@@ -18,6 +18,15 @@ import se.deversity.vibetags.processor.internal.content.TransitiveSection;
  */
 public final class GuardrailContentBuilder {
 
+    /**
+     * What an always-loaded file says once a test round's guardrails have left it for
+     * {@code TESTING.md}. The wording is a contract from the first release that carries it:
+     * consumers commit the files this sentence is written into, so editing it rewrites a generated
+     * file in every consuming build. {@code TestingMdRoutingEndToEndTest} holds it to a literal.
+     */
+    static final String TESTING_POINTER =
+        "Guardrails for test code are in TESTING.md. Read it before modifying anything under a test source set.";
+
     private final AnnotationCollector collector;
     private final Set<String> activeServices;
     private final String projectName;
@@ -127,7 +136,8 @@ public final class GuardrailContentBuilder {
                 GuardrailModel view = views.of(serviceKey);
                 String content = PlatformRendererRegistry.getRenderer(platform).render(view, platform, context);
                 if (content != null) {
-                    contentByService.put(serviceKey, withTransitiveAppendix(content, view, platform));
+                    contentByService.put(serviceKey,
+                        views.withPointer(serviceKey, withTransitiveAppendix(content, view, platform)));
                 }
             }
         }
@@ -207,6 +217,29 @@ public final class GuardrailContentBuilder {
                 return withoutSafety;
             }
             return ServiceRegistry.routesTestGuardrails(serviceKey) ? safetyOnly : model;
+        }
+
+        /**
+         * {@code content} with the pointer to {@code TESTING.md} appended, when this round moved
+         * guardrails out of {@code serviceKey}'s file; otherwise {@code content} unchanged.
+         *
+         * <p>Appended after the rendered body, never spliced into it, so it cannot land inside a
+         * structured element such as {@code <project_guardrails>} and be read as one of the rules.
+         * A Markdown file gets it as a sentence; a hash-marker file has no prose, so there it is a
+         * comment. Nothing is appended when the test code carried only safety annotations: nothing
+         * moved, and an empty {@code TESTING.md} is not worth an agent's read.
+         */
+        String withPointer(String serviceKey, String content) {
+            if (withoutSafety == null || !withoutSafety.anyAnnotationsFound()
+                    || !ServiceRegistry.routesTestGuardrails(serviceKey)) {
+                return content;
+            }
+            java.nio.file.Path file = ServiceRegistry.buildServiceFileMap(java.nio.file.Path.of("")).get(serviceKey);
+            java.nio.file.Path name = file == null ? null : file.getFileName();
+            String[] markers = name == null ? null : GuardrailFileWriter.getMarkersFor(name.toString());
+            boolean prose = markers != null && markers[0].startsWith("<!--");
+            return content + (content.endsWith("\n") ? "" : "\n") + "\n"
+                + (prose ? "" : "# ") + TESTING_POINTER + "\n";
         }
     }
 

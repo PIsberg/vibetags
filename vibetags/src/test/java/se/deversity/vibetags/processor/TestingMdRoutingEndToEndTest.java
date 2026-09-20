@@ -277,4 +277,105 @@ class TestingMdRoutingEndToEndTest {
         }
         assertTrue(read("TESTING.md").contains(TEST_FOCUS));
     }
+
+    // -----------------------------------------------------------------------
+    // The pointer: a file that gave up its test guardrails says where they went
+    // -----------------------------------------------------------------------
+
+    /**
+     * Written out, not read from the production constant. Consumers commit the files that contain
+     * this sentence, so a change to it rewrites a generated file in every consuming build, and a
+     * test that read the constant would follow the change instead of failing on it.
+     */
+    private static final String POINTER =
+        "Guardrails for test code are in TESTING.md. Read it before modifying anything under a test source set.";
+
+    private static final String SAFETY_ONLY_TEST_SOURCE = """
+        package com.example.ledger;
+
+        import se.deversity.vibetags.annotations.AILocked;
+
+        @AILocked(reason = "Golden ledger fixture is shared with the partner sandbox")
+        public class GoldenLedgerFixture {
+        }
+        """;
+
+    private static int occurrences(String haystack, String needle) {
+        int n = 0;
+        for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + 1)) {
+            n++;
+        }
+        return n;
+    }
+
+    @Test
+    void aFileThatGaveUpTestGuardrailsPointsAtTestingMdExactlyOnce() throws IOException {
+        optInto(ALWAYS_LOADED);
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileTests();
+
+        for (String file : ALWAYS_LOADED) {
+            assertEquals(1, occurrences(read(file), POINTER), file + ":\n" + read(file));
+        }
+        assertEquals(0, occurrences(read("TESTING.md"), POINTER), "TESTING.md does not point at itself");
+    }
+
+    /** A {@code #} comment in a hash-marker file, prose in a Markdown one. */
+    @Test
+    void thePointerIsACommentWhereTheFileHasNoProse() throws IOException {
+        optInto(ALWAYS_LOADED);
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileTests();
+
+        assertTrue(read(".cursorrules").contains("\n# " + POINTER + "\n"), read(".cursorrules"));
+        assertTrue(read("GEMINI.md").contains("\n" + POINTER + "\n"), read("GEMINI.md"));
+    }
+
+    /**
+     * CLAUDE.md wraps its rules in {@code <project_guardrails>}. A sentence inside that element
+     * would be parsed as one of the rules, so the pointer goes after it closes.
+     */
+    @Test
+    void thePointerIsNeverInsideTheProjectGuardrailsElement() throws IOException {
+        optInto(ALWAYS_LOADED);
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileTests();
+
+        String claude = read("CLAUDE.md");
+        int pointerAt = claude.indexOf(POINTER);
+        int lastOpen = claude.lastIndexOf("<project_guardrails>", pointerAt);
+        int lastClose = claude.lastIndexOf("</project_guardrails>", pointerAt);
+        assertTrue(pointerAt >= 0, claude);
+        assertTrue(lastOpen < 0 || lastClose > lastOpen,
+            "the pointer sits inside an open <project_guardrails> element:\n" + claude);
+    }
+
+    @Test
+    void noPointerWithoutTestingMd() throws IOException {
+        optInto(ALWAYS_LOADED);
+        compileMain();
+        compileTests();
+
+        for (String file : ALWAYS_LOADED) {
+            assertEquals(0, occurrences(read(file), "TESTING.md"), file + ":\n" + read(file));
+        }
+    }
+
+    /** Nothing moved, so there is nothing to point at, and an empty TESTING.md is no use to read. */
+    @Test
+    void noPointerWhenTheTestCodeCarriesOnlySafetyAnnotations() throws IOException {
+        optInto(ALWAYS_LOADED);
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileSourceSet("test", List.<String[]>of(
+            new String[]{"com.example.ledger.GoldenLedgerFixture", SAFETY_ONLY_TEST_SOURCE}));
+
+        for (String file : ALWAYS_LOADED) {
+            assertEquals(0, occurrences(read(file), POINTER), file + ":\n" + read(file));
+            assertTrue(read(file).contains("Golden ledger fixture"), file + " must keep the safety guardrail");
+        }
+    }
 }
