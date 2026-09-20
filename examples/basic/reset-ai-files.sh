@@ -77,6 +77,8 @@ AI_FILES=(
   ".goosehints"
   ".agents/skills/vibetags-guardrails/SKILL.md"
   "replit.md"
+  # Routing target for test-code guardrails; only a test-compile round writes to it
+  "TESTING.md"
 )
 
 echo "Resetting AI config files in: $SCRIPT_DIR"

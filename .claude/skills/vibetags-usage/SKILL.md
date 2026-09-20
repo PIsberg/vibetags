@@ -131,6 +131,7 @@ touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is w
 touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment exclusion lists
 mkdir -p .zencoder/rules                   # Zencoder (per-class rules)
 touch replit.md                            # Replit Agent
+touch TESTING.md                           # not a tool's file: test-code guardrails go here instead (safety annotations stay put)
 touch CONVENTIONS.md .aiderignore          # Aider
 touch QWEN.md .qwenignore                  # Qwen
 mkdir -p .qwen/commands && touch .qwen/commands/refactor.md  # Qwen /refactor command (own opt-in)

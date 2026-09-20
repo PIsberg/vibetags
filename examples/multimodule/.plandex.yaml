@@ -17,6 +17,8 @@ guardrails:
     # VIBETAGS-MODULE: core
     - path: "com.example.multimodule.core.IrNode"
       reason: "Core IR node: structural changes break every downstream module"
+    - path: "com.example.multimodule.core.IrGraphFixturesTest"
+      reason: "The golden graphs below are the layout engine's recorded output for the 1.0 release. Regenerating them makes the suite agree with the current engine instead of with the release it is meant to protect."
     # VIBETAGS-MODULE-END: core
     # VIBETAGS-MODULE: showcase
     - path: "com.example.payment.PaymentProcessor"

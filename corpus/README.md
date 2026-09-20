@@ -209,7 +209,7 @@ is read back. Two assertions:
 
 | # | Assertion | What it protects |
 |---|---|---|
-| 9 | Every opted-in platform file was written non-empty | Opting a file in and getting nothing back looks exactly like a project with no guardrails |
+| 9 | Every opted-in platform file was written non-empty, `TESTING.md` excepted | Opting a file in and getting nothing back looks exactly like a project with no guardrails. `TESTING.md` is the one output a main round deliberately leaves alone, and every corpus repository is compiled main-only, so empty is its correct result here (`MAY_BE_EMPTY` in `check-platforms.py`) |
 | 10 | Every YAML, TOML and JSON file **parses** | The question no fixture test asks |
 
 Assertion 10 is the point of the phase. The fixture tests assert what a renderer *contains*; none

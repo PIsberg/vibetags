@@ -18,12 +18,22 @@ import se.deversity.vibetags.processor.internal.content.TransitiveSection;
  */
 public final class GuardrailContentBuilder {
 
+    /**
+     * What an always-loaded file says once a test round's guardrails have left it for
+     * {@code TESTING.md}. The wording is a contract from the first release that carries it:
+     * consumers commit the files this sentence is written into, so editing it rewrites a generated
+     * file in every consuming build. {@code TestingMdRoutingEndToEndTest} holds it to a literal.
+     */
+    static final String TESTING_POINTER =
+        "Guardrails for test code are in TESTING.md. Read it before modifying anything under a test source set.";
+
     private final AnnotationCollector collector;
     private final Set<String> activeServices;
     private final String projectName;
     private final String generatedHeader;
     private final @Nullable RoleConfig roles;
     private boolean safetyDigest;
+    private boolean unrouted;
 
     public GuardrailContentBuilder(AnnotationCollector collector,
                                    Set<String> activeServices,
@@ -52,6 +62,17 @@ public final class GuardrailContentBuilder {
      */
     public GuardrailContentBuilder safetyDigest() {
         this.safetyDigest = true;
+        return this;
+    }
+
+    /**
+     * Renders every service from the whole model even in a test round with {@code TESTING.md}
+     * present: what the round would have written had the file not been there. The processor stores
+     * that on the sidecar, so that deleting {@code TESTING.md} and rebuilding only the main sources
+     * puts the test guardrails back instead of leaving them in no file.
+     */
+    public GuardrailContentBuilder unrouted() {
+        this.unrouted = true;
         return this;
     }
 
@@ -92,7 +113,14 @@ public final class GuardrailContentBuilder {
         if (safetyDigest) {
             context = context.asSafetyDigest();
         }
+        if (collector.isTestRound()) {
+            // The one thing a renderer may know about where the round's sources came from, and
+            // today only TESTING.md's renderer asks.
+            context = context.asTestRound();
+        }
         Map<String, String> contentByService = new java.util.LinkedHashMap<>();
+        RoutedViews views = new RoutedViews(model,
+            !unrouted && collector.isTestRound() && activeServices.contains("testing"));
 
         // Render each active service (excluding granular directories and special-case exclusions)
         for (String serviceKey : activeServices) {
@@ -105,17 +133,19 @@ public final class GuardrailContentBuilder {
 
             Platform platform = Platform.fromServiceKey(serviceKey);
             if (platform != null) {
-                String content = PlatformRendererRegistry.getRenderer(platform).render(model, platform, context);
+                GuardrailModel view = views.of(serviceKey);
+                String content = PlatformRendererRegistry.getRenderer(platform).render(view, platform, context);
                 if (content != null) {
-                    contentByService.put(serviceKey, withTransitiveAppendix(content, model, platform));
+                    contentByService.put(serviceKey,
+                        views.withPointer(serviceKey, withTransitiveAppendix(content, view, platform)));
                 }
             }
         }
 
         // Implicit platform activations: the Codex sidecar, the one documented exception to invariant 1
         if (activeServices.contains("codex")) {
-            putRendered(contentByService, "codex_config", Platform.CODEX_CONFIG, model, context);
-            putRendered(contentByService, "codex_rules", Platform.CODEX_RULES, model, context);
+            putRendered(contentByService, "codex_config", Platform.CODEX_CONFIG, views.of("codex_config"), context);
+            putRendered(contentByService, "codex_rules", Platform.CODEX_RULES, views.of("codex_rules"), context);
         }
         // Qwen has no implicit outputs. .qwen/settings.json is the user's Qwen Code settings file and is
         // never written (#650); .qwen/commands/refactor.md is an ordinary opt-in, rendered by the loop
@@ -154,6 +184,62 @@ public final class GuardrailContentBuilder {
         String content = PlatformRendererRegistry.getRenderer(platform).render(model, platform, context);
         if (content != null) {
             contentByService.put(serviceKey, content);
+        }
+    }
+
+    /**
+     * Which slice of the model each service renders. In every round but one, all of it.
+     *
+     * <p>A test round of a project that has {@code TESTING.md} is routed: {@code TESTING.md} renders
+     * the model without its safety annotations, the instruction aggregates
+     * ({@link ServiceRegistry#routesTestGuardrails}) render the safety annotations only, and every
+     * other service renders the whole model as before. Done here, by handing renderers a smaller
+     * model, because a renderer only ever sees a model: none of them learns that routing exists,
+     * and a tests-only module with a single sidecar, which the reactor merge skips, is routed the
+     * same way as any other.
+     */
+    private static final class RoutedViews {
+        private final GuardrailModel model;
+        private final @Nullable GuardrailModel safetyOnly;
+        private final @Nullable GuardrailModel withoutSafety;
+
+        RoutedViews(GuardrailModel model, boolean routed) {
+            this.model = model;
+            this.safetyOnly = routed ? model.safetyOnly() : null;
+            this.withoutSafety = routed ? model.withoutSafety() : null;
+        }
+
+        GuardrailModel of(String serviceKey) {
+            if (safetyOnly == null || withoutSafety == null) {
+                return model;
+            }
+            if ("testing".equals(serviceKey)) {
+                return withoutSafety;
+            }
+            return ServiceRegistry.routesTestGuardrails(serviceKey) ? safetyOnly : model;
+        }
+
+        /**
+         * {@code content} with the pointer to {@code TESTING.md} appended, when this round moved
+         * guardrails out of {@code serviceKey}'s file; otherwise {@code content} unchanged.
+         *
+         * <p>Appended after the rendered body, never spliced into it, so it cannot land inside a
+         * structured element such as {@code <project_guardrails>} and be read as one of the rules.
+         * A Markdown file gets it as a sentence; a hash-marker file has no prose, so there it is a
+         * comment. Nothing is appended when the test code carried only safety annotations: nothing
+         * moved, and an empty {@code TESTING.md} is not worth an agent's read.
+         */
+        String withPointer(String serviceKey, String content) {
+            if (withoutSafety == null || !withoutSafety.anyAnnotationsFound()
+                    || !ServiceRegistry.routesTestGuardrails(serviceKey)) {
+                return content;
+            }
+            java.nio.file.Path file = ServiceRegistry.buildServiceFileMap(java.nio.file.Path.of("")).get(serviceKey);
+            java.nio.file.Path name = file == null ? null : file.getFileName();
+            String[] markers = name == null ? null : GuardrailFileWriter.getMarkersFor(name.toString());
+            boolean prose = markers != null && markers[0].startsWith("<!--");
+            return content + (content.endsWith("\n") ? "" : "\n") + "\n"
+                + (prose ? "" : "# ") + TESTING_POINTER + "\n";
         }
     }
 

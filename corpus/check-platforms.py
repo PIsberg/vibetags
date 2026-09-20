@@ -97,6 +97,15 @@ def parse(path: pathlib.Path):
     return None
 
 
+# The one output that is meant to be empty on a main-only build. TESTING.md takes a test round's
+# non-safety guardrails, and a main round renders nothing for it on purpose, so that an earlier
+# test round's region is left in place rather than blanked. Every corpus repository here is
+# compiled main-only, so an empty TESTING.md is the correct result and not the defect this check
+# is looking for. Emptiness anywhere else still fails: an opted-in file holding nothing is the
+# shape this repository has shipped before.
+MAY_BE_EMPTY = {"TESTING.md"}
+
+
 def verify(root: pathlib.Path, registry: pathlib.Path):
     failures = []
     absent, dirs = [], []
@@ -114,7 +123,8 @@ def verify(root: pathlib.Path, registry: pathlib.Path):
             continue
         checked += 1
         if path.stat().st_size == 0:
-            failures.append(f"{rel}: opted in and written empty")
+            if rel not in MAY_BE_EMPTY:
+                failures.append(f"{rel}: opted in and written empty")
             continue
         problem = parse(path)
         if problem is None:

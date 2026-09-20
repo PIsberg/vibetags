@@ -102,6 +102,75 @@ public record YamlMergeShape(String anchor, int indent, String emptyBody, boolea
     }
 
     /**
+     * Merges the several renderings one module produces, one per compiled source set, into the
+     * single document that module contributes to {@link #merge}.
+     *
+     * <p>Maven and Gradle compile a module's main and test sources as two rounds, so a module whose
+     * test code is annotated renders this platform twice. {@code merge} is built to receive one
+     * complete document per module and write the scaffold once; handing it two documents joined
+     * together puts a second scaffold inside a contribution's body, where nothing strips it. That
+     * is the duplicate-key defect this record exists to prevent, one level further in, and it hid
+     * behind the fixtures: every reactor example annotated main sources only.
+     *
+     * <p>{@link #keyedBuckets} shapes need the same treatment a level deeper. Two source sets each
+     * render a {@code locked:} and an {@code audit:} block, and appending them would repeat those
+     * keys, which {@code splitBuckets} resolves by keeping the last one - losing the main source
+     * set's entries rather than merely producing an ambiguous document.
+     *
+     * @param documents this module's rendered documents, in source-set order
+     * @return the single document, or {@code null} when a part does not match this shape, so the
+     *         caller keeps the concatenation it used before rather than a document guessed at here
+     */
+    public @Nullable String mergeSourceSets(List<String> documents) {
+        if (documents.size() < 2) {
+            return documents.isEmpty() ? null : documents.get(0);
+        }
+        String scaffold = null;
+        List<String> bodies = new ArrayList<>();
+        for (String document : documents) {
+            int afterAnchor = endOfAnchorLine(document);
+            if (afterAnchor < 0) return null;
+            if (scaffold == null) scaffold = document.substring(0, afterAnchor).stripTrailing();
+            String body = trimBlankLines(document.substring(afterAnchor));
+            if (body.isBlank() || body.strip().equals(emptyBody.strip())) continue;
+            bodies.add(body);
+        }
+        if (scaffold == null) return null;
+        if (bodies.isEmpty()) {
+            return emptyBody.isBlank() ? scaffold : scaffold + "\n" + emptyBody;
+        }
+        String combined = keyedBuckets ? combineBuckets(bodies) : String.join("\n", bodies);
+        return combined == null ? null : scaffold + "\n" + combined;
+    }
+
+    /**
+     * Emits each bucket key once with every source set's entries under it.
+     *
+     * @return {@code null} when a body does not decompose into keyed blocks, for the same reason
+     *         {@link #appendKeyedBuckets} refuses: nothing is written that would drop a part this
+     *         could not place
+     */
+    private @Nullable String combineBuckets(List<String> bodies) {
+        Map<String, List<String>> byKey = new LinkedHashMap<>();
+        for (String body : bodies) {
+            Map<String, String> buckets = splitBuckets(body);
+            if (buckets == null || buckets.isEmpty()) return null;
+            for (Map.Entry<String, String> bucket : buckets.entrySet()) {
+                byKey.computeIfAbsent(bucket.getKey(), k -> new ArrayList<>()).add(bucket.getValue());
+            }
+        }
+        StringBuilder out = new StringBuilder();
+        for (Map.Entry<String, List<String>> bucket : byKey.entrySet()) {
+            if (out.length() > 0) out.append('\n');
+            out.append(bucket.getKey());
+            for (String entries : bucket.getValue()) {
+                if (!entries.isBlank()) out.append('\n').append(entries);
+            }
+        }
+        return out.toString();
+    }
+
+    /**
      * Regroups keyed contributions so each key appears once. Plandex renders
      * {@code guardrails:} with a {@code locked:} / {@code audit:} / {@code privacy:} block under
      * it, and appending two modules' blocks would repeat whichever keys they share — the same

@@ -76,6 +76,9 @@ public enum Platform {
     GREPTILE("greptile"),
     GREPTILE_RULES("greptile_rules"),
     GREPTILE_CONFIG("greptile_config"),
+    // TESTING.md: not a tool's file but a routing target. A test round's non-safety guardrails go
+    // here instead of into the always-loaded aggregates when the file is present.
+    TESTING("testing"),
 
     // Granular rule platforms
     CURSOR_GRANULAR("cursor_granular"),

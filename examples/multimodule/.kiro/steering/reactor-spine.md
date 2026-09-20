@@ -66,6 +66,17 @@ When modifying this element, audit for:
 
 ### com.example.multimodule.core.IrGraph
 - **Rule**: This type is immutable. Never introduce non-final fields, setters, or mutating methods.
+
+## Locked Status
+
+### com.example.multimodule.core.IrGraphFixturesTest
+- **Reason**: The golden graphs below are the layout engine's recorded output for the 1.0 release. Regenerating them makes the suite agree with the current engine instead of with the release it is meant to protect.
+
+## Context & Focus
+
+### com.example.multimodule.core.IrGraphFixturesTest
+- **Focus**: Build IrGraph fixtures through IrGraphFixtures.of(...), never by mutating a graph in place: the engine's layout cache keys on node identity
+- **Avoid**: Sharing one fixture graph between cases; the engine mutates what it lays out
 <!-- VIBETAGS-MODULE-END: core -->
 <!-- VIBETAGS-MODULE: engine -->
 ## Thread-Safety Guarantee

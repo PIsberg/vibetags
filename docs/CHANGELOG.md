@@ -23,6 +23,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lost silently. An incremental KSP build regenerates from the whole module: without that, KSP shows
   a processor only the changed files, and the first test run of the adapter rewrote `CLAUDE.md` from
   one file and dropped the untouched file's guardrail.
+- **Fixed: a module whose main and test sources are both annotated produced invalid YAML.** Every
+  generated YAML document (`.coderabbit.yaml`, `sweep.yaml`, `ellipsis.yaml`, `.plandex.yaml`,
+  `.roomodes`, `.interpreter/profiles/vibetags.yaml`, `.aider.conf.yml`) carried its top-level key
+  once per compiled source set, because a module's two rounds each render the whole document and
+  the merge stacked them. A strict parser rejects such a file outright; a lenient one keeps the
+  last block, so the main source set's guardrails were silently dropped. Single-module projects
+  were affected as well as reactors. Plandex was the worse case: its `locked:` and `audit:` keys
+  repeated inside the block, and the bucket merge resolved that by keeping the last, losing the
+  main source set's entries rather than merely producing an ambiguous document. Nothing had to be
+  opted into for this: any project that annotated a test class and opted into one of those files
+  had it. Annotate nothing in a test source set and the output is unchanged.
+- **`TESTING.md`: guardrails on test code, out of the always-loaded files.** Annotating fixtures,
+  test helpers and test classes used to put their guardrails in `CLAUDE.md`, `.cursorrules` and
+  every other always-loaded instruction file, so each agent session paid for test-only rules
+  whether or not it touched a test. Create an empty `TESTING.md` beside them and a round that
+  compiles test code (source set `test`, `*Test`, `*Tests` or `testFixtures`) writes its
+  guardrails there instead; each file that gave some up ends with one sentence pointing at it.
+  The six safety annotations (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`,
+  `@AISecure`) never move, whatever code they are on: `TESTING.md` is read on demand, which is too
+  late for a locked fixture. Ignore files, JSON, TOML and YAML tool configuration and granular rule
+  files are not routed. Without `TESTING.md` nothing changes, and deleting it loses nothing: a
+  routed round also records what it would have written without the file (sidecar key `~tfull~`),
+  and the merge reads that once the file is gone, so a main-only build puts the test guardrails
+  back. `TESTING.md` does not count as another AI config file for the `AGENTS.md` sole-file rule.
+  Known limits: a round that compiles main and test sources together counts as main and is not
+  routed; a module whose main sources carry no annotation gets its test guardrails back on the
+  next test compile after `TESTING.md` is deleted, not on a main-only build; and removing the last
+  annotation from a test source set leaves its guardrail in place, as it already did in `CLAUDE.md`.
+  Those three are tracked as issues #780, #782 and #781.
 
 ### Fixed
 

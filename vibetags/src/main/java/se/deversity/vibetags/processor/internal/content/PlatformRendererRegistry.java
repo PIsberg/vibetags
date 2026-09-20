@@ -45,6 +45,7 @@ public final class PlatformRendererRegistry {
     private static final GreptileRenderer GREPTILE_RENDERER = new GreptileRenderer();
     private static final GreptileRulesRenderer GREPTILE_RULES_RENDERER = new GreptileRulesRenderer();
     private static final GreptileConfigRenderer GREPTILE_CONFIG_RENDERER = new GreptileConfigRenderer();
+    private static final RoutedTestingRenderer TESTING_RENDERER = new RoutedTestingRenderer();
 
     private PlatformRendererRegistry() {}
 
@@ -200,6 +201,8 @@ public final class PlatformRendererRegistry {
                 return ROO_MODES_RENDERER;
             case LOCKS_REPORT:
                 return LOCKS_REPORT_RENDERER;
+            case TESTING:
+                return TESTING_RENDERER;
             default:
                 // Every *_GRANULAR service shares one renderer, and this used to be thirteen case
                 // labels written by hand — of which only twelve were ever written. GEMINI_GRANULAR

@@ -396,7 +396,9 @@ class AIGuardrailProcessorProcessTest {
             // The always-on safety files inside .windsurf/rules/ and .devin/rules/ (#684)
             "windsurf_safety", "devin_safety",
             // Lean indexed root aggregate opt-in (multi-module)
-            "root_index"
+            "root_index",
+            // TESTING.md: where a test round's non-safety guardrails go when the file is present
+            "testing"
         );
         assertEquals(expectedKeys, map.keySet(),
             "buildServiceFileMap must return exactly the expected set of keys");
@@ -420,6 +422,7 @@ class AIGuardrailProcessorProcessTest {
 
         assertEquals(root.resolve(".cursorrules"),                      map.get("cursor"));
         assertEquals(root.resolve("CLAUDE.md"),                         map.get("claude"));
+        assertEquals(root.resolve("TESTING.md"),                        map.get("testing"));
         assertEquals(root.resolve(".aiexclude"),                        map.get("aiexclude"));
         assertEquals(root.resolve("AGENTS.md"),                         map.get("codex"));
         assertEquals(root.resolve("gemini_instructions.md"),            map.get("gemini"));

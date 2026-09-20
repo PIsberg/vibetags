@@ -182,4 +182,16 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 ## Mirrored Elements
 - [EvidenceBasedShowcase.CATALOG_VERSION](com.example.service.EvidenceBasedShowcase.CATALOG_VERSION): Editing this requires the same edit at: pom.xml:<version>, README.md version badge, docs/CHANGELOG.md. The release version is duplicated across build config, docs, and the badge. Enforced by ProjectFactsConsistencyTest.
+
+# This Project
+
+> AI guardrail rules generated from source annotations by VibeTags.
+
+AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
+
+## Locked Files
+- [GoldenPayloadFixtures](com.example.testing.GoldenPayloadFixtures): These byte sequences are the partner's recorded settlement responses. Regenerating or reformatting them makes the suite agree with itself and disagree with production.
+
+## Contextual Rules
+- [PaymentFixturesTest](com.example.testing.PaymentFixturesTest): Focus - Build payments through PaymentFixtures, never with the PaymentRequest constructor: the fixture is what keeps minor units and currency consistent across the suite. Avoid - Asserting on formatted amounts; assert on the minor-unit long
 <!-- VIBETAGS-END -->

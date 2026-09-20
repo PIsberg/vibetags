@@ -76,6 +76,27 @@ class AgentsMdSoleFallbackTest {
             "AGENTS.md must contain the Codex locked-files section");
     }
 
+    /**
+     * {@code TESTING.md} is a routing target, not a tool's instruction file, so it cannot be the
+     * thing {@code AGENTS.md} is a pointer to. Counting it as "another AI config file" would mean
+     * a Codex-only project that creates {@code TESTING.md} silently stops getting its
+     * {@code AGENTS.md} written, guardrails and all.
+     */
+    @Test
+    void agentsMdBesideOnlyTestingMdIsStillTheSoleAiConfigFile(@TempDir Path tempDir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
+        h.touchOptIn("AGENTS.md");
+        h.touchOptIn("TESTING.md");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        h.compile();
+
+        String agents = h.readFile("AGENTS.md");
+        assertTrue(agents.contains("PaymentProcessor"),
+            "AGENTS.md must still list the @AILocked element when TESTING.md is the only other opt-in");
+        assertTrue(agents.contains("LOCKED FILES"),
+            "AGENTS.md must still contain the Codex locked-files section");
+    }
+
     // -----------------------------------------------------------------------
     // Coexisting with another AI file → AGENTS.md is left untouched
     // -----------------------------------------------------------------------

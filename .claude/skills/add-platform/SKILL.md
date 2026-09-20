@@ -147,6 +147,15 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
    - `AIGuardrailProcessorProcessTest.java` — `expectedKeys = Set.of(...)`
    - `AIGuardrailProcessorUnitTest.java` — the matching `Set.of(...)`
 
+   A third pinned set decides something rather than listing it: **`ServiceRoutingContractTest.ROUTED`**.
+   It fails for every new key until you classify it: does a test round's non-safety guardrails
+   leave this file for `TESTING.md` when that file is present
+   (`ServiceRegistry.routesTestGuardrails`)? Yes for an instruction file an agent loads as prose
+   (one rendered file, with markers, not YAML); no for an ignore file, a JSON/TOML/YAML tool
+   configuration, a `*_safety` file or a granular directory. When in doubt answer no: a wrongly
+   routed file loses guardrails, a wrongly unrouted one only costs context. Decide what the file
+   is for, then update `ROUTED` or the rule, never just the list.
+
 10. **New end-to-end test** — add to (or start the next) `NewPlatformsV<N>EndToEndTest.java`
     following `NewPlatformsV4EndToEndTest`'s shape: `ProcessorTestHarness.withExampleSources
     (tempDir)` in `@BeforeAll`; one `testAllNewFilesExist()`; then per-file content tests

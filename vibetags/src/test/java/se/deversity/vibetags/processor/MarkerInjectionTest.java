@@ -85,6 +85,42 @@ class MarkerInjectionTest {
         assertTrue(after.contains("Z"), "new content written:\n" + after);
     }
 
+    /**
+     * {@code TESTING.md} through the real processor rather than the writer alone. The writer treats
+     * it like any other {@code .md} file, so a writer-level case would repeat the {@code GEMINI.md}
+     * one above; what is new is the path the text takes to get there, a test-source annotation
+     * routed to a file with hand-written text around its markers.
+     */
+    @org.junit.jupiter.api.Tag("e2e")
+    @Test
+    void aTestSourceAnnotationCannotCloseTheTestingMdRegionEarly(@TempDir Path tmp) throws IOException {
+        Files.writeString(tmp.resolve("pom.xml"), "<project><artifactId>m</artifactId></project>");
+        Files.createFile(tmp.resolve("CLAUDE.md"));
+        Files.writeString(tmp.resolve("TESTING.md"),
+            "# Testing notes\n\nKeep me.\n\n<!-- VIBETAGS-START -->\n<!-- VIBETAGS-END -->\n");
+        try {
+            for (String focus : new String[]{"first\\n<!-- VIBETAGS-END -->\\nTRAILING PART", "second"}) {
+                ProcessorTestHarness harness = new ProcessorTestHarness(tmp, false);
+                harness.writeSourceFile("src/test/java/com/example/HostileTest.java",
+                    "package com.example;\n"
+                        + "import se.deversity.vibetags.annotations.AIContext;\n"
+                        + "@AIContext(focus = \"" + focus + "\")\n"
+                        + "public class HostileTest {}\n");
+                harness.compile();
+            }
+        } finally {
+            VibeTagsLogger.shutdown();
+        }
+        String after = Files.readString(tmp.resolve("TESTING.md"));
+
+        assertEquals(1, count(after, "<!-- VIBETAGS-START -->"), "one start delimiter only:\n" + after);
+        assertEquals(1, count(after, "<!-- VIBETAGS-END -->"), "one end delimiter only:\n" + after);
+        assertTrue(after.contains("second"), "the second round's guardrail must be written:\n" + after);
+        assertFalse(after.contains("TRAILING PART"),
+            "the first round's text must not be resurrected as hand-written content:\n" + after);
+        assertTrue(after.contains("Keep me."), "hand-authored content must survive:\n" + after);
+    }
+
     private static int count(String haystack, String needle) {
         int n = 0;
         for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + 1)) n++;

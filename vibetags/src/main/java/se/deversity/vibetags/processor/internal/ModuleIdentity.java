@@ -22,4 +22,28 @@ public record ModuleIdentity(Path root, String sourceSet) {
 
     /** The conventional primary source set; the only one whose sidecar id carries no suffix. */
     public static final String MAIN = "main";
+
+    /** Gradle's shared-test-code source set; named for tests but ending in neither suffix. */
+    private static final String TEST_FIXTURES = "testFixtures";
+
+    /**
+     * Whether this round compiled test code, which decides if its guardrails are routed to
+     * {@code TESTING.md}.
+     *
+     * <p>A naming convention, deliberately not a substring match: {@code test}, a camel-case
+     * {@code Test} or {@code Tests} suffix ({@code integrationTest}, {@code functionalTests}), or
+     * {@code testFixtures}. Source sets such as {@code latest} or {@code contest} only contain the
+     * letters, and {@code jmh} or {@code generated} are not {@code main} without being tests. A
+     * wrong {@code true} moves production guardrails out of the always-loaded files, so anything
+     * unrecognised answers {@code false}, which leaves the round unrouted and loses nothing.
+     */
+    public boolean isTestSourceSet() {
+        if (sourceSet == null) {
+            return false;
+        }
+        return "test".equals(sourceSet)
+            || sourceSet.endsWith("Test")
+            || sourceSet.endsWith("Tests")
+            || TEST_FIXTURES.equals(sourceSet);
+    }
 }

@@ -54,6 +54,14 @@ class UnsetMemberRenderingTest {
                "codex_config", "sweep", "plandex", "interpreter", "aider_conventions"));
 
     /**
+     * {@code TESTING.md} renders only in a test round and answers {@code null} in any other, which
+     * is its contract rather than a dropped platform, so it alone gets a test-round context.
+     */
+    private static RenderingContext contextFor(Platform platform) {
+        return platform == Platform.TESTING ? CONTEXT.asTestRound() : CONTEXT;
+    }
+
+    /**
      * Annotations that legitimately render nothing when written bare, because their only member is
      * the content itself.
      *
@@ -122,7 +130,7 @@ class UnsetMemberRenderingTest {
     @DisplayName("an unset optional member leaves no dangling separator, empty span or empty list")
     void unsetMembersLeaveNoDanglingText(Platform platform) {
         String bare = PlatformRendererRegistry.getRenderer(platform)
-            .render(GuardrailModels.everyAnnotationWithMembersUnset(), platform, CONTEXT);
+            .render(GuardrailModels.everyAnnotationWithMembersUnset(), platform, contextFor(platform));
 
         List<String> dangling = new ArrayList<>();
         collect(DANGLING_BULLET_SEPARATOR, bare, dangling);
@@ -157,7 +165,7 @@ class UnsetMemberRenderingTest {
     @DisplayName("an unset optional member emits no label at all, rather than a label with nothing after it")
     void unsetMembersLeaveNoEmptyLabels(Platform platform) {
         String bare = PlatformRendererRegistry.getRenderer(platform)
-            .render(GuardrailModels.everyAnnotationWithMembersUnset(), platform, CONTEXT);
+            .render(GuardrailModels.everyAnnotationWithMembersUnset(), platform, contextFor(platform));
 
         List<String> empty = new ArrayList<>();
         for (Matcher m = EMPTY_LABELLED_BULLET.matcher(bare); m.find(); ) {
@@ -178,9 +186,9 @@ class UnsetMemberRenderingTest {
     @DisplayName("an annotation with every optional member unset still reaches the platform file")
     void bareAnnotationsAreNotDropped(Platform platform) {
         String populated = PlatformRendererRegistry.getRenderer(platform)
-            .render(GuardrailModels.everyAnnotation(), platform, CONTEXT);
+            .render(GuardrailModels.everyAnnotation(), platform, contextFor(platform));
         String bare = PlatformRendererRegistry.getRenderer(platform)
-            .render(GuardrailModels.everyAnnotationWithMembersUnset(), platform, CONTEXT);
+            .render(GuardrailModels.everyAnnotationWithMembersUnset(), platform, contextFor(platform));
         assertTrue(bare != null && !bare.isEmpty(), platform + " rendered nothing at all");
 
         List<String> dropped = new ArrayList<>();
@@ -216,13 +224,13 @@ class UnsetMemberRenderingTest {
     @DisplayName("an annotation that renders nothing when bare leaves the file as though it were absent")
     void annotationsThatRenderNothingLeaveNoEmptySection(Platform platform) {
         String absent = PlatformRendererRegistry.getRenderer(platform)
-            .render(GuardrailModel.builder().build(), platform, CONTEXT);
+            .render(GuardrailModel.builder().build(), platform, contextFor(platform));
         List<String> traces = new ArrayList<>();
         for (Class<? extends Annotation> type : RENDERS_NOTHING_WHEN_BARE) {
             GuardrailModel onlyBare = GuardrailModel.builder()
                 .add(type, GuardrailModels.elementWithMembersUnset(type))
                 .build();
-            String bare = PlatformRendererRegistry.getRenderer(platform).render(onlyBare, platform, CONTEXT);
+            String bare = PlatformRendererRegistry.getRenderer(platform).render(onlyBare, platform, contextFor(platform));
             if (!java.util.Objects.equals(absent, bare)) {
                 traces.add(type.getSimpleName() + ":\n" + bare);
             }

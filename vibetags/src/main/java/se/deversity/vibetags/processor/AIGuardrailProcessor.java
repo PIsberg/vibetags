@@ -14,6 +14,7 @@ import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.GuardrailEnforcer;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
+import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
@@ -27,6 +28,7 @@ import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.PartialRoundDetector;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
 import se.deversity.vibetags.processor.model.ContentHash;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
@@ -450,6 +452,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // while rounds are live — the Tree API cannot map elements back to source afterwards.
             if (moduleIdentity == null) {
                 moduleIdentity = ModuleRootResolver.fromRound(processingEnv, roundEnv);
+                // Set on every attempt, not only a successful one, so a reused processor whose
+                // identity did not resolve this time cannot keep the last compilation's answer.
+                collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());
             }
 
             // Which sources this round was handed, for the same reason and under the same
@@ -1194,6 +1199,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (String service : activeServices) {
             Path optIn = serviceFiles.get(service);
             if (optIn == null || !Files.isRegularFile(optIn)) {
+                continue;
+            }
+            // TESTING.md breaks this warning's premise, which is that a current module contributes
+            // a body for every active service. A main round renders nothing for `testing` by
+            // design, so the main sidecar never carries one however current it is, while the file's
+            // own mtime is whatever the test round last wrote. Every routed project would be told
+            // on every build that a complete file is missing a module. A warning that is always
+            // wrong is worse than none: it teaches the reader to skip the one that is right.
+            if (Platform.TESTING.getServiceKey().equals(service)) {
                 continue;
             }
             long optedInAt;
@@ -2015,10 +2029,66 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      *
      * <p>{@code contentByService} already excludes granular directories, so every entry is a real
      * output file.
+     *
+     * <p>An instance method, where it used to be static, so that a routed test round can also
+     * record what it would have written without {@code TESTING.md}. The name and parameters are
+     * unchanged on purpose: one of the two call sites is inside the locked {@code generateFiles()},
+     * and it has to stay byte-identical.
      */
-    private static void populateSidecarBodies(ModuleSidecar sidecar,
-                                              Map<String, String> contentByService) {
+    private void populateSidecarBodies(ModuleSidecar sidecar,
+                                       Map<String, String> contentByService) {
         contentByService.forEach(sidecar::putBody);
+        putUnroutedBodies(sidecar);
+    }
+
+    /**
+     * For a routed test round, stores the unrouted rendering of every routed service beside the
+     * routed one.
+     *
+     * <p>The routed body of {@code CLAUDE.md} is the safety half only. If {@code TESTING.md} is
+     * deleted and only the main sources are rebuilt, this sidecar is all the merge has of the test
+     * round, and without the unrouted body the rest of its guardrails would be in no file until the
+     * tests happened to be compiled again. A second render pass, paid only by a round that is
+     * routed; every other round returns at the first line and its sidecar is unchanged.
+     */
+    private void putUnroutedBodies(ModuleSidecar sidecar) {
+        Set<String> activeServices =
+            ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root));
+        if (!activeServices.contains("testing")) {
+            // No TESTING.md, no feature: not even a log line, so a project that never opted in
+            // cannot tell this code exists.
+            return;
+        }
+        // Routing moves a guardrail between files without changing whether the build succeeds, so
+        // the decision is recorded: the output files cannot say why a rule is or is not in them.
+        String sourceSet = moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
+        if (!collector.isTestRound()) {
+            if (log != null) {
+                log.debug("testing.skip reason=not-test-round sourceSet={}", sourceSet);
+            }
+            return;
+        }
+        GuardrailModel model = collector.model();
+        int moved = model.withoutSafety().totalAnnotatedReferences();
+        if (moved == 0) {
+            // Nothing left the always-loaded files, so the routed body is the unrouted one.
+            if (log != null) {
+                log.debug("testing.skip reason=no-test-guardrails sourceSet={}", sourceSet);
+            }
+            return;
+        }
+        int[] routed = {0};
+        new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER, RoleConfig.load(root))
+            .unrouted().build().contentByService.forEach((service, body) -> {
+                if (ServiceRegistry.routesTestGuardrails(service)) {
+                    sidecar.putUnroutedBody(service, body);
+                    routed[0]++;
+                }
+            });
+        if (log != null) {
+            log.info("testing.route sourceSet={} routed={} moved={} kept={}", sourceSet, routed[0], moved,
+                model.safetyOnly().totalAnnotatedReferences());
+        }
     }
 
     /**
@@ -2128,6 +2198,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (debugLog != null) {
                 debugLog.debug("merge.markers service={} html={} bytes={}",
                     service, htmlMarkers, mergedBody.length());
+                // Deleting TESTING.md changes what the merge reads for a module, and the file it
+                // writes cannot say so: the body is well formed either way.
+                for (String module : ModuleSidecar.testingFallbackModules(service, allSidecars)) {
+                    debugLog.debug("merge.testing.fallback service={} module={}", service, module);
+                }
             }
         }
         return merged;
