@@ -26,6 +26,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import se.deversity.vibetags.annotations.AISecure;
 
 /**
  * The bounds the classpath probe runs under, and what it says when it hits one.
@@ -39,6 +40,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>So both halves are the contract: stop at the cap, and say that you did.
  */
+@AISecure(
+    aspect = "Enforces the trust boundary: manifests come from third-party dependency JARs "
+        + "and their text is merged into the consumer's always-loaded instruction files. "
+        + "These cases are the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list; relaxing one "
+        + "to make a test pass widens what a dependency may put in front of an agent"
+)
 class TransitiveManifestReaderLimitsTest {
 
     private ch.qos.logback.classic.Logger logger;

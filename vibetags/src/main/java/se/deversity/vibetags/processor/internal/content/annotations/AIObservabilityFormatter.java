@@ -27,10 +27,14 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
         if (traces.length > 0)  summary.append("Traces: ").append(String.join(", ", traces)).append(". ");
         if (logs.length > 0)    summary.append("Logs: ").append(String.join(", ", logs)).append(". ");
         if (!note.isEmpty())    summary.append("Note: ").append(note);
+        // Each clause above ends in a period and a space, so a summary whose last field is
+        // unset ends in that space and carries it into the file. The standard pre-commit
+        // trailing-whitespace hook strips it and the next build writes it back, forever.
+        String details = summary.toString().stripTrailing();
 
         switch (platform) {
             case CURSOR:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", details)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
@@ -41,20 +45,20 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append("    </element>\n");
                 break;
             case CODEX:
-                sb.append(CommonFormatterHelper.codexBullet(className, summary.toString()));
+                sb.append(CommonFormatterHelper.codexBullet(className, details));
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", details)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
+                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", details)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
+                sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", details)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", details)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n');
@@ -66,16 +70,16 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### OBSERVABILITY: ").append(className).append("\n- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard/alert.\n")
-                    .append(CommonFormatterHelper.bullet("Details", summary.toString())).append('\n');
+                    .append(CommonFormatterHelper.bullet("Details", details)).append('\n');
                 break;
             case WINDSURF:
-                sb.append("* `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
+                sb.append("* `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(" - ", details)).append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
+                sb.append("- `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(": ", details)).append('\n');
                 break;
             case INTERPRETER:
-                sb.append("- `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
+                sb.append("- `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(": ", details)).append('\n');
                 break;
             default:
                 break;

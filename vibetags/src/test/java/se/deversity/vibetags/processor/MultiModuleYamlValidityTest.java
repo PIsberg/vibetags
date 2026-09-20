@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import se.deversity.vibetags.annotations.AILoadBearing;
 
 /**
  * Six of the generated files are YAML documents, and a YAML document has exactly one of each
@@ -43,6 +44,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>These tests therefore assert what the consuming tool observes, not what the bytes look like:
  * the file parses with duplicate keys forbidden, and both modules' elements survive the parse.
  */
+@AILoadBearing(
+    invariant = "At least one fixture here gives a single module two sidecars sharing one "
+        + "region id, that is, an annotated main source set and an annotated test source set",
+    breaksIf = "Every reactor fixture annotates main sources only. That is exactly how the "
+        + "duplicate top-level key defect survived: one body per region, so no region ever "
+        + "carried two scaffolds, and all six YAML outputs shipped unparseable"
+)
 class MultiModuleYamlValidityTest {
 
     private static final String ALPHA = "com.example.alpha.AlphaService";

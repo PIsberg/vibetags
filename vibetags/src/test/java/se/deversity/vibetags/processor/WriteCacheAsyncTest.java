@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import se.deversity.vibetags.annotations.AIParallelTests;
 
 /**
  * Concurrency stress test for {@link WriteCache} using async-test-lib.
@@ -23,6 +24,11 @@ import static org.junit.jupiter.api.Assertions.*;
 // @Isolated: real platform threads plus detector instrumentation. Runs alone so that
 // pressure does not reach the javac-based e2e tests beside it. See docs/TESTS.md.
 @Isolated
+@AIParallelTests(
+    reason = "Must keep running alone. Real platform threads plus detector instrumentation "
+        + "generate load that reaches the javac-based end-to-end tests beside it, and those "
+        + "fail as flakes far from this file, so the cost never points back here"
+)
 class WriteCacheAsyncTest {
 
     private WriteCache cache;

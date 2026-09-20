@@ -1,0 +1,10 @@
+---
+paths: ["**/SS.java"]
+---
+
+<!-- VIBETAGS-START -->
+# Rules for SS
+
+## Schema & Serialization Safety
+- **Rule**: Prohibit altering data formats, fields, database columns, or serialization structures without explicit backward-compatible migration paths.
+<!-- VIBETAGS-END -->
