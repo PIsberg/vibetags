@@ -9,7 +9,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -107,6 +109,22 @@ public final class RoleConfig {
         return new RoleConfig(parsed, ContentHash.of(content));
     }
 
+    /**
+     * Memoised {@link #roleFor} answers, keyed by the two values the match actually reads.
+     *
+     * <p>Not keyed by {@link TaggedElement} itself: its {@code equals} is {@code (path, kind)}
+     * while the match reads {@code (qualifiedName, kind)}. Those agree for every element the
+     * processor builds today, but a memo keyed on something other than its function's inputs
+     * answers the wrong question the moment they stop agreeing, and silently.
+     *
+     * <p>Concurrent because this object is handed to the renderers and nothing in its contract says
+     * they are sequential. They are today — the parallel phase writes content that was already
+     * rendered — so this keeps that a performance decision rather than a correctness one. Bounded
+     * by one build's elements, and the keys are strings, so nothing here holds a javac
+     * {@code Element}.
+     */
+    private final Map<String, Optional<String>> roleMemo = new ConcurrentHashMap<>();
+
     /** True when there are no usable roles (parsing produced nothing) — treat as roles-off. */
     public boolean isEmpty() {
         return roles.isEmpty();
@@ -122,6 +140,20 @@ public final class RoleConfig {
      * the element belongs to no role and should keep its per-class file.
      */
     public Optional<String> roleFor(TaggedElement owner) {
+        String key = owner.kind() + "::" + owner.qualifiedName();
+        return roleMemo.computeIfAbsent(key, unused -> matchRole(owner));
+    }
+
+    /**
+     * The uncached match: every role's FQN set, then every role's compiled globs, in config order.
+     *
+     * <p>Cost is roles times globs regex matches per element, and the same element is asked several
+     * times per build — once by {@code GranularRulesWriter.plan}, which itself runs two to three
+     * times, and once per indexed aggregate through {@code GranularIndexSection.scopedPath}.
+     * Memoised in {@link #roleMemo} because the answer depends only on this config and the element,
+     * both of which are fixed for the life of this object.
+     */
+    private Optional<String> matchRole(TaggedElement owner) {
         String path = ownerPath(owner);
         String fqn = owner.qualifiedName();
         for (Role role : roles) {

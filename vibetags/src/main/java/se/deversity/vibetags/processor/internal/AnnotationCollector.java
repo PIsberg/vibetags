@@ -57,6 +57,8 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
+import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
+import se.deversity.vibetags.processor.internal.content.GranularBody;
 import java.lang.annotation.Annotation;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -165,6 +167,20 @@ public final class AnnotationCollector {
      */
     private @Nullable GuardrailModel memo;
 
+    /**
+     * The per-element granular bodies for {@link #memo}, or {@code null} when they must be rebuilt.
+     *
+     * <p>Rendered from the model alone, and the heaviest per-element render there is: 44 bucket
+     * loops plus a split and a regex match per line. It was recomputed on every
+     * {@code GuardrailContentBuilder.build()} — measured at 12 times for one {@code mvn verify} of
+     * the three-module example, because the root build, each module's own build, every accepting
+     * mirror target and each safety digest all build content from the same collected state.
+     *
+     * <p>Memoised beside the model rather than inside the renderer on purpose: the renderer is a
+     * static singleton, and a memo there would outlive the compilation that filled it.
+     */
+    private @Nullable Map<TaggedElement, GranularBody> granularMemo;
+
     /** Creates every bucket up front, in registry order, so no caller can ever see a missing one. */
     public AnnotationCollector() {
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
@@ -183,6 +199,7 @@ public final class AnnotationCollector {
         if (this.captureSignatures != capture) {
             this.captureSignatures = capture;
             memo = null;
+            granularMemo = null;
         }
     }
 
@@ -207,6 +224,7 @@ public final class AnnotationCollector {
         if (position != null) {
             lockedPositions.put(element, position);
             memo = null;
+            granularMemo = null;
         }
     }
 
@@ -258,6 +276,7 @@ public final class AnnotationCollector {
             anyAnnotationsFound = true;
         }
         memo = null;
+        granularMemo = null;
         return added;
     }
 
@@ -274,6 +293,7 @@ public final class AnnotationCollector {
         anyAnnotationsFound = false;
         sawSourceRoots = false;
         memo = null;
+        granularMemo = null;
     }
 
     /**
@@ -345,6 +365,7 @@ public final class AnnotationCollector {
         }
         transitiveRules.addAll(rules);
         memo = null;
+        granularMemo = null;
     }
 
     /** The transitive rules recorded so far, deduplicated in insertion order. */
@@ -367,6 +388,23 @@ public final class AnnotationCollector {
             memo = m;
         }
         return m;
+    }
+
+    /**
+     * The per-element granular bodies for the current contents, rendered once per collected state.
+     *
+     * <p>Unmodifiable: every caller reads it, today only for its key set and to write one file per
+     * entry, and sharing one map between the root build, the module builds and the mirror targets
+     * only works while none of them can change it.
+     */
+    public Map<TaggedElement, GranularBody> granularRules() {
+        Map<TaggedElement, GranularBody> rules = granularMemo;
+        if (rules == null) {
+            rules = Collections.unmodifiableMap(
+                PlatformRendererRegistry.granularRenderer().renderGranular(model()));
+            granularMemo = rules;
+        }
+        return rules;
     }
 
     /** Unmodifiable view of the elements carrying {@code type}; empty when none do. */

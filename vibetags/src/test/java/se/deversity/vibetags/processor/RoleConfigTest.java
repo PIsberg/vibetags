@@ -176,4 +176,34 @@ class RoleConfigTest {
             "the file holds both lines' classes, so its frontmatter must name both lines' globs; "
                 + "with only the first, the file never loads for the classes of the second");
     }
+
+    @Test
+    @DisplayName("a package and a class of the same name are not one cached answer")
+    void kindIsPartOfTheRoleLookup(@TempDir Path dir) throws IOException {
+        // roleFor is memoised, because the same element is asked several times per build: twice or
+        // three times by GranularRulesWriter.plan and once per indexed aggregate. A memo keyed only
+        // by qualified name would answer this second call with the first call's role, which is the
+        // one way memoising here can be wrong, and it would be wrong silently.
+        RoleConfig roles = write(dir,
+            "hooks = com/example/webhooks/**",
+            "klass = com/example/webhooks.java");
+
+        assertEquals("hooks", roles.roleFor(pkg("com.example.webhooks")).orElse(null),
+            "the package path ends in a separator and belongs to the package role");
+        assertEquals("klass", roles.roleFor(type("com.example.webhooks")).orElse(null),
+            "the class of the same qualified name resolves to a .java path and a different role");
+    }
+
+    @Test
+    @DisplayName("asking twice gives the same answer")
+    void repeatedLookupsAgree(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "api-endpoints = **/*Controller.java");
+        TaggedElement controller = type("com.example.web.OrderController");
+        TaggedElement service = type("com.example.web.OrderService");
+
+        for (int call = 0; call < 3; call++) {
+            assertEquals("api-endpoints", roles.roleFor(controller).orElse(null), "call " + call);
+            assertTrue(roles.roleFor(service).isEmpty(), "call " + call + ": unmatched stays unmatched");
+        }
+    }
 }
