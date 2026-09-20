@@ -6,6 +6,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
@@ -177,5 +178,63 @@ class RuleFileLengthWarnerTest {
         assertTrue(appender.list.stream().map(ILoggingEvent::getFormattedMessage)
                 .anyMatch(m -> m.equals("validation.skip check=rule-file-length file=.devin/rules/team.md reason=no-markers")),
             "the skipped file says why");
+    }
+
+    /**
+     * The byte prefilter must not swallow a real finding.
+     *
+     * <p>With DEBUG off, a file at or under the cap in bytes is skipped without being read, because
+     * a UTF-8 file that small cannot hold more characters than the cap. Every other test in this
+     * class runs with DEBUG on, which bypasses that path entirely, so without this case the
+     * prefilter would be uncovered by the suite that exists to guard this warner.
+     */
+    @Test
+    @DisplayName("with DEBUG off an oversized file still warns")
+    void theBytePrefilterDoesNotSwallowAnOversizedFile(@TempDir Path root) throws IOException {
+        logger.setLevel(Level.WARN);
+        Files.createDirectories(root.resolve(".windsurf/rules"));
+        Files.writeString(root.resolve(".windsurf/rules/web.md"),
+            generated("a".repeat(LIMIT + 1 - markerOverhead())), StandardCharsets.UTF_8);
+
+        warn(root);
+
+        assertEquals(List.of("validation.rule-file-over-limit file=.windsurf/rules/web.md chars=12001 limit=12000"),
+            warnEvents());
+        assertEquals(1, warnings.size(), "the prefilter must not hide an over-cap file: " + warnings);
+    }
+
+    @Test
+    @DisplayName("with DEBUG off a file within the cap warns about nothing")
+    void theBytePrefilterStaysSilentForASmallFile(@TempDir Path root) throws IOException {
+        logger.setLevel(Level.WARN);
+        Files.createDirectories(root.resolve(".windsurf/rules"));
+        Files.writeString(root.resolve(".windsurf/rules/web.md"), generated("a".repeat(100)),
+            StandardCharsets.UTF_8);
+
+        warn(root);
+
+        assertEquals(List.of(), warnEvents());
+        assertEquals(List.of(), warnings);
+    }
+
+    /**
+     * A file whose characters are within the cap but whose bytes are not: the prefilter declines to
+     * decide and the ordinary read reaches the same verdict it always did, which is silence.
+     */
+    @Test
+    @DisplayName("multi-byte characters do not make a within-cap file warn")
+    void aMultiByteFileOverTheByteCapButUnderTheCharCapIsSilent(@TempDir Path root) throws IOException {
+        logger.setLevel(Level.WARN);
+        Files.createDirectories(root.resolve(".windsurf/rules"));
+        // Three bytes per character, so well over the cap in bytes and well under it in characters.
+        String filler = "中".repeat(LIMIT - markerOverhead() - 1);
+        Path file = root.resolve(".windsurf/rules/web.md");
+        Files.writeString(file, generated(filler), StandardCharsets.UTF_8);
+        assertTrue(Files.size(file) > LIMIT, "the fixture must exceed the cap in bytes to be the case it claims");
+
+        warn(root);
+
+        assertEquals(List.of(), warnEvents(), "the cap is characters, and this file is within it");
+        assertEquals(List.of(), warnings);
     }
 }

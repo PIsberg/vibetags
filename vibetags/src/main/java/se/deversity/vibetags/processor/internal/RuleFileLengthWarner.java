@@ -67,6 +67,19 @@ public final class RuleFileLengthWarner {
     private static void measure(Messager messager, @Nullable Logger log, Path displayRoot, String serviceKey,
                                 Path file) {
         String shown = HandAuthoredYamlKeyWarner.displayPath(displayRoot, file);
+        // A UTF-8 file of at most the cap in bytes cannot hold more than the cap in chars: every
+        // code point costs at least as many bytes as the UTF-16 units it occupies (1 to 1, 2 to 1,
+        // 3 to 1, and 4 to 2 for a surrogate pair). Such a file can never warn, so reading and
+        // decoding it is pure cost, and this runs over every rule file after every build, including
+        // the ones a fingerprint short-circuit left untouched.
+        //
+        // Gated on DEBUG rather than applied always, deliberately. The two skip events below are
+        // contracts (invariant 15, docs/LOGGING.md) and fire today for small files; a reader who
+        // asked for DEBUG still gets them, and pays the read to do so. With DEBUG off, which is
+        // every ordinary build, nothing observable is lost.
+        if ((log == null || !log.isDebugEnabled()) && withinCapByBytes(file)) {
+            return;
+        }
         String content;
         try {
             content = Files.readString(file, StandardCharsets.UTF_8);
@@ -94,6 +107,20 @@ public final class RuleFileLengthWarner {
         if (log != null) {
             log.warn("validation.rule-file-over-limit file={} chars={} limit={}",
                 shown, length, RuleFileLengthRule.WORKSPACE_RULE_FILE_LIMIT);
+        }
+    }
+
+    /**
+     * True when the file is small enough in bytes that it cannot exceed the cap in characters.
+     *
+     * <p>A file whose size cannot be read answers {@code false}, so the caller falls through to the
+     * ordinary read and reaches the same verdict it always did, including its skip event.
+     */
+    private static boolean withinCapByBytes(Path file) {
+        try {
+            return Files.size(file) <= RuleFileLengthRule.WORKSPACE_RULE_FILE_LIMIT;
+        } catch (IOException | RuntimeException unsizable) {
+            return false;
         }
     }
 }
