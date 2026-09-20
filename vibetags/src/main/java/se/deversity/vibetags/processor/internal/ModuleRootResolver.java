@@ -111,7 +111,11 @@ public final class ModuleRootResolver {
             }
         }
         if (moduleRoot == null) return null;
-        return new ModuleIdentity(moduleRoot, pickSourceSet(sourceSets));
+        // A round that saw main and a test source set at once: pickSourceSet prefers main, so
+        // nothing downstream would otherwise know the test half was here and went unrouted.
+        boolean mixed = sourceSets.contains(ModuleIdentity.MAIN)
+            && sourceSets.stream().anyMatch(ModuleIdentity::isTestSourceSetName);
+        return new ModuleIdentity(moduleRoot, pickSourceSet(sourceSets), mixed);
     }
 
     /**
