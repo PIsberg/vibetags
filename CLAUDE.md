@@ -151,3 +151,9 @@ answers; use it when the topic is not below.
 
 <rule>Never propose edits to files listed in <locked_files>.</rule>
 <!-- VIBETAGS-END -->
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan:
+specs/001-test-annotations-testing-md/plan.md
+<!-- SPECKIT END -->
