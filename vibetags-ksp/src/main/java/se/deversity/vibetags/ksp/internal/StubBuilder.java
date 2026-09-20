@@ -213,7 +213,7 @@ final class StubBuilder {
             parameters.put(element.getSimpleName().toString(), element);
         }
         JvmTypes.Scope scope = new JvmTypes.Scope(parameters, outerScope);
-        recordSupertypes(cls, type);
+        recordSupertypes(cls, type, scope);
 
         Owner.Kind ownerKind;
         if (cls.isCompanionObject()) {
@@ -270,7 +270,7 @@ final class StubBuilder {
         return type;
     }
 
-    private void recordSupertypes(KSClassDeclaration cls, KTypeElement type) {
+    private void recordSupertypes(KSClassDeclaration cls, KTypeElement type, JvmTypes.Scope scope) {
         try {
             Iterator<KSType> supertypes = UtilsKt.getAllSuperTypes(cls).iterator();
             while (supertypes.hasNext()) {
@@ -279,6 +279,32 @@ final class StubBuilder {
         } catch (RuntimeException unresolved) {
             // A supertype that does not resolve leaves the set short; only the locked-override
             // check reads it, and a missed override there costs one advisory warning.
+        }
+        boolean isClass = type.getKind() == ElementKind.CLASS || type.getKind() == ElementKind.ENUM;
+        boolean hasExplicitSuperclass = false;
+        try {
+            for (KSTypeReference ref : list(cls.getSuperTypes().iterator())) {
+                try {
+                    KSType resolved = ref.resolve();
+                    KSDeclaration decl = resolved.getDeclaration();
+                    if (decl instanceof KSClassDeclaration superCls) {
+                        TypeMirror rendered = types.render(ref, JvmTypes.Position.ARGUMENT, scope);
+                        if (superCls.getClassKind() == ClassKind.INTERFACE) {
+                            type.addInterface(rendered);
+                        } else if (isClass && !hasExplicitSuperclass) {
+                            hasExplicitSuperclass = true;
+                            type.setSuperclass(rendered);
+                        }
+                    }
+                } catch (RuntimeException unresolved) {
+                    // An unresolvable supertype reference is skipped.
+                }
+            }
+        } catch (RuntimeException unresolved) {
+            // Unresolvable supertypes sequence is skipped.
+        }
+        if (isClass && !hasExplicitSuperclass && !type.getQualifiedName().contentEquals("java.lang.Object")) {
+            type.setSuperclass(types.declared("java.lang.Object", List.of()));
         }
     }
 
