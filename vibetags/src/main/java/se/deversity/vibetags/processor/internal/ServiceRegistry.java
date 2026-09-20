@@ -32,6 +32,26 @@ public final class ServiceRegistry {
     /** On-disk file name for the lean-indexed root aggregate opt-in. */
     public static final String ROOT_INDEX_FILE = ".vibetags-root-index";
 
+    /**
+     * Opt-in keys whose file is a marker rather than something an AI tool reads.
+     *
+     * <p>The {@code AGENTS.md} sole-file rule asks one question: is {@code AGENTS.md} the only
+     * file an AI tool reads in this project. These keys are opt-ins, so they are in
+     * {@link #OPT_IN_KEYS}, but none of them answers that question.
+     *
+     * <ul>
+     *   <li>{@code root_index} has no renderer at all; its presence flips how a reactor root
+     *       merges its aggregates, and nothing is ever written to the file (#788).</li>
+     *   <li>{@code testing} is read on demand by an agent already working on tests, never as a
+     *       project instruction file, and is never what an {@code AGENTS.md} pointer points at.</li>
+     * </ul>
+     *
+     * <p>Counting either one made a project whose only AI config file is {@code AGENTS.md} stop
+     * having it written the moment it opted in, which is Tier-1 invariant 4 answering wrongly for
+     * a reason no diagnostic explains.
+     */
+    private static final Set<String> MARKER_ONLY_OPT_INS = Set.of("root_index", "testing");
+
     /** Subset of service keys whose presence on disk activates a service. */
     private static final Set<String> OPT_IN_KEYS = Set.of(
         "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
@@ -366,7 +386,7 @@ public final class ServiceRegistry {
         // TESTING.md does not count as company: no tool reads it as its instruction file, so it
         // is never what an AGENTS.md pointer points at, and counting it would stop a Codex-only
         // project's AGENTS.md being written the moment it opted in to test routing.
-        int aiConfigFiles = active.size() - (active.contains("testing") ? 1 : 0);
+        int aiConfigFiles = (int) active.stream().filter(k -> !MARKER_ONLY_OPT_INS.contains(k)).count();
         if (active.contains("codex") && aiConfigFiles > 1
                 && !carriesGeneratedBlock(allServiceFiles.get("codex"))) {
             active.remove("codex");
