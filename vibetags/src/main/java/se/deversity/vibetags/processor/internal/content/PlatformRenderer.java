@@ -56,4 +56,23 @@ public interface PlatformRenderer {
     default @Nullable WholeFileMerge wholeFileMerge() {
         return null;
     }
+
+    /**
+     * Text every module's body of this file opens with, and which therefore belongs once at the
+     * top of a reactor's file rather than inside each module's region.
+     *
+     * <p>Only {@code TESTING.md} declares one. Its regions each began with the same two-line
+     * preamble saying what the file is scoped to — true of the file, not of any one module — so a
+     * three-module reactor said it three times, in a feature whose whole purpose is to spend less
+     * of the agent's context (issue #783).
+     *
+     * <p>Hoisted only when every region's body actually starts with it, so a module rendered by an
+     * older processor, or one that renders something else entirely, keeps its own text rather than
+     * having a prefix cut off it.
+     *
+     * @return the shared prologue, or {@code ""} when this platform has none
+     */
+    default String filePrologue() {
+        return "";
+    }
 }

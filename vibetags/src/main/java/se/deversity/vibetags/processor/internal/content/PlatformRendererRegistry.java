@@ -83,6 +83,16 @@ public final class PlatformRendererRegistry {
         return renderer == null ? null : renderer.mergeShape();
     }
 
+    /** The prologue this service's renderer declares, or {@code ""} when it declares none. */
+    public static String filePrologueFor(String serviceKey) {
+        Platform platform = Platform.fromServiceKey(serviceKey);
+        if (platform == null) {
+            return "";
+        }
+        PlatformRenderer renderer = findRenderer(platform);
+        return renderer == null ? "" : renderer.filePrologue();
+    }
+
     /**
      * The whole-file merge declared by the renderer behind {@code serviceKey}, or {@code null} when
      * the service has no renderer, its file carries markers, or its output holds no per-element

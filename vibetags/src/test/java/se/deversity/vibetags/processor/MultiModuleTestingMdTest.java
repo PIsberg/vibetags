@@ -87,6 +87,37 @@ class MultiModuleTestingMdTest {
         assertFalse(claude.contains("ALPHA-TEST rule") || claude.contains("BETA-TEST rule"), claude);
     }
 
+    /**
+     * The preamble is about the file, so a reactor says it once (#783).
+     *
+     * <p>It used to open every module's region: two lines about what {@code TESTING.md} is scoped
+     * to, repeated once per module, in a feature whose whole purpose is to spend less of the
+     * agent's context. On {@code examples/multimodule} hoisting it takes the file from 1236 bytes
+     * to 985, and the saving grows with every module.
+     *
+     * <p>Above the regions, not inside the first one: a reader meets it before any module's
+     * content, and a module rebuilt on its own cannot take the file's preamble with it.
+     */
+    @Test
+    void thePreambleIsWrittenOncePerFileNotOncePerModule() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createFile(root.resolve("TESTING.md"));
+        buildBothModules();
+
+        String testing = Files.readString(root.resolve("TESTING.md"));
+        int occurrences = testing.split("These guardrails apply to test code", -1).length - 1;
+        assertEquals(1, occurrences,
+            "the preamble is about the file, not about a module, so it belongs once:\n" + testing);
+
+        int preambleAt = testing.indexOf("These guardrails apply to test code");
+        int firstRegionAt = testing.indexOf("VIBETAGS-MODULE:");
+        assertTrue(preambleAt >= 0 && firstRegionAt > preambleAt,
+            "it must sit above every region, not inside the first module's:\n" + testing);
+
+        assertTrue(testing.contains("ALPHA-TEST rule") && testing.contains("BETA-TEST rule"),
+            "hoisting the preamble must not cost a module its guardrails:\n" + testing);
+    }
+
     /** FR-011: rebuilding one module must not erase the other's region. */
     @Test
     void rebuildingOneModuleKeepsTheOthersRegion() throws IOException {

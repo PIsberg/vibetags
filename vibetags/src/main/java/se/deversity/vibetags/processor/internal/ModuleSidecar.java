@@ -1387,6 +1387,12 @@ public final class ModuleSidecar {
         String frontMatter = htmlMarkers && PlatformRendererRegistry.mergeShapeFor(serviceKey) == null
             ? sharedFrontMatter(bodiesOf(serviceKey, sidecars, false))
             : "";
+        // Same hoist, for a renderer that says in prose what the YAML platforms say in front
+        // matter: text about the file rather than about a module. Only TESTING.md declares one,
+        // and only when every region actually opens with it (issue #783).
+        if (frontMatter.isEmpty() && htmlMarkers) {
+            frontMatter = sharedPrologue(serviceKey, bodiesOf(serviceKey, sidecars, false));
+        }
         List<Map.Entry<String, String>> contributions = new ArrayList<>();
         boolean anyPointer = false;
         for (Map.Entry<String, List<ModuleSidecar>> region : groupByRegion(sidecars).entrySet()) {
@@ -1520,6 +1526,27 @@ public final class ModuleSidecar {
             }
         }
         return shared == null ? "" : shared;
+    }
+
+    /**
+     * The prologue {@code serviceKey}'s renderer declares, but only when every one of {@code bodies}
+     * opens with it.
+     *
+     * <p>The "every one" is the guard that matters. A sidecar written by an older processor, or by
+     * a module that renders this service differently, would otherwise have the first characters of
+     * its own content cut off by a prefix it never wrote.
+     */
+    static String sharedPrologue(String serviceKey, List<String> bodies) {
+        String prologue = PlatformRendererRegistry.filePrologueFor(serviceKey);
+        if (prologue.isEmpty() || bodies.isEmpty()) {
+            return "";
+        }
+        for (String body : bodies) {
+            if (!body.strip().startsWith(prologue.strip())) {
+                return "";
+            }
+        }
+        return prologue.strip();
     }
 
     private static String withoutFrontMatter(String body, String frontMatter) {

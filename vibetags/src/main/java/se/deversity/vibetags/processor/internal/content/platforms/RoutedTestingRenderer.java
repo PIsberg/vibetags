@@ -45,6 +45,15 @@ public final class RoutedTestingRenderer implements PlatformRenderer {
     }
 
     /**
+     * The preamble is about the file, not about any one module, so a reactor writes it once above
+     * every region rather than inside each of them. See {@link PlatformRenderer#filePrologue}.
+     */
+    @Override
+    public String filePrologue() {
+        return PREAMBLE;
+    }
+
+    /**
      * Drops the locked heading when nothing can appear under it.
      *
      * <p>The content builder renders this file from {@code model.withoutSafety()}, so its locked
