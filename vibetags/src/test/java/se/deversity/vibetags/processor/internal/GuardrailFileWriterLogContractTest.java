@@ -19,6 +19,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import se.deversity.vibetags.annotations.AIContext;
 
 /**
  * The writer's DEBUG events are a contract, not commentary.
@@ -31,6 +32,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Renaming an event asserted here is a breaking change. See CLAUDE.md, "Logging".
  */
 @DisplayName("GuardrailFileWriter DEBUG events")
+@AIContext(
+    focus = "The event names and reason= values asserted here are the writer's published "
+        + "contract, not test scaffolding: people grep build logs for write.skip and "
+        + "reason=cache-unchanged. Add a case when you add an event",
+    avoids = "Renaming or merging an asserted event to tidy the assertions; that is a "
+        + "breaking change for every consumer parsing a build log, and nothing else catches it"
+)
 class GuardrailFileWriterLogContractTest {
 
     private static final String HEADER =
