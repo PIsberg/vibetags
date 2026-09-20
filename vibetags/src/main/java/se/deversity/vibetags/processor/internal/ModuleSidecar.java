@@ -1154,6 +1154,22 @@ public final class ModuleSidecar {
         return bodies.get(serviceKey);
     }
 
+    /**
+     * The ids of the sidecars whose body for {@code serviceKey} the merge is reading from the
+     * unrouted fallback, in sidecar order. For the {@code merge.testing.fallback} log event: the
+     * merged file is well formed either way, so nothing else records that the substitution happened.
+     */
+    public static List<String> testingFallbackModules(String serviceKey, List<ModuleSidecar> sidecars) {
+        List<String> modules = new ArrayList<>();
+        for (ModuleSidecar s : sidecars) {
+            String unrouted = s.unroutedBodies.get(serviceKey);
+            if (s.testingWithdrawn && unrouted != null && !unrouted.isBlank()) {
+                modules.add(s.moduleId);
+            }
+        }
+        return modules;
+    }
+
     /** Glob-scoped granular directory (no trailing slash) for an aggregate service, else {@code null}. */
     private static @Nullable String aggregateScopedDir(String service) {
         switch (service) {

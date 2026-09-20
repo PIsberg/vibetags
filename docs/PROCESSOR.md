@@ -288,6 +288,46 @@ for removal, because the next real build of any survivor removes them
 (`CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration`,
 `checkMode_reportsADepartedModulesRuleFileAsDrift`).
 
+## Test-code guardrails (`TESTING.md`)
+
+`TESTING.md` is an opt-in like any other (`touch TESTING.md` at the VibeTags root), but no tool
+reads it by name. Its presence asks for guardrails on test code to be written there instead of
+into the always-loaded instruction files. VibeTags never creates it and never deletes it.
+
+**What counts as test code.** The round, not the element: Maven and Gradle compile each source
+set in its own javac invocation, and a round is a test round when its source set is `test`, ends
+in `Test` or `Tests` (`integrationTest`, `functionalTests`), or is `testFixtures`. `jmh` and
+`generated` are not `main` without being tests, and `latest` only contains the letters
+(`ModuleIdentityTest`). A round that compiles main and test sources together resolves to `main`
+and is not routed, which loses nothing.
+
+**What moves.** In a test round with `TESTING.md` present:
+
+- `TESTING.md` is rendered from the round's guardrails minus the six safety annotations, in the
+  `AGENTS.md` layout under a two-line preamble;
+- each instruction aggregate (`ServiceRegistry.routesTestGuardrails`: one rendered file, with
+  markers, not YAML; pinned per key by `ServiceRoutingContractTest`) is rendered from the safety
+  annotations only, and ends with one sentence pointing at `TESTING.md` if anything moved;
+- everything else is rendered from the whole model as before: ignore files, JSON, TOML and YAML
+  tool configuration, `.vibetags-locks`, `llms.txt`, the `*_safety` files and granular rule files.
+
+`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit` and `@AISecure` never move.
+`TESTING.md` is read on demand, and a safety guardrail an agent meets only after deciding to work
+on tests arrives too late (`TestingMdSafetyEndToEndTest`).
+
+**Toggling the file.** The build fingerprint folds in the active-service set, so creating or
+deleting `TESTING.md` is noticed by a round whose sources did not change. Creating it moves
+nothing until a test round runs. Deleting it and building only the main sources puts the test
+guardrails back: a routed round also stores what it would have written without the file, under
+the sidecar key `~tfull~<service>`, and the merge reads that once the opt-in is gone
+(`TestingMdLifecycleEndToEndTest`, `ModuleSidecarTestingFallbackTest`). Two limits: a module whose
+main sources carry no annotation has a single sidecar, so its test guardrails return on the next
+test compile and not on a main-only build; and removing the last annotation from a test source set
+leaves its guardrail in place, the same emptied-source-set limit that applies to every other file.
+
+**Log events.** `testing.route`, `testing.skip` and `merge.testing.fallback`; see
+[LOGGING.md](LOGGING.md). A project without `TESTING.md` logs none of them.
+
 ## Machine-readable lock report (`.vibetags-locks`)
 
 An opt-in pseudo-platform (service key `locks_report`, touch `.vibetags-locks` to enable) that emits

@@ -606,6 +606,7 @@ touch .clinerules                            # Cline AI assistant (single file, 
 #                                            # (Cline itself converts the file to the directory)
 touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment exclusion lists
 touch replit.md                              # Replit Agent
+touch TESTING.md                             # not a tool's file: test-code guardrails go here, out of the always-loaded files (safety annotations stay)
 mkdir -p .zencoder/rules                     # Zencoder (granular per-class rules)
 mkdir -p .agents/skills/vibetags-guardrails && touch .agents/skills/vibetags-guardrails/SKILL.md  # cross-client Agent Skills
 mkdir -p .junie && touch .junie/AGENTS.md    # JetBrains Junie (current; legacy .junie/guidelines.md also written)

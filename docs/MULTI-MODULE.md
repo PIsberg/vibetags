@@ -248,6 +248,15 @@ live under the *module* directory and the root cannot name them relatively. A mo
 the safety tier contributes only its pointer, so no empty `<project_guardrails>` shell appears.
 Digests ride in the sidecar under `~idx~<service>` keys.
 
+A test source set's sidecar can carry one more reserved key family, `~tfull~<service>`, written
+only by a round that routed its guardrails to `TESTING.md`. It holds what the round would have
+written to that service's file without `TESTING.md`. The ordinary `<service>` body of such a
+sidecar is the safety half only, so the merge reads `~tfull~` instead once `readAll()` finds the
+opt-in gone; the decision is transient state on the sidecar instances, like the index mode above,
+and `mergeFor` stays disk-free. An unrouted round writes no such key, and an older processor
+leaves it unstored like any reserved key it does not know. See
+[PROCESSOR.md](PROCESSOR.md#test-code-guardrails-testingmd).
+
 Losslessness guard: a module is linked only when it actually emits its own per-module output for that
 service (its module dir opted into `.claude/rules/` and/or `CLAUDE.md`); a module with no output of
 its own keeps its embedded body so nothing is dropped. The decision is computed on the filesystem in

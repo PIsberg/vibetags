@@ -195,7 +195,9 @@ class TestingMdRoutingEndToEndTest {
      * annotations never saves its sidecar ({@code generateFiles()}, "Only persist the sidecar when
      * this compilation actually saw annotations"), so the source set's previous sidecar keeps
      * contributing its old body. Measured on 2026-09-20 with no {@code TESTING.md} at all: the
-     * removed test guardrail lingers in {@code CLAUDE.md} the same way. {@code generateFiles()} is
+     * removed test guardrail lingers in {@code CLAUDE.md} the same way. It is the limitation
+     * {@link SourceSetIsolationEndToEndTest} already pins ("a source set emptied of every annotation
+     * ... its sidecar is the recorded escape"), seen in a new file. {@code generateFiles()} is
      * {@code @AILocked}, so this is escalated to the owner, and the case is disabled rather than
      * rewritten to assert the behaviour it was written to reject.
      */

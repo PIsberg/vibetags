@@ -27,6 +27,7 @@ import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.PartialRoundDetector;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
 import se.deversity.vibetags.processor.model.ContentHash;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
@@ -2041,20 +2042,43 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * routed; every other round returns at the first line and its sidecar is unchanged.
      */
     private void putUnroutedBodies(ModuleSidecar sidecar) {
-        if (!collector.isTestRound()) {
-            return;
-        }
         Set<String> activeServices =
             ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root));
         if (!activeServices.contains("testing")) {
+            // No TESTING.md, no feature: not even a log line, so a project that never opted in
+            // cannot tell this code exists.
             return;
         }
+        // Routing moves a guardrail between files without changing whether the build succeeds, so
+        // the decision is recorded: the output files cannot say why a rule is or is not in them.
+        String sourceSet = moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
+        if (!collector.isTestRound()) {
+            if (log != null) {
+                log.debug("testing.skip reason=not-test-round sourceSet={}", sourceSet);
+            }
+            return;
+        }
+        GuardrailModel model = collector.model();
+        int moved = model.withoutSafety().totalAnnotatedReferences();
+        if (moved == 0) {
+            // Nothing left the always-loaded files, so the routed body is the unrouted one.
+            if (log != null) {
+                log.debug("testing.skip reason=no-test-guardrails sourceSet={}", sourceSet);
+            }
+            return;
+        }
+        int[] routed = {0};
         new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER, RoleConfig.load(root))
             .unrouted().build().contentByService.forEach((service, body) -> {
                 if (ServiceRegistry.routesTestGuardrails(service)) {
                     sidecar.putUnroutedBody(service, body);
+                    routed[0]++;
                 }
             });
+        if (log != null) {
+            log.info("testing.route sourceSet={} routed={} moved={} kept={}", sourceSet, routed[0], moved,
+                model.safetyOnly().totalAnnotatedReferences());
+        }
     }
 
     /**
@@ -2164,6 +2188,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (debugLog != null) {
                 debugLog.debug("merge.markers service={} html={} bytes={}",
                     service, htmlMarkers, mergedBody.length());
+                // Deleting TESTING.md changes what the merge reads for a module, and the file it
+                // writes cannot say so: the body is well formed either way.
+                for (String module : ModuleSidecar.testingFallbackModules(service, allSidecars)) {
+                    debugLog.debug("merge.testing.fallback service={} module={}", service, module);
+                }
             }
         }
         return merged;

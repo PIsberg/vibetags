@@ -15,7 +15,7 @@ import se.deversity.vibetags.processor.model.GuardrailModel;
  * for one it has no arm for, so rendering under its own name would need 44 new arms and would
  * silently drop whichever one was forgotten.
  */
-public final class TestingRenderer implements PlatformRenderer {
+public final class RoutedTestingRenderer implements PlatformRenderer {
     // CodexRenderer is stateless — one shared instance is sufficient.
     private static final CodexRenderer CODEX_RENDERER = new CodexRenderer();
 
