@@ -97,6 +97,33 @@ class AgentsMdSoleFallbackTest {
             "AGENTS.md must still contain the Codex locked-files section");
     }
 
+    /**
+     * {@code .vibetags-root-index} is a marker, not an AI config file (#788).
+     *
+     * <p>It is in {@code OPT_IN_KEYS} because its presence is an opt-in, but it has no renderer and
+     * nothing ever writes to it: it flips how a reactor root merges its aggregates. The sole-file
+     * rule asks a different question — is {@code AGENTS.md} the only file an AI tool reads here —
+     * and a marker is not an answer to it.
+     *
+     * <p>Counting it made a project whose only AI config file is {@code AGENTS.md} stop having its
+     * {@code AGENTS.md} written the moment it opted into the lean index, which is Tier-1 invariant
+     * 4 giving the wrong answer for a reason the user cannot see.
+     */
+    @Test
+    void agentsMdBesideOnlyTheRootIndexMarkerIsStillTheSoleAiConfigFile(@TempDir Path tempDir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
+        h.touchOptIn("AGENTS.md");
+        h.touchOptIn(".vibetags-root-index");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        h.compile();
+
+        String agents = h.readFile("AGENTS.md");
+        assertTrue(agents.contains("PaymentProcessor"),
+            "a marker file is not another AI config file; AGENTS.md is still the only one here");
+        assertTrue(agents.contains("LOCKED FILES"),
+            "AGENTS.md must still carry the Codex locked-files section");
+    }
+
     // -----------------------------------------------------------------------
     // Coexisting with another AI file → AGENTS.md is left untouched
     // -----------------------------------------------------------------------
