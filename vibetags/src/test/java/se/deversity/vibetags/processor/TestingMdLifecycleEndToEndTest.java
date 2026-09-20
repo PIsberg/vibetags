@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -147,5 +148,88 @@ class TestingMdLifecycleEndToEndTest {
         assertTrue(claude.contains(MAIN_FOCUS) && claude.contains(TEST_LOCK), claude);
         assertFalse(claude.contains("TESTING.md"), "and nothing may point at a file that is gone:\n" + claude);
         assertFalse(Files.exists(root.resolve("TESTING.md")), "VibeTags never recreates the opt-in file");
+    }
+
+    /**
+     * Creating TESTING.md changes no source, so the round that follows looks exactly like the last
+     * one to anything that only hashes sources. It must still be treated as a different build.
+     */
+    @Test
+    void creatingTestingMdIsNoticedByARoundWhoseSourcesDidNotChange() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compileMain();
+        compileTests();
+        assertTrue(read("CLAUDE.md").contains(TEST_FOCUS), "precondition: unrouted");
+
+        Files.createFile(root.resolve("TESTING.md"));
+        compileTests();
+
+        assertTrue(read("TESTING.md").contains(TEST_FOCUS), "the identical test round must now route");
+        assertFalse(read("CLAUDE.md").contains(TEST_FOCUS), read("CLAUDE.md"));
+    }
+
+    /** The mirror image: deleting it, then the identical test round. */
+    @Test
+    void deletingTestingMdIsNoticedByARoundWhoseSourcesDidNotChange() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileTests();
+        assertFalse(read("CLAUDE.md").contains(TEST_FOCUS), "precondition: routed");
+
+        Files.delete(root.resolve("TESTING.md"));
+        compileTests();
+
+        assertTrue(read("CLAUDE.md").contains(TEST_FOCUS), read("CLAUDE.md"));
+    }
+
+    /** A committed TESTING.md that churns on every build is one nobody keeps. */
+    @Test
+    void theSameFullBuildTwiceRewritesNothing() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileTests();
+        String claude = read("CLAUDE.md");
+        String testing = read("TESTING.md");
+        long claudeWritten = Files.getLastModifiedTime(root.resolve("CLAUDE.md")).toMillis();
+        long testingWritten = Files.getLastModifiedTime(root.resolve("TESTING.md")).toMillis();
+
+        compileMain();
+        compileTests();
+
+        assertEquals(claude, read("CLAUDE.md"));
+        assertEquals(testing, read("TESTING.md"));
+        assertEquals(claudeWritten, Files.getLastModifiedTime(root.resolve("CLAUDE.md")).toMillis(),
+            "CLAUDE.md was rewritten by a build that changed nothing");
+        assertEquals(testingWritten, Files.getLastModifiedTime(root.resolve("TESTING.md")).toMillis(),
+            "TESTING.md was rewritten by a build that changed nothing");
+    }
+
+    /**
+     * The delete case again, for a module whose main sources carry no annotation, and a known
+     * limit: it fails. The main round saves no sidecar, so the test round's is the only one, and
+     * the fallback is not consulted until the tests are compiled again, at which point they are
+     * re-rendered unrouted and nothing is missing. Letting a lone sidecar into the merge, the way
+     * the lean root index does, was tried on 2026-09-20 and did not change the result, so the
+     * deciding guard is further in; not chased past the locked {@code generateFiles()}.
+     */
+    @Disabled("Known limit: unannotated main sources plus a main-only build after deleting TESTING.md "
+        + "leaves the test guardrails out until the next test compile. Needs an owner decision.")
+    @Test
+    void deletingTestingMdLosesNothingEvenWhenTheMainSourcesAreUnannotated() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createFile(root.resolve("TESTING.md"));
+        List<String[]> unannotatedMain = List.<String[]>of(new String[]{"com.example.ledger.Ledger",
+            "package com.example.ledger;\npublic class Ledger {\n}\n"});
+        compileSourceSet("main", unannotatedMain);
+        compileTests();
+        assertFalse(read("CLAUDE.md").contains(TEST_FOCUS), "precondition: routed");
+
+        Files.delete(root.resolve("TESTING.md"));
+        compileSourceSet("main", unannotatedMain);
+
+        assertTrue(read("CLAUDE.md").contains(TEST_FOCUS),
+            "the test guardrail must be back in CLAUDE.md:\n" + read("CLAUDE.md"));
     }
 }
