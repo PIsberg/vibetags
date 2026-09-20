@@ -2018,10 +2018,43 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      *
      * <p>{@code contentByService} already excludes granular directories, so every entry is a real
      * output file.
+     *
+     * <p>An instance method, where it used to be static, so that a routed test round can also
+     * record what it would have written without {@code TESTING.md}. The name and parameters are
+     * unchanged on purpose: one of the two call sites is inside the locked {@code generateFiles()},
+     * and it has to stay byte-identical.
      */
-    private static void populateSidecarBodies(ModuleSidecar sidecar,
-                                              Map<String, String> contentByService) {
+    private void populateSidecarBodies(ModuleSidecar sidecar,
+                                       Map<String, String> contentByService) {
         contentByService.forEach(sidecar::putBody);
+        putUnroutedBodies(sidecar);
+    }
+
+    /**
+     * For a routed test round, stores the unrouted rendering of every routed service beside the
+     * routed one.
+     *
+     * <p>The routed body of {@code CLAUDE.md} is the safety half only. If {@code TESTING.md} is
+     * deleted and only the main sources are rebuilt, this sidecar is all the merge has of the test
+     * round, and without the unrouted body the rest of its guardrails would be in no file until the
+     * tests happened to be compiled again. A second render pass, paid only by a round that is
+     * routed; every other round returns at the first line and its sidecar is unchanged.
+     */
+    private void putUnroutedBodies(ModuleSidecar sidecar) {
+        if (!collector.isTestRound()) {
+            return;
+        }
+        Set<String> activeServices =
+            ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root));
+        if (!activeServices.contains("testing")) {
+            return;
+        }
+        new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER, RoleConfig.load(root))
+            .unrouted().build().contentByService.forEach((service, body) -> {
+                if (ServiceRegistry.routesTestGuardrails(service)) {
+                    sidecar.putUnroutedBody(service, body);
+                }
+            });
     }
 
     /**

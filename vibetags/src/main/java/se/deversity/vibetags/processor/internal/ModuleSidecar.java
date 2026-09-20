@@ -144,6 +144,12 @@ public final class ModuleSidecar {
     private static final String KEY_MODULE_BODY_PREFIX = "~mod~";
     /** Key prefix for the safety-tier digest used by the lean indexed reactor root. */
     private static final String KEY_INDEX_DIGEST_PREFIX = "~idx~";
+    /**
+     * Key prefix for the body a routed test round would have written to a service's file without
+     * {@code TESTING.md}. Read only once that file is gone, so deleting it and rebuilding the main
+     * sources alone loses no test guardrail.
+     */
+    private static final String KEY_UNROUTED_BODY_PREFIX = "~tfull~";
     /** Key holding the annotated element ids this module+source-set contributed. */
     private static final String KEY_ELEMENT_IDS = "~elements";
     /**
@@ -196,6 +202,13 @@ public final class ModuleSidecar {
     private final Map<String, String> indexDigests = new LinkedHashMap<>();
 
     /**
+     * Service key to the body a routed test round would have written without {@code TESTING.md}.
+     * Persisted under {@link #KEY_UNROUTED_BODY_PREFIX}; empty for every unrouted round, so those
+     * sidecars stay byte-identical to what they were before the key existed.
+     */
+    private final Map<String, String> unroutedBodies = new LinkedHashMap<>();
+
+    /**
      * Granular rule stems (filename minus extension) this module+source-set wrote. Sibling
      * compilations read them so orphan cleanup never deletes a file it simply could not see —
      * neither another module's, nor another source set's (issue #330).
@@ -242,6 +255,12 @@ public final class ModuleSidecar {
     private final Map<String, String> indexPointers = new LinkedHashMap<>();
 
     /**
+     * True when {@code readAll} found no {@code TESTING.md} opt-in at the root. Transient like the
+     * index state above: it describes the disk now, not the round that wrote this sidecar.
+     */
+    private boolean testingWithdrawn;
+
+    /**
      * @param moduleId   filename-safe identifier (e.g. {@code "module_graph"}, {@code "_root_"})
      * @param modulePath path of the module root relative to the VibeTags root
      *                   (e.g. {@code "module-graph"}); {@code ""} for the root module
@@ -281,6 +300,16 @@ public final class ModuleSidecar {
         }
     }
 
+    /**
+     * Stores what a routed test round would have rendered for {@code serviceKey} had
+     * {@code TESTING.md} not been there; see {@link #reactorBody}.
+     */
+    public void putUnroutedBody(String serviceKey, String body) {
+        if (body != null && !body.isBlank()) {
+            unroutedBodies.put(serviceKey, body);
+        }
+    }
+
     /** Records the granular rule stems this module+source-set wrote this run. */
     public void setGranularStems(Set<String> stems) {
         granularStems.clear();
@@ -316,6 +345,7 @@ public final class ModuleSidecar {
     public String getRegionId() { return regionId; }
     public Map<String, String> getBodies() { return Collections.unmodifiableMap(bodies); }
     public Map<String, String> getModuleBodies() { return Collections.unmodifiableMap(moduleBodies); }
+    public Map<String, String> getUnroutedBodies() { return Collections.unmodifiableMap(unroutedBodies); }
     public Set<String> getGranularStems() { return Collections.unmodifiableSet(granularStems); }
     public Set<String> getElementIds() { return Collections.unmodifiableSet(elementIds); }
     public Map<String, GranularContribution> getGranularContributions() {
@@ -349,6 +379,9 @@ public final class ModuleSidecar {
         }
         for (Map.Entry<String, String> entry : indexDigests.entrySet()) {
             appendEncoded(sb, KEY_INDEX_DIGEST_PREFIX + entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<String, String> entry : unroutedBodies.entrySet()) {
+            appendEncoded(sb, KEY_UNROUTED_BODY_PREFIX + entry.getKey(), entry.getValue());
         }
         for (Map.Entry<String, GranularContribution> entry : granularUnits.entrySet()) {
             appendEncoded(sb, KEY_GRANULAR_UNIT_PREFIX + entry.getKey(), entry.getValue().serialize());
@@ -572,6 +605,7 @@ public final class ModuleSidecar {
             Map<String, String> bodies = new LinkedHashMap<>();
             Map<String, String> moduleBodies = new LinkedHashMap<>();
             Map<String, String> indexDigests = new LinkedHashMap<>();
+            Map<String, String> unroutedBodies = new LinkedHashMap<>();
             Set<String> granularStems = new LinkedHashSet<>();
             Set<String> elementIds = new LinkedHashSet<>();
             Map<String, GranularContribution> granularUnits = new LinkedHashMap<>();
@@ -632,6 +666,8 @@ public final class ModuleSidecar {
                     moduleBodies.put(key.substring(KEY_MODULE_BODY_PREFIX.length()), decode(val));
                 } else if (key.startsWith(KEY_INDEX_DIGEST_PREFIX)) {
                     indexDigests.put(key.substring(KEY_INDEX_DIGEST_PREFIX.length()), decode(val));
+                } else if (key.startsWith(KEY_UNROUTED_BODY_PREFIX)) {
+                    unroutedBodies.put(key.substring(KEY_UNROUTED_BODY_PREFIX.length()), decode(val));
                 } else if (key.startsWith(RESERVED_PREFIX)) {
                     // Reserved key from a newer processor: recognised, deliberately not stored, and
                     // above all kept out of the `else` below, which would put it in `bodies` and
@@ -655,6 +691,7 @@ public final class ModuleSidecar {
             s.bodies.putAll(bodies);
             s.moduleBodies.putAll(moduleBodies);
             s.indexDigests.putAll(indexDigests);
+            s.unroutedBodies.putAll(unroutedBodies);
             s.granularStems.addAll(granularStems);
             s.elementIds.addAll(elementIds);
             // Naming lines may precede or follow their contribution; attach once both are in.
@@ -812,6 +849,7 @@ public final class ModuleSidecar {
         }
         dropSupersededRegions(result, resultFiles, prune, log);
         applyRootIndexModeTo(root, result);
+        applyTestingOptInTo(root, result);
         return result;
     }
 
@@ -1081,6 +1119,41 @@ public final class ModuleSidecar {
         return false;
     }
 
+    /**
+     * Flags every sidecar when {@code TESTING.md} is not opted in at {@code root}, so the merge
+     * reads a routed round's {@code ~tfull~} body in place of its ordinary one.
+     *
+     * <p>Runs here for the reason {@link #applyRootIndexModeTo} does: it needs the filesystem, and
+     * {@code mergeFor} stays disk-free with its contract signature untouched. The opt-in is asked
+     * of {@link ServiceRegistry#isOptedIn}, not of {@code Files.exists}: a directory named
+     * {@code TESTING.md} is not the opt-in anywhere else either (issue #642).
+     *
+     * <p>The flag marks absence, not presence, so its default is the harmless one. A sidecar built
+     * in memory and never passed through {@code readAll} keeps the body it was given.
+     */
+    static void applyTestingOptInTo(Path root, List<ModuleSidecar> sidecars) {
+        Path testing = ServiceRegistry.buildServiceFileMap(root).get("testing");
+        if (testing != null && ServiceRegistry.isOptedIn("testing", testing)) return;
+        for (ModuleSidecar s : sidecars) {
+            s.testingWithdrawn = true;
+        }
+    }
+
+    /**
+     * The body this sidecar contributes to the shared file of {@code serviceKey}: the ordinary one,
+     * unless the round that wrote it was routed and {@code TESTING.md} has since gone, in which case
+     * the ordinary body is only the safety half and the unrouted body is the whole of it.
+     */
+    private @Nullable String reactorBody(String serviceKey) {
+        if (testingWithdrawn) {
+            String unrouted = unroutedBodies.get(serviceKey);
+            if (unrouted != null && !unrouted.isBlank()) {
+                return unrouted;
+            }
+        }
+        return bodies.get(serviceKey);
+    }
+
     /** Glob-scoped granular directory (no trailing slash) for an aggregate service, else {@code null}. */
     private static @Nullable String aggregateScopedDir(String service) {
         switch (service) {
@@ -1243,7 +1316,7 @@ public final class ModuleSidecar {
             List<String> parts = new ArrayList<>();
             String pointer = null;
             for (ModuleSidecar s : region.getValue()) {
-                String body = s.bodies.get(serviceKey);
+                String body = s.reactorBody(serviceKey);
                 if (body == null || body.isBlank()) continue;
                 // In lean-index mode a module that maintains its own per-module output for this
                 // service contributes its safety-tier digest plus a short pointer instead of its
@@ -1317,7 +1390,7 @@ public final class ModuleSidecar {
     private static List<String> bodiesOf(String serviceKey, List<ModuleSidecar> sidecars, boolean moduleOwn) {
         List<String> bodies = new ArrayList<>();
         for (ModuleSidecar s : sidecars) {
-            String body = moduleOwn ? s.moduleBodies.get(serviceKey) : s.bodies.get(serviceKey);
+            String body = moduleOwn ? s.moduleBodies.get(serviceKey) : s.reactorBody(serviceKey);
             if (body != null && !body.isBlank()) {
                 bodies.add(body.strip());
             }

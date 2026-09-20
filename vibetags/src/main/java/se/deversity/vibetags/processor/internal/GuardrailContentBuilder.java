@@ -24,6 +24,7 @@ public final class GuardrailContentBuilder {
     private final String generatedHeader;
     private final @Nullable RoleConfig roles;
     private boolean safetyDigest;
+    private boolean unrouted;
 
     public GuardrailContentBuilder(AnnotationCollector collector,
                                    Set<String> activeServices,
@@ -52,6 +53,17 @@ public final class GuardrailContentBuilder {
      */
     public GuardrailContentBuilder safetyDigest() {
         this.safetyDigest = true;
+        return this;
+    }
+
+    /**
+     * Renders every service from the whole model even in a test round with {@code TESTING.md}
+     * present: what the round would have written had the file not been there. The processor stores
+     * that on the sidecar, so that deleting {@code TESTING.md} and rebuilding only the main sources
+     * puts the test guardrails back instead of leaving them in no file.
+     */
+    public GuardrailContentBuilder unrouted() {
+        this.unrouted = true;
         return this;
     }
 
@@ -98,7 +110,8 @@ public final class GuardrailContentBuilder {
             context = context.asTestRound();
         }
         Map<String, String> contentByService = new java.util.LinkedHashMap<>();
-        RoutedViews views = new RoutedViews(model, collector.isTestRound() && activeServices.contains("testing"));
+        RoutedViews views = new RoutedViews(model,
+            !unrouted && collector.isTestRound() && activeServices.contains("testing"));
 
         // Render each active service (excluding granular directories and special-case exclusions)
         for (String serviceKey : activeServices) {
