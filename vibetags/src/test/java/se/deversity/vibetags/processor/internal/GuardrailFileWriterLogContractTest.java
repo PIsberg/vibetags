@@ -90,6 +90,22 @@ class GuardrailFileWriterLogContractTest {
     }
 
     @Test
+    @DisplayName("a non-marker file with matching size but differing bytes logs reason=bytes-differ")
+    void exactSizeMismatchLogsBytesDiffer(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("settings.toml");
+        String initial = "key = \"value1\"\n";
+        String updated = "key = \"value2\"\n";
+        Files.writeString(file, initial);
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        assertTrue(writer.writeFileIfChanged(file.toString(), updated, true),
+            "content differs with same size, so file is updated");
+        assertTrue(logged("write.update"), "an update is recorded: " + events());
+        assertTrue(logged("reason=bytes-differ"),
+            "exact-size mismatch logs reason=bytes-differ, not size-differs: " + events());
+    }
+
+    @Test
     @DisplayName("an empty round skips for a different, distinguishable reason")
     void noNewRulesSkipsWithItsOwnReason(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("AGENTS.md");

@@ -184,7 +184,7 @@ public final class GuardrailFileWriter {
                     skipUpdateMsg(fileName);
                     return false;
                 }
-                debug("write.update file={} reason=size-differs oldBytes={} newBytes={} markers=false",
+                debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
                     fileName, existingSize, contentByteLen);
                 writeAndCache(filePath, content, content);
                 messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);

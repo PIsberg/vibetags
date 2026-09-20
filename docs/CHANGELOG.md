@@ -55,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `write.update` logged `reason=size-differs` in the streaming fast path when on-disk and new sizes were equal but bytes differed (#775). It now logs `reason=bytes-differ`.
+
 - `vibetags doctor` reported a KSP project as unwired, because it looked only for
   `vibetags-processor` in the build file. `vibetags-ksp` now counts as the processor wiring.
 
