@@ -207,6 +207,11 @@ tools/consumer-sweep.sh <version>
 changes the *content* of files those repositories have already committed. The sweep reports
 drift in generated guardrail files, and drift is the finding.
 
+Check the exit status and the `Built N of M` footer before reading the table. Exit `2` means a
+consumer was never built, usually because its working tree was dirty, and a release must not be
+cut on a consumer nobody measured. Clear the tree and re-run rather than reading the remaining
+rows as a sweep.
+
 Why this step exists. #480 changed the element identity written into `.vibetags-locks`, into
 every `path=` attribute and into granular rule *filenames*: type-use annotations are no longer
 part of it. For a project using jspecify or the Checker Framework that moves committed files.
