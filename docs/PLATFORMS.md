@@ -117,7 +117,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.augmentignore` | Augment Code | Glob patterns |
 | `.vibetags-locks` | CI tooling (locked-files GitHub Action) | JSON Lines between hash markers |
 | `.vibetags-root-index` | Reactor root, opt-in to the lean indexed aggregate ([MULTI-MODULE.md](MULTI-MODULE.md#lean-indexed-root-aggregate-vibetags-root-index)) | Marker file |
-| `TESTING.md` | No tool reads it by name. Opt-in routing target: when present, a round that compiles test code (source set `test`, `*Test`, `*Tests` or `testFixtures`) writes its guardrails here instead of into the always-loaded instruction files, which keep the six safety annotations and gain a one-sentence pointer ([PROCESSOR.md](PROCESSOR.md#test-code-guardrails-testingmd)). A main round writes nothing to it | Markdown, the `AGENTS.md` layout under a two-line preamble |
+| `TESTING.md` | No tool reads it by name. Opt-in routing target: when present, a round that compiles test code (source set `test`, `*Test`, `*Tests` or `testFixtures`) writes its guardrails here instead of into the always-loaded instruction files, which keep the six safety annotations and gain a one-sentence pointer ([PROCESSOR.md](PROCESSOR.md#test-code-guardrails-testingmd)). A main round writes nothing to it | Markdown, the `AGENTS.md` layout under a two-line preamble, minus the locked-files heading: the routed model holds no safety annotation, so that section could only ever be an empty heading contradicting the preamble |
 
 #### Granular rules
 
