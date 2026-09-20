@@ -47,6 +47,7 @@ import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import java.lang.annotation.Annotation;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The canonical, ordered list of every {@code @AI...} guardrail annotation the processor collects.
@@ -118,6 +119,20 @@ public final class GuardrailAnnotations {
         AIThreadAffinity.class,
         AIKeepInSync.class
     );
+
+    /**
+     * The six safety annotations: the ones an agent has to see whether or not it ever opens the
+     * annotated file. They stay inline when an aggregate collapses to a scoped-rules index, they
+     * rank an inherited rule as {@link TransitiveRule.Tier#SAFETY}, and they stay in the
+     * always-loaded files when a test round's other guardrails are routed to {@code TESTING.md}.
+     *
+     * <p>One definition on purpose. Each of those three behaviours used to be free to keep its own
+     * copy of this list, and two copies agree only until someone adds a seventh to one of them.
+     * Membership only: nothing reads an order from it, which is why it is a {@code Set} and
+     * {@link #ALL} is not.
+     */
+    public static final Set<Class<? extends Annotation>> SAFETY = Set.of(
+        AILocked.class, AICore.class, AIPrivacy.class, AIIgnore.class, AIAudit.class, AISecure.class);
 
     /** The label used in the log summary and the scoped-rules index, e.g. {@code @AILocked}. */
     public static String label(Class<? extends Annotation> type) {

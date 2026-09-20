@@ -219,6 +219,42 @@ public final class GuardrailModel {
         return total;
     }
 
+    /**
+     * This model with only the {@linkplain GuardrailAnnotations#SAFETY safety annotations} in it:
+     * what the always-loaded files render for a test round whose other guardrails went to
+     * {@code TESTING.md}.
+     *
+     * <p>Locked positions and inherited rules come along. The positions belong to {@code @AILocked}
+     * elements, which are all here; inherited rules come from dependency JARs rather than from
+     * this round's sources, so they are nobody's test-code guardrails and stay where they were.
+     */
+    public GuardrailModel safetyOnly() {
+        Builder view = partition(true);
+        lockedPositions.forEach(view::lockedPosition);
+        view.transitiveRules(transitiveRules);
+        return view.build();
+    }
+
+    /**
+     * This model with the {@linkplain GuardrailAnnotations#SAFETY safety annotations} taken out:
+     * what {@code TESTING.md} renders. With {@link #safetyOnly()} it splits the buckets in two with
+     * nothing in both and nothing in neither, which {@code GuardrailModelViewsTest} holds to
+     * {@link GuardrailAnnotations#ALL}.
+     */
+    public GuardrailModel withoutSafety() {
+        return partition(false).build();
+    }
+
+    private Builder partition(boolean safety) {
+        Builder view = builder();
+        buckets.forEach((type, bucket) -> {
+            if (GuardrailAnnotations.SAFETY.contains(type) == safety) {
+                bucket.forEach(element -> view.add(type, element));
+            }
+        });
+        return view;
+    }
+
     // -----------------------------------------------------------------------------------------
     // Named bucket accessors. Thin lookups over `of(...)`, kept because renderers read them as
     // method references (`GuardrailModel::audit`) and because the name says what the section is.

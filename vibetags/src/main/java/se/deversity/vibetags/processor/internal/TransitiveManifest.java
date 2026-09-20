@@ -1,11 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
-import se.deversity.vibetags.annotations.AIAudit;
-import se.deversity.vibetags.annotations.AICore;
-import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.annotations.AILocked;
-import se.deversity.vibetags.annotations.AIPrivacy;
-import se.deversity.vibetags.annotations.AISecure;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import se.deversity.vibetags.processor.model.TransitiveRule;
 
@@ -75,11 +70,11 @@ public final class TransitiveManifest {
      * everything else is advisory.
      *
      * <p>This is deliberately the same list the scoped-rules index keeps inline when an aggregate
-     * collapses. Introducing a separate severity vocabulary for transitive rules would create a
-     * second copy of it that no test keeps in agreement with the first.
+     * collapses, and the same one that keeps a test round's safety guardrails out of
+     * {@code TESTING.md}. It used to be spelled out here; it is now
+     * {@link GuardrailAnnotations#SAFETY} itself, so there is no second copy to keep in agreement.
      */
-    static final Set<Class<? extends Annotation>> SAFETY_ANNOTATIONS = Set.of(
-        AILocked.class, AICore.class, AIPrivacy.class, AIIgnore.class, AIAudit.class, AISecure.class);
+    static final Set<Class<? extends Annotation>> SAFETY_ANNOTATIONS = GuardrailAnnotations.SAFETY;
 
     /** Labels of the safety annotations, as they appear in a manifest's {@code annotation} field. */
     static final Set<String> SAFETY_LABELS = SAFETY_ANNOTATIONS.stream()
