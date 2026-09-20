@@ -192,7 +192,10 @@ jobs:
         if: matrix.java == '21'
         run: |
           cd vibetags
-          mvn clean compile -B -Pself-annotate -Dvibetags.selfcheck=true
+          # test-compile, not compile: TESTING.md routing only happens in a test round, so a
+          # main-only check would regenerate without the test guardrails and report drift
+          # against the committed files, which were generated from both source sets.
+          mvn clean test-compile -B -Pself-annotate -Dvibetags.selfcheck=true
 
       - name: Reset AI Config Files (Maven)
         run: |
@@ -1744,7 +1747,7 @@ jobs:
         uses: ./action/locked-files
         with:
           working-directory: .
-          build-command: mvn -B -q -f vibetags/pom.xml clean compile -Pself-annotate
+          build-command: mvn -B -q -f vibetags/pom.xml clean test-compile -Pself-annotate
 
   # The committed architecture diagrams under docs/diagrams/codekarta/ are generated from
   # source by code-karta; a diagram that only regenerates when someone remembers is

@@ -13,7 +13,7 @@
 
 - [ ] `mvn test` (fast tier) from `vibetags/`
 - [ ] `mvn test -Pe2e` when the change touches the processor, a renderer, or a writer
-- [ ] `mvn clean compile -Pself-annotate` and committed the regenerated guardrail files,
+- [ ] `mvn clean test-compile -Pself-annotate` and committed the regenerated guardrail files,
       when the change touches annotations on this repo's own sources
 - [ ] `pre-commit run --all-files` after `git add`
 - [ ] Docs that this change makes wrong are updated in this same PR
