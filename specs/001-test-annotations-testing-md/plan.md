@@ -118,7 +118,7 @@ vibetags/src/main/java/se/deversity/vibetags/processor/
 │       ├── Platform.java                 # + TESTING("testing")
 │       ├── PlatformRendererRegistry.java # + case TESTING
 │       ├── RenderingContext.java         # + testRound flag
-│       └── platforms/TestingRenderer.java    # NEW, delegating
+│       └── platforms/RoutedTestingRenderer.java  # NEW, delegating
 └── model/GuardrailModel.java             # + safetyOnly(), withoutSafety() (read scoped rule first)
 
 vibetags/src/test/java/se/deversity/vibetags/processor/

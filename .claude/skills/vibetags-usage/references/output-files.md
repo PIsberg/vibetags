@@ -59,6 +59,7 @@ Part of the `vibetags-usage` skill; [SKILL.md](../SKILL.md) holds setup and the 
 | `.augment/rules/*.md` | Augment Code (granular per-class rules) |
 | `.goosehints` | goose (Block) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |
+| `TESTING.md` | No tool reads it by name. Routing target: a round that compiles test code writes its non-safety guardrails here instead of into the always-loaded files, which keep the six safety annotations and gain a pointer |
 | `.void/rules.md` | Void Editor (deprecated) |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) |

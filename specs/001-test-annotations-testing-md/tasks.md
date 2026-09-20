@@ -162,8 +162,8 @@ one with both; check where each lands.
 - [ ] T039 Fixture `examples/basic`: add `examples/basic/src/test/java/` with one class carrying a non-safety annotation and one carrying `@AILocked`, add the JUnit-free test-compile wiring the pom needs, `touch examples/basic/TESTING.md`, add `TESTING.md` to `AI_FILES` in `examples/basic/reset-ai-files.sh`, then `rm -f .vibetags-cache && mvn clean test-compile` and commit the regenerated files. `TEST/ExampleOptInCoverageTest.java` must pass.
 - [ ] T040 Fixture `examples/multimodule`: `touch examples/multimodule/TESTING.md`, `rm -f .vibetags-cache`, regenerate with `mvn clean verify` (not `compile`), commit. Read the new active-service count from `examples/multimodule/vibetags.log` and update both `expected=` values in `.github/workflows/build.yml` if they moved. Do the same for `examples/gradle-multimodule` only if `examples/INDEX.md` says that fixture should carry it.
 - [ ] T041 CI-only gate: add `TESTING.md` with a content assertion (a known test-class path inside the markers) to `.github/actions/verify-generated-files/action.yml`, then extract every `run: |` block to a script in the scratchpad and execute it with `bash -e -o pipefail` from `examples/basic`. Report the actual exit code.
-- [ ] T042 [P] Docs, all in this change: a `TESTING.md` row in `docs/PLATFORMS.md`; opt-in, routing rule, mixed-round limit and the toggle behaviour in `docs/PROCESSOR.md`; the `~tfull~` key and test-sidecar states in `docs/MULTI-MODULE.md`; the new test classes in `docs/TESTS.md`; an entry in `docs/CHANGELOG.md`; the `touch TESTING.md` line in `USAGE.md`; Quick Setup and `references/output-files.md` in `.claude/skills/vibetags-usage/`; a "decide `routesTestGuardrails` for the new key" step in `.claude/skills/add-platform/SKILL.md`. No em-dashes, no curly quotes. Do not change the README AI-platform count (research R7); run `ProjectFactsConsistencyTest`.
-- [ ] T043 [P] Evaluate the one VibeTags self-annotation candidate from plan.md (`ServiceRegistry.routesTestGuardrails`, the include/exclude asymmetry). If added, run `mvn compile -Pself-annotate` from `vibetags/` and commit the regenerated guardrail files; if not, say why in the PR body. Do not add others without a fact the code does not already state.
+- [x] T042 [P] Docs, all in this change: a `TESTING.md` row in `docs/PLATFORMS.md`; opt-in, routing rule, mixed-round limit and the toggle behaviour in `docs/PROCESSOR.md`; the `~tfull~` key and test-sidecar states in `docs/MULTI-MODULE.md`; the new test classes in `docs/TESTS.md`; an entry in `docs/CHANGELOG.md`; the `touch TESTING.md` line in `USAGE.md`; Quick Setup and `references/output-files.md` in `.claude/skills/vibetags-usage/`; a "decide `routesTestGuardrails` for the new key" step in `.claude/skills/add-platform/SKILL.md`. No em-dashes, no curly quotes. Do not change the README AI-platform count (research R7); run `ProjectFactsConsistencyTest`.
+- [x] T043 [P] Evaluate the one VibeTags self-annotation candidate from plan.md (`ServiceRegistry.routesTestGuardrails`, the include/exclude asymmetry). If added, run `mvn compile -Pself-annotate` from `vibetags/` and commit the regenerated guardrail files; if not, say why in the PR body. Do not add others without a fact the code does not already state.
 - [ ] T044 Full gates, in order, reporting each as passed, failed or not run: `mvn -B verify -Pe2e` from `vibetags/` (adds PMD, CPD, SpotBugs, Error Prone; check the JDK matches CI before trusting a red PMD); `python action/locked-files/check_locked_diff.py` with `PYTHONIOENCODING=utf-8`; `git add` then `pre-commit run --all-files`; the quickstart.md walk in `examples/basic` and `examples/multimodule`.
 - [ ] T045 Measure the cost instead of estimating it: run the `load-tests/` annotation-volume sweep with and without `TESTING.md` per the `load-tests` skill and put the two numbers in the PR body. If the harness cannot express a test source set, say so and open an issue instead of guessing.
 - [ ] T046 Run the consumer regression sweep per the `consumer-regression-suite` skill (native Bash in the background, not `ctx_shell`), and report which of the five consumers were built and which were not.
@@ -297,9 +297,18 @@ Unticked tasks that are partly done, and what is left of each:
   them up and carries the pointer once, and the root file is unaffected. It passed first time, as
   R9 predicted, and detects: with `routesTestGuardrails` forced to false it is one of the three
   cases in the class that go red.
-- **T042**: mostly done (PLATFORMS, PROCESSOR, MULTI-MODULE, LOGGING, TESTS, CHANGELOG, USAGE,
-  vibetags-usage Quick Setup). **Not done**: `references/output-files.md` in the vibetags-usage
-  skill, and the `routesTestGuardrails` step in the add-platform skill.
+- **T042**: done. PLATFORMS, PROCESSOR, MULTI-MODULE, LOGGING, TESTS, CHANGELOG, USAGE and the
+  vibetags-usage Quick Setup were already there; `references/output-files.md` in the
+  vibetags-usage skill is now too. The add-platform step was already written (commit 4631fbdb,
+  inside checklist item 9), so that half of this entry was stale.
+- **T043**: evaluated, answer **no**, and the reasoning is the PR's. The candidate fact is the
+  asymmetry in `routesTestGuardrails`: a service wrongly routed loses guardrails from a file a
+  tool loads, one wrongly left alone only costs context. Three things already carry it, one of
+  them enforced: the method's own Javadoc states it in full, `ServiceRoutingContractTest` fails
+  for every new key until someone classifies it by hand, and the add-platform skill asks the
+  question at the point a new key is added. A build-enforced gate beats prose an agent may or may
+  not have loaded, and `ServiceRegistry` already carries a class-level `@AIContext`, so a
+  method-level annotation would be a second entry saying what the first three say.
 - `TestingRenderer` is now `RoutedTestingRenderer`: PMD's `TestClassWithoutTestCases` fires on
   any class named `Test*`, and the repo has no PMD suppressions. `plan.md` and `research.md`
   still use the old name.
@@ -311,6 +320,8 @@ Unticked tasks that are partly done, and what is left of each:
   `TESTING.md` one, not the precondition, and the missing warning). The fixture needs a `pom.xml`
   at the root: without a build file the source set is never classified and the round is not routed,
   which is what the first red run showed.
+- Also corrected: `plan.md` and `research.md` called the renderer `TestingRenderer`; it is
+  `RoutedTestingRenderer`.
 - **Not started**: T038a (KSP), T039 to T041 (example
   fixtures and the verify-generated-files action; they need the processor installed), T043
   (self-annotation candidate), T045 (load tests), T046 (consumer sweep), T047 (PR, issues, CI).

@@ -145,7 +145,7 @@ the root.
 ## R7. What TESTING.md looks like
 
 **Decision**: `TESTING.md` at the VibeTags root, service key `testing`, `Platform.TESTING`,
-HTML-comment markers (derived from the `.md` extension by `getMarkersFor`). `TestingRenderer`
+HTML-comment markers (derived from the `.md` extension by `getMarkersFor`). `RoutedTestingRenderer`
 delegates to an existing Markdown bucket-walk renderer with its own short preamble, per the
 `FirebaseRenderer` delegation pattern; the delegate is chosen in tasks after comparing rendered
 output, with the Codex/`AGENTS.md` style as the default candidate because it is tool-neutral.
