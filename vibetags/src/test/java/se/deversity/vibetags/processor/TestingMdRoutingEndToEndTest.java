@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -11,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -140,5 +142,139 @@ class TestingMdRoutingEndToEndTest {
             assertTrue(content.contains(TEST_FOCUS), file + " is where a test guardrail lives by default:\n" + content);
         }
         assertFalse(Files.exists(root.resolve("TESTING.md")), "VibeTags never creates the opt-in file");
+    }
+
+    private static final String SECOND_TEST_FOCUS = "Clock is injected, never read from the system";
+
+    private static final String SECOND_TEST_SOURCE = """
+        package com.example.ledger;
+
+        import se.deversity.vibetags.annotations.AIContext;
+
+        @AIContext(focus = "Clock is injected, never read from the system")
+        public class LedgerClockTest {
+        }
+        """;
+
+    private static final String UNANNOTATED_TEST_SOURCE = """
+        package com.example.ledger;
+
+        public class LedgerTest {
+        }
+        """;
+
+    /** The generated region of a Markdown file: what lies between the two markers. */
+    private static String generatedRegion(String content) {
+        int start = content.indexOf("<!-- VIBETAGS-START -->");
+        int end = content.indexOf("<!-- VIBETAGS-END -->");
+        assertTrue(start >= 0 && end > start, "no marker pair in:\n" + content);
+        return content.substring(start, end);
+    }
+
+    @Test
+    void addingATestAnnotationChangesTestingMdAndNothingElse() throws IOException {
+        optInto(ALWAYS_LOADED);
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileTests();
+        String claudeBefore = read("CLAUDE.md");
+        String cursorBefore = read(".cursorrules");
+
+        compileSourceSet("test", List.<String[]>of(
+            new String[]{"com.example.ledger.LedgerTest", TEST_SOURCE},
+            new String[]{"com.example.ledger.LedgerClockTest", SECOND_TEST_SOURCE}));
+
+        assertTrue(read("TESTING.md").contains(SECOND_TEST_FOCUS), "the new guardrail must reach TESTING.md");
+        assertTrue(read("TESTING.md").contains(TEST_FOCUS), "and must not displace the first");
+        assertEquals(claudeBefore, read("CLAUDE.md"), "a new test guardrail is no business of CLAUDE.md's");
+        assertEquals(cursorBefore, read(".cursorrules"), "nor of .cursorrules'");
+    }
+
+    /**
+     * Spec US1 scenario 3, and it does not hold yet. Not because of routing: a round that saw no
+     * annotations never saves its sidecar ({@code generateFiles()}, "Only persist the sidecar when
+     * this compilation actually saw annotations"), so the source set's previous sidecar keeps
+     * contributing its old body. Measured on 2026-09-20 with no {@code TESTING.md} at all: the
+     * removed test guardrail lingers in {@code CLAUDE.md} the same way. {@code generateFiles()} is
+     * {@code @AILocked}, so this is escalated to the owner, and the case is disabled rather than
+     * rewritten to assert the behaviour it was written to reject.
+     */
+    @Disabled("Escalated: a zero-annotation round keeps its stale sidecar; the guard is in the locked "
+        + "generateFiles() and predates TESTING.md. Reproduces in CLAUDE.md without this feature.")
+    @Test
+    void removingTheLastTestAnnotationEmptiesTheRegionAndKeepsTheFile() throws IOException {
+        optInto(ALWAYS_LOADED);
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileTests();
+        assertTrue(read("TESTING.md").contains(TEST_FOCUS), "precondition");
+
+        compileSourceSet("test", List.<String[]>of(
+            new String[]{"com.example.ledger.LedgerTest", UNANNOTATED_TEST_SOURCE}));
+
+        assertTrue(Files.exists(root.resolve("TESTING.md")), "the opt-in file is the user's, never deleted");
+        assertFalse(read("TESTING.md").contains(TEST_FOCUS),
+            "a guardrail whose annotation is gone must not linger:\n" + read("TESTING.md"));
+        assertTrue(read("CLAUDE.md").contains(MAIN_FOCUS), "and the main guardrails are untouched");
+    }
+
+    @Test
+    void handWrittenTextAroundTheMarkersSurvives() throws IOException {
+        optInto(ALWAYS_LOADED);
+        String above = "# Testing\n\nRun the fast tier before pushing.\n\n";
+        String below = "\n## Flaky tests\n\nQuarantine, do not retry.\n";
+        Files.writeString(root.resolve("TESTING.md"),
+            above + "<!-- VIBETAGS-START -->\n<!-- VIBETAGS-END -->\n" + below, StandardCharsets.UTF_8);
+
+        compileMain();
+        compileTests();
+
+        String testing = read("TESTING.md");
+        assertTrue(generatedRegion(testing).contains(TEST_FOCUS), "the region must be filled:\n" + testing);
+        assertTrue(testing.startsWith(above), "text above the markers must be byte-identical:\n" + testing);
+        assertTrue(testing.endsWith(below), "text below the markers must be byte-identical:\n" + testing);
+    }
+
+    /**
+     * A module with test sources and no main sources has one sidecar, so the reactor merge never
+     * runs for it. Routing that lived in the merge would silently skip exactly this module.
+     */
+    @Test
+    void aModuleWithOnlyTestSourcesIsRoutedToo() throws IOException {
+        optInto(ALWAYS_LOADED);
+        Files.createFile(root.resolve("TESTING.md"));
+
+        compileTests();
+
+        assertTrue(read("TESTING.md").contains(TEST_FOCUS), "TESTING.md:\n" + read("TESTING.md"));
+        for (String file : ALWAYS_LOADED) {
+            assertFalse(read(file).contains(TEST_FOCUS), file + " must not carry it:\n" + read(file));
+        }
+    }
+
+    /**
+     * Opting in on a project that was already built. The test round's share of CLAUDE.md is now
+     * empty, and an empty share still has to replace what that round wrote there last time.
+     */
+    @Test
+    void optingInRemovesTheTestGuardrailsAnEarlierBuildLeftInTheAlwaysLoadedFiles() throws IOException {
+        optInto(ALWAYS_LOADED);
+        compileMain();
+        compileTests();
+        assertTrue(read("CLAUDE.md").contains(TEST_FOCUS), "precondition: unrouted build put it there");
+
+        Files.createFile(root.resolve("TESTING.md"));
+        // A second annotated class, so the round is not the one the fingerprint already saw. That
+        // the bare toggle is also noticed is TestingMdLifecycleEndToEndTest's business.
+        compileSourceSet("test", List.<String[]>of(
+            new String[]{"com.example.ledger.LedgerTest", TEST_SOURCE},
+            new String[]{"com.example.ledger.LedgerClockTest", SECOND_TEST_SOURCE}));
+
+        for (String file : ALWAYS_LOADED) {
+            String content = read(file);
+            assertFalse(content.contains(TEST_FOCUS), file + " still carries a stale test guardrail:\n" + content);
+            assertTrue(content.contains(MAIN_FOCUS), file + " lost the main guardrail:\n" + content);
+        }
+        assertTrue(read("TESTING.md").contains(TEST_FOCUS));
     }
 }
