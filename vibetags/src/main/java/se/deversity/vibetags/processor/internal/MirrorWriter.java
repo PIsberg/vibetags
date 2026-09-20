@@ -190,16 +190,8 @@ public final class MirrorWriter {
         if (depth >= MODULE_SEARCH_DEPTH) {
             return;
         }
-        try (java.util.stream.Stream<Path> children = java.nio.file.Files.list(dir)) {
-            List<Path> dirs = children
-                .filter(java.nio.file.Files::isDirectory)
-                .filter(p -> {
-                    Path name = p.getFileName();
-                    return name != null && !MirrorConfig.SKIP_DIRS.contains(name.toString());
-                })
-                .sorted()
-                .toList();
-            for (Path child : dirs) {
+        try {
+            for (Path child : MirrorConfig.childDirectories(dir)) {
                 collectModules(child, depth + 1, out, seen);
             }
         } catch (java.io.IOException | RuntimeException ignored) {

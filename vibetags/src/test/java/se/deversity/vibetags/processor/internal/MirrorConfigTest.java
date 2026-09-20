@@ -41,6 +41,18 @@ class MirrorConfigTest {
     }
 
     @Test
+    void childDirectories_listsNonSkippedDirectoriesSorted(@TempDir Path dir) throws IOException {
+        Files.createDirectories(dir.resolve("b_dir"));
+        Files.createDirectories(dir.resolve("a_dir"));
+        Files.createDirectories(dir.resolve(".git"));
+        Files.createDirectories(dir.resolve("target"));
+        Files.createFile(dir.resolve("some_file.txt"));
+
+        List<Path> children = MirrorConfig.childDirectories(dir);
+        assertEquals(List.of(dir.resolve("a_dir"), dir.resolve("b_dir")), children);
+    }
+
+    @Test
     void aDirectoryNamedLikeTheConfigIsTreatedAsAbsent(@TempDir Path dir) throws IOException {
         // Files.isRegularFile is false for a directory, so load() must degrade to "not a target"
         // rather than failing the compile of a module that never asked for mirroring.
