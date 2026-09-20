@@ -775,7 +775,9 @@ jobs:
       - name: Build Example Project (Maven)
         run: |
           cd examples/basic
-          mvn -B clean compile
+          # test-compile, not compile: src/test/java is what makes VibeTags see a test round and
+          # write TESTING.md, which the verify-generated-files step below asserts the content of.
+          mvn -B clean test-compile
 
       - name: Build Multi-Module Example (Maven reactor)
         run: |
