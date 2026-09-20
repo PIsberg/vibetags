@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import com.sun.source.util.Trees;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AICore;
+import se.deversity.vibetags.annotations.AILocked;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -74,7 +75,7 @@ public final class PartialRoundDetector {
      * way to name a type outside the current package without the package name appearing in the
      * file, so this is a decision, not a heuristic.
      */
-    static final String ANNOTATION_PACKAGE = "se.deversity.vibetags.annotations";
+    static final String ANNOTATION_PACKAGE = AILocked.class.getPackageName();
 
     /** How many unread sources a report names before it stops looking. */
     private static final int MAX_REPORTED = 8;

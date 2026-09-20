@@ -57,14 +57,17 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void testProcessorSupportsCorrectAnnotationTypes() {
-        AIGuardrailProcessor processor = new AIGuardrailProcessor();
-        // The processor should support all four annotation types
-        // This is configured via @SupportedAnnotationTypes annotation
+        // @SupportedAnnotationTypes needs a compile-time constant, so the annotations package is
+        // spelled literally there, while getSupportedAnnotationTypes() derives the same string from
+        // AILocked.class.getPackageName(). Those two are twins kept in agreement by nothing else:
+        // asserting the literal against the derived name, rather than against a third copy of it,
+        // is what makes a package rename fail here instead of silently halving what javac hands the
+        // processor.
         SupportedAnnotationTypes annotation =
             AIGuardrailProcessor.class.getAnnotation(SupportedAnnotationTypes.class);
         assertNotNull(annotation);
         assertArrayEquals(
-            new String[]{"se.deversity.vibetags.annotations.*"},
+            new String[]{AILocked.class.getPackageName() + ".*"},
             annotation.value(),
             "Must use package wildcard — covers all current and future annotations without triggering on unrelated compilations"
         );

@@ -121,7 +121,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     @Override
     public Set<String> getSupportedAnnotationTypes() {
         return transitiveReader != null
-            ? Set.of("*", "se.deversity.vibetags.annotations.*")
+            ? Set.of("*", AILocked.class.getPackageName() + ".*")
             : super.getSupportedAnnotationTypes();
     }
 

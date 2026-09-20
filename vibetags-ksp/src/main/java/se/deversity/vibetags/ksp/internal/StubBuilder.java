@@ -19,6 +19,7 @@ import com.google.devtools.ksp.symbol.KSTypeParameter;
 import com.google.devtools.ksp.symbol.KSTypeReference;
 import com.google.devtools.ksp.symbol.KSValueParameter;
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.model.SourceLocation;
 
 import javax.lang.model.element.ElementKind;
@@ -795,7 +796,7 @@ final class StubBuilder {
     private void noteDropped(List<AnnotationReader.Use> uses, String what, String why) {
         for (AnnotationReader.Use use : uses) {
             String type = use.data().type();
-            if (type.startsWith("se.deversity.vibetags.annotations.")) {
+            if (type.startsWith(AILocked.class.getPackageName() + ".")) {
                 dropped.add("@" + type.substring(type.lastIndexOf('.') + 1) + " on " + what
                     + " reaches no guardrail file: " + why + ".");
             }

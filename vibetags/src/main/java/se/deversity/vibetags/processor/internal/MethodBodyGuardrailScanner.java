@@ -10,6 +10,7 @@ import com.sun.source.util.TreePath;
 import com.sun.source.util.TreeScanner;
 import com.sun.source.util.Trees;
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 
 import javax.annotation.processing.ProcessingEnvironment;
@@ -41,7 +42,7 @@ import java.util.Set;
  */
 public final class MethodBodyGuardrailScanner {
 
-    private static final String ANNOTATIONS_PACKAGE = "se.deversity.vibetags.annotations";
+    private static final String ANNOTATIONS_PACKAGE = AILocked.class.getPackageName();
 
     /** Simple names of every registered guardrail annotation, for the import-based match. */
     private static final Set<String> SIMPLE_NAMES = simpleNames();
