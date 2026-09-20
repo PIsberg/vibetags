@@ -232,4 +232,48 @@ class TestingMdLifecycleEndToEndTest {
         assertTrue(read("CLAUDE.md").contains(TEST_FOCUS),
             "the test guardrail must be back in CLAUDE.md:\n" + read("CLAUDE.md"));
     }
+
+    /**
+     * A routed build must not accuse itself of being incomplete.
+     *
+     * <p>The "opted into after X last compiled" warning reads a sidecar that carries bodies but
+     * none for an active service as a module that compiled before the opt-in existed, which for
+     * every other platform it is. {@code testing} breaks that premise by design: a main round
+     * renders nothing for it, on purpose, so the main sidecar never carries a {@code testing} body
+     * however current it is. Left alone, every routed project gets the warning on every build, and
+     * the file it names is complete. A warning that is always wrong is worse than none, because it
+     * trains the reader to skip the one that is right.
+     */
+    @Test
+    void aRoutedBuildDoesNotWarnThatTestingMdIsMissingTheMainRound() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createFile(root.resolve("TESTING.md"));
+        compileMain();
+        compileTests();
+
+        assertTrue(read("TESTING.md").contains(TEST_FOCUS),
+            "precondition: the routed round completed the file:\n" + read("TESTING.md"));
+
+        // Compile main again, which is when the warning fires: TESTING.md now carries the test
+        // round's mtime, later than anything the main sidecar records.
+        List<String> warnings = compileMainCapturingWarnings();
+
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("TESTING.md was opted into after")),
+            "TESTING.md is complete; nothing is missing from it. Warnings were:\n  "
+                + String.join("\n  ", warnings));
+    }
+
+    private List<String> compileMainCapturingWarnings() throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        Files.writeString(root.resolve("pom.xml"),
+            "<project><artifactId>ledger</artifactId></project>", StandardCharsets.UTF_8);
+        harness.writeSourceFile("src/main/java/com/example/ledger/Ledger.java", MAIN_SOURCE);
+        List<String> warnings = harness.compileReturningDiagnostics().stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.WARNING
+                || d.getKind() == javax.tools.Diagnostic.Kind.MANDATORY_WARNING)
+            .map(d -> d.getMessage(null))
+            .toList();
+        VibeTagsLogger.shutdown();
+        return warnings;
+    }
 }

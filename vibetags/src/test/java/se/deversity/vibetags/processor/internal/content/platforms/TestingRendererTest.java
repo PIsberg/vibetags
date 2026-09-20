@@ -76,6 +76,32 @@ class TestingRendererTest {
     }
 
     /**
+     * A heading that can never have anything under it is worse than no heading. The content
+     * builder hands this renderer {@code model.withoutSafety()}, so the locked section is empty by
+     * construction, and a reader who meets "LOCKED FILES (DO NOT EDIT)" with nothing beneath it
+     * reads "no test file is locked" two lines after the preamble said the locked ones are
+     * somewhere else. An opted-in file holding only a header is a shape this repository has
+     * shipped before.
+     *
+     * <p>The rule is emptiness, not the file: a model that does carry a locked element keeps the
+     * heading, so this cannot quietly become "TESTING.md never shows locks".
+     */
+    @Test
+    void aSectionWithNothingUnderItIsNotPrinted() {
+        String routed = render(GuardrailModels.everyAnnotation().withoutSafety(), MAIN_ROUND.asTestRound());
+        assertNotNull(routed);
+        assertFalse(routed.contains("LOCKED FILES"),
+            "the routed model has no locked element, so this heading can only mislead:\n" + routed);
+        assertTrue(routed.contains("CONTEXTUAL RULES"),
+            "and a section that does have content is untouched:\n" + routed);
+
+        String full = render(GuardrailModels.everyAnnotation(), MAIN_ROUND.asTestRound());
+        assertNotNull(full);
+        assertTrue(full.contains("LOCKED FILES"),
+            "a model carrying a locked element keeps the heading:\n" + full);
+    }
+
+    /**
      * {@code TESTING.md} borrows the {@code AGENTS.md} rendering, so whatever reaches that file
      * must reach this one. No formatter has a {@code TESTING} arm, which means the derived check
      * in {@link RendererDropsNoSupportedAnnotationTest} sees nothing to compare for this platform

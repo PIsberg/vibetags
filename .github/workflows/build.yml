@@ -202,7 +202,11 @@ jobs:
       - name: Build Example Project (Maven)
         run: |
           cd examples/basic
-          mvn clean compile -B -Dvibetags.log.path=../../vibetags.log
+          # test-compile, not compile: the example's src/test/java is what makes VibeTags see a
+          # test round and write TESTING.md. With `compile` the routed file stays empty, the
+          # git comparison below passes on a fixture that exercises nothing, and the Gradle leg
+          # (which runs compileTestJava as part of `build`) disagrees with this one.
+          mvn clean test-compile -B -Dvibetags.log.path=../../vibetags.log
 
       - name: Verify The Example's Committed Guardrails Match Its Annotations
         run: |
@@ -214,7 +218,7 @@ jobs:
           # went unnoticed.
           if [ -n "$(git status --porcelain -- examples/basic/)" ]; then
             echo "::error::examples/basic/ guardrail files are out of date with its annotations."
-            echo "Run: cd examples/basic && mvn clean compile   then commit the regenerated files."
+            echo "Run: cd examples/basic && mvn clean test-compile   then commit the regenerated files."
             git status --porcelain -- examples/basic/
             git --no-pager diff -- examples/basic/
             exit 1
@@ -227,7 +231,7 @@ jobs:
           # The cache-off path (-Avibetags.cache=false) ran only inside library tests until
           # now. `clean` matters: without it an up-to-date compile skips javac, the processor
           # never runs, and this step verifies nothing.
-          mvn clean compile -B -Dvibetags.cache=false -Dvibetags.log.path=../../vibetags.log
+          mvn clean test-compile -B -Dvibetags.cache=false -Dvibetags.log.path=../../vibetags.log
           if [ -n "$(git status --porcelain -- .)" ]; then
             echo "::error::a cache-disabled rebuild changed examples/basic/ output."
             git --no-pager diff -- .
@@ -321,7 +325,10 @@ jobs:
           # the sidecar merge — not just the three the hand-written modules happened to use.
           # (The four indexable granular directories are deliberately absent: co-activating them
           # collapses the aggregates, which is what examples/multimodule-indexed/ covers.)
-          expected=57
+          # 58 since TESTING.md was opted in: core's test source set is what gives the reactor a
+          # routed round, so the merge of TESTING.md across modules is covered here and not only
+          # by the in-process fixtures.
+          expected=58
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "expected $expected active services in the reactor, got $actual"

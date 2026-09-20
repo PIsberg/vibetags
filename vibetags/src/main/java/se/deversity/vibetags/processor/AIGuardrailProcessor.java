@@ -14,6 +14,7 @@ import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.GuardrailEnforcer;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
+import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
@@ -1198,6 +1199,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         for (String service : activeServices) {
             Path optIn = serviceFiles.get(service);
             if (optIn == null || !Files.isRegularFile(optIn)) {
+                continue;
+            }
+            // TESTING.md breaks this warning's premise, which is that a current module contributes
+            // a body for every active service. A main round renders nothing for `testing` by
+            // design, so the main sidecar never carries one however current it is, while the file's
+            // own mtime is whatever the test round last wrote. Every routed project would be told
+            // on every build that a complete file is missing a module. A warning that is always
+            // wrong is worse than none: it teaches the reader to skip the one that is right.
+            if (Platform.TESTING.getServiceKey().equals(service)) {
                 continue;
             }
             long optedInAt;

@@ -42,7 +42,7 @@ runs:
           .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore .rooignore .continueignore .augmentignore .devinignore \
           .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes \
           .clinerules .junie/guidelines.md .junie/AGENTS.md .idx/airules.md \
-          CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md \
+          CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md TESTING.md \
           .claude/rules/com-example-payment-PaymentProcessor.md \
           .github/instructions/com-example-payment-PaymentProcessor.instructions.md \
           .gemini/rules/com-example-payment-PaymentProcessor.md \
@@ -148,4 +148,15 @@ runs:
         echo "OK .plandex.yaml audit section"
         grep -q "audit" .interpreter/profiles/vibetags.yaml || { echo "FAIL interpreter profile audit missing"; exit 1; }
         echo "OK Open Interpreter profile audit"
+        # TESTING.md. Existing and non-empty is not the property that matters here: the file ships
+        # as an empty opt-in placeholder and a build that never ran a test round leaves it that
+        # way, which is indistinguishable from a build where routing silently stopped working.
+        # So assert what is inside the markers, in both directions.
+        grep -q "com.example.testing.PaymentFixturesTest" TESTING.md || { echo "FAIL TESTING.md carries no test-code guardrail, so the test round did not route (is the build running test-compile?)"; exit 1; }
+        grep -q "VIBETAGS-START" TESTING.md || { echo "FAIL TESTING.md has no generated region"; exit 1; }
+        if grep -q "recorded settlement responses" TESTING.md; then echo "FAIL a safety-tier guardrail was routed to TESTING.md"; exit 1; fi
+        grep -q "recorded settlement responses" CLAUDE.md || { echo "FAIL the test class's @AILocked left CLAUDE.md, where safety guardrails must stay"; exit 1; }
+        if grep -q "PaymentFixtures, never with the PaymentRequest" CLAUDE.md; then echo "FAIL a routed test guardrail is still in CLAUDE.md"; exit 1; fi
+        grep -q "Guardrails for test code are in TESTING.md" CLAUDE.md || { echo "FAIL CLAUDE.md gave up test guardrails without pointing at TESTING.md"; exit 1; }
+        echo "OK TESTING.md routing (moved, kept, and pointed at)"
         echo "All @AIAudit content verified"

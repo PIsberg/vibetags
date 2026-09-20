@@ -44,7 +44,7 @@ test, written first and shown failing. Each test task says what it must see to f
 **Purpose**: a known-green baseline, so a later red is attributable to this change.
 
 - [x] T001 Confirm the branch base: run `git log --oneline origin/main..HEAD` and `git status --short` in the repo root; record in the PR notes that the branch sits on `simplify/whole-codebase` (17 commits) and that `CLAUDE.md` plus the Spec Kit install were dirty before work began. Do not stage those files.
-- [ ] T002 Build and install in order: `vibetags-annotations` (`mvn install`), `vibetags` (`mvn clean install`), `vibetags-bom` (`mvn install`); then run `mvn test -Pe2e` from `vibetags/` and record the pass/fail/skip counts as the baseline. A red baseline is reported, not worked around.
+- [x] T002 Build and install in order: `vibetags-annotations` (`mvn install`), `vibetags` (`mvn clean install`), `vibetags-bom` (`mvn install`); then run `mvn test -Pe2e` from `vibetags/` and record the pass/fail/skip counts as the baseline. A red baseline is reported, not worked around.
 - [x] T003 [P] Read the scoped rule files this feature touches and note any constraint that contradicts plan.md: `.claude/rules/se-deversity-vibetags-processor-internal-ModuleSidecar.md`, `...-internal-AnnotationCollector.md`, `...-internal-ServiceRegistry.md`, `...-internal-content.md`, `...-internal-content-PlatformRenderer.md`, `...-model.md`, `...-internal-BuildFingerprint.md`, `...-AIGuardrailProcessor.md`
 - [x] T004 [P] Resolve research R1's open check: find what source set the KSP front end reports by reading `vibetags-ksp/src/main` for its use of `ModuleIdentity`/`ModuleSidecar.scopedModuleId`; write the answer into `specs/001-test-annotations-testing-md/research.md` under R1. If it reports a test source set, add a KSP test task to Phase 7.
 
@@ -67,7 +67,7 @@ No output changes for any existing project at the end of this phase.
 - [x] T012 Create `MAIN/internal/content/platforms/TestingRenderer.java` implementing `PlatformRenderer`: returns `null` when `context.testRound()` is false; otherwise writes a two-line preamble (these guardrails apply to test code; safety guardrails for test code are in the always-loaded files) and delegates the body to the Codex/`AGENTS.md` Markdown renderer, following `FirebaseRenderer`'s delegation pattern. Wire `case TESTING:` in `MAIN/internal/content/PlatformRendererRegistry.java`. If the Codex delegate needs a `case TESTING:` in any annotation formatter, pick a delegate that does not, and record the choice in research R7.
 - [x] T013 In `MAIN/internal/GuardrailContentBuilder.java`, make `build()` pass `context.asTestRound()` when `collector.isTestRound()` is true. No routing yet.
 - [x] T014 Invariant 4 guard, test first: extend `TEST/AgentsMdSoleFallbackTest.java` with a case where `TESTING.md` and `AGENTS.md` are the only files present and assert `AGENTS.md` is still written as the sole AI config file. Show it failing if it does, then exclude `testing` from whatever "is an AI config file" set the sole-fallback rule uses in `MAIN/internal/ServiceRegistry.java` (or the class that rule lives in).
-- [ ] T015 Run `mvn test -Pe2e` from `vibetags/`: the count of failures must equal T002's baseline. Then run `git status --short examples/` after `cd examples/basic && rm -f .vibetags-cache && mvn clean compile`: no generated file may differ. This is the first FR-002 proof.
+- [x] T015 Run `mvn test -Pe2e` from `vibetags/`: the count of failures must equal T002's baseline. Then run `git status --short examples/` after `cd examples/basic && rm -f .vibetags-cache && mvn clean compile`: no generated file may differ. This is the first FR-002 proof.
 
 **Checkpoint**: `testing` is a registered, inert service; every existing output is byte-identical.
 
@@ -159,9 +159,9 @@ one with both; check where each lands.
 - [x] T037 Logging, test first: add contract cases in `TEST/internal/GuardrailFileWriterLogContractTest.java` (or a sibling `TestingRoutingLogContractTest.java` in the same package) for `testing.route sourceSet= routed= moved= kept=`, `testing.skip reason=not-test-round`, `testing.skip reason=no-test-guardrails`, `merge.testing.fallback service= module=`, and for the absence of any `testing.` event when `TESTING.md` is absent. Then emit them from `MAIN/internal/GuardrailContentBuilder.java` or `MAIN/AIGuardrailProcessor.java` (outside `generateFiles()`) and `MAIN/internal/ModuleSidecar.java`; document them in `docs/LOGGING.md`.
 - [x] T038 [P] Multi-module test in `TEST/TestingMdRoutingEndToEndTest.java` or a new `TEST/MultiModuleTestingMdTest.java`: two modules with test guardrails produce one `TESTING.md` with two `VIBETAGS-MODULE` regions; building one module alone does not erase the other's region (FR-011). Add the research R9 case: a nested `module-a/TESTING.md` behaves like the root case and does not throw.
 - [ ] T038a KSP routing test, added by T004 (research R1): in `vibetags-ksp/src/test`, run the KSP front end over a Kotlin source under `src/test/kotlin` with `TESTING.md` and `CLAUDE.md` present and assert a non-safety guardrail lands in `TESTING.md` and not in `CLAUDE.md`. T004 established by reading, not by running, that `KspElements.getFileObjectOf` hands `ModuleRootResolver` the real path; this task is what executes it. If the KSP test harness cannot place sources under a `src/test` path, say so and open an issue.
-- [ ] T039 Fixture `examples/basic`: add `examples/basic/src/test/java/` with one class carrying a non-safety annotation and one carrying `@AILocked`, add the JUnit-free test-compile wiring the pom needs, `touch examples/basic/TESTING.md`, add `TESTING.md` to `AI_FILES` in `examples/basic/reset-ai-files.sh`, then `rm -f .vibetags-cache && mvn clean test-compile` and commit the regenerated files. `TEST/ExampleOptInCoverageTest.java` must pass.
-- [ ] T040 Fixture `examples/multimodule`: `touch examples/multimodule/TESTING.md`, `rm -f .vibetags-cache`, regenerate with `mvn clean verify` (not `compile`), commit. Read the new active-service count from `examples/multimodule/vibetags.log` and update both `expected=` values in `.github/workflows/build.yml` if they moved. Do the same for `examples/gradle-multimodule` only if `examples/INDEX.md` says that fixture should carry it.
-- [ ] T041 CI-only gate: add `TESTING.md` with a content assertion (a known test-class path inside the markers) to `.github/actions/verify-generated-files/action.yml`, then extract every `run: |` block to a script in the scratchpad and execute it with `bash -e -o pipefail` from `examples/basic`. Report the actual exit code.
+- [x] T039 Fixture `examples/basic`: add `examples/basic/src/test/java/` with one class carrying a non-safety annotation and one carrying `@AILocked`, add the JUnit-free test-compile wiring the pom needs, `touch examples/basic/TESTING.md`, add `TESTING.md` to `AI_FILES` in `examples/basic/reset-ai-files.sh`, then `rm -f .vibetags-cache && mvn clean test-compile` and commit the regenerated files. `TEST/ExampleOptInCoverageTest.java` must pass.
+- [x] T040 Fixture `examples/multimodule`: `touch examples/multimodule/TESTING.md`, `rm -f .vibetags-cache`, regenerate with `mvn clean verify` (not `compile`), commit. Read the new active-service count from `examples/multimodule/vibetags.log` and update both `expected=` values in `.github/workflows/build.yml` if they moved. Do the same for `examples/gradle-multimodule` only if `examples/INDEX.md` says that fixture should carry it.
+- [x] T041 CI-only gate: add `TESTING.md` with a content assertion (a known test-class path inside the markers) to `.github/actions/verify-generated-files/action.yml`, then extract every `run: |` block to a script in the scratchpad and execute it with `bash -e -o pipefail` from `examples/basic`. Report the actual exit code.
 - [x] T042 [P] Docs, all in this change: a `TESTING.md` row in `docs/PLATFORMS.md`; opt-in, routing rule, mixed-round limit and the toggle behaviour in `docs/PROCESSOR.md`; the `~tfull~` key and test-sidecar states in `docs/MULTI-MODULE.md`; the new test classes in `docs/TESTS.md`; an entry in `docs/CHANGELOG.md`; the `touch TESTING.md` line in `USAGE.md`; Quick Setup and `references/output-files.md` in `.claude/skills/vibetags-usage/`; a "decide `routesTestGuardrails` for the new key" step in `.claude/skills/add-platform/SKILL.md`. No em-dashes, no curly quotes. Do not change the README AI-platform count (research R7); run `ProjectFactsConsistencyTest`.
 - [x] T043 [P] Evaluate the one VibeTags self-annotation candidate from plan.md (`ServiceRegistry.routesTestGuardrails`, the include/exclude asymmetry). If added, run `mvn compile -Pself-annotate` from `vibetags/` and commit the regenerated guardrail files; if not, say why in the PR body. Do not add others without a fact the code does not already state.
 - [ ] T044 Full gates, in order, reporting each as passed, failed or not run: `mvn -B verify -Pe2e` from `vibetags/` (adds PMD, CPD, SpotBugs, Error Prone; check the JDK matches CI before trusting a red PMD); `python action/locked-files/check_locked_diff.py` with `PYTHONIOENCODING=utf-8`; `git add` then `pre-commit run --all-files`; the quickstart.md walk in `examples/basic` and `examples/multimodule`.
@@ -322,12 +322,44 @@ Unticked tasks that are partly done, and what is left of each:
   which is what the first red run showed.
 - Also corrected: `plan.md` and `research.md` called the renderer `TestingRenderer`; it is
   `RoutedTestingRenderer`.
-- **Not started**: T038a (KSP), T039 to T041 (example
-  fixtures and the verify-generated-files action; they need the processor installed), T043
-  (self-annotation candidate), T045 (load tests), T046 (consumer sweep), T047 (PR, issues, CI).
-  T044 is partly done: `mvn -B verify -Pe2e` and the locked-files guard pass; `pre-commit` has
-  only been run per commit with checkstyle skipped there (checkstyle runs in the Maven build);
-  the quickstart walk has **not been run**.
+- **T002 / T015**: the three `mvn install` steps ran (annotations, processor, BOM), so the example
+  rebuilds T015 wanted are done: `examples/basic` regenerates from empty and its cache-off rebuild
+  is byte-identical, `examples/multimodule` regenerates and a second `mvn clean verify` changes
+  nothing. Full `mvn test -Pe2e`: 3219 run, 0 failures, 0 errors, 5 skipped (the 3 pre-existing
+  plus the 2 `@Disabled` owner escalations).
+- **T039**: done, and it needed more than the task said. `examples/basic/src/test/java` carries
+  `PaymentFixturesTest` (`@AIContext`, routed) and `GoldenPayloadFixtures` (`@AILocked`, kept), so
+  the committed fixture proves the split rather than only the move. The Maven pom needed nothing:
+  `<configuration>` on maven-compiler-plugin is plugin-wide, so `testCompile` inherits the
+  processor path and the `-A` options. `build.gradle` needed three changes, because Gradle gives a
+  test source set neither the main set's `compileOnly` dependencies nor its annotation-processor
+  path: `testCompileOnly` + `testAnnotationProcessor`, a `compileTestJava` block, and
+  `test { enabled = false }` (the example declares no test framework on purpose). CI's two
+  `mvn clean compile` steps for this example became `mvn clean test-compile`; with `compile` the
+  routed file stays empty, the git comparison passes on a fixture that exercises nothing, and the
+  Gradle leg, whose `build` already runs `compileTestJava`, would disagree with the Maven one.
+- **T040**: done. `examples/multimodule/TESTING.md` plus one annotated test source set in `core`
+  (`IrGraphFixturesTest`, again both halves). The `tests` module was the wrong home: it carries no
+  annotations by design, which is the whole of issue #312. `expected=57` became `58` in
+  build.yml; the Gradle reactor's `expected=58` is a different fixture and is unchanged.
+- **T041**: done and actually run, not just written. `TESTING.md` is in the presence list and has
+  four content assertions covering both directions (routed guardrail present, safety guardrail
+  absent, safety guardrail still in `CLAUDE.md`, pointer present). Every `run:` block was extracted
+  to one script and executed with `bash -e -o pipefail` from `examples/basic`: **exit 0**. Both new
+  checks detect: exit 1 with an emptied `TESTING.md`, exit 1 with a marker-only placeholder.
+- **Two defects found by building the real fixture**, both fixed test-first here:
+  1. `TESTING.md` printed `## LOCKED FILES (DO NOT EDIT)` with nothing under it. The file is
+     rendered from `withoutSafety()`, so that heading can never have content, and it contradicts
+     the preamble two lines above it. `RoutedTestingRenderer` now drops it when the model's locked
+     bucket is empty, which keeps it for any caller that does pass one.
+  2. Every routed build warned `TESTING.md was opted into after _root_ last compiled`. That
+     warning treats a sidecar with bodies but none for an active service as stale; `testing` breaks
+     the premise on purpose, because a main round renders nothing for it. The file it named was
+     complete, and it fired on every build of every routed project.
+- **Not started**: T038a (KSP), T045 (load tests), T046 (consumer sweep), T047 (PR, issues, CI).
+  T044 is partly done: `mvn -B verify -Pe2e` and the locked-files guard passed before these last
+  changes and need re-running; `pre-commit` runs with the docker-backed checkstyle hook skipped
+  (checkstyle runs in the Maven build); the quickstart walk has **not been run**.
 - Pulled forward from Phase 7 because the new service key turned existing gates red: the
   `docs/PLATFORMS.md` row and README config-file count (part of T042), and the empty
   `examples/basic/TESTING.md` plus its `reset-ai-files.sh` entry (part of T039).

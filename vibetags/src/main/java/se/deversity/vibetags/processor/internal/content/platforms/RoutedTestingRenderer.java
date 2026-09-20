@@ -26,6 +26,12 @@ public final class RoutedTestingRenderer implements PlatformRenderer {
             + " here: they stay in the always-loaded instruction files.\n\n";
 
     /**
+     * The one heading the borrowed rendering always writes, content or not. Everything else
+     * {@code CodexRenderer} emits is already conditional on having something to say.
+     */
+    private static final String EMPTY_LOCKED_SECTION = "## LOCKED FILES (DO NOT EDIT)\n\n";
+
+    /**
      * @return {@code null} outside a test round. A main round has no test guardrails, and an empty
      *         body would replace the region the test round wrote; no entry leaves it in place.
      */
@@ -34,6 +40,25 @@ public final class RoutedTestingRenderer implements PlatformRenderer {
         if (!context.testRound()) {
             return null;
         }
-        return PREAMBLE + CODEX_RENDERER.render(model, Platform.CODEX, context);
+        return PREAMBLE + withoutEmptyLockedSection(
+            CODEX_RENDERER.render(model, Platform.CODEX, context), model);
+    }
+
+    /**
+     * Drops the locked heading when nothing can appear under it.
+     *
+     * <p>The content builder renders this file from {@code model.withoutSafety()}, so its locked
+     * bucket is empty by construction and the heading is a standing lie: a reader meets "LOCKED
+     * FILES (DO NOT EDIT)" with nothing beneath it two lines after the preamble said the locked
+     * guardrails are in the always-loaded files, and concludes no test file is locked. The test
+     * that this repository already writes for it is that an opted-in file holding only a header is
+     * a defect, not an output.
+     *
+     * <p>The condition is the model's own bucket rather than the platform, so a caller that does
+     * hand this renderer a locked element still sees it. That is the case {@code TestingRendererTest}
+     * pins, and it is why this is not simply a shorter preamble.
+     */
+    private static String withoutEmptyLockedSection(String body, GuardrailModel model) {
+        return model.locked().isEmpty() ? body.replace(EMPTY_LOCKED_SECTION, "") : body;
     }
 }

@@ -48,6 +48,7 @@ Which example to read for a given processor feature.
 | Granular rules grouped by role (`.vibetags-roles`) | `multimodule`, `multimodule-indexed`, `all-tiers`, `gradle-multimodule` |
 | Root aggregate as index (`.vibetags-root-index`) | `multimodule-indexed`, `all-tiers` |
 | Test-source mirroring (`.vibetags-mirror`) | `multimodule/tests/`, `gradle-multimodule/tests/` |
+| Test-code guardrails routed to `TESTING.md` | `basic` (single module, both halves of the split: `src/test/java/com/example/testing/`), `multimodule` (reactor merge, one region per module with a test round, from `core/src/test/java/`) |
 | Locks report (`.vibetags-locks`) | `multimodule`, `gradle-multimodule` |
 | Transitive manifests, publish and consume (`.vibetags-manifest`, `.vibetags-transitive`) | `multimodule`, `gradle-multimodule` |
 | Check mode | `multimodule` (Maven property), `gradle-multimodule` (`-PvibetagsCheck`), `all-tiers`, `multimodule-indexed` |
