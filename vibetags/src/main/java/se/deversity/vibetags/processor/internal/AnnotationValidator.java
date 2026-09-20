@@ -7,7 +7,10 @@ import se.deversity.vibetags.processor.internal.validation.ValidationRules;
 import javax.annotation.processing.Messager;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.Element;
 import java.util.Set;
+import java.util.Map;
+import java.lang.annotation.Annotation;
 
 /**
  * Compile-time consistency checks for VibeTags annotations. Emits compiler warnings for
@@ -39,6 +42,20 @@ public final class AnnotationValidator {
      */
     public static void validate(Messager messager, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv,
                                 @Nullable Set<String> presentFqns) {
-        ValidationRules.run(new ValidationContext(messager, roundEnv, processingEnv, presentFqns));
+        validate(messager, roundEnv, processingEnv, presentFqns, null);
+    }
+
+    /**
+     * Same, reusing what the collector already found this round instead of asking javac again.
+     *
+     * <p>The collector runs before validation and issues the identical per-type query, and each one
+     * walks every root element. {@code roundIndex} must describe <em>this round only</em>: handing
+     * over everything collected so far would make every rule report the earlier rounds' elements
+     * again, once per subsequent round.
+     */
+    public static void validate(Messager messager, RoundEnvironment roundEnv, ProcessingEnvironment processingEnv,
+                                @Nullable Set<String> presentFqns,
+                                @Nullable Map<Class<? extends Annotation>, Set<? extends Element>> roundIndex) {
+        ValidationRules.run(new ValidationContext(messager, roundEnv, processingEnv, presentFqns, roundIndex));
     }
 }

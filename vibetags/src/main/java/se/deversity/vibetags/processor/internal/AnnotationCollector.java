@@ -168,6 +168,21 @@ public final class AnnotationCollector {
     private @Nullable GuardrailModel memo;
 
     /**
+     * What {@link #collect} found in the round it last ran for, keyed by annotation type.
+     *
+     * <p>This round only, never the accumulated buckets. The validator reports per round, so
+     * handing it everything collected so far would repeat every warning on every subsequent round.
+     * Replaced wholesale at the start of each collect, so a round that finds nothing leaves an
+     * empty map rather than the previous round's answers.
+     *
+     * <p>It exists because the same query is asked three times per round: here, again by
+     * {@code ValidationContext.elementsWith} for every scanned type, and a third time for
+     * {@code @AILocked} by the locks-report path. Each one walks every root element. Measured on
+     * examples/multimodule: 103 collect scans, 78 validation scans, 4 locks scans per build.
+     */
+    private final Map<Class<? extends Annotation>, Set<? extends Element>> thisRound = new LinkedHashMap<>();
+
+    /**
      * The per-element granular bodies for {@link #memo}, or {@code null} when they must be rebuilt.
      *
      * <p>Rendered from the model alone, and the heaviest per-element render there is: 44 bucket
@@ -249,11 +264,17 @@ public final class AnnotationCollector {
      *         the historical contract callers use to decide whether this compilation saw anything
      */
     public boolean collect(RoundEnvironment roundEnv, @Nullable Set<String> presentAnnotationFqns) {
+        thisRound.clear();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
             if (presentAnnotationFqns != null && !presentAnnotationFqns.contains(type.getName())) {
-                continue;  // javac reported it absent this round: the query would only return empty
+                // javac reported it absent this round: the query would only return empty.
+                // Deliberately not recorded — "never asked" and "asked, found nothing" are
+                // different answers, and ValidationContext already short-circuits an absent type
+                // from the same presentFqns set without querying, so nothing re-scans it anyway.
+                continue;
             }
             Set<? extends Element> found = roundEnv.getElementsAnnotatedWith(type);
+            thisRound.put(type, found);
             if (found.isEmpty()) {
                 continue;
             }
@@ -288,6 +309,9 @@ public final class AnnotationCollector {
      */
     public void reset() {
         buckets.values().forEach(Set::clear);
+        // The round that filled it is over; leaving it would let a later caller mistake the
+        // previous round's answers for its own.
+        thisRound.clear();
         lockedPositions.clear();
         transitiveRules.clear();
         anyAnnotationsFound = false;
@@ -405,6 +429,25 @@ public final class AnnotationCollector {
             granularMemo = rules;
         }
         return rules;
+    }
+
+    /**
+     * What the last {@link #collect} found for {@code type} in that round alone, or {@code null}
+     * when this round was never asked about it.
+     *
+     * <p>{@code null} rather than an empty set on purpose: "not asked" and "asked, found nothing"
+     * are different answers, and only the second lets a caller skip its own query.
+     */
+    public @Nullable Set<? extends Element> elementsThisRound(Class<? extends Annotation> type) {
+        return thisRound.get(type);
+    }
+
+    /**
+     * The whole of {@link #elementsThisRound}, for handing to the validator so it does not repeat
+     * the query per scanned type. Unmodifiable: the validator reads it, nothing else may write it.
+     */
+    public Map<Class<? extends Annotation>, Set<? extends Element>> roundIndex() {
+        return Collections.unmodifiableMap(thisRound);
     }
 
     /** Unmodifiable view of the elements carrying {@code type}; empty when none do. */

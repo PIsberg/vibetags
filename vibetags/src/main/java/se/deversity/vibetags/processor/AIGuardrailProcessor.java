@@ -44,6 +44,7 @@ import javax.annotation.processing.*;
 import javax.tools.Diagnostic;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import java.lang.annotation.Annotation;
 import javax.lang.model.element.TypeElement;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -492,11 +493,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // elements back to source once processing is over. Only needed for the .vibetags-locks
             // report; skip when it isn't opted in, or when no @AILocked is present this round.
             if (locksReportEnabled && (presentFqns == null || presentFqns.contains(AILocked.class.getName()))) {
-                for (Element e : roundEnv.getElementsAnnotatedWith(AILocked.class)) {
+                // collect() ran a moment ago and asked javac this exact question; reuse it.
+                Set<? extends Element> locked = collector.elementsThisRound(AILocked.class);
+                if (locked == null) {
+                    locked = roundEnv.getElementsAnnotatedWith(AILocked.class);
+                }
+                for (Element e : locked) {
                     collector.recordLockedPosition(e, positionResolver.resolve(e));
                 }
             }
-            validateAnnotations(processingEnv.getMessager(), roundEnv, presentFqns);
+            validateAnnotations(processingEnv.getMessager(), roundEnv, presentFqns, collector.roundIndex());
             // Guardrails written where JSR 269 cannot see them (local/anonymous declarations)
             // are a silent no-op; the Tree API can still see them, so say so. Needs the live
             // round for the same reason the position resolver does.
@@ -1904,8 +1910,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     // generateFiles(), is explicitly off-limits.
     // ---------------------------------------------------------------------------------------
 
+    /**
+     * Kept delegating to the overload below rather than calling the validator itself, so the
+     * four-argument method stays the single seam: {@code process()} calls that one, and a test
+     * that overrides it intercepts this route too. Two independent seams would mean a fault
+     * injected into one silently not firing when the production path uses the other, which is
+     * exactly what {@code ProcessorFailureGuardTest} caught when {@code process()} moved.
+     */
     void validateAnnotations(Messager messager, RoundEnvironment roundEnv, @Nullable Set<String> presentFqns) {
-        AnnotationValidator.validate(messager, roundEnv, processingEnv, presentFqns);
+        validateAnnotations(messager, roundEnv, presentFqns, null);
+    }
+
+    /** The seam {@code process()} calls: validation, reusing what the collector found this round. */
+    void validateAnnotations(Messager messager, RoundEnvironment roundEnv, @Nullable Set<String> presentFqns,
+                             @Nullable Map<Class<? extends Annotation>, Set<? extends Element>> roundIndex) {
+        AnnotationValidator.validate(messager, roundEnv, processingEnv, presentFqns, roundIndex);
     }
 
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
