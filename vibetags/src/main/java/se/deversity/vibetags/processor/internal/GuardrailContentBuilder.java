@@ -92,6 +92,11 @@ public final class GuardrailContentBuilder {
         if (safetyDigest) {
             context = context.asSafetyDigest();
         }
+        if (collector.isTestRound()) {
+            // The one thing a renderer may know about where the round's sources came from, and
+            // today only TESTING.md's renderer asks.
+            context = context.asTestRound();
+        }
         Map<String, String> contentByService = new java.util.LinkedHashMap<>();
 
         // Render each active service (excluding granular directories and special-case exclusions)

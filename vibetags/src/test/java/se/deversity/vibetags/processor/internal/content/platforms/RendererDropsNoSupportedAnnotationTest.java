@@ -67,8 +67,12 @@ class RendererDropsNoSupportedAnnotationTest {
     @MethodSource("aggregatePlatforms")
     @DisplayName("every annotation the platform's formatters render reaches the platform's file")
     void rendersEveryAnnotationItsFormattersSupport(Platform platform) {
+        // TESTING.md is the one aggregate that renders only in a test round; in a main round its
+        // null is correct, not a drop. TestingRendererTest holds it to AGENTS.md's coverage, since
+        // no formatter has a TESTING arm for the loop below to compare against.
+        RenderingContext context = platform == Platform.TESTING ? CONTEXT.asTestRound() : CONTEXT;
         String rendered = PlatformRendererRegistry.getRenderer(platform)
-            .render(GuardrailModels.everyAnnotation(), platform, CONTEXT);
+            .render(GuardrailModels.everyAnnotation(), platform, context);
         assertTrue(rendered != null, platform + " rendered nothing at all");
 
         List<String> dropped = new ArrayList<>();

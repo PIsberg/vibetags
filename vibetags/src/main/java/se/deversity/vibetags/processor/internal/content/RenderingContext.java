@@ -20,6 +20,7 @@ public final class RenderingContext {
     private final Set<TaggedElement> granularOwners;
     private final @Nullable RoleConfig roles;
     private final boolean safetyDigest;
+    private final boolean testRound;
 
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices) {
         this(projectName, generatedHeader, activeServices, 4096);
@@ -55,17 +56,18 @@ public final class RenderingContext {
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
                             int estimatedContentSize, Set<TaggedElement> granularOwners,
                             @Nullable RoleConfig roles) {
-        this(projectName, generatedHeader, activeServices, estimatedContentSize, granularOwners, roles, false);
+        this(projectName, generatedHeader, activeServices, estimatedContentSize, granularOwners, roles, false, false);
     }
 
     /**
      * @param safetyDigest render the safety tier only, with no scoped-rules index — see
      *        {@link #safetyDigest()}.
+     * @param testRound this round compiled test code, see {@link #testRound()}.
      */
     private RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
                              int estimatedContentSize, Set<TaggedElement> granularOwners,
                              @Nullable RoleConfig roles,
-                             boolean safetyDigest) {
+                             boolean safetyDigest, boolean testRound) {
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
         // Defensive copy: prevent callers from mutating the set through the stored reference.
@@ -85,6 +87,7 @@ public final class RenderingContext {
         this.granularOwners = Collections.unmodifiableSet(sortedOwners);
         this.roles = roles;
         this.safetyDigest = safetyDigest;
+        this.testRound = testRound;
     }
 
     /**
@@ -99,7 +102,24 @@ public final class RenderingContext {
      */
     public RenderingContext asSafetyDigest() {
         return new RenderingContext(projectName, generatedHeader, activeServices, estimatedContentSize,
-            granularOwners, roles, true);
+            granularOwners, roles, true, testRound);
+    }
+
+    /**
+     * A copy of this context for a round that compiled test code, the only kind of round whose
+     * guardrails {@code TESTING.md} carries.
+     *
+     * <p>A plain flag rather than the source set's name: this layer may not import compiler APIs
+     * (invariant 7), and what a source set is called is the collector's business, not a renderer's.
+     */
+    public RenderingContext asTestRound() {
+        return new RenderingContext(projectName, generatedHeader, activeServices, estimatedContentSize,
+            granularOwners, roles, safetyDigest, true);
+    }
+
+    /** True when this round compiled test code; see {@link #asTestRound()}. */
+    public boolean testRound() {
+        return testRound;
     }
 
     /**

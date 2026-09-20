@@ -87,7 +87,10 @@ public final class ServiceRegistry {
         // .greptile/config.json carries its exclusions: VibeTags owns a span in ignorePatterns only (#651).
         "greptile", "greptile_rules", "greptile_config",
         // Lean indexed root aggregate (multi-module): link to per-module rules instead of embedding
-        "root_index"
+        "root_index",
+        // TESTING.md. No tool reads it by name: its presence asks for a test round's non-safety
+        // guardrails to be written there instead of into the always-loaded aggregates.
+        "testing"
     );
 
     /**
@@ -244,6 +247,9 @@ public final class ServiceRegistry {
         // reactor-root CLAUDE.md/.cursorrules/.windsurfrules/copilot-instructions.md merge from
         // embedding each module's guardrails to linking the module's own scoped rule files.
         map.put("root_index",    root.resolve(".vibetags-root-index"));
+        // Routing target for test-code guardrails. A .md file, so HTML markers and the ordinary
+        // multi-module merge; its renderer writes nothing outside a test round.
+        map.put("testing",       root.resolve("TESTING.md"));
         return map;
     }
 
@@ -350,7 +356,11 @@ public final class ServiceRegistry {
         // AGENTS.md is only managed when it is the only AI config file present (see Javadoc),
         // unless it already carries a VibeTags block — a marked file is one VibeTags generated,
         // so refreshing it cannot clobber a hand-authored pointer.
-        if (active.contains("codex") && active.size() > 1
+        // TESTING.md does not count as company: no tool reads it as its instruction file, so it
+        // is never what an AGENTS.md pointer points at, and counting it would stop a Codex-only
+        // project's AGENTS.md being written the moment it opted in to test routing.
+        int aiConfigFiles = active.size() - (active.contains("testing") ? 1 : 0);
+        if (active.contains("codex") && aiConfigFiles > 1
                 && !carriesGeneratedBlock(allServiceFiles.get("codex"))) {
             active.remove("codex");
         }

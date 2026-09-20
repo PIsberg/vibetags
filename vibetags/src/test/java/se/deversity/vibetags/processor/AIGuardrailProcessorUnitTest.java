@@ -240,7 +240,9 @@ class AIGuardrailProcessorUnitTest {
             // Devin Desktop, formerly Windsurf: its preferred rules directory and ignore file (#671)
             "devin_granular", "devin_ignore",
             // Lean indexed root aggregate opt-in (multi-module)
-            "root_index"
+            "root_index",
+            // TESTING.md: where a test round's non-safety guardrails go when the file is present
+            "testing"
         );
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
         assertFalse(active.contains("codex"),

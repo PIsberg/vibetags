@@ -450,6 +450,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // while rounds are live — the Tree API cannot map elements back to source afterwards.
             if (moduleIdentity == null) {
                 moduleIdentity = ModuleRootResolver.fromRound(processingEnv, roundEnv);
+                // Set on every attempt, not only a successful one, so a reused processor whose
+                // identity did not resolve this time cannot keep the last compilation's answer.
+                collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());
             }
 
             // Which sources this round was handed, for the same reason and under the same

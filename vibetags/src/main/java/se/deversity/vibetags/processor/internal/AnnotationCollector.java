@@ -149,6 +149,16 @@ public final class AnnotationCollector {
     private boolean captureSignatures;
 
     /**
+     * Whether the rounds being collected compile test code rather than main code. Carried here
+     * because the content builder is handed the collector and nothing else about the compilation,
+     * and the rendering layer may not ask the compiler itself (invariant 7).
+     *
+     * <p>False by default, which is also the answer for a round that mixes main and test sources:
+     * {@code ModuleRootResolver} collapses that to {@code main}, and an unrouted round loses nothing.
+     */
+    private boolean testRound;
+
+    /**
      * The snapshot of the current contents, or {@code null} when it must be rebuilt. A generate or
      * check phase asks for the model several times (fingerprint, content build, per-module output),
      * so snapshotting once per round of mutation keeps that from re-walking every element.
@@ -174,6 +184,22 @@ public final class AnnotationCollector {
             this.captureSignatures = capture;
             memo = null;
         }
+    }
+
+    /**
+     * Records whether the rounds being collected compile test code. The processor sets it from
+     * {@link ModuleIdentity#isTestSourceSet()} as soon as the module identity resolves.
+     *
+     * <p>Does not invalidate the memoised snapshot: the model holds the same elements either way,
+     * and only where they are rendered differs.
+     */
+    public void testRound(boolean testRound) {
+        this.testRound = testRound;
+    }
+
+    /** Whether these rounds compile test code; false until {@link #testRound(boolean)} says so. */
+    public boolean isTestRound() {
+        return testRound;
     }
 
     /** Records the source position of a locked element; null positions are ignored. */
