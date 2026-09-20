@@ -281,6 +281,57 @@ class KspLifecycleTest {
         assertFalse(withoutImpls.contains("DefaultImpls"), withoutImpls);
     }
 
+    @Test
+    void typeElementPopulatesSuperclassAndInterfaces() throws IOException {
+        write("com/a/Hierarchy.kt", "package com.a\n"
+            + "import java.io.Serializable\n"
+            + "open class Base\n"
+            + "interface Marker\n"
+            + "class Child : Base(), Marker, Serializable\n"
+            + "interface SubInterface : Marker\n");
+
+        List<TypeElement> types = new ArrayList<>();
+        SymbolProcessorProvider provider = env -> new KspGuardrailProcessor(env, new AbstractProcessor() {
+            @Override
+            public Set<String> getSupportedAnnotationTypes() {
+                return Set.of("*");
+            }
+
+            @Override
+            public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment round) {
+                if (!round.processingOver()) {
+                    for (javax.lang.model.element.Element e : round.getRootElements()) {
+                        if (e instanceof TypeElement t) {
+                            types.add(t);
+                        }
+                    }
+                }
+                return false;
+            }
+        });
+
+        new KspHarness(sources(), root).run(provider);
+
+        TypeElement child = types.stream()
+            .filter(t -> t.getQualifiedName().contentEquals("com.a.Child"))
+            .findFirst().orElseThrow();
+        assertEquals("com.a.Base", child.getSuperclass().toString());
+        List<String> interfaces = child.getInterfaces().stream().map(Object::toString).sorted().toList();
+        assertEquals(List.of("com.a.Marker", "java.io.Serializable"), interfaces);
+
+        TypeElement base = types.stream()
+            .filter(t -> t.getQualifiedName().contentEquals("com.a.Base"))
+            .findFirst().orElseThrow();
+        assertEquals("java.lang.Object", base.getSuperclass().toString());
+        assertEquals(List.of(), base.getInterfaces());
+
+        TypeElement subInterface = types.stream()
+            .filter(t -> t.getQualifiedName().contentEquals("com.a.SubInterface"))
+            .findFirst().orElseThrow();
+        assertEquals(javax.lang.model.type.TypeKind.NONE, subInterface.getSuperclass().getKind());
+        assertEquals(List.of("com.a.Marker"), subInterface.getInterfaces().stream().map(Object::toString).toList());
+    }
+
     /** Stands in for the processor, recording what the adapter hands it. */
     private static final class Recorder extends AbstractProcessor {
         private final List<String> events;

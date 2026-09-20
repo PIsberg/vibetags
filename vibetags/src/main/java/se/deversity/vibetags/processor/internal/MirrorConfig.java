@@ -173,8 +173,21 @@ public final class MirrorConfig {
         if (depth >= MAX_DEPTH) {
             return;
         }
+        try {
+            for (Path child : childDirectories(dir)) {
+                collect(child, depth + 1, out, seen);
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // Unreadable directory — mirroring is best-effort and must never fail a compile.
+        }
+    }
+
+    /**
+     * Lists immediate child directories of {@code dir}, excluding {@link #SKIP_DIRS}, sorted by path.
+     */
+    static List<Path> childDirectories(Path dir) throws IOException {
         try (Stream<Path> children = Files.list(dir)) {
-            List<Path> dirs = children
+            return children
                 .filter(Files::isDirectory)
                 .filter(p -> {
                     Path name = p.getFileName();
@@ -182,11 +195,6 @@ public final class MirrorConfig {
                 })
                 .sorted()
                 .toList();
-            for (Path child : dirs) {
-                collect(child, depth + 1, out, seen);
-            }
-        } catch (IOException | RuntimeException ignored) {
-            // Unreadable directory — mirroring is best-effort and must never fail a compile.
         }
     }
 

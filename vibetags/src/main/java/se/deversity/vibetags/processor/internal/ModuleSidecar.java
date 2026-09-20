@@ -73,7 +73,7 @@ import java.util.stream.Stream;
 )
 public final class ModuleSidecar {
 
-    static final String SIDECAR_PREFIX = ".vibetags-mod-";
+    public static final String SIDECAR_PREFIX = ".vibetags-mod-";
     /**
      * Format version written into every sidecar header. Bump when the format changes.
      *
@@ -1086,7 +1086,7 @@ public final class ModuleSidecar {
      * {@code mergeFor} disk-free and its @AIContract signature untouched.
      */
     public static void applyRootIndexModeTo(Path root, List<ModuleSidecar> sidecars) {
-        if (!Files.exists(root.resolve(".vibetags-root-index"))) return;
+        if (!Files.exists(root.resolve(ServiceRegistry.ROOT_INDEX_FILE))) return;
         for (ModuleSidecar s : sidecars) {
             s.rootIndexMode = true;
             // The root module's own guardrails are not duplicated elsewhere — keep them inline.
@@ -1246,20 +1246,12 @@ public final class ModuleSidecar {
      * @return file names, sorted, or empty when every sidecar on disk was readable
      */
     public static List<String> unreadableSidecarNames(Path root) {
-        if (!Files.isDirectory(root)) return List.of();
         List<String> unreadable = new ArrayList<>();
-        try (Stream<Path> stream = Files.list(root)) {
-            for (Path p : stream.toList()) {
-                Path fn = p.getFileName();
-                if (fn == null) continue;
-                String name = fn.toString();
-                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
-                ModuleSidecar loaded = load(p);
-                if (loaded == UNREADABLE || loaded == FUTURE_VERSION) unreadable.add(name);
+        for (Path p : listPaths(root)) {
+            ModuleSidecar loaded = load(p);
+            if (loaded == UNREADABLE || loaded == FUTURE_VERSION) {
+                unreadable.add(GuardrailFileWriter.fileName(p));
             }
-        } catch (IOException unlistable) {
-            // A root we cannot list contributes no names, the same as a root with no sidecars.
-            return List.of();
         }
         Collections.sort(unreadable);
         return unreadable;
@@ -1900,21 +1892,12 @@ public final class ModuleSidecar {
      * full round, while a false positive would delete a sibling's work.
      */
     public static boolean anyStale(Path root) {
-        if (!Files.isDirectory(root)) return false;
-        try (Stream<Path> stream = Files.list(root)) {
-            for (Path p : stream.toList()) {
-                Path fn = p.getFileName();
-                String name = fn == null ? "" : fn.toString();
-                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
-                String modulePath = readModulePathHeader(p);
-                if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
-                    continue;
-                }
-                if (!moduleDirExists(root, modulePath)) return true;
+        for (Path p : listPaths(root)) {
+            String modulePath = readModulePathHeader(p);
+            if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
+                continue;
             }
-        } catch (IOException ignored) {
-            // A root we cannot list tells us nothing; treat it as "nothing to prune" and let the
-            // ordinary round decide. Failing a build over a directory listing would be the larger bug.
+            if (!moduleDirExists(root, modulePath)) return true;
         }
         return false;
     }
@@ -1999,7 +1982,7 @@ public final class ModuleSidecar {
      */
     private static void logSkipped(@Nullable Logger log, Path sidecar, String reason) {
         if (log != null && log.isDebugEnabled()) {
-            log.debug("sidecar.skip reason={} path={}", reason, fileName(sidecar));
+            log.debug("sidecar.skip reason={} path={}", reason, GuardrailFileWriter.fileName(sidecar));
         }
     }
 
@@ -2013,15 +1996,10 @@ public final class ModuleSidecar {
             return;
         }
         if (prune) {
-            log.info("sidecar.prune reason={} path={}", reason, fileName(sidecar));
+            log.info("sidecar.prune reason={} path={}", reason, GuardrailFileWriter.fileName(sidecar));
         } else if (log.isDebugEnabled()) {
-            log.debug("sidecar.skip reason={} path={}", reason, fileName(sidecar));
+            log.debug("sidecar.skip reason={} path={}", reason, GuardrailFileWriter.fileName(sidecar));
         }
-    }
-
-    private static String fileName(Path path) {
-        Path name = path.getFileName();
-        return name != null ? name.toString() : path.toString();
     }
 
     /** The {@code modulePath} header of one sidecar, or {@code null} if absent or unreadable. */
@@ -2063,7 +2041,7 @@ public final class ModuleSidecar {
         long stamp = 0L;
         for (Path p : listPaths(root)) {
             try {
-                stamp = 31L * stamp + fileName(p).hashCode();
+                stamp = 31L * stamp + GuardrailFileWriter.fileName(p).hashCode();
                 java.nio.file.attribute.BasicFileAttributes attrs =
                     Files.readAttributes(p, java.nio.file.attribute.BasicFileAttributes.class);
                 stamp = 31L * stamp + attrs.lastModifiedTime().toMillis();

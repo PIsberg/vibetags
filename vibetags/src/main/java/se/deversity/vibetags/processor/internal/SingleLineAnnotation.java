@@ -53,14 +53,21 @@ final class SingleLineAnnotation {
         return type.cast(proxy);
     }
 
-    private static boolean hasStringMember(Class<?> type) {
-        for (Method member : type.getDeclaredMethods()) {
-            Class<?> returned = member.getReturnType();
-            if (returned == String.class || returned == String[].class) {
-                return true;
+    private static final ClassValue<Boolean> HAS_STRING_MEMBER = new ClassValue<>() {
+        @Override
+        protected Boolean computeValue(Class<?> type) {
+            for (Method member : type.getDeclaredMethods()) {
+                Class<?> returned = member.getReturnType();
+                if (returned == String.class || returned == String[].class) {
+                    return Boolean.TRUE;
+                }
             }
+            return Boolean.FALSE;
         }
-        return false;
+    };
+
+    private static boolean hasStringMember(Class<?> type) {
+        return HAS_STRING_MEMBER.get(type);
     }
 
     /** A member's value with every string in it on one line; anything else passes through. */

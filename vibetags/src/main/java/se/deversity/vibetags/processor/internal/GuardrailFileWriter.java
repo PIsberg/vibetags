@@ -128,7 +128,7 @@ public final class GuardrailFileWriter {
             // Fast-path: if our cache says we wrote this exact body to this file and the file
             // is byte-stable since (size + mtime unchanged), skip the read/diff/write entirely.
             if (writeCache != null && writeCache.isUnchanged(filePath, content)) {
-                debug("write.skip file={} reason=cache-unchanged bytes={}", name(filePath), content.length());
+                debug("write.skip file={} reason=cache-unchanged bytes={}", fileName(filePath), content.length());
                 return false;
             }
 
@@ -184,7 +184,7 @@ public final class GuardrailFileWriter {
                     skipUpdateMsg(fileName);
                     return false;
                 }
-                debug("write.update file={} reason=size-differs oldBytes={} newBytes={} markers=false",
+                debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
                     fileName, existingSize, contentByteLen);
                 writeAndCache(filePath, content, content);
                 messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
@@ -227,7 +227,7 @@ public final class GuardrailFileWriter {
     }
 
     /** File name for log events; never the absolute path, which is noise in a build log. */
-    private static String name(Path filePath) {
+    static String fileName(Path filePath) {
         Path fileName = filePath.getFileName();
         return fileName != null ? fileName.toString() : filePath.toString();
     }
@@ -235,11 +235,11 @@ public final class GuardrailFileWriter {
     /** Writes {@code finalContent} atomically and, if a write cache is wired, records the body we wrote. */
     private void writeAndCache(Path filePath, String finalContent, String bodyForCache) throws IOException {
         if (dryRun) {
-            debug("write.skip file={} reason=dry-run bytes={}", name(filePath), finalContent.length());
+            debug("write.skip file={} reason=dry-run bytes={}", fileName(filePath), finalContent.length());
             dryRunChanges.add(filePath.toString());
             return;
         }
-        debug("write.commit file={} bytes={}", name(filePath), finalContent.length());
+        debug("write.commit file={} bytes={}", fileName(filePath), finalContent.length());
         writeContentWithBackup(filePath, finalContent);
         if (writeCache != null) {
             writeCache.recordWrite(filePath, bodyForCache);
@@ -813,7 +813,7 @@ public final class GuardrailFileWriter {
             if (!Files.exists(file)) {
                 return false;
             }
-            debug("delete.skip file={} reason=dry-run", name(file));
+            debug("delete.skip file={} reason=dry-run", fileName(file));
             dryRunChanges.add(file.toString());
             return true;
         }
@@ -821,7 +821,7 @@ public final class GuardrailFileWriter {
             if (!Files.deleteIfExists(file)) {
                 return false;
             }
-            debug("delete.commit file={}", name(file));
+            debug("delete.commit file={}", fileName(file));
             if (writeCache != null) {
                 writeCache.invalidate(file);
             }
@@ -829,7 +829,7 @@ public final class GuardrailFileWriter {
         } catch (IOException e) {
             // A file we cannot delete stays; the next build tries again. Failing a compile over
             // housekeeping would be the larger bug.
-            debug("delete.skip file={} reason=io-error detail={}", name(file), e.toString());
+            debug("delete.skip file={} reason=io-error detail={}", fileName(file), e.toString());
             return false;
         }
     }

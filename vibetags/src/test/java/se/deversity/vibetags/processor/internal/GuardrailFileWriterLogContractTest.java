@@ -17,6 +17,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -87,6 +89,22 @@ class GuardrailFileWriterLogContractTest {
         assertTrue(logged("reason=identical-bytes"),
             "the skip carries the reason that distinguishes it from every other skip: " + events());
         assertTrue(logged("file=AGENTS.md"), "events name the file, not the absolute path");
+    }
+
+    @Test
+    @DisplayName("a non-marker file with matching size but differing bytes logs reason=bytes-differ")
+    void exactSizeMismatchLogsBytesDiffer(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("settings.toml");
+        String initial = "key = \"value1\"\n";
+        String updated = "key = \"value2\"\n";
+        Files.writeString(file, initial);
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        assertTrue(writer.writeFileIfChanged(file.toString(), updated, true),
+            "content differs with same size, so file is updated");
+        assertTrue(logged("write.update"), "an update is recorded: " + events());
+        assertTrue(logged("reason=bytes-differ"),
+            "exact-size mismatch logs reason=bytes-differ, not size-differs: " + events());
     }
 
     @Test
@@ -192,5 +210,18 @@ class GuardrailFileWriterLogContractTest {
             count++;
         }
         return count;
+    }
+
+    @Test
+    @DisplayName("fileName extracts simple name from path or falls back to path string")
+    void fileNameExtractsNameOrFallsBack() {
+        assertEquals("test.md", GuardrailFileWriter.fileName(Path.of("a/b/test.md")));
+        // Path.of("") has an empty-but-present file name, so it does not reach the fallback.
+        assertEquals("", GuardrailFileWriter.fileName(Path.of("")));
+        // getFileName() is null only for a root, which is the one input the fallback exists for.
+        Path root = Path.of("x").toAbsolutePath().getRoot();
+        assertNotNull(root, "an absolute path always has a root");
+        assertNull(root.getFileName(), "a root is the case the fallback is written for");
+        assertEquals(root.toString(), GuardrailFileWriter.fileName(root));
     }
 }

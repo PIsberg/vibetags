@@ -26,6 +26,12 @@ import java.util.Set;
 )
 public final class ServiceRegistry {
 
+    /** On-disk file name for the machine-readable @AILocked report. */
+    public static final String LOCKS_REPORT_FILE = ".vibetags-locks";
+
+    /** On-disk file name for the lean-indexed root aggregate opt-in. */
+    public static final String ROOT_INDEX_FILE = ".vibetags-root-index";
+
     /** Subset of service keys whose presence on disk activates a service. */
     private static final Set<String> OPT_IN_KEYS = Set.of(
         "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
@@ -244,11 +250,11 @@ public final class ServiceRegistry {
         map.put("void",          root.resolve(".void/rules.md"));
         map.put("roo_modes",     root.resolve(".roomodes"));
         // Machine-readable @AILocked report (no extension → hash markers → multi-module merge)
-        map.put("locks_report",  root.resolve(".vibetags-locks"));
+        map.put("locks_report",  root.resolve(LOCKS_REPORT_FILE));
         // Lean indexed root aggregate opt-in (multi-module). No renderer: presence only flips the
         // reactor-root CLAUDE.md/.cursorrules/.windsurfrules/copilot-instructions.md merge from
         // embedding each module's guardrails to linking the module's own scoped rule files.
-        map.put("root_index",    root.resolve(".vibetags-root-index"));
+        map.put("root_index",    root.resolve(ROOT_INDEX_FILE));
         // Routing target for test-code guardrails. A .md file, so HTML markers and the ordinary
         // multi-module merge; its renderer writes nothing outside a test round.
         map.put("testing",       root.resolve("TESTING.md"));
@@ -328,8 +334,7 @@ public final class ServiceRegistry {
         if (root != null && path.startsWith(root)) {
             return root.relativize(path).toString().replace('\\', '/');
         }
-        Path name = path.getFileName();
-        return name == null ? path.toString() : name.toString();
+        return GuardrailFileWriter.fileName(path);
     }
 
     /**

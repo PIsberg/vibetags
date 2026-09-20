@@ -19,6 +19,7 @@ import com.google.devtools.ksp.symbol.KSTypeParameter;
 import com.google.devtools.ksp.symbol.KSTypeReference;
 import com.google.devtools.ksp.symbol.KSValueParameter;
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.model.SourceLocation;
 
 import javax.lang.model.element.ElementKind;
@@ -141,7 +142,7 @@ final class StubBuilder {
         Path source = Paths.get(file.getFilePath());
         KTypeElement facade = null;
         List<KTypeElement> fileRoots = new ArrayList<>();
-        for (KSDeclaration declaration : list(file.getDeclarations().iterator())) {
+        for (KSDeclaration declaration : KspGuardrailProcessor.list(file.getDeclarations().iterator())) {
             if (declaration instanceof KSClassDeclaration cls) {
                 fileRoots.add(buildClass(cls, pkg, source, JvmTypes.Scope.empty(), false));
             } else if (declaration instanceof KSFunctionDeclaration || declaration instanceof KSPropertyDeclaration) {
@@ -213,7 +214,7 @@ final class StubBuilder {
             parameters.put(element.getSimpleName().toString(), element);
         }
         JvmTypes.Scope scope = new JvmTypes.Scope(parameters, outerScope);
-        recordSupertypes(cls, type);
+        recordSupertypes(cls, type, scope);
 
         Owner.Kind ownerKind;
         if (cls.isCompanionObject()) {
@@ -231,7 +232,7 @@ final class StubBuilder {
             suppressed != null ? suppressed : outerSuppressWildcards, hasAnnotation(cls, JVM_EXPOSE_BOXED));
 
         KSFunctionDeclaration primary = cls.getPrimaryConstructor();
-        List<KSDeclaration> members = list(cls.getDeclarations().iterator());
+        List<KSDeclaration> members = KspGuardrailProcessor.list(cls.getDeclarations().iterator());
         Set<String> constructorProperties = constructorProperties(primary);
         Map<String, List<AnnotationReader.Use>> propertyUses = new HashMap<>();
         for (KSDeclaration member : members) {
@@ -270,7 +271,7 @@ final class StubBuilder {
         return type;
     }
 
-    private void recordSupertypes(KSClassDeclaration cls, KTypeElement type) {
+    private void recordSupertypes(KSClassDeclaration cls, KTypeElement type, JvmTypes.Scope scope) {
         try {
             Iterator<KSType> supertypes = UtilsKt.getAllSuperTypes(cls).iterator();
             while (supertypes.hasNext()) {
@@ -279,6 +280,32 @@ final class StubBuilder {
         } catch (RuntimeException unresolved) {
             // A supertype that does not resolve leaves the set short; only the locked-override
             // check reads it, and a missed override there costs one advisory warning.
+        }
+        boolean isClass = type.getKind() == ElementKind.CLASS || type.getKind() == ElementKind.ENUM;
+        boolean hasExplicitSuperclass = false;
+        try {
+            for (KSTypeReference ref : KspGuardrailProcessor.list(cls.getSuperTypes().iterator())) {
+                try {
+                    KSType resolved = ref.resolve();
+                    KSDeclaration decl = resolved.getDeclaration();
+                    if (decl instanceof KSClassDeclaration superCls) {
+                        TypeMirror rendered = types.render(ref, JvmTypes.Position.ARGUMENT, scope);
+                        if (superCls.getClassKind() == ClassKind.INTERFACE) {
+                            type.addInterface(rendered);
+                        } else if (isClass && !hasExplicitSuperclass) {
+                            hasExplicitSuperclass = true;
+                            type.setSuperclass(rendered);
+                        }
+                    }
+                } catch (RuntimeException unresolved) {
+                    // An unresolvable supertype reference is skipped.
+                }
+            }
+        } catch (RuntimeException unresolved) {
+            // Unresolvable supertypes sequence is skipped.
+        }
+        if (isClass && !hasExplicitSuperclass && !type.getQualifiedName().contentEquals("java.lang.Object")) {
+            type.setSuperclass(types.declared("java.lang.Object", List.of()));
         }
     }
 
@@ -454,9 +481,7 @@ final class StubBuilder {
         Iterator<com.google.devtools.ksp.symbol.KSAnnotation> it = function.getAnnotations().iterator();
         while (it.hasNext()) {
             com.google.devtools.ksp.symbol.KSAnnotation annotation = it.next();
-            KSType type = annotation.getAnnotationType().resolve();
-            com.google.devtools.ksp.symbol.KSName name = type.getDeclaration().getQualifiedName();
-            if (name != null && JVM_EXPOSE_BOXED.equals(name.asString())) {
+            if (JVM_EXPOSE_BOXED.equals(JvmTypes.annotationName(annotation))) {
                 for (com.google.devtools.ksp.symbol.KSValueArgument argument : annotation.getArguments()) {
                     if (argument.getValue() instanceof String given && !given.isEmpty()) {
                         return given;
@@ -769,7 +794,7 @@ final class StubBuilder {
     private void noteDropped(List<AnnotationReader.Use> uses, String what, String why) {
         for (AnnotationReader.Use use : uses) {
             String type = use.data().type();
-            if (type.startsWith("se.deversity.vibetags.annotations.")) {
+            if (type.startsWith(AILocked.class.getPackageName() + ".")) {
                 dropped.add("@" + type.substring(type.lastIndexOf('.') + 1) + " on " + what
                     + " reaches no guardrail file: " + why + ".");
             }
@@ -884,11 +909,5 @@ final class StubBuilder {
                 }
             }
         }
-    }
-
-    private static <T> List<T> list(Iterator<T> iterator) {
-        List<T> items = new ArrayList<>();
-        iterator.forEachRemaining(items::add);
-        return items;
     }
 }
