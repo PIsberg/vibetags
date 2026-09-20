@@ -57,6 +57,20 @@ class SingleLineAnnotationTest {
     }
 
     @Test
+    void theStringMemberAnswerIsStableAcrossRepeatedCalls() {
+        // hasStringMember is memoised per annotation type in a ClassValue, so the answer is now
+        // computed once and reused. A memo keyed or invalidated wrongly would show up as the
+        // second call disagreeing with the first, or as one type's answer leaking to another.
+        Retention raw = Probe.class.getAnnotation(Retention.class);
+        for (int call = 0; call < 3; call++) {
+            assertEquals("one line", wrap(Plain.class).reason(),
+                "call " + call + ": a type with string members must stay proxied");
+            assertSame(raw, SingleLineAnnotation.of(Retention.class, raw),
+                "call " + call + ": a type without string members must stay unproxied");
+        }
+    }
+
+    @Test
     void lineBreaksAndTheIndentationAfterThemCollapseToOneSpace() {
         assertEquals("Partner contract v2. Breaking it fails the nightly reconciliation. Ask the payments team first.",
             wrap(Wrapped.class).reason(),
