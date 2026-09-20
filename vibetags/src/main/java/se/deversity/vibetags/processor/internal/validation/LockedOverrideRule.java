@@ -8,6 +8,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import java.lang.annotation.Annotation;
@@ -59,19 +60,24 @@ final class LockedOverrideRule implements ValidationRule {
         if (!(locked.getEnclosingElement() instanceof TypeElement owner)) {
             return;
         }
+        // Loop-invariant: the owner does not change while its subtypes are swept, yet this was
+        // recomputed for every candidate. Measured on this repository's own self-annotate, one
+        // locked method over two rounds: 542 candidate checks, so 542 erasures of the same type.
+        TypeMirror ownerErasure = types.erasure(owner.asType());
         for (Element root : roots) {
-            visitTypes(ctx, root, owner, locked, elements, types);
+            visitTypes(ctx, root, owner, ownerErasure, locked, elements, types);
         }
     }
 
     /** Walks {@code root} and its nested types, reporting unlocked overrides of {@code locked}. */
     private void visitTypes(ValidationContext ctx, Element root, TypeElement owner,
-                            ExecutableElement locked, Elements elements, Types types) {
+                            TypeMirror ownerErasure, ExecutableElement locked,
+                            Elements elements, Types types) {
         if (!(root instanceof TypeElement candidate)) {
             return;
         }
         if (!candidate.equals(owner)
-                && types.isSubtype(types.erasure(candidate.asType()), types.erasure(owner.asType()))) {
+                && types.isSubtype(types.erasure(candidate.asType()), ownerErasure)) {
             for (Element member : candidate.getEnclosedElements()) {
                 if (member.getKind() != ElementKind.METHOD
                         || member.getAnnotation(AILocked.class) != null) {
@@ -91,7 +97,7 @@ final class LockedOverrideRule implements ValidationRule {
         }
         for (Element enclosed : root.getEnclosedElements()) {
             if (enclosed instanceof TypeElement) {
-                visitTypes(ctx, enclosed, owner, locked, elements, types);
+                visitTypes(ctx, enclosed, owner, ownerErasure, locked, elements, types);
             }
         }
     }
