@@ -139,4 +139,35 @@ class TestingMdSafetyEndToEndTest {
             assertTrue(content.contains("GoldenLedgerFixture"), ignoreFile + " must still list the test file:\n" + content);
         }
     }
+
+    /**
+     * Invariant 6 with routing on. When {@code .claude/rules/} is opted in, {@code CLAUDE.md}
+     * collapses to an index of scoped rule files and keeps only the safety buckets inline. A routed
+     * test round hands that renderer a model holding only safety annotations, so the two features
+     * meet in the one place a safety guardrail could fall between them. The granular rule file is
+     * compared across the two builds as well: rule files are per element and are not routed.
+     */
+    @Test
+    void theIndexedAggregateKeepsTestCodeSafetyGuardrailsInline() throws IOException {
+        String source = testSource("AILocked",
+            "@AILocked(reason = \"SAFETY-TEXT golden fixture is shared with a partner\")",
+            "import se.deversity.vibetags.annotations.AIContext;\n",
+            "@AIContext(focus = \"ADVISORY-TEXT build ledgers through LedgerBuilder only\")\n");
+        for (String name : List.of("indexed-with", "indexed-without")) {
+            Path dir = Files.createDirectories(tmp.resolve(name).resolve(".claude/rules"));
+            Files.createFile(dir.resolve(".vibetags"));
+        }
+        Path with = build("indexed-with", true, source);
+        Path without = build("indexed-without", false, source);
+
+        String claude = Files.readString(with.resolve("CLAUDE.md"));
+        assertTrue(claude.contains("SAFETY-TEXT"),
+            "the locked test fixture must stay inline in the indexed CLAUDE.md:\n" + claude);
+        assertFalse(claude.contains("ADVISORY-TEXT"), claude);
+
+        String ruleFile = ".claude/rules/com-example-ledger-GoldenLedgerFixture.md";
+        assertTrue(Files.exists(with.resolve(ruleFile)), "precondition: the granular directory is active");
+        assertEquals(Files.readString(without.resolve(ruleFile)), Files.readString(with.resolve(ruleFile)),
+            "a granular rule file must not depend on TESTING.md");
+    }
 }
