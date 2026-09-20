@@ -49,6 +49,9 @@ import java.util.Map;
 )
 public final class WriteCache {
 
+    /** Default on-disk file name for the write cache. */
+    public static final String DEFAULT_FILE_NAME = ".vibetags-cache";
+
     /**
      * Format version written into the cache header. Bump when the line format changes.
      * A cache written by a newer processor (higher version) is discarded wholesale on load —
@@ -422,7 +425,7 @@ public final class WriteCache {
                 return; // a cache path that is a filesystem root is not a cache location
             }
             Path tmp = ModuleSidecar.uniqueTempFile(
-                    tmpDir, cacheFileName != null ? cacheFileName.toString() : ".vibetags-cache");
+                    tmpDir, cacheFileName != null ? cacheFileName.toString() : DEFAULT_FILE_NAME);
             Files.writeString(tmp, sb.toString(), StandardCharsets.UTF_8);
             ModuleSidecar.moveIntoPlace(tmp, cachePath, ModuleSidecar.ATOMIC_REPLACE);
             dirty = false;

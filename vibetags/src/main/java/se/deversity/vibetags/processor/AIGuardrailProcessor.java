@@ -299,12 +299,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         collector.captureSignatures(!this.enforceFamilies.isEmpty() || this.baselineUpdate);
         // Position resolution feeds only the .vibetags-locks report; skip it entirely (no Tree API
         // scanning, no per-element allocation) unless that opt-in file is present.
-        this.locksReportEnabled = Files.exists(this.root.resolve(".vibetags-locks"));
+        this.locksReportEnabled = Files.exists(this.root.resolve(ServiceRegistry.LOCKS_REPORT_FILE));
         this.positionResolver = SourcePositionResolver.forEnv(processingEnv, this.root);
         this.bodyScanner = MethodBodyGuardrailScanner.forEnv(processingEnv);
 
         if (booleanOption(options, "vibetags.cache", true, messager)) {
-            this.writeCache = new WriteCache(this.root.resolve(".vibetags-cache"));
+            this.writeCache = new WriteCache(this.root.resolve(WriteCache.DEFAULT_FILE_NAME));
             // Options that shape output without being part of the annotation fingerprint: the
             // project name (the llms.txt H1) and the module override (the region a reactor merge
             // files this module under). Bound as the cache's run context so an option edit
@@ -1305,7 +1305,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private static List<String> sidecarNames(Set<String> regionIds) {
         List<String> names = new java.util.ArrayList<>();
         for (String regionId : regionIds) {
-            names.add(".vibetags-mod-" + regionId);
+            names.add(ModuleSidecar.SIDECAR_PREFIX + regionId);
         }
         return names;
     }

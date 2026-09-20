@@ -73,7 +73,7 @@ import java.util.stream.Stream;
 )
 public final class ModuleSidecar {
 
-    static final String SIDECAR_PREFIX = ".vibetags-mod-";
+    public static final String SIDECAR_PREFIX = ".vibetags-mod-";
     /**
      * Format version written into every sidecar header. Bump when the format changes.
      *
@@ -1086,7 +1086,7 @@ public final class ModuleSidecar {
      * {@code mergeFor} disk-free and its @AIContract signature untouched.
      */
     public static void applyRootIndexModeTo(Path root, List<ModuleSidecar> sidecars) {
-        if (!Files.exists(root.resolve(".vibetags-root-index"))) return;
+        if (!Files.exists(root.resolve(ServiceRegistry.ROOT_INDEX_FILE))) return;
         for (ModuleSidecar s : sidecars) {
             s.rootIndexMode = true;
             // The root module's own guardrails are not duplicated elsewhere — keep them inline.
