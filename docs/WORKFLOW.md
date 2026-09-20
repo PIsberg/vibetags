@@ -56,13 +56,20 @@ Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). J
 carries NullAway with it — nullability is checked at `ERROR` on every matrix JDK, so a
 `@Nullable` that stops being honoured fails the build rather than producing a warning nobody reads.
 
-6b. **Verify VibeTags' Own Guardrails Are Current** — `mvn clean test-compile -Pself-annotate
-`-Dvibetags.selfcheck=true`, JDK 21 only. The repo dogfoods its own guardrails, and until now
-nothing checked that the committed `CLAUDE.md` / `GEMINI.md` / `.claude/rules`
-matched what the processor writes. They had drifted. The flag turns the self-annotate profile into
-check mode, which fails on any would-be write, so the drift is a red build rather than something
-the next person to run the profile by hand discovers. JDK 21 only because it compares file content,
-which is JDK-independent.
+6b. **Verify VibeTags' Own Guardrails Are Current** — `mvn clean test-compile -Pself-annotate`
+followed by `git status --porcelain`, JDK 21 only. The repo dogfoods its own guardrails, and until
+now nothing checked that the committed `CLAUDE.md` / `GEMINI.md` / `.claude/rules` matched what the
+processor writes. They had drifted. Regenerating and diffing makes that a red build rather than
+something the next person to run the profile by hand discovers. JDK 21 only because it compares
+file content, which is JDK-independent.
+
+   It regenerates and diffs rather than using `-Dvibetags.selfcheck=true`, and the reason is worth
+   keeping: check mode reports per compile round, and this project has two of them. Maven runs
+   `default-compile` before `default-testCompile`, so on a clean clone the main round compares
+   main-only output against committed files that also carry the test round's guardrails and fails
+   before the test round runs. It passes on a machine that has built before, because a gitignored
+   `.vibetags-mod-*` sidecar is still on disk — green everywhere except CI, which is the wrong way
+   round for a gate. Issue #794 tracks the check-mode behaviour itself.
 
    Running it **locally** can report `vibetags/CLAUDE.md` as out of date when CI does not. That file
    is gitignored, so a fresh checkout has none and the file-existence opt-in means nothing creates

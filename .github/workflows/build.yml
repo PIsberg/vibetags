@@ -185,17 +185,33 @@ jobs:
       # The repo dogfoods its own guardrails but never verified them, so the committed
       # CLAUDE.md / GEMINI.md / .claude/rules could drift from what the
       # processor writes and nothing said so — which is exactly what happened, and is only
-      # visible to whoever next runs -Pself-annotate by hand. Check mode exists for precisely
-      # this and fails on any would-be write, so a stale committed guardrail is now a red
-      # build. On JDK 21 only: it verifies file content, which is JDK-independent.
+      # visible to whoever next runs -Pself-annotate by hand. On JDK 21 only: it verifies file
+      # content, which is JDK-independent.
+      #
+      # Regenerate and diff, not -Avibetags.check=true. Check mode reports per round, and this
+      # project now has two: Maven runs default-compile before default-testCompile, so on a clean
+      # clone the main round compares main-only output against committed files that also carry the
+      # test round's guardrails, and fails before the test round has run. It passes locally only
+      # when a previous build left a .vibetags-mod-* sidecar behind, which is gitignored and never
+      # present in CI — a false green exactly where it matters. Diffing the tree after both rounds
+      # asks the question that is actually being asked: do the committed files match a full
+      # regeneration? Same pattern as the enforcing example's gate below. See issue #794.
       - name: Verify VibeTags' Own Guardrails Are Current (self-check)
         if: matrix.java == '21'
         run: |
           cd vibetags
           # test-compile, not compile: TESTING.md routing only happens in a test round, so a
-          # main-only check would regenerate without the test guardrails and report drift
-          # against the committed files, which were generated from both source sets.
-          mvn clean test-compile -B -Pself-annotate -Dvibetags.selfcheck=true
+          # main-only regeneration would drop every test guardrail from the committed files.
+          mvn clean test-compile -B -Pself-annotate
+          cd ..
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::VibeTags' own guardrail files are out of date with its annotations."
+            echo "Run 'cd vibetags && mvn clean test-compile -Pself-annotate' and commit the result."
+            git --no-pager status --porcelain
+            git --no-pager diff
+            exit 1
+          fi
+          echo "Committed guardrail files match a full regeneration."
 
       - name: Reset AI Config Files (Maven)
         run: |
