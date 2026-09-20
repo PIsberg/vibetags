@@ -595,6 +595,28 @@ public final class ModuleSidecar {
      * (skipped, and likewise never deleted).
      */
     static @Nullable ModuleSidecar load(Path path) {
+        return load(path, false);
+    }
+
+    /**
+     * Classifies a sidecar and reads its headers without materialising a single body.
+     *
+     * <p>For the callers that ask only what a sidecar <em>is</em>, not what it says.
+     * {@code unreadableSidecarNames} wants nothing but the sentinel, yet the full load
+     * base64-decodes every body, splits it, parses every granular contribution and fills every map
+     * first. Measured on the three-module example: 21 of that build's 57 sidecar loads, each
+     * decoding around 46 values.
+     *
+     * <p>Every value is still base64-validated, because that is how a corrupt sidecar is
+     * recognised and the caller prunes on the verdict. Only the decoded bytes are discarded
+     * instead of being turned into strings and maps. {@code ModuleSidecarSkeletonLoadTest} holds
+     * the two loads to the same classification, corrupt bodies included.
+     */
+    static @Nullable ModuleSidecar loadSkeleton(Path path) {
+        return load(path, true);
+    }
+
+    private static @Nullable ModuleSidecar load(Path path, boolean skeleton) {
         try {
             List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
             String moduleId = null;
@@ -634,6 +656,14 @@ public final class ModuleSidecar {
                 if (eq < 0) continue;
                 String key = line.substring(0, eq);
                 String val = line.substring(eq + 1);
+                // A skeleton load answers what this sidecar is, not what it says. Everything below
+                // the headers is base64 that only exists to become a body, a stem or a granular
+                // contribution, so validate it — that is how a corrupt sidecar is recognised, and
+                // the caller prunes on the verdict — and then drop it rather than materialise it.
+                if (skeleton && !isSkeletonKey(key)) {
+                    validate(val);
+                    continue;
+                }
                 if (KEY_MODULE_ID.equals(key)) {
                     moduleId = val;
                 } else if (KEY_MODULE_PATH.equals(key)) {
@@ -746,6 +776,25 @@ public final class ModuleSidecar {
             last = lines.get(i).strip();
         }
         return TRAILER.equals(last);
+    }
+
+    /** The keys a skeleton load keeps: the headers, plus the element ids the partial-round guard reads. */
+    private static boolean isSkeletonKey(String key) {
+        return KEY_MODULE_ID.equals(key)
+            || KEY_MODULE_PATH.equals(key)
+            || KEY_REGION_ID.equals(key)
+            || KEY_ELEMENT_IDS.equals(key);
+    }
+
+    /**
+     * Base64-validates a value without building a string from it.
+     *
+     * <p>The decoded bytes are deliberately discarded. What matters is that the decoder throws on
+     * a value that is not base64, exactly as it does in {@link #decode}, so a skeleton load reaches
+     * the same corrupt verdict as a full one.
+     */
+    private static void validate(String base64) {
+        Base64.getDecoder().decode(base64);
     }
 
     private static String decode(String base64) {
@@ -1093,8 +1142,18 @@ public final class ModuleSidecar {
             if (s.modulePath.isEmpty() || "_root_".equals(s.moduleId)) continue;
             Path moduleDir = root.resolve(s.modulePath);
             if (!Files.isDirectory(moduleDir)) continue;
-            Set<String> moduleActive =
-                ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(moduleDir));
+            // Only the eight keys buildIndexPointer consults, and only for aggregates this
+            // module actually contributes to. resolveActiveServices would stat every opt-in
+            // path instead: measured at 85 per call, 4 calls per build of the indexed example,
+            // 340 of that build's 850 opt-in stats, to read 8 answers. Its one post-filter
+            // drops codex, which is not among the eight, so narrowing changes no verdict.
+            Map<String, Path> moduleFiles = ServiceRegistry.buildServiceFileMap(moduleDir);
+            Set<String> moduleActive = new LinkedHashSet<>();
+            for (String agg : INDEXABLE_AGGREGATES) {
+                if (!s.bodies.containsKey(agg)) continue;
+                addIfOptedIn(moduleActive, moduleFiles, agg);
+                addIfOptedIn(moduleActive, moduleFiles, aggregateGranularKey(agg));
+            }
             for (String agg : INDEXABLE_AGGREGATES) {
                 if (!s.bodies.containsKey(agg)) continue; // module contributes nothing for this service
                 String pointer = buildIndexPointer(agg, s.modulePath, moduleActive);
@@ -1186,6 +1245,15 @@ public final class ModuleSidecar {
         return aggregateScopedDir(service) == null ? null : service + "_granular";
     }
 
+    /** Adds {@code key} to {@code into} when its file or directory is present under the module. */
+    private static void addIfOptedIn(Set<String> into, Map<String, Path> moduleFiles, @Nullable String key) {
+        if (key == null) return;
+        Path file = moduleFiles.get(key);
+        if (file != null && ServiceRegistry.isOptedIn(key, file)) {
+            into.add(key);
+        }
+    }
+
     /** The always-loaded aggregate file name for an aggregate service, else {@code null}. */
     private static @Nullable String aggregateFileName(String service) {
         switch (service) {
@@ -1248,7 +1316,8 @@ public final class ModuleSidecar {
     public static List<String> unreadableSidecarNames(Path root) {
         List<String> unreadable = new ArrayList<>();
         for (Path p : listPaths(root)) {
-            ModuleSidecar loaded = load(p);
+            // Skeleton: this asks only what the sidecar is. See loadSkeleton.
+            ModuleSidecar loaded = loadSkeleton(p);
             if (loaded == UNREADABLE || loaded == FUTURE_VERSION) {
                 unreadable.add(GuardrailFileWriter.fileName(p));
             }
