@@ -164,10 +164,10 @@ one with both; check where each lands.
 - [x] T041 CI-only gate: add `TESTING.md` with a content assertion (a known test-class path inside the markers) to `.github/actions/verify-generated-files/action.yml`, then extract every `run: |` block to a script in the scratchpad and execute it with `bash -e -o pipefail` from `examples/basic`. Report the actual exit code.
 - [x] T042 [P] Docs, all in this change: a `TESTING.md` row in `docs/PLATFORMS.md`; opt-in, routing rule, mixed-round limit and the toggle behaviour in `docs/PROCESSOR.md`; the `~tfull~` key and test-sidecar states in `docs/MULTI-MODULE.md`; the new test classes in `docs/TESTS.md`; an entry in `docs/CHANGELOG.md`; the `touch TESTING.md` line in `USAGE.md`; Quick Setup and `references/output-files.md` in `.claude/skills/vibetags-usage/`; a "decide `routesTestGuardrails` for the new key" step in `.claude/skills/add-platform/SKILL.md`. No em-dashes, no curly quotes. Do not change the README AI-platform count (research R7); run `ProjectFactsConsistencyTest`.
 - [x] T043 [P] Evaluate the one VibeTags self-annotation candidate from plan.md (`ServiceRegistry.routesTestGuardrails`, the include/exclude asymmetry). If added, run `mvn compile -Pself-annotate` from `vibetags/` and commit the regenerated guardrail files; if not, say why in the PR body. Do not add others without a fact the code does not already state.
-- [ ] T044 Full gates, in order, reporting each as passed, failed or not run: `mvn -B verify -Pe2e` from `vibetags/` (adds PMD, CPD, SpotBugs, Error Prone; check the JDK matches CI before trusting a red PMD); `python action/locked-files/check_locked_diff.py` with `PYTHONIOENCODING=utf-8`; `git add` then `pre-commit run --all-files`; the quickstart.md walk in `examples/basic` and `examples/multimodule`.
+- [x] T044 Full gates, in order, reporting each as passed, failed or not run: `mvn -B verify -Pe2e` from `vibetags/` (adds PMD, CPD, SpotBugs, Error Prone; check the JDK matches CI before trusting a red PMD); `python action/locked-files/check_locked_diff.py` with `PYTHONIOENCODING=utf-8`; `git add` then `pre-commit run --all-files`; the quickstart.md walk in `examples/basic` and `examples/multimodule`.
 - [ ] T045 Measure the cost instead of estimating it: run the `load-tests/` annotation-volume sweep with and without `TESTING.md` per the `load-tests` skill and put the two numbers in the PR body. If the harness cannot express a test source set, say so and open an issue instead of guessing.
 - [ ] T046 Run the consumer regression sweep per the `consumer-regression-suite` skill (native Bash in the background, not `ctx_shell`), and report which of the five consumers were built and which were not.
-- [ ] T047 Open the PR against `main` (do not merge). Body: the failure it prevents, how it was verified, "stacked on the simplify/whole-codebase PR, review the last commits", the FR-008 amendment, and links to a GitHub issue for each item left behind: mixed main-and-test rounds are never routed; per-module nested `TESTING.md` is undocumented; `.specify/memory/constitution.md` is unfilled; KSP source-set behaviour if T004 found a gap. Push, then follow CI to green: download the `regenerated-diagrams` artifact for the new renderer class and commit the five SVGs under `docs/diagrams/codekarta/`.
+- [x] T047 Open the PR against `main` (do not merge). Body: the failure it prevents, how it was verified, "stacked on the simplify/whole-codebase PR, review the last commits", the FR-008 amendment, and links to a GitHub issue for each item left behind: mixed main-and-test rounds are never routed; per-module nested `TESTING.md` is undocumented; `.specify/memory/constitution.md` is unfilled; KSP source-set behaviour if T004 found a gap. Push, then follow CI to green: download the `regenerated-diagrams` artifact for the new renderer class and commit the five SVGs under `docs/diagrams/codekarta/`.
 
 ---
 
@@ -356,10 +356,19 @@ Unticked tasks that are partly done, and what is left of each:
      warning treats a sidecar with bodies but none for an active service as stale; `testing` breaks
      the premise on purpose, because a main round renders nothing for it. The file it named was
      complete, and it fired on every build of every routed project.
-- **Not started**: T038a (KSP), T045 (load tests), T046 (consumer sweep), T047 (PR, issues, CI).
-  T044 is partly done: `mvn -B verify -Pe2e` and the locked-files guard passed before these last
-  changes and need re-running; `pre-commit` runs with the docker-backed checkstyle hook skipped
-  (checkstyle runs in the Maven build); the quickstart walk has **not been run**.
+- **T044**: `mvn -B verify -Pe2e` **passed** on the final tree (BUILD SUCCESS, 3219/0/0/5, with
+  PMD, CPD, SpotBugs, Error Prone and Checkstyle). `check_locked_diff.py` with
+  `VIBETAGS_BASE_REF=main` **passed**: 24 locked elements from 3 reports, no locked code touched.
+  `pre-commit run --all-files` **passed** with the docker-backed `checkstyle` hook **skipped**
+  (checkstyle runs in the Maven build). The quickstart walk is still **not run**.
+- **T047**: done. The branch was rebased with `git rebase --onto main ddb347bd` first: the 17
+  `simplify/whole-codebase` commits were on main as one squash (#778), so the PR was showing 10.5k
+  insertions of already-merged work. `git diff ddb347bd main` was empty before the rebase, which is
+  the check that made it safe; the tree is unchanged and the PR is 18 commits. Body rewritten with
+  the gate table, the two defects, the three detection checks, the FR-008 amendment and the T043
+  decision. Eleven issues opened for what is left: #780 to #790.
+- **Not started**: T038a (KSP, now #785), T045 (load tests, now #789), T046 (consumer sweep, now
+  #790).
 - Pulled forward from Phase 7 because the new service key turned existing gates red: the
   `docs/PLATFORMS.md` row and README config-file count (part of T042), and the empty
   `examples/basic/TESTING.md` plus its `reset-ai-files.sh` entry (part of T039).
