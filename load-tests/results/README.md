@@ -219,6 +219,55 @@ B/op) regardless of body size — bounded by one `Files.readAttributes` syscall 
 an O(1) cached `String.hashCode()` lookup. The no-cache path scales linearly with
 body size because it must `readString` the entire file every call.
 
+## TESTING.md routing (`TestingMdRoutingStressTest`, not in these folders)
+
+`TestingMdRoutingStressTest` measures what routing test guardrails to `TESTING.md` saves in the
+always-loaded file. It has no folder here and will not get one, because **it is not comparable with
+anything else in this directory**: it writes its sources to disk under `src/main/java` and
+`src/test/java` and compiles from files, where every other harness hands javac in-memory
+`JavaFileObject`s.
+
+That is not a style difference, it is the only way the feature can be measured at all.
+`ModuleRootResolver` names a source set by reading the compilation unit's source **file** path, and
+a `string:///` URI has no file, so in `AnnotationVolumeStressTest` and its siblings no round is ever
+classified as a test round and routing is silently off. Measured on 2026-09-20 by opting that
+harness into `TESTING.md` and giving it a `pom.xml`: the file stayed 0 bytes at N=10 and N=100 while
+`CLAUDE.md` took 4638 and 34458 bytes (issue #789). Converting the in-memory harness in place would
+have made every baseline above incomparable with every one captured after, for a measurement that
+belongs in its own class.
+
+Quote its **byte** columns and ignore its **ms** columns. Bytes are a deterministic property of the
+generated files and reproduce exactly; the two timings are single wall-clock readings subject to
+every caveat listed below, and nothing in the test asserts on them.
+
+Captured on the usual box (i7-1260P), `main` at 2026-09-20:
+
+| main + test classes | `CLAUDE.md` unrouted | `CLAUDE.md` routed | `TESTING.md` | always-loaded saving |
+|---:|---:|---:|---:|---:|
+| 10 + 10 | 3 881 | 2 815 | 1 240 | 1 066 (27.5 %) |
+| 100 + 100 | 32 501 | 20 725 | 8 710 | 11 776 (36.2 %) |
+| 500 + 500 | 161 753 | 101 577 | 42 710 | 60 176 (37.2 %) |
+
+The saving converges on roughly 37 % of the always-loaded file once there are enough annotations for
+the fixed preamble to stop dominating, which is why the N=10 row is the outlier rather than the
+headline.
+
+Note that the routed pair is *smaller than the unrouted single file*: 144 287 bytes against 161 753
+at N=500. That is per-element scaffolding not being rendered twice, not content going missing. The
+test proves the difference is benign rather than asserting it, by checking all 500 test `focus`
+strings are readable in one of the two files and all 500 main ones have stayed in `CLAUDE.md`.
+
+To re-capture:
+
+```bash
+cd load-tests
+mvn test -Dtest=TestingMdRoutingStressTest       # N = 10, 100, 500
+cat $(ls -t target/testing-md-routing-*.txt | head -1)
+```
+
+It also runs in the `load-tests` job of `build.yml` on every pull request, where it is a regression
+gate rather than a measurement: routing must engage, and no guardrail may end up in neither file.
+
 ## Caveats — read before drawing conclusions
 
 1. **JMH error bars vary wildly across releases** because each baseline was measured during a different machine-state window. The 0.5.5 `writeFileIfChanged_smallWrite` ±5186 µs/op is system noise, not a real 5× regression. The narrow-error metrics across all releases (`buildServiceFileMap`, the 0.7.1 `_noChange` and `_smallWrite`) are trustworthy. When in doubt, re-run on a quiet machine.

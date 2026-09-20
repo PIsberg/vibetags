@@ -108,6 +108,17 @@ count. The signature-capture change is the worked example: invisible on the 1000
 36 MB on 400 classes of 40 members each. If a change touches per-member work, measure it on wide
 types — `SignatureCaptureStressTest` is the template.
 
+**The fixture is blind to anything that depends on where a source file lives.** Every sweep here
+hands javac in-memory `JavaFileObject`s with a `string:///` URI. `ModuleRootResolver` resolves a
+module root and a source set by walking up from the compilation unit's source **file**, so with
+no file it resolves neither: every round is treated as a main round of an unidentified module.
+Features keyed on that are therefore not merely unmeasured, they are switched off, and the sweep
+still goes green. `TESTING.md` routing is the worked example — opting the volume sweep into
+`TESTING.md` and giving it a `pom.xml` still left the file at 0 bytes while `CLAUDE.md` took the
+whole model (issue #789). Before measuring anything to do with source sets, module roots, roles,
+mirrors or granular paths, assert that the feature engaged; then write sources to disk, as
+`TestingMdRoutingStressTest` does, rather than extending a sweep that cannot see it.
+
 **`OutputSize(B)` is the correctness check hiding in the perf report.** It is byte-identical
 between releases that render the same thing, and an unexplained change means the work product
 moved — a functional finding, not a performance one. It is *not* constant across the whole
