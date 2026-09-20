@@ -2,6 +2,8 @@ package se.deversity.vibetags.processor.internal;
 
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.processor.VibeTagsLogger;
+import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
 import java.io.IOException;
@@ -391,6 +393,41 @@ public final class ServiceRegistry {
      */
     public static boolean isIgnoreService(String key) {
         return key.endsWith("_ignore") || "aiexclude".equals(key);
+    }
+
+    /**
+     * True when a test round's non-safety guardrails leave this service's file for
+     * {@code TESTING.md}, once that file is present.
+     *
+     * <p>The rule picks out the instruction files an agent loads as prose: one rendered file, with
+     * VibeTags markers, that is not YAML. The two sides are not symmetric, and the asymmetry is the
+     * part to keep. Routing a file that should have stayed whole loses guardrails from it: an ignore
+     * file would stop excluding a test file, and a JSON, TOML or YAML tool configuration has no
+     * prose in which to say the rest is in {@code TESTING.md}. Failing to route a file only costs
+     * the context the feature set out to save. So every doubtful case answers {@code false}.
+     *
+     * <p>{@code ServiceRoutingContractTest} pins the answer for every key by hand, so a new
+     * service fails there until someone decides which side it is on.
+     */
+    public static boolean routesTestGuardrails(String key) {
+        Path file = buildServiceFileMap(Path.of("")).get(key);
+        // No platform means no renderer: root_index is a marker file whose extensionless name would
+        // otherwise read as "hash markers, no merge shape" and qualify with nothing to route.
+        if (file == null || Platform.fromServiceKey(key) == null
+                || writesDirectory(key) || isIgnoreService(key)) {
+            return false;
+        }
+        // Decisions rather than consequences of the format: the destination itself, the files that
+        // hold only what never moves, the report a CI diff guard reads every lock from, and the
+        // llms files, which describe the project to a reader rather than instruct an agent.
+        if ("testing".equals(key) || key.endsWith("_safety") || "locks_report".equals(key)
+                || key.startsWith("llms")) {
+            return false;
+        }
+        Path name = file.getFileName();
+        return name != null
+            && GuardrailFileWriter.getMarkersFor(name.toString()) != null
+            && PlatformRendererRegistry.mergeShapeFor(key) == null;
     }
 
     /**

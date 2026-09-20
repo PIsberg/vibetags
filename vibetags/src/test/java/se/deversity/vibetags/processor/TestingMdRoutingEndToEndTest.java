@@ -96,4 +96,49 @@ class TestingMdRoutingEndToEndTest {
         assertTrue(testing.contains(TEST_FOCUS), "the test class's guardrail must reach TESTING.md:\n" + testing);
         assertFalse(testing.contains(MAIN_FOCUS), "and the main class's must not:\n" + testing);
     }
+
+    /** One HTML-marker file, one hash-marker file, and a second Markdown aggregate. */
+    private static final List<String> ALWAYS_LOADED = List.of("CLAUDE.md", ".cursorrules", "GEMINI.md");
+
+    private void optInto(List<String> files) throws IOException {
+        for (String file : files) {
+            Files.createFile(root.resolve(file));
+        }
+    }
+
+    @Test
+    void aTestRoundsGuardrailsLeaveTheAlwaysLoadedFiles() throws IOException {
+        optInto(ALWAYS_LOADED);
+        Files.createFile(root.resolve("TESTING.md"));
+
+        compileMain();
+        compileTests();
+
+        for (String file : ALWAYS_LOADED) {
+            String content = read(file);
+            assertTrue(content.contains(MAIN_FOCUS), file + " must keep the main code's guardrail:\n" + content);
+            assertFalse(content.contains(TEST_FOCUS),
+                file + " must not carry a test-code guardrail once TESTING.md is present:\n" + content);
+        }
+        assertTrue(read("TESTING.md").contains(TEST_FOCUS), "it has to have gone somewhere");
+    }
+
+    /**
+     * The control for the test above. Without it, that test also passes when the test round
+     * simply never reaches these files, which is a different defect with the same symptom.
+     */
+    @Test
+    void withoutTestingMdTheTestGuardrailsStayWhereTheyWere() throws IOException {
+        optInto(ALWAYS_LOADED);
+
+        compileMain();
+        compileTests();
+
+        for (String file : ALWAYS_LOADED) {
+            String content = read(file);
+            assertTrue(content.contains(MAIN_FOCUS), file + " must keep the main code's guardrail:\n" + content);
+            assertTrue(content.contains(TEST_FOCUS), file + " is where a test guardrail lives by default:\n" + content);
+        }
+        assertFalse(Files.exists(root.resolve("TESTING.md")), "VibeTags never creates the opt-in file");
+    }
 }

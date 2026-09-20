@@ -98,6 +98,7 @@ public final class GuardrailContentBuilder {
             context = context.asTestRound();
         }
         Map<String, String> contentByService = new java.util.LinkedHashMap<>();
+        RoutedViews views = new RoutedViews(model, collector.isTestRound() && activeServices.contains("testing"));
 
         // Render each active service (excluding granular directories and special-case exclusions)
         for (String serviceKey : activeServices) {
@@ -110,17 +111,18 @@ public final class GuardrailContentBuilder {
 
             Platform platform = Platform.fromServiceKey(serviceKey);
             if (platform != null) {
-                String content = PlatformRendererRegistry.getRenderer(platform).render(model, platform, context);
+                GuardrailModel view = views.of(serviceKey);
+                String content = PlatformRendererRegistry.getRenderer(platform).render(view, platform, context);
                 if (content != null) {
-                    contentByService.put(serviceKey, withTransitiveAppendix(content, model, platform));
+                    contentByService.put(serviceKey, withTransitiveAppendix(content, view, platform));
                 }
             }
         }
 
         // Implicit platform activations: the Codex sidecar, the one documented exception to invariant 1
         if (activeServices.contains("codex")) {
-            putRendered(contentByService, "codex_config", Platform.CODEX_CONFIG, model, context);
-            putRendered(contentByService, "codex_rules", Platform.CODEX_RULES, model, context);
+            putRendered(contentByService, "codex_config", Platform.CODEX_CONFIG, views.of("codex_config"), context);
+            putRendered(contentByService, "codex_rules", Platform.CODEX_RULES, views.of("codex_rules"), context);
         }
         // Qwen has no implicit outputs. .qwen/settings.json is the user's Qwen Code settings file and is
         // never written (#650); .qwen/commands/refactor.md is an ordinary opt-in, rendered by the loop
@@ -159,6 +161,39 @@ public final class GuardrailContentBuilder {
         String content = PlatformRendererRegistry.getRenderer(platform).render(model, platform, context);
         if (content != null) {
             contentByService.put(serviceKey, content);
+        }
+    }
+
+    /**
+     * Which slice of the model each service renders. In every round but one, all of it.
+     *
+     * <p>A test round of a project that has {@code TESTING.md} is routed: {@code TESTING.md} renders
+     * the model without its safety annotations, the instruction aggregates
+     * ({@link ServiceRegistry#routesTestGuardrails}) render the safety annotations only, and every
+     * other service renders the whole model as before. Done here, by handing renderers a smaller
+     * model, because a renderer only ever sees a model: none of them learns that routing exists,
+     * and a tests-only module with a single sidecar, which the reactor merge skips, is routed the
+     * same way as any other.
+     */
+    private static final class RoutedViews {
+        private final GuardrailModel model;
+        private final @Nullable GuardrailModel safetyOnly;
+        private final @Nullable GuardrailModel withoutSafety;
+
+        RoutedViews(GuardrailModel model, boolean routed) {
+            this.model = model;
+            this.safetyOnly = routed ? model.safetyOnly() : null;
+            this.withoutSafety = routed ? model.withoutSafety() : null;
+        }
+
+        GuardrailModel of(String serviceKey) {
+            if (safetyOnly == null || withoutSafety == null) {
+                return model;
+            }
+            if ("testing".equals(serviceKey)) {
+                return withoutSafety;
+            }
+            return ServiceRegistry.routesTestGuardrails(serviceKey) ? safetyOnly : model;
         }
     }
 
