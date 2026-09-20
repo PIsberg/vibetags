@@ -141,6 +141,39 @@ class TestingMdSafetyEndToEndTest {
     }
 
     /**
+     * FR-009 for the review configs. A YAML or JSON reviewer configuration is a file VibeTags
+     * merges a span into, not an instruction file an agent loads whole, so nothing about it should
+     * move when {@code TESTING.md} appears. It is also the one output family routing could reach by
+     * accident: {@code routesTestGuardrails} excludes it on two independent grounds (it has a merge
+     * shape, and it has no marker pair), and a change that dropped either would show up here as a
+     * byte difference rather than as a silently thinner reviewer config.
+     */
+    @Test
+    void aReviewConfigIsByteIdenticalWithAndWithoutTestingMd() throws IOException {
+        String source = testSource("AILocked",
+            "@AILocked(reason = \"SAFETY-TEXT golden fixture is shared with a partner\")",
+            "import se.deversity.vibetags.annotations.AIContext;\n",
+            "@AIContext(focus = \"ADVISORY-TEXT build ledgers through LedgerBuilder only\")\n");
+        List<String> configs = List.of(".coderabbit.yaml", "greptile.json");
+        for (String name : List.of("config-with", "config-without")) {
+            Path dir = Files.createDirectories(tmp.resolve(name));
+            for (String config : configs) {
+                Files.createFile(dir.resolve(config));
+            }
+        }
+        Path with = build("config-with", true, source);
+        Path without = build("config-without", false, source);
+
+        for (String config : configs) {
+            String content = Files.readString(with.resolve(config));
+            assertTrue(content.contains("ADVISORY-TEXT") && content.contains("SAFETY-TEXT"),
+                config + " reviews the whole diff, so it keeps both kinds of test guardrail:\n" + content);
+            assertEquals(Files.readString(without.resolve(config)), content,
+                config + " must not depend on TESTING.md at all");
+        }
+    }
+
+    /**
      * Invariant 6 with routing on. When {@code .claude/rules/} is opted in, {@code CLAUDE.md}
      * collapses to an index of scoped rule files and keeps only the safety buckets inline. A routed
      * test round hands that renderer a model holding only safety annotations, so the two features

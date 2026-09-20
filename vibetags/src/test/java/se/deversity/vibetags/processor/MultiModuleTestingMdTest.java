@@ -113,4 +113,41 @@ class MultiModuleTestingMdTest {
         assertEquals(2, occurrences(claude, POINTER),
             "module-a and module-b moved guardrails; module-c has no test code:\n" + claude);
     }
+
+    /**
+     * Research R9. A {@code TESTING.md} inside a module is not a promise this change makes, and
+     * no doc offers it. It is reachable all the same, because the per-module writer renders
+     * through the same registry and builder as the root, so the thing to pin is that it behaves
+     * like the root case rather than throwing or filling with the whole reactor. Left unpinned,
+     * the first user to try it finds out by losing a build.
+     */
+    @Test
+    void aTestingMdInsideAModuleTakesThatModulesTestGuardrailsOnly() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createFile(root.resolve("TESTING.md"));
+        Files.createDirectories(root.resolve("module-a"));
+        Files.createFile(root.resolve("module-a/CLAUDE.md"));
+        Files.createFile(root.resolve("module-a/TESTING.md"));
+
+        buildBothModules();
+
+        String nested = Files.readString(root.resolve("module-a/TESTING.md"));
+        assertTrue(nested.contains("ALPHA-TEST rule"),
+            "the module's own test guardrail belongs in the module's own TESTING.md:\n" + nested);
+        assertFalse(nested.contains("BETA-TEST rule"),
+            "a per-module file carries that module only, as its CLAUDE.md does:\n" + nested);
+        assertFalse(nested.contains("ALPHA-MAIN rule"),
+            "routing is the same rule here: main guardrails do not move:\n" + nested);
+
+        String nestedClaude = Files.readString(root.resolve("module-a/CLAUDE.md"));
+        assertTrue(nestedClaude.contains("ALPHA-MAIN rule"), nestedClaude);
+        assertFalse(nestedClaude.contains("ALPHA-TEST rule"),
+            "and the module's always-loaded file gave its test guardrails up:\n" + nestedClaude);
+        assertEquals(1, occurrences(nestedClaude, POINTER),
+            "with the pointer said once:\n" + nestedClaude);
+
+        String rootTesting = Files.readString(root.resolve("TESTING.md"));
+        assertTrue(rootTesting.contains("ALPHA-TEST rule") && rootTesting.contains("BETA-TEST rule"),
+            "the root file is unaffected by a module opting in as well:\n" + rootTesting);
+    }
 }

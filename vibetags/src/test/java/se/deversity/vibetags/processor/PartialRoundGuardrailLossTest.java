@@ -265,6 +265,66 @@ class PartialRoundGuardrailLossTest {
         @Override public java.util.Locale getLocale() { return delegate.getLocale(); }
     }
 
+    /**
+     * Invariant 17 has to cover the routed file too. With {@code TESTING.md} present a test
+     * round's non-safety guardrails live there, so a partial test round that rewrote it from the
+     * subset it happened to compile would delete exactly the guardrails invariant 17 exists to
+     * protect - only in a file the reported Gradle incident never touched, because routing did not
+     * exist yet. The safety half stays in {@code CLAUDE.md} and is asserted in the same round, so
+     * one partial round is checked against both destinations at once.
+     */
+    @Test
+    void aPartialTestRoundStripsNeitherTestingMdNorTheRoutedAggregate(@TempDir Path root)
+            throws Exception {
+        Path[] tests = writeThreeAnnotatedTestSources(root);
+        compileAll(root, tests);
+
+        String routedFull = Files.readString(root.resolve("TESTING.md"), StandardCharsets.UTF_8);
+        String aggregateFull = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(routedFull.contains("beta-fixture-rule"),
+            "precondition: the full test round routed Beta's @AIContext to TESTING.md. Was:" + NL
+                + routedFull);
+        assertTrue(aggregateFull.contains("beta-golden-bytes"),
+            "precondition: Beta's @AILocked is safety-tier and stayed in CLAUDE.md. Was:" + NL
+                + aggregateFull);
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        // Gradle's incremental round, in the test source set: one of the three recompiled.
+        compileSubset(root, tests[0]);
+
+        String routedAfter = Files.readString(root.resolve("TESTING.md"), StandardCharsets.UTF_8);
+        assertTrue(routedAfter.contains("beta-fixture-rule"),
+            "TESTING.md was rebuilt from the one test class this round compiled, so the routed "
+                + "guardrails of the two it never saw are gone. Was:" + NL + routedAfter);
+        assertTrue(routedAfter.contains("gamma-fixture-rule"),
+            "Gamma's routed guardrail went the same way as Beta's. Was:" + NL + routedAfter);
+
+        String aggregateAfter = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(aggregateAfter.contains("beta-golden-bytes"),
+            "the safety half is written by the same round; a partial test round must leave it "
+                + "alone too. Was:" + NL + aggregateAfter);
+        assertTrue(aggregateAfter.contains("gamma-golden-bytes"),
+            "Gamma's safety guardrail went the same way as Beta's. Was:" + NL + aggregateAfter);
+    }
+
+    /** Same silence problem: a partial test round has to say why TESTING.md did not move. */
+    @Test
+    void aPartialTestRoundSaysSoOnTheConsole(@TempDir Path root) throws Exception {
+        Path[] tests = writeThreeAnnotatedTestSources(root);
+        compileAll(root, tests);
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        List<String> warnings = compileSubsetCapturingWarnings(root, tests[0]);
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("did not compile")),
+            "a routed round that refuses to regenerate has to explain itself, or the developer "
+                + "reads a TESTING.md that does not reflect their edit. Warnings were:" + NL
+                + "  " + String.join(NL + "  ", warnings));
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static String messages(List<Diagnostic<? extends javax.tools.JavaFileObject>> diagnostics) {
@@ -310,6 +370,37 @@ class PartialRoundGuardrailLossTest {
 
     private static Path rule(Path root, String simpleName) {
         return root.resolve(".claude/rules/com-example-" + simpleName + ".md");
+    }
+
+    /**
+     * Three test classes, each carrying one routed guardrail and one safety guardrail, with
+     * {@code TESTING.md} opted in. {@code src/test/java} is what makes the round a test round.
+     */
+    private static Path[] writeThreeAnnotatedTestSources(Path root) throws IOException {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createFile(root.resolve("TESTING.md"));
+        Files.writeString(root.resolve("pom.xml"),
+            "<project><artifactId>ledger</artifactId></project>", StandardCharsets.UTF_8);
+        return new Path[]{
+            writeTest(root, "AlphaTest", "alpha"),
+            writeTest(root, "BetaTest", "beta"),
+            writeTest(root, "GammaTest", "gamma"),
+        };
+    }
+
+    private static Path writeTest(Path root, String type, String stem) throws IOException {
+        Path p = root.resolve("src/test/java/com/example/" + type + ".java");
+        Files.createDirectories(p.getParent());
+        Files.writeString(p,
+            "package com.example;" + NL
+                + "import se.deversity.vibetags.annotations.AIContext;" + NL
+                + "import se.deversity.vibetags.annotations.AILocked;" + NL
+                + "@AIContext(focus = " + Q + stem + "-fixture-rule" + Q + ")" + NL
+                + "@AILocked(reason = " + Q + stem + "-golden-bytes" + Q + ")" + NL
+                + "public class " + type + " {}" + NL,
+            StandardCharsets.UTF_8);
+        return p;
     }
 
     private static Path[] writeThreeAnnotatedSources(Path root) throws IOException {

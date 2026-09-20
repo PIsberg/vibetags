@@ -117,7 +117,7 @@ file byte for byte; cross create/delete with main-only, tests-only and main-then
 - [x] T026 [US2] In `MAIN/internal/ModuleSidecar.java`: add the `~tfull~<service>` key namespace (persisted, next to `~idx~`), `putUnroutedBody`, a transient never-persisted `testingOptedIn` flag set for every sidecar in `readAll(root)` via an `applyTestingOptInTo(root, sidecars)` helper modelled on `applyRootIndexModeTo` but using `ServiceRegistry.isOptedIn`, and in `mergeFor` substitute the `~tfull~` body when the flag is false. `mergeFor`'s `@AIContract` signature is unchanged. Also apply the substitution in `contributionsFor` only if a routed service can reach it (it should not: routed services all have markers).
 - [x] T027 [US2] In `MAIN/AIGuardrailProcessor.java`: change `populateSidecarBodies` from `static` to an instance method with the same name and parameters so both call sites (`generateFiles`, `checkFiles`) stay byte-identical; when the round is routed, render the unrouted body for each routed service with a second `GuardrailContentBuilder` pass that ignores routing, and store it with `putUnroutedBody`. Verify with `git diff -U0` that no line inside `generateFiles()` changed, and run `python action/locked-files/check_locked_diff.py` with `PYTHONIOENCODING=utf-8` against `merge-base..HEAD`.
 - [x] T028 [US2] Extend `TEST/CheckModeTest.java`: check mode reports a stale `TESTING.md` as drift, reports none on a tree a real routed build just produced, and agrees with generation after a delete-then-main-only build.
-- [ ] T029 [US2] Extend `TEST/PartialRoundGuardrailLossTest.java`: a partial test round with `TESTING.md` present writes nothing to `TESTING.md` or to any routed file, and says so in the log.
+- [x] T029 [US2] Extend `TEST/PartialRoundGuardrailLossTest.java`: a partial test round with `TESTING.md` present writes nothing to `TESTING.md` or to any routed file, and says so in the log.
 - [ ] T030 [US2] Run T024 and T025 green, then the full `mvn test -Pe2e` against the T002 baseline.
 
 **Checkpoint**: both P1 stories hold; the feature is safe to opt into and out of.
@@ -147,7 +147,7 @@ absent when `TESTING.md` is absent or the module moved nothing.
 one with both; check where each lands.
 
 - [x] T034 [US4] Add cases to `TEST/TestingMdRoutingEndToEndTest.java` for spec US4 scenarios 1 to 3, once per safety annotation (parameterized over the six): the safety guardrail's rendering in `CLAUDE.md` is byte-identical to the rendering without `TESTING.md`, and the element path does not appear in `TESTING.md` for a safety-only class. For a class carrying both kinds, its path appears in both files, each with only its own kind.
-- [ ] T035 [P] [US4] FR-009 cases in `TEST/TestingMdRoutingEndToEndTest.java`: with `TESTING.md` present, an `@AIIgnore` on a test file still yields its glob in `.cursorignore` and one other ignore file; a JSON or YAML review config (for example `.coderabbit.yaml`) and a granular rule file under `.claude/rules/` for a test class are byte-identical with and without `TESTING.md`.
+- [x] T035 [P] [US4] FR-009 cases in `TEST/TestingMdRoutingEndToEndTest.java`: with `TESTING.md` present, an `@AIIgnore` on a test file still yields its glob in `.cursorignore` and one other ignore file; a JSON or YAML review config (for example `.coderabbit.yaml`) and a granular rule file under `.claude/rules/` for a test class are byte-identical with and without `TESTING.md`.
 - [x] T036 [US4] Extend `TEST/GranularRulesEndToEndTest.java` (invariant 6): with a granular directory opted in and `TESTING.md` present, the aggregate's inline safety buckets still include test-code safety guardrails. Fix `MAIN/internal/GuardrailContentBuilder.java` if the indexed renderer variant and the `safetyOnly()` view interact badly.
 
 **Checkpoint**: all four stories independently verified.
@@ -157,7 +157,7 @@ one with both; check where each lands.
 ## Phase 7: Polish & Cross-Cutting Concerns
 
 - [x] T037 Logging, test first: add contract cases in `TEST/internal/GuardrailFileWriterLogContractTest.java` (or a sibling `TestingRoutingLogContractTest.java` in the same package) for `testing.route sourceSet= routed= moved= kept=`, `testing.skip reason=not-test-round`, `testing.skip reason=no-test-guardrails`, `merge.testing.fallback service= module=`, and for the absence of any `testing.` event when `TESTING.md` is absent. Then emit them from `MAIN/internal/GuardrailContentBuilder.java` or `MAIN/AIGuardrailProcessor.java` (outside `generateFiles()`) and `MAIN/internal/ModuleSidecar.java`; document them in `docs/LOGGING.md`.
-- [ ] T038 [P] Multi-module test in `TEST/TestingMdRoutingEndToEndTest.java` or a new `TEST/MultiModuleTestingMdTest.java`: two modules with test guardrails produce one `TESTING.md` with two `VIBETAGS-MODULE` regions; building one module alone does not erase the other's region (FR-011). Add the research R9 case: a nested `module-a/TESTING.md` behaves like the root case and does not throw.
+- [x] T038 [P] Multi-module test in `TEST/TestingMdRoutingEndToEndTest.java` or a new `TEST/MultiModuleTestingMdTest.java`: two modules with test guardrails produce one `TESTING.md` with two `VIBETAGS-MODULE` regions; building one module alone does not erase the other's region (FR-011). Add the research R9 case: a nested `module-a/TESTING.md` behaves like the root case and does not throw.
 - [ ] T038a KSP routing test, added by T004 (research R1): in `vibetags-ksp/src/test`, run the KSP front end over a Kotlin source under `src/test/kotlin` with `TESTING.md` and `CLAUDE.md` present and assert a non-safety guardrail lands in `TESTING.md` and not in `CLAUDE.md`. T004 established by reading, not by running, that `KspElements.getFileObjectOf` hands `ModuleRootResolver` the real path; this task is what executes it. If the KSP test harness cannot place sources under a `src/test` path, say so and open an issue.
 - [ ] T039 Fixture `examples/basic`: add `examples/basic/src/test/java/` with one class carrying a non-safety annotation and one carrying `@AILocked`, add the JUnit-free test-compile wiring the pom needs, `touch examples/basic/TESTING.md`, add `TESTING.md` to `AI_FILES` in `examples/basic/reset-ai-files.sh`, then `rm -f .vibetags-cache && mvn clean test-compile` and commit the regenerated files. `TEST/ExampleOptInCoverageTest.java` must pass.
 - [ ] T040 Fixture `examples/multimodule`: `touch examples/multimodule/TESTING.md`, `rm -f .vibetags-cache`, regenerate with `mvn clean verify` (not `compile`), commit. Read the new active-service count from `examples/multimodule/vibetags.log` and update both `expected=` values in `.github/workflows/build.yml` if they moved. Do the same for `examples/gradle-multimodule` only if `examples/INDEX.md` says that fixture should carry it.
@@ -278,9 +278,12 @@ Unticked tasks that are partly done, and what is left of each:
   hardwired to `src/main`). Passed first time.
 - **T031**: done. Single-module cases in `TestingMdRoutingEndToEndTest` (three failing-first),
   the reactor case in `MultiModuleTestingMdTest` (passed first time).
-- **T035**: the `@AIIgnore` case and the granular rule file byte-identity case are written and
-  green (`TestingMdSafetyEndToEndTest`). The JSON or YAML review config byte-identity case is
-  **not written**.
+- **T035**: done. The `@AIIgnore` case and the granular rule file byte-identity case were
+  already green (`TestingMdSafetyEndToEndTest`); the review-config case
+  (`aReviewConfigIsByteIdenticalWithAndWithoutTestingMd`, `.coderabbit.yaml` and `greptile.json`)
+  passed first time and was checked for detection: widening `routesTestGuardrails` to accept a
+  file with markers **or** a merge shape turns exactly that one case of the 15 red, so nothing
+  else in the suite covered it.
 - **T034** lives in a new class, `TestingMdSafetyEndToEndTest`, not in the routing class. Passed
   first time; with `@AISecure` removed from `GuardrailAnnotations.SAFETY` exactly its two
   `AISecure` cases fail.
@@ -288,15 +291,27 @@ Unticked tasks that are partly done, and what is left of each:
   passed first time, no production change needed.
 - **T037**: done (`TestingRoutingLogContractTest`, `docs/LOGGING.md`). The cases were **not run
   red first**: a `verify` run held the build directory while they were written.
-- **T038**: the reactor cases are done (`MultiModuleTestingMdTest`). The research R9 case, a
-  nested `module-a/TESTING.md`, is **not written**.
+- **T038**: done. The research R9 case is
+  `MultiModuleTestingMdTest.aTestingMdInsideAModuleTakesThatModulesTestGuardrailsOnly`: a
+  `module-a/TESTING.md` takes module-a's test guardrails and nothing else, its `CLAUDE.md` gives
+  them up and carries the pointer once, and the root file is unaffected. It passed first time, as
+  R9 predicted, and detects: with `routesTestGuardrails` forced to false it is one of the three
+  cases in the class that go red.
 - **T042**: mostly done (PLATFORMS, PROCESSOR, MULTI-MODULE, LOGGING, TESTS, CHANGELOG, USAGE,
   vibetags-usage Quick Setup). **Not done**: `references/output-files.md` in the vibetags-usage
   skill, and the `routesTestGuardrails` step in the add-platform skill.
 - `TestingRenderer` is now `RoutedTestingRenderer`: PMD's `TestClassWithoutTestCases` fires on
   any class named `Test*`, and the repo has no PMD suppressions. `plan.md` and `research.md`
   still use the old name.
-- **Not started**: T029 (partial round, invariant 17), T038a (KSP), T039 to T041 (example
+- **T029**: done, and a finding: invariant 17 already covered the routed file, so no production
+  change was needed. Two cases in `PartialRoundGuardrailLossTest`, over three annotated
+  `src/test/java` classes each carrying one routed `@AIContext` and one safety `@AILocked`, so one
+  partial round is checked against both destinations. Both passed first time; with the
+  `!unread.isEmpty()` guard in `process()` disabled they go red on the assertions that matter (the
+  `TESTING.md` one, not the precondition, and the missing warning). The fixture needs a `pom.xml`
+  at the root: without a build file the source set is never classified and the round is not routed,
+  which is what the first red run showed.
+- **Not started**: T038a (KSP), T039 to T041 (example
   fixtures and the verify-generated-files action; they need the processor installed), T043
   (self-annotation candidate), T045 (load tests), T046 (consumer sweep), T047 (PR, issues, CI).
   T044 is partly done: `mvn -B verify -Pe2e` and the locked-files guard pass; `pre-commit` has
