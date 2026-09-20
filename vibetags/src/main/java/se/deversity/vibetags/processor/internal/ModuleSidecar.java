@@ -1142,8 +1142,18 @@ public final class ModuleSidecar {
             if (s.modulePath.isEmpty() || "_root_".equals(s.moduleId)) continue;
             Path moduleDir = root.resolve(s.modulePath);
             if (!Files.isDirectory(moduleDir)) continue;
-            Set<String> moduleActive =
-                ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(moduleDir));
+            // Only the eight keys buildIndexPointer consults, and only for aggregates this
+            // module actually contributes to. resolveActiveServices would stat every opt-in
+            // path instead: measured at 85 per call, 4 calls per build of the indexed example,
+            // 340 of that build's 850 opt-in stats, to read 8 answers. Its one post-filter
+            // drops codex, which is not among the eight, so narrowing changes no verdict.
+            Map<String, Path> moduleFiles = ServiceRegistry.buildServiceFileMap(moduleDir);
+            Set<String> moduleActive = new LinkedHashSet<>();
+            for (String agg : INDEXABLE_AGGREGATES) {
+                if (!s.bodies.containsKey(agg)) continue;
+                addIfOptedIn(moduleActive, moduleFiles, agg);
+                addIfOptedIn(moduleActive, moduleFiles, aggregateGranularKey(agg));
+            }
             for (String agg : INDEXABLE_AGGREGATES) {
                 if (!s.bodies.containsKey(agg)) continue; // module contributes nothing for this service
                 String pointer = buildIndexPointer(agg, s.modulePath, moduleActive);
@@ -1233,6 +1243,15 @@ public final class ModuleSidecar {
     /** Granular service key governing an aggregate service (e.g. {@code claude} → {@code claude_granular}). */
     private static @Nullable String aggregateGranularKey(String service) {
         return aggregateScopedDir(service) == null ? null : service + "_granular";
+    }
+
+    /** Adds {@code key} to {@code into} when its file or directory is present under the module. */
+    private static void addIfOptedIn(Set<String> into, Map<String, Path> moduleFiles, @Nullable String key) {
+        if (key == null) return;
+        Path file = moduleFiles.get(key);
+        if (file != null && ServiceRegistry.isOptedIn(key, file)) {
+            into.add(key);
+        }
     }
 
     /** The always-loaded aggregate file name for an aggregate service, else {@code null}. */
