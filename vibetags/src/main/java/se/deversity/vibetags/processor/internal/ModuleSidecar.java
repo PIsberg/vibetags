@@ -1999,7 +1999,7 @@ public final class ModuleSidecar {
      */
     private static void logSkipped(@Nullable Logger log, Path sidecar, String reason) {
         if (log != null && log.isDebugEnabled()) {
-            log.debug("sidecar.skip reason={} path={}", reason, fileName(sidecar));
+            log.debug("sidecar.skip reason={} path={}", reason, GuardrailFileWriter.fileName(sidecar));
         }
     }
 
@@ -2013,15 +2013,10 @@ public final class ModuleSidecar {
             return;
         }
         if (prune) {
-            log.info("sidecar.prune reason={} path={}", reason, fileName(sidecar));
+            log.info("sidecar.prune reason={} path={}", reason, GuardrailFileWriter.fileName(sidecar));
         } else if (log.isDebugEnabled()) {
-            log.debug("sidecar.skip reason={} path={}", reason, fileName(sidecar));
+            log.debug("sidecar.skip reason={} path={}", reason, GuardrailFileWriter.fileName(sidecar));
         }
-    }
-
-    private static String fileName(Path path) {
-        Path name = path.getFileName();
-        return name != null ? name.toString() : path.toString();
     }
 
     /** The {@code modulePath} header of one sidecar, or {@code null} if absent or unreadable. */
@@ -2063,7 +2058,7 @@ public final class ModuleSidecar {
         long stamp = 0L;
         for (Path p : listPaths(root)) {
             try {
-                stamp = 31L * stamp + fileName(p).hashCode();
+                stamp = 31L * stamp + GuardrailFileWriter.fileName(p).hashCode();
                 java.nio.file.attribute.BasicFileAttributes attrs =
                     Files.readAttributes(p, java.nio.file.attribute.BasicFileAttributes.class);
                 stamp = 31L * stamp + attrs.lastModifiedTime().toMillis();

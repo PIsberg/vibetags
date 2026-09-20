@@ -48,8 +48,7 @@ public final class HandAuthoredYamlKeyWarner {
             if (PlatformRendererRegistry.mergeShapeFor(serviceKey) == null || !Files.isRegularFile(file)) {
                 continue; // not a YAML platform, or not opted in
             }
-            Path fileNamePath = file.getFileName();
-            String fileName = fileNamePath != null ? fileNamePath.toString() : file.toString();
+            String fileName = GuardrailFileWriter.fileName(file);
             String[] markers = GuardrailFileWriter.getMarkersFor(fileName);
             if (markers == null) {
                 continue;

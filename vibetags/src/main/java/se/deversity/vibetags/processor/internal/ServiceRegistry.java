@@ -328,8 +328,7 @@ public final class ServiceRegistry {
         if (root != null && path.startsWith(root)) {
             return root.relativize(path).toString().replace('\\', '/');
         }
-        Path name = path.getFileName();
-        return name == null ? path.toString() : name.toString();
+        return GuardrailFileWriter.fileName(path);
     }
 
     /**
