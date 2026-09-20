@@ -213,7 +213,7 @@ final class JvmTypes {
         return false;
     }
 
-    private static @Nullable String annotationName(KSAnnotation annotation) {
+    static @Nullable String annotationName(KSAnnotation annotation) {
         KSType type = annotation.getAnnotationType().resolve();
         KSName name = type.isError() ? null : type.getDeclaration().getQualifiedName();
         return name == null ? null : name.asString();

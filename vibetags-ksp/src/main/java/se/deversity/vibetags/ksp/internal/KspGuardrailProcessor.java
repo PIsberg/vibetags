@@ -197,7 +197,7 @@ public final class KspGuardrailProcessor implements SymbolProcessor {
         return present;
     }
 
-    private static <T> List<T> list(Iterator<T> iterator) {
+    static <T> List<T> list(Iterator<T> iterator) {
         List<T> items = new ArrayList<>();
         iterator.forEachRemaining(items::add);
         return items;

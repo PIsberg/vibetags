@@ -142,7 +142,7 @@ final class StubBuilder {
         Path source = Paths.get(file.getFilePath());
         KTypeElement facade = null;
         List<KTypeElement> fileRoots = new ArrayList<>();
-        for (KSDeclaration declaration : list(file.getDeclarations().iterator())) {
+        for (KSDeclaration declaration : KspGuardrailProcessor.list(file.getDeclarations().iterator())) {
             if (declaration instanceof KSClassDeclaration cls) {
                 fileRoots.add(buildClass(cls, pkg, source, JvmTypes.Scope.empty(), false));
             } else if (declaration instanceof KSFunctionDeclaration || declaration instanceof KSPropertyDeclaration) {
@@ -232,7 +232,7 @@ final class StubBuilder {
             suppressed != null ? suppressed : outerSuppressWildcards, hasAnnotation(cls, JVM_EXPOSE_BOXED));
 
         KSFunctionDeclaration primary = cls.getPrimaryConstructor();
-        List<KSDeclaration> members = list(cls.getDeclarations().iterator());
+        List<KSDeclaration> members = KspGuardrailProcessor.list(cls.getDeclarations().iterator());
         Set<String> constructorProperties = constructorProperties(primary);
         Map<String, List<AnnotationReader.Use>> propertyUses = new HashMap<>();
         for (KSDeclaration member : members) {
@@ -284,7 +284,7 @@ final class StubBuilder {
         boolean isClass = type.getKind() == ElementKind.CLASS || type.getKind() == ElementKind.ENUM;
         boolean hasExplicitSuperclass = false;
         try {
-            for (KSTypeReference ref : list(cls.getSuperTypes().iterator())) {
+            for (KSTypeReference ref : KspGuardrailProcessor.list(cls.getSuperTypes().iterator())) {
                 try {
                     KSType resolved = ref.resolve();
                     KSDeclaration decl = resolved.getDeclaration();
@@ -481,9 +481,7 @@ final class StubBuilder {
         Iterator<com.google.devtools.ksp.symbol.KSAnnotation> it = function.getAnnotations().iterator();
         while (it.hasNext()) {
             com.google.devtools.ksp.symbol.KSAnnotation annotation = it.next();
-            KSType type = annotation.getAnnotationType().resolve();
-            com.google.devtools.ksp.symbol.KSName name = type.getDeclaration().getQualifiedName();
-            if (name != null && JVM_EXPOSE_BOXED.equals(name.asString())) {
+            if (JVM_EXPOSE_BOXED.equals(JvmTypes.annotationName(annotation))) {
                 for (com.google.devtools.ksp.symbol.KSValueArgument argument : annotation.getArguments()) {
                     if (argument.getValue() instanceof String given && !given.isEmpty()) {
                         return given;
@@ -911,11 +909,5 @@ final class StubBuilder {
                 }
             }
         }
-    }
-
-    private static <T> List<T> list(Iterator<T> iterator) {
-        List<T> items = new ArrayList<>();
-        iterator.forEachRemaining(items::add);
-        return items;
     }
 }
