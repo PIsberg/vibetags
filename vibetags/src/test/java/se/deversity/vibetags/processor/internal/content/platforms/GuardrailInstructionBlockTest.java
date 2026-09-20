@@ -17,8 +17,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Proves every one of the 39 annotation types actually reaches
- * {@link GuardrailInstructionBlock#build(AnnotationCollector)} — each
+ * Proves every one of the 44 annotation types actually reaches
+ * {@link GuardrailInstructionBlock#build(se.deversity.vibetags.processor.model.GuardrailModel)} — each
  * {@code FormatterRegistry.X().format(...)} call in that method is otherwise unverified by any
  * other test (the shared PR-reviewer/Roo-mode instruction block is a thin pass-through, easy to
  * silently regress when a new annotation type is added but forgotten here).
