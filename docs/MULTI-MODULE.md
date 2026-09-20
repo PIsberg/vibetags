@@ -218,6 +218,14 @@ sidecar under `~mod~<service>` keys, and the writer concatenates the bodies of e
 this module's region — main first. That is what makes a module's own `CLAUDE.md` survive a
 `test-compile` round that saw none of its main sources.
 
+A nested `TESTING.md` composes the same way, and is supported (#786). `touch module-a/TESTING.md`
+and that module's test-round guardrails go to its own file instead of the root one: its own
+`CLAUDE.md` gives them up and carries the pointer once, and the root `TESTING.md` is unaffected.
+This needs no special case — `ModuleOutputWriter` re-runs the same pipeline through the same
+registry, so routing composes per module exactly as every other opt-in does, which is why it is
+documented rather than merely tolerated. Pinned by
+`MultiModuleTestingMdTest.aTestingMdInsideAModuleTakesThatModulesTestGuardrailsOnly`.
+
 Called as a terminal step in `generateFiles()`/`checkFiles()`; **gated on `moduleRoot != null` and
 `!compilationRoot.equals(root)`** so in-memory/non-javac compiles (which fall back to the JVM working
 dir) never write there. The module's own opt-in set is folded into the `BuildFingerprint` input so a
