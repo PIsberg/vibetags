@@ -193,6 +193,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private @Nullable ModuleIdentity moduleIdentity;
 
+    /** Set once the mixed-round diagnostic has been emitted for this compilation. */
+    private boolean mixedRoundWarned;
+
     /**
      * What this compilation was actually shown: every source file it compiled, and the source
      * roots they came from. Read once at {@code processingOver()} to tell a build that saw all of
@@ -456,6 +459,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 // Set on every attempt, not only a successful one, so a reused processor whose
                 // identity did not resolve this time cannot keep the last compilation's answer.
                 collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());
+                warnIfMixedRoundCannotRoute(moduleIdentity);
             }
 
             // Which sources this round was handed, for the same reason and under the same
@@ -1899,6 +1903,39 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             .map(TaggedElement::simpleName)
             .collect(Collectors.joining(", "));
         log.info("{}: {} — {}", label, elements.size(), names);
+    }
+
+    /**
+     * Says once why {@code TESTING.md} stayed empty when the round could not be routed.
+     *
+     * <p>Routing is decided per round, and a round handed a module's main <em>and</em> test sources
+     * at once reports as {@code main}, so its test-code guardrails stay in the always-loaded files.
+     * That loses nothing — it is where they were before routing existed — but it is invisible: an
+     * empty {@code TESTING.md} looks exactly like a feature that does not work. Maven and Gradle
+     * compile the two source sets separately and never reach this; a hand-written javac line, an
+     * IDE, or a tool that does not separate them does.
+     *
+     * <p>Only when the file is opted in: a project without it asked for nothing and is owed no
+     * diagnostic. Once per compilation, because the answer cannot change between rounds.
+     */
+    private void warnIfMixedRoundCannotRoute(@Nullable ModuleIdentity identity) {
+        if (mixedRoundWarned || identity == null || !identity.isMixedRound()) {
+            return;
+        }
+        Path testingFile = ServiceRegistry.buildServiceFileMap(this.root).get("testing");
+        if (testingFile == null || !ServiceRegistry.isOptedIn("testing", testingFile)) {
+            return;
+        }
+        mixedRoundWarned = true;
+        getSafeMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: TESTING.md is opted in, but this build compiles main and test sources in one "
+                + "round, so test-code guardrails were not routed to it and stay in the "
+                + "always-loaded files. Nothing is lost. Compile the source sets separately, as "
+                + "Maven and Gradle do, for the routing to apply.");
+        Logger log = VibeTagsLogger.currentFor(this.root);
+        if (log != null) {
+            log.warn("testing.route.skip reason=mixed-round sourceSet={}", identity.sourceSet());
+        }
     }
 
     // ---------------------------------------------------------------------------------------
