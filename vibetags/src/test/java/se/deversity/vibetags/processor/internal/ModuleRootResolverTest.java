@@ -60,6 +60,24 @@ class ModuleRootResolverTest {
     }
 
     @Test
+    void hasBuildFile_identifiesDirectoriesWithBuildFiles(@TempDir Path tmp) throws IOException {
+        assertFalse(ModuleRootResolver.hasBuildFile(tmp));
+        assertFalse(ModuleRootResolver.hasBuildFile(null));
+
+        Path pomDir = Files.createDirectory(tmp.resolve("pom"));
+        Files.createFile(pomDir.resolve("pom.xml"));
+        assertTrue(ModuleRootResolver.hasBuildFile(pomDir));
+
+        Path gradleDir = Files.createDirectory(tmp.resolve("gradle"));
+        Files.createFile(gradleDir.resolve("build.gradle"));
+        assertTrue(ModuleRootResolver.hasBuildFile(gradleDir));
+
+        Path ktsDir = Files.createDirectory(tmp.resolve("kts"));
+        Files.createFile(ktsDir.resolve("build.gradle.kts"));
+        assertTrue(ModuleRootResolver.hasBuildFile(ktsDir));
+    }
+
+    @Test
     void sourceSetOf_readsTheSegmentAfterSrc(@TempDir Path tmp) {
         Path module = tmp.resolve("module-core");
         assertEquals("main", ModuleRootResolver.sourceSetOf(module, module.resolve("src/main/java/com/example")));

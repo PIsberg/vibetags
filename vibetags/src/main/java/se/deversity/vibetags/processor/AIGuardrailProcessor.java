@@ -1783,7 +1783,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 if (!Files.isDirectory(dir) || !Files.isDirectory(dir.resolve("src"))) {
                     continue; // Nothing there to compile, so nothing to collapse.
                 }
-                if (hasOwnBuildFile(dir) || collapsing.contains(included)) {
+                if (ModuleRootResolver.hasBuildFile(dir) || collapsing.contains(included)) {
                     continue; // Its own build file is what gives it its own identity.
                 }
                 collapsing.add(included);
@@ -1833,13 +1833,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return List.of(); // A diagnostic must never be the thing that fails a build.
         }
         return names;
-    }
-
-    /** Whether {@code dir} carries a build file, which is what makes it its own module root. */
-    private static boolean hasOwnBuildFile(Path dir) {
-        return Files.isRegularFile(dir.resolve("build.gradle"))
-            || Files.isRegularFile(dir.resolve("build.gradle.kts"))
-            || Files.isRegularFile(dir.resolve("pom.xml"));
     }
 
     /**

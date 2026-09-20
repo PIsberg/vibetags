@@ -211,12 +211,23 @@ public final class ModuleRootResolver {
     static @Nullable Path nearestBuildFileAncestor(@Nullable Path dir) {
         Path current = dir;
         for (int i = 0; current != null && i < MAX_WALK_UP; i++, current = current.getParent()) {
-            for (String buildFile : BUILD_FILES) {
-                if (Files.isRegularFile(current.resolve(buildFile))) {
-                    return current;
-                }
+            if (hasBuildFile(current)) {
+                return current;
             }
         }
         return null;
+    }
+
+    /** Whether {@code dir} carries a build file, identifying it as a module root. */
+    public static boolean hasBuildFile(@Nullable Path dir) {
+        if (dir == null) {
+            return false;
+        }
+        for (String buildFile : BUILD_FILES) {
+            if (Files.isRegularFile(dir.resolve(buildFile))) {
+                return true;
+            }
+        }
+        return false;
     }
 }
