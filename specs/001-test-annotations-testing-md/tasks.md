@@ -158,7 +158,7 @@ one with both; check where each lands.
 
 - [x] T037 Logging, test first: add contract cases in `TEST/internal/GuardrailFileWriterLogContractTest.java` (or a sibling `TestingRoutingLogContractTest.java` in the same package) for `testing.route sourceSet= routed= moved= kept=`, `testing.skip reason=not-test-round`, `testing.skip reason=no-test-guardrails`, `merge.testing.fallback service= module=`, and for the absence of any `testing.` event when `TESTING.md` is absent. Then emit them from `MAIN/internal/GuardrailContentBuilder.java` or `MAIN/AIGuardrailProcessor.java` (outside `generateFiles()`) and `MAIN/internal/ModuleSidecar.java`; document them in `docs/LOGGING.md`.
 - [x] T038 [P] Multi-module test in `TEST/TestingMdRoutingEndToEndTest.java` or a new `TEST/MultiModuleTestingMdTest.java`: two modules with test guardrails produce one `TESTING.md` with two `VIBETAGS-MODULE` regions; building one module alone does not erase the other's region (FR-011). Add the research R9 case: a nested `module-a/TESTING.md` behaves like the root case and does not throw.
-- [ ] T038a KSP routing test, added by T004 (research R1): in `vibetags-ksp/src/test`, run the KSP front end over a Kotlin source under `src/test/kotlin` with `TESTING.md` and `CLAUDE.md` present and assert a non-safety guardrail lands in `TESTING.md` and not in `CLAUDE.md`. T004 established by reading, not by running, that `KspElements.getFileObjectOf` hands `ModuleRootResolver` the real path; this task is what executes it. If the KSP test harness cannot place sources under a `src/test` path, say so and open an issue.
+- [x] T038a KSP routing test, added by T004 (research R1): in `vibetags-ksp/src/test`, run the KSP front end over a Kotlin source under `src/test/kotlin` with `TESTING.md` and `CLAUDE.md` present and assert a non-safety guardrail lands in `TESTING.md` and not in `CLAUDE.md`. T004 established by reading, not by running, that `KspElements.getFileObjectOf` hands `ModuleRootResolver` the real path; this task is what executes it. If the KSP test harness cannot place sources under a `src/test` path, say so and open an issue.
 - [x] T039 Fixture `examples/basic`: add `examples/basic/src/test/java/` with one class carrying a non-safety annotation and one carrying `@AILocked`, add the JUnit-free test-compile wiring the pom needs, `touch examples/basic/TESTING.md`, add `TESTING.md` to `AI_FILES` in `examples/basic/reset-ai-files.sh`, then `rm -f .vibetags-cache && mvn clean test-compile` and commit the regenerated files. `TEST/ExampleOptInCoverageTest.java` must pass.
 - [x] T040 Fixture `examples/multimodule`: `touch examples/multimodule/TESTING.md`, `rm -f .vibetags-cache`, regenerate with `mvn clean verify` (not `compile`), commit. Read the new active-service count from `examples/multimodule/vibetags.log` and update both `expected=` values in `.github/workflows/build.yml` if they moved. Do the same for `examples/gradle-multimodule` only if `examples/INDEX.md` says that fixture should carry it.
 - [x] T041 CI-only gate: add `TESTING.md` with a content assertion (a known test-class path inside the markers) to `.github/actions/verify-generated-files/action.yml`, then extract every `run: |` block to a script in the scratchpad and execute it with `bash -e -o pipefail` from `examples/basic`. Report the actual exit code.
@@ -367,8 +367,13 @@ Unticked tasks that are partly done, and what is left of each:
   the check that made it safe; the tree is unchanged and the PR is 18 commits. Body rewritten with
   the gate table, the two defects, the three detection checks, the FR-008 amendment and the T043
   decision. Eleven issues opened for what is left: #780 to #790.
-- **Not started**: T038a (KSP, now #785), T045 (load tests, now #789), T046 (consumer sweep, now
-  #790).
+- **T038a**: done, `KspTestingMdRoutingTest` in `vibetags-ksp`. The harness takes the source root
+  as a parameter, so a `src/test/kotlin` round needed no harness change; what it did need was the
+  `build.gradle.kts` opt-in, because without a build file at the root there is no module root and
+  therefore no source set, the same trap the Java fixture hit. It passed first time, as R1's
+  reading predicted, and detects: with `KspElements.getFileObjectOf` forced to return null it goes
+  red on the `TESTING.md` assertion. Closes #785.
+- **Not started**: T045 (load tests, now #789), T046 (consumer sweep, now #790).
 - Pulled forward from Phase 7 because the new service key turned existing gates red: the
   `docs/PLATFORMS.md` row and README config-file count (part of T042), and the empty
   `examples/basic/TESTING.md` plus its `reset-ai-files.sh` entry (part of T039).
