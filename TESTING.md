@@ -52,7 +52,7 @@ Do not extend these elements. Suggest migrating callers to the listed replacemen
 ## 📡 OBSERVABILITY INSTRUMENTATION
 These elements carry instrumentation watched by dashboards/alerts. Do not remove or rename without flagging.
 
-- **se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.OB**: Metrics: m. 
+- **se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.OB**: Metrics: m.
 
 ## 📜 REGULATORY COMPLIANCE
 These elements implement specific compliance clauses. Document compliance impact for every change.

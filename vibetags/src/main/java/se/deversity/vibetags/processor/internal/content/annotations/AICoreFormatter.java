@@ -23,7 +23,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
         switch (platform) {
             case CURSOR:
             case WINDSURF:
-                sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
+                sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case CLAUDE:
                 sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
@@ -35,17 +35,17 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("- **").append(className).append("** (sensitivity: ").append(sensitivity).append(')').append(CommonFormatterHelper.clause(": ", note)).append('\n');
                 break;
             case COPILOT:
-                sb.append("- `").append(className).append("` — sensitivity: ").append(sensitivity).append(". ").append(note).append('\n');
+                sb.append("- `").append(className).append("` — sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.clause(" ", note)).append('\n');
                 break;
             case QWEN:
-                sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
+                sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case GEMINI:
             case GEMINI_MD:
-                sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
+                sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case LLMS:
-                sb.append("- [").append(element.displayName()).append("](").append(className).append("): Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
+                sb.append("- [").append(element.displayName()).append("](").append(className).append("): Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case LLMS_FULL:
                 sb.append("### ").append(className).append('\n')
@@ -58,7 +58,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Note", note)).append('\n');
                 break;
             case ZED:
-                sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append(". Note: ").append(note).append('\n');
+                sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case MENTAT:
                 sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"sensitivity\": \"").append(Escape.json(sensitivity)).append("\", \"note\": \"").append(Escape.json(note)).append("\"},\n");

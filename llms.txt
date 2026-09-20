@@ -154,7 +154,7 @@ AI tools reading this file should respect the guardrails defined below. These ru
 - [DEP](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.DEP): Replaced by: `x.NewType`. Migrate any caller to the replacement.
 
 ## 📡 Observability Instrumentation
-- [OB](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.OB): Metrics: m. 
+- [OB](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.OB): Metrics: m.
 
 ## 📜 Regulatory Compliance
 - [RG](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.RG): GDPR Art. 17 — Implements a regulatory requirement. Any change must document its compliance impact.

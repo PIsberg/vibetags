@@ -136,7 +136,7 @@ public final class GranularRenderer implements PlatformRenderer {
                 if (obs.traces().length > 0)  summary.append("Traces: ").append(String.join(", ", obs.traces())).append(". ");
                 if (obs.logs().length > 0)    summary.append("Logs: ").append(String.join(", ", obs.logs())).append(". ");
                 if (!obs.note().isEmpty())    summary.append("Note: ").append(obs.note());
-                appendToGranular(elementRules, e, "Observability Instrumentation", "- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard.\n- **Details**: " + summary);
+                appendToGranular(elementRules, e, "Observability Instrumentation", "- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard.\n- **Details**: " + summary.toString().stripTrailing());
             }
         }
         for (TaggedElement e : model.regulation()) {
