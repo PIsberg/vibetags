@@ -105,7 +105,7 @@ public final class GuardrailContentBuilder {
         // per-element walk inside each renderer.
         boolean granularActive = activeServices.stream().anyMatch(ServiceRegistry::writesDirectory);
         Map<TaggedElement, GranularBody> elementRules = granularActive
-                ? PlatformRendererRegistry.granularRenderer().renderGranular(model)
+                ? collector.granularRules()
                 : new java.util.LinkedHashMap<>();
 
         RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices,
