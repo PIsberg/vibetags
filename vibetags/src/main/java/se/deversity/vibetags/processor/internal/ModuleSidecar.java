@@ -1246,20 +1246,12 @@ public final class ModuleSidecar {
      * @return file names, sorted, or empty when every sidecar on disk was readable
      */
     public static List<String> unreadableSidecarNames(Path root) {
-        if (!Files.isDirectory(root)) return List.of();
         List<String> unreadable = new ArrayList<>();
-        try (Stream<Path> stream = Files.list(root)) {
-            for (Path p : stream.toList()) {
-                Path fn = p.getFileName();
-                if (fn == null) continue;
-                String name = fn.toString();
-                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
-                ModuleSidecar loaded = load(p);
-                if (loaded == UNREADABLE || loaded == FUTURE_VERSION) unreadable.add(name);
+        for (Path p : listPaths(root)) {
+            ModuleSidecar loaded = load(p);
+            if (loaded == UNREADABLE || loaded == FUTURE_VERSION) {
+                unreadable.add(GuardrailFileWriter.fileName(p));
             }
-        } catch (IOException unlistable) {
-            // A root we cannot list contributes no names, the same as a root with no sidecars.
-            return List.of();
         }
         Collections.sort(unreadable);
         return unreadable;
@@ -1900,21 +1892,12 @@ public final class ModuleSidecar {
      * full round, while a false positive would delete a sibling's work.
      */
     public static boolean anyStale(Path root) {
-        if (!Files.isDirectory(root)) return false;
-        try (Stream<Path> stream = Files.list(root)) {
-            for (Path p : stream.toList()) {
-                Path fn = p.getFileName();
-                String name = fn == null ? "" : fn.toString();
-                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
-                String modulePath = readModulePathHeader(p);
-                if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
-                    continue;
-                }
-                if (!moduleDirExists(root, modulePath)) return true;
+        for (Path p : listPaths(root)) {
+            String modulePath = readModulePathHeader(p);
+            if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
+                continue;
             }
-        } catch (IOException ignored) {
-            // A root we cannot list tells us nothing; treat it as "nothing to prune" and let the
-            // ordinary round decide. Failing a build over a directory listing would be the larger bug.
+            if (!moduleDirExists(root, modulePath)) return true;
         }
         return false;
     }
