@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
+import se.deversity.vibetags.processor.internal.content.GranularPairing;
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
@@ -733,21 +734,23 @@ public final class GranularRulesWriter {
     }
 
     // Order = historical per-class write order.
+    // The five directories that govern an aggregate take their extension from GranularPairing, so
+    // the index that points at a rule file and the writer that names it cannot disagree (#763).
     private static final List<GranularFormat> FORMATS = List.of(
-        new GranularFormat("cursor_granular", ".mdc", GranularRulesWriter::fmCursor, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("cursor_granular", GranularPairing.CURSOR.extension(), GranularRulesWriter::fmCursor, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("trae_granular", ".md", GranularRulesWriter::fmTrae, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("roo_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         // Windsurf (now Devin Desktop) reads the trigger schema, not Cursor's (#683): see fmTriggerGlob.
-        new GranularFormat("windsurf_granular", ".md", GranularRulesWriter::fmTriggerGlob, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("windsurf_granular", GranularPairing.WINDSURF.extension(), GranularRulesWriter::fmTriggerGlob, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("continue_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("tabnine_granular", ".md", GranularRulesWriter::fmNone, n -> "# AI Guidelines for " + n + "\n\n"),
         new GranularFormat("amazonq_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Q Rules for " + n + "\n\n"),
         new GranularFormat("ai_rules_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("pearai_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("kiro_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
-        new GranularFormat("gemini_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("claude_granular", ".md", GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("copilot_granular", ".instructions.md", GranularRulesWriter::fmApplyTo,
+        new GranularFormat("gemini_granular", GranularPairing.GEMINI_MD.extension(), GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("claude_granular", GranularPairing.CLAUDE.extension(), GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
+        new GranularFormat("copilot_granular", GranularPairing.COPILOT.extension(), GranularRulesWriter::fmApplyTo,
             n -> "# Copilot Instructions for " + n + "\n\n"),
         // Grok Build loads every *.md in .grok/rules/ unconditionally and alphabetically and
         // parses no front matter, so a globs block would land in the model's context as literal

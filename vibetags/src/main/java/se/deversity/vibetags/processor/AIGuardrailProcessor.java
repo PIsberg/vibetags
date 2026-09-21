@@ -12,6 +12,7 @@ import se.deversity.vibetags.processor.internal.DestructiveRewriteWarner;
 import se.deversity.vibetags.processor.internal.ReactorRootDetector;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
+import se.deversity.vibetags.processor.internal.content.GranularPairing;
 import se.deversity.vibetags.processor.internal.GuardrailEnforcer;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.content.Platform;
@@ -1731,7 +1732,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // variant (safety inline, detail elsewhere); safetyDigest() then drops the index list.
             Set<String> digestServices = new java.util.LinkedHashSet<>();
             digestServices.add(aggregate);
-            digestServices.add(aggregate + "_granular");
+            // From the pairing, never aggregate + "_granular": gemini_md's sibling is
+            // gemini_granular, and the concatenation named a key that does not exist (#763).
+            GranularPairing pairing = GranularPairing.forAggregate(aggregate);
+            if (pairing == null) continue;
+            digestServices.add(pairing.granularKey());
             String body = new GuardrailContentBuilder(collector, digestServices, projectName,
                     GENERATED_HEADER, roles).safetyDigest().build().contentByService.get(aggregate);
             if (body != null && !body.isBlank()) {

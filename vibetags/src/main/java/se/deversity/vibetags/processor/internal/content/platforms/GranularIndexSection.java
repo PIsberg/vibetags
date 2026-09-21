@@ -5,6 +5,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Set;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.Escape;
+import se.deversity.vibetags.processor.internal.content.GranularPairing;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 
@@ -29,6 +30,19 @@ final class GranularIndexSection {
     private GranularIndexSection() {}
 
     /**
+     * The pairing that governs {@code platform}'s aggregate, or {@code null} when it has none.
+     * {@code CLAUDE_LOCAL} is the one alias: {@code CLAUDE.local.md} is loaded by the same tool as
+     * {@code CLAUDE.md}, so it follows Claude's pairing. Every other platform resolves by its own
+     * service key, which is what keeps this from being a second list of the pairs (#763).
+     */
+    private static @Nullable GranularPairing pairingFor(Platform platform) {
+        if (platform == Platform.CLAUDE_LOCAL) {
+            return GranularPairing.CLAUDE;
+        }
+        return GranularPairing.forAggregate(platform.getServiceKey());
+    }
+
+    /**
      * Maps an aggregate platform to the service key of the granular directory that governs it, or
      * {@code null} when the platform has no granular sibling. {@code CLAUDE_LOCAL} deliberately maps
      * to {@code claude_granular}: {@code CLAUDE.local.md} is loaded by the same tool as
@@ -37,21 +51,8 @@ final class GranularIndexSection {
      * Void, the Claude skill) map to {@code null} and therefore never collapse to an index.
      */
     static @Nullable String governingGranularKey(Platform platform) {
-        switch (platform) {
-            case CLAUDE:
-            case CLAUDE_LOCAL:
-                return "claude_granular";
-            case CURSOR:
-                return "cursor_granular";
-            case WINDSURF:
-                return "windsurf_granular";
-            case COPILOT:
-                return "copilot_granular";
-            case GEMINI_MD:
-                return "gemini_granular";
-            default:
-                return null;
-        }
+        GranularPairing pairing = pairingFor(platform);
+        return pairing == null ? null : pairing.granularKey();
     }
 
     /**
@@ -71,32 +72,14 @@ final class GranularIndexSection {
      * Package-private so {@code DocsGranularPairsClaimTest} can derive the documented pair list.
      */
     static @Nullable String scopedDir(Platform platform) {
-        String key = governingGranularKey(platform);
-        if (key == null) {
-            return null;
-        }
-        switch (key) {
-            case "claude_granular":   return ".claude/rules";
-            case "cursor_granular":   return ".cursor/rules";
-            case "windsurf_granular": return ".windsurf/rules";
-            case "copilot_granular":  return ".github/instructions";
-            case "gemini_granular":   return ".gemini/rules";
-            default:                  return null;
-        }
+        GranularPairing pairing = pairingFor(platform);
+        return pairing == null ? null : pairing.scopedDir();
     }
 
     /** Filename suffix (including the leading dot) of the governing granular files for {@code platform}. */
     private static @Nullable String scopedSuffix(Platform platform) {
-        String key = governingGranularKey(platform);
-        if (key == null) {
-            return null;
-        }
-        // Cursor uses .mdc; Copilot uses the two-dot .instructions.md; the rest use .md.
-        switch (key) {
-            case "cursor_granular":  return ".mdc";
-            case "copilot_granular": return ".instructions.md";
-            default:                 return ".md";
-        }
+        GranularPairing pairing = pairingFor(platform);
+        return pairing == null ? null : pairing.extension();
     }
 
     /** Relative path to the scoped rule file for {@code owner} under {@code platform}'s granular directory. */
@@ -158,7 +141,8 @@ final class GranularIndexSection {
      * would not help: they are expanded when the file loads, which would undo the collapse.
      */
     private static boolean loadsScopedFilesOnOpen(Platform platform) {
-        return platform != Platform.GEMINI_MD;
+        GranularPairing pairing = pairingFor(platform);
+        return pairing == null || pairing.loadsScopedFilesOnOpen();
     }
 
     /**

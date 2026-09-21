@@ -8,6 +8,7 @@ import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
+import se.deversity.vibetags.processor.internal.content.GranularPairing;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 import java.io.IOException;
@@ -1125,7 +1126,8 @@ public final class ModuleSidecar {
     // -----------------------------------------------------------------------
 
     /** Aggregate services that have a glob-scoped granular sibling and can therefore be linked. */
-    public static final List<String> INDEXABLE_AGGREGATES = List.of("claude", "cursor", "windsurf", "copilot");
+    public static final List<String> INDEXABLE_AGGREGATES =
+        java.util.Arrays.stream(GranularPairing.values()).map(GranularPairing::aggregateKey).toList();
 
     /**
      * When the reactor root opted into the lean index ({@code .vibetags-root-index} present), flags
@@ -1269,18 +1271,14 @@ public final class ModuleSidecar {
 
     /** Glob-scoped granular directory (no trailing slash) for an aggregate service, else {@code null}. */
     private static @Nullable String aggregateScopedDir(String service) {
-        switch (service) {
-            case "claude":   return ".claude/rules";
-            case "cursor":   return ".cursor/rules";
-            case "windsurf": return ".windsurf/rules";
-            case "copilot":  return ".github/instructions";
-            default:         return null;
-        }
+        GranularPairing pairing = GranularPairing.forAggregate(service);
+        return pairing == null ? null : pairing.scopedDir();
     }
 
     /** Granular service key governing an aggregate service (e.g. {@code claude} → {@code claude_granular}). */
     private static @Nullable String aggregateGranularKey(String service) {
-        return aggregateScopedDir(service) == null ? null : service + "_granular";
+        GranularPairing pairing = GranularPairing.forAggregate(service);
+        return pairing == null ? null : pairing.granularKey();
     }
 
     /** Adds {@code key} to {@code into} when its file or directory is present under the module. */
@@ -1294,13 +1292,8 @@ public final class ModuleSidecar {
 
     /** The always-loaded aggregate file name for an aggregate service, else {@code null}. */
     private static @Nullable String aggregateFileName(String service) {
-        switch (service) {
-            case "claude":   return "CLAUDE.md";
-            case "cursor":   return ".cursorrules";
-            case "windsurf": return ".windsurfrules";
-            case "copilot":  return ".github/copilot-instructions.md";
-            default:         return null;
-        }
+        GranularPairing pairing = GranularPairing.forAggregate(service);
+        return pairing == null ? null : pairing.aggregateFile();
     }
 
     /**
@@ -1314,6 +1307,8 @@ public final class ModuleSidecar {
         String scopedDir = aggregateScopedDir(service);
         if (scopedDir == null) return null;
         boolean hasGranular = moduleActive.contains(aggregateGranularKey(service));
+        GranularPairing pairing = GranularPairing.forAggregate(service);
+        boolean loadsOnOpen = pairing == null || pairing.loadsScopedFilesOnOpen();
         boolean hasAggregate = moduleActive.contains(service);
         if (!hasGranular && !hasAggregate) return null; // module keeps nothing of its own → embed as before
 
@@ -1322,7 +1317,11 @@ public final class ModuleSidecar {
         p.append("Guardrails for module `").append(mp).append("` are maintained in that module's own files");
         if (hasGranular) {
             p.append(", in the scoped rules under `").append(mp).append('/').append(scopedDir)
-             .append("/` (loaded automatically when you open a matching source file)");
+             .append("/` (")
+             .append(loadsOnOpen
+                 ? "loaded automatically when you open a matching source file"
+                 : "not loaded by themselves: open the matching rule file before you edit a source file")
+             .append(')');
         }
         if (hasAggregate) {
             p.append(hasGranular ? " and `" : ", in `").append(mp).append('/').append(aggregateFileName(service)).append('`');
