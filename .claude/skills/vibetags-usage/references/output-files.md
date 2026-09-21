@@ -17,7 +17,7 @@ Part of the `vibetags-usage` skill; [SKILL.md](../SKILL.md) holds setup and the 
 | `.devin/rules/*.md` | Devin Desktop (granular per-class rules, preferred directory, `trigger: glob`) |
 | `.devin/rules/+vibetags-safety.md`, `.windsurf/rules/+vibetags-safety.md` | Devin Desktop (written with each directory: the always-on safety tier, `trigger: always_on`) |
 | `.devinignore` | Devin Desktop (exclusion list) |
-| `.trae/rules/*.md` | Trae IDE (granular per-class rules) |
+| `.trae/rules/*.md` | TraeCode, formerly Trae IDE (granular per-class rules; can also import `AGENTS.md` and `CLAUDE.md` behind a settings toggle) |
 | `CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore` | Aider |
 | `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
