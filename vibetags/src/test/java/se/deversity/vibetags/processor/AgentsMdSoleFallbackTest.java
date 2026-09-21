@@ -124,6 +124,34 @@ class AgentsMdSoleFallbackTest {
             "AGENTS.md must still carry the Codex locked-files section");
     }
 
+    /**
+     * {@code .vibetags-locks} is a CI report, not an AI config file (#800).
+     *
+     * <p>Unlike the root-index marker it is rendered and written, so this is a decision rather than
+     * an observation: its reader is the {@code action/locked-files} guard, a JSON Lines consumer,
+     * and no AI tool loads it as instructions. The sole-file rule asks whether {@code AGENTS.md} is
+     * the only file an AI tool reads, so the report is not company.
+     *
+     * <p>Counting it made a Codex-only project lose its {@code AGENTS.md} the moment it opted into
+     * the locked-elements report, which is the one project shape most likely to want both.
+     */
+    @Test
+    void agentsMdBesideOnlyTheLocksReportIsStillTheSoleAiConfigFile(@TempDir Path tempDir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
+        h.touchOptIn("AGENTS.md");
+        h.touchOptIn(".vibetags-locks");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        h.compile();
+
+        String agents = h.readFile("AGENTS.md");
+        assertTrue(agents.contains("PaymentProcessor"),
+            "a CI report is not another AI config file; AGENTS.md is still the only one here");
+        assertTrue(agents.contains("LOCKED FILES"),
+            "AGENTS.md must still carry the Codex locked-files section");
+        assertTrue(h.readFile(".vibetags-locks").contains("PaymentProcessor"),
+            "the report itself must still be written, or this case proves nothing about coexistence");
+    }
+
     // -----------------------------------------------------------------------
     // Coexisting with another AI file → AGENTS.md is left untouched
     // -----------------------------------------------------------------------

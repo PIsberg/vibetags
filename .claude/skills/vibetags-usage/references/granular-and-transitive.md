@@ -13,7 +13,7 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.cursor/rules/*.mdc` | Cursor | YAML front-matter + Markdown |
 | `.windsurf/rules/*.md` | Devin Desktop, formerly Windsurf (fallback directory) | YAML front-matter + Markdown |
 | `.devin/rules/*.md` | Devin Desktop (preferred directory) | YAML front-matter (`trigger: glob`) + Markdown |
-| `.trae/rules/*.md` | Trae IDE | YAML front-matter + Markdown |
+| `.trae/rules/*.md` | TraeCode, formerly Trae IDE | YAML front-matter + Markdown |
 | `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) | Markdown |
 | `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine | Markdown |

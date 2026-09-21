@@ -1,7 +1,6 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -207,15 +206,18 @@ class TestingMdLifecycleEndToEndTest {
     }
 
     /**
-     * The delete case again, for a module whose main sources carry no annotation, and a known
-     * limit: it fails. The main round saves no sidecar, so the test round's is the only one, and
-     * the fallback is not consulted until the tests are compiled again, at which point they are
-     * re-rendered unrouted and nothing is missing. Letting a lone sidecar into the merge, the way
-     * the lean root index does, was tried on 2026-09-20 and did not change the result, so the
-     * deciding guard is further in; not chased past the locked {@code generateFiles()}.
+     * The delete case again, for a module whose main sources carry no annotation (#782).
+     *
+     * <p>Two guards decided it, and either one alone leaves this red. The first is javac's, not
+     * VibeTags': a processor whose supported annotation types match nothing in the compilation is
+     * never called, so the main-only build did not run VibeTags at all (javac said so: "options
+     * were not recognized by any processor"). That is why letting a lone sidecar into the merge,
+     * tried on 2026-09-20, changed nothing. The processor now claims {@code "*"} while a routed
+     * sidecar holds an unrouted body and {@code TESTING.md} is gone. The second is the merge gate:
+     * the main round saves no sidecar, so the test round's is the only one, and the fallback is
+     * substituted only on the merge path, which a lone sidecar now reaches while the fallback is in
+     * force.
      */
-    @Disabled("Known limit: unannotated main sources plus a main-only build after deleting TESTING.md "
-        + "leaves the test guardrails out until the next test compile. Needs an owner decision.")
     @Test
     void deletingTestingMdLosesNothingEvenWhenTheMainSourcesAreUnannotated() throws IOException {
         Files.createFile(root.resolve("CLAUDE.md"));

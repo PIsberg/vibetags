@@ -17,7 +17,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIKeepInSyncFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIKeepInSync keepInSync = element.annotation(AIKeepInSync.class);
         if (keepInSync == null) return;
         String className = element.path();

@@ -200,9 +200,14 @@ that orphaned it.
 
 Two preservation guards keep compiles with **no annotations** from destroying content: the module's
 sidecar is only saved when annotations were found, and shared-file writes with no contributions
-preserve the existing file content. Consequence: removing *all* annotations from a module leaves its
-last contribution in place until its `.vibetags-mod-*` file is deleted (or the module directory
-disappears).
+preserve the existing file content. Both have one exception since #781: a round that found nothing,
+**was handed sources of its own**, and whose sidecar on disk records elements has had its
+annotations removed, not hidden. It saves its empty sidecar and rewrites the files it withdrew
+from, so removing *all* annotations from a module or a source set retires its contribution on the
+next compile of it. What makes the empty result safe to believe is that a partial round is refused
+before generation (invariant 17). The case still out of reach is a module or source set with no
+sources left at all, which no build compiles: its contribution stays until its `.vibetags-mod-*`
+file is deleted (or the module directory disappears).
 
 ## Per-module (nested) output
 
@@ -235,14 +240,21 @@ serves only the root aggregate.
 ## Lean indexed root aggregate (`.vibetags-root-index`)
 
 By default the reactor-root aggregate (`CLAUDE.md`, `.cursorrules`, `.windsurfrules`,
-`.github/copilot-instructions.md`) embeds a full verbatim copy of every module's guardrails via the
+`.github/copilot-instructions.md`, `GEMINI.md`) embeds a full verbatim copy of every module's guardrails via the
 sidecar merge. In a reactor where each module already carries its own scoped rules (`.claude/rules/`
 etc.), that root block is a second copy of content the tool auto-loads from the module files (issue
-#298). Touching `.vibetags-root-index` at the root opts into a **lean index**: for the four
+#298). Touching `.vibetags-root-index` at the root opts into a **lean index**: for the five
 aggregates that have a granular sibling, the merge replaces each module's embedded body with a short
 pointer to that module's own scoped rules (and/or its own aggregate file), still wrapped in the
 `VIBETAGS-MODULE` sub-markers. The root module's own body stays inline, and aggregates **without** a
-granular sibling (`GEMINI.md`, `AGENTS.md`, `llms.txt`, `.vibetags-locks`, …) keep the full merge.
+granular sibling (`AGENTS.md`, `llms.txt`, `.vibetags-locks`, …) keep the full merge.
+
+`GEMINI.md` joined the list in #763. It already collapsed to a scoped-rules index inside a single
+module (#320) and was missing from the root list only because the pairing was declared in four
+places; a reactor with both files got a lean root `CLAUDE.md` and a fat root `GEMINI.md` from one
+build. The five pairs now come from one table, `GranularPairing`. The Gemini pointer is worded
+differently on purpose: Gemini CLI does not read `.gemini/rules/` by itself (#669), so the pointer
+tells the agent to open the matching rule file instead of saying it loads automatically.
 
 **The safety tier stays inline** (issue #332). What each module contributes to the lean root is its
 *safety digest* — `@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure` and

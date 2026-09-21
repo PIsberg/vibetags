@@ -19,9 +19,10 @@ import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.WriteCache;
 import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
+import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.internal.content.annotations.*;
-import se.deversity.vibetags.processor.internal.content.platforms.FirebaseRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer;
 
 import javax.annotation.processing.RoundEnvironment;
@@ -44,7 +45,7 @@ import static org.mockito.Mockito.*;
  * <ul>
  *   <li>RenderingContext.getGeneratedHeader() and isActive()</li>
  *   <li>Platform.fromServiceKey() returning null and getServiceKey()</li>
- *   <li>FirebaseRenderer.render() (delegates to CursorRenderer)</li>
+ *   <li>the FIREBASE platform's renderer (CursorRenderer, by registry fall-through since #764)</li>
  *   <li>GranularRenderer.render() returning null</li>
  *   <li>GuardrailContentBuilder — inactive codex/qwen/cody/aiexclude branches</li>
  *   <li>ModuleSidecar — computeModuleId/computeModulePath escaping/different-drive cases</li>
@@ -116,12 +117,12 @@ class Coverage1dot0GapTest {
     }
 
     // -----------------------------------------------------------------------
-    // FirebaseRenderer.render()
+    // Platform.FIREBASE's renderer
     // -----------------------------------------------------------------------
 
     @Test
     void firebaseRenderer_render_delegatesToCursorRendererAndReturnsNonNull() {
-        FirebaseRenderer renderer = new FirebaseRenderer();
+        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.FIREBASE);
         AnnotationCollector collector = new AnnotationCollector();
 
         // Add a locked element so there is content
@@ -135,7 +136,7 @@ class Coverage1dot0GapTest {
 
         RenderingContext ctx = new RenderingContext("P", "# h\n", Set.of("firebase"));
         String result = renderer.render(collector.model(), Platform.FIREBASE, ctx);
-        assertNotNull(result, "FirebaseRenderer.render() must not return null when annotations exist");
+        assertNotNull(result, "the FIREBASE renderer must not return null when annotations exist");
         assertTrue(result.contains("com.example.Foo"), "Result must contain the annotated class name");
     }
 

@@ -100,7 +100,9 @@ final class CommonFormatterHelper {
         // Every arm below runs the summary through clause(), so an annotation whose summary is
         // entirely made of unset members renders as the element alone rather than as the element
         // plus a separator with nothing after it.
-        switch (platform) {
+        // rendersAs(): callers inside a formatter already hold a family, but this is reachable
+        // with a real platform too, and an alias must read the same words either way (#764).
+        switch (platform.rendersAs()) {
             case CURSOR:
             case WINDSURF:
                 sb.append("* `").append(className).append('`').append(clause(" - ", summary)).append('\n');
@@ -115,7 +117,6 @@ final class CommonFormatterHelper {
                 sb.append("* `").append(className).append('`').append(clause(" - ", summary)).append('\n');
                 return true;
             case GEMINI:
-            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(clause(": ", summary)).append('\n');
                 return true;
             case LLMS:

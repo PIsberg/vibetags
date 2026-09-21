@@ -56,7 +56,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `QWEN.md` | Qwen | Markdown |
 | `.qwenignore` | Qwen | Glob patterns |
 | `.qwen/commands/refactor.md` | Qwen (`/refactor` command; its own opt-in, not implied by `QWEN.md`) | Markdown command template |
-| `.trae/rules/*.md` | Trae IDE (granular) | YAML front-matter + Markdown |
+| `.trae/rules/*.md` | TraeCode, formerly Trae IDE (granular; it can also import `AGENTS.md` and `CLAUDE.md`, see [below](#trae-is-now-traecode-and-can-import-agentsmd-and-claudemd)) | YAML front-matter + Markdown |
 | `.roo/rules/*.md` | Zoo Code (fork of the retired Roo Code; reads the same paths), granular | Markdown |
 | `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
 | `llms-full.txt` | Windsurf Cascade, large-context LLMs | Markdown (full reference book) |
@@ -432,7 +432,8 @@ files to which the rule applies (for example, `*.js`, `src/**/*.ts`), and you ca
 wildcards separated by `,`". `cursor.com/docs/context/rules` redirects to the URL cited here, so the
 link has not rotted. What that re-check does **not** add is a runtime observation, which is the one
 thing #711 asks for and the one thing neither read can supply. Trae has meanwhile renamed itself
-TraeCode and now imports `AGENTS.md` and `CLAUDE.md` natively (#809), which does not bear on the
+TraeCode and can import `AGENTS.md` and `CLAUDE.md`
+([below](#trae-is-now-traecode-and-can-import-agentsmd-and-claudemd)), which does not bear on the
 glob form.
 
 What the shipped code does. Neither tool is open source and neither was run for this check; the
@@ -463,6 +464,40 @@ verdict rests on the vendor statements above and on reading each tool's own bund
 What would add to this: a project opened in current Cursor and Trae with one rule written each way,
 recording which one attaches when a matching file is opened. Continue and PearAI keep the list,
 which Continue documents; see the table under [Granular rules](#granular-rules).
+
+### Trae is now TraeCode, and can import `AGENTS.md` and `CLAUDE.md`
+
+Trae's [rules documentation](https://docs.trae.ai/ide/rules), read on 2026-09-21, calls the product
+**TraeCode** throughout. The directory is still `.trae/rules/`, so the platform key, the path and
+the generated files do not change; only the label in the table above does (#809).
+
+The same page has a section "Import AGENTS.md, CLAUDE.md, and CLAUDE.local.md": "In addition to
+TraeCode's native project rules, you can also reuse the following two types of rule files located
+in the project root directory." It is behind two switches under Settings > Rules > Import Settings,
+"Include AGENTS.md in the context" and "Include CLAUDE.md in context", and "once enabled, the agent
+will read the `CLAUDE.md` and `CLAUDE.local.md` files in the root directory and add them to the
+context". The page does not say whether the switches start on or off.
+
+What that means for choosing opt-ins:
+
+- A project that has opted into `CLAUDE.md` (or a sole `AGENTS.md`) already reaches a TraeCode user
+  who has the switch on, with no `.trae/rules/` directory at all.
+- A project that has both `CLAUDE.md` and `.trae/rules/` may hand TraeCode the same guardrails
+  twice: once from the imported aggregate and once from the per-class rule files. `CLAUDE.md`
+  collapses to an index only when `.claude/rules/` is opted in, not when `.trae/rules/` is, so the
+  overlap is the full aggregate unless `.claude/rules/` exists too. VibeTags does not try to detect
+  this: the switch is per-user editor state that a build cannot see.
+- The page also says TraeCode reads a `.trae/rules/` folder "in any subdirectory of the project",
+  which is what a multi-module build's per-module directories rely on.
+
+**`scene: git_message` is out of scope, on purpose.** The page documents a front-matter field that
+applies a rule to AI-generated Git commit messages. No `@AI*` annotation says anything about
+commit messages, so VibeTags never emits it. A hand-written rule file carrying it is unaffected:
+the granular sweep neither touches nor lists a file with no VibeTags markers.
+
+Read from the vendor's page, not run. Nobody here has TraeCode installed, the same limit that
+keeps #711 open, so how an imported `CLAUDE.md` and `.trae/rules/` rank against each other is
+unknown.
 
 ### Cline's two shapes at one path
 

@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIMemoryBudgetFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIMemoryBudget memoryBudget = element.annotation(AIMemoryBudget.class);
         if (memoryBudget == null) return;
         String className = element.path();

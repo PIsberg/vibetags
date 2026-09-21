@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AICoreFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AICore core = element.annotation(AICore.class);
         if (core == null) return;
         String className = element.path();
@@ -41,7 +41,6 @@ public final class AICoreFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case GEMINI:
-            case GEMINI_MD:
                 sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case LLMS:

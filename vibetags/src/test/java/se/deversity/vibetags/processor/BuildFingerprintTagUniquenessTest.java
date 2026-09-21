@@ -26,22 +26,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>{@code BuildFingerprint} folds each annotation's contents into the hash under a short tag,
  * {@code appendAnnotationSet(sb, "L", model.locked(), ...)}. The {@code add-annotation} skill says
- * those tags must be unique, and until this test nothing checked it: {@code "LB"} is used by both
+ * those tags must be unique, and until this test nothing checked it: {@code "LB"} was used by both
  * {@code legacyBridge} and {@code loadBearing}
  * (<a href="https://github.com/PIsberg/vibetags/issues/765">issue #765</a>).
  *
- * <p>Two annotations sharing a tag is currently harmless, because the sections are positional: each
+ * <p>Two annotations sharing a tag was harmless, because the sections are positional: each
  * call appends at a fixed point in a fixed order, so the tag is a label in the hashed string rather
  * than a key anything looks up. It stops being harmless the moment anything keys on the tag, or the
  * order stops being fixed, and the failure then is a fingerprint that cannot tell two different
  * builds apart, which is the quietest kind of wrong this processor can produce.
  *
- * <p>The existing collision is allowed here by name, with the reason, rather than the rule being
- * weakened or the test not written. Fixing it changes the hashed string and so invalidates every
- * consumer's {@code .vibetags-cache} once, which #765 says is a decision for a release boundary.
- * When that decision is made, delete the entry from {@link #KNOWN_COLLISIONS} and this test enforces
- * the rule outright. Until then it stops a <em>second</em> collision from arriving unnoticed, which
- * is the part that was actually unguarded.
+ * <p>That collision was first allowed here by name, because fixing it changes the hashed string and
+ * so invalidates every consumer's {@code .vibetags-cache} once. It was fixed right after a release was
+ * prepared ({@code loadBearing} is now {@code "LDB"}), the cost being one missed short-circuit
+ * per consumer, and {@link #KNOWN_COLLISIONS} is empty: the rule is enforced
+ * outright. The map stays so that a future collision that truly cannot be fixed at once has
+ * somewhere to be recorded as a decision rather than a relaxed rule.
  */
 @DisplayName("Fingerprint tags are unique per annotation")
 class BuildFingerprintTagUniquenessTest {
@@ -51,10 +51,7 @@ class BuildFingerprintTagUniquenessTest {
      *
      * <p>An entry here is a decision somebody has to remove, not a rule somebody quietly relaxed.
      */
-    private static final Map<String, String> KNOWN_COLLISIONS = Map.of(
-        "LB", "legacyBridge and loadBearing, since the tags were introduced. Harmless while the "
-            + "sections are positional; fixing it rewrites the hashed string and invalidates every "
-            + "consumer's .vibetags-cache once, so it waits for a release boundary (#765).");
+    private static final Map<String, String> KNOWN_COLLISIONS = Map.of();
 
     /** {@code appendAnnotationSet(sb, "TAG", model.accessor(), ...)}. */
     private static final Pattern CALL = Pattern.compile(

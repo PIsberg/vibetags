@@ -200,6 +200,9 @@ and this section seem to disagree, the enforcing test decides.
   string values instead and every other byte is kept (#639, #651).
 - **`AGENTS.md` is a write target only when it is the sole AI config file present,** or when it
   already carries a marker pair. Otherwise `codex` is dropped, and so is the Codex sidecar config.
+  Three opt-ins do not count as company, because no AI tool reads them as instructions:
+  `.vibetags-root-index` (a marker, #788), `TESTING.md` (a routing target) and `.vibetags-locks`
+  (a JSON Lines report for the CI guard, #800).
   Worth knowing what this now costs: `AGENTS.md` has become the default rules file for 20+ tools,
   so in the common case, a project that also uses Claude or Cursor, VibeTags writes none. Most of
   those tools also read a file VibeTags does write, but Amp, OpenCode, Jules, Factory Droid,

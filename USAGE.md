@@ -571,7 +571,7 @@ mkdir -p .amazonq/rules                      # Amazon Q (deprecated, #645: Kiro'
 mkdir -p .ai/rules                           # Universal .ai/rules standard (deprecated, #645)
 
 # --- Trae, Zoo Code ---
-mkdir -p .trae/rules                         # Trae IDE
+mkdir -p .trae/rules                         # TraeCode (formerly Trae IDE)
 mkdir -p .roo/rules                          # Zoo Code (fork of the retired Roo Code; reads the same paths)
 
 # --- PearAI ---

@@ -1,7 +1,6 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -191,18 +190,15 @@ class TestingMdRoutingEndToEndTest {
     }
 
     /**
-     * Spec US1 scenario 3, and it does not hold yet. Not because of routing: a round that saw no
-     * annotations never saves its sidecar ({@code generateFiles()}, "Only persist the sidecar when
-     * this compilation actually saw annotations"), so the source set's previous sidecar keeps
-     * contributing its old body. Measured on 2026-09-20 with no {@code TESTING.md} at all: the
-     * removed test guardrail lingers in {@code CLAUDE.md} the same way. It is the limitation
-     * {@link SourceSetIsolationEndToEndTest} already pins ("a source set emptied of every annotation
-     * ... its sidecar is the recorded escape"), seen in a new file. {@code generateFiles()} is
-     * {@code @AILocked}, so this is escalated to the owner, and the case is disabled rather than
-     * rewritten to assert the behaviour it was written to reject.
+     * Spec US1 scenario 3 (#781). It was committed disabled: a round that found no annotations never
+     * saved its sidecar, so the source set's previous one kept contributing the removed guardrail.
+     * Three things had to change, and the first is javac's: a source set with no annotation left is
+     * never handed to a processor that claims only VibeTags' annotations, so the processor now
+     * claims {@code "*"} while any sidecar records elements. Then an emptied round that was shown
+     * its sources saves its empty sidecar, and rewrites the files it has withdrawn from. Partial
+     * rounds are refused before generation (invariant 17), which is what makes the empty result
+     * safe to believe.
      */
-    @Disabled("Escalated: a zero-annotation round keeps its stale sidecar; the guard is in the locked "
-        + "generateFiles() and predates TESTING.md. Reproduces in CLAUDE.md without this feature.")
     @Test
     void removingTheLastTestAnnotationEmptiesTheRegionAndKeepsTheFile() throws IOException {
         optInto(ALWAYS_LOADED);
@@ -218,6 +214,29 @@ class TestingMdRoutingEndToEndTest {
         assertFalse(read("TESTING.md").contains(TEST_FOCUS),
             "a guardrail whose annotation is gone must not linger:\n" + read("TESTING.md"));
         assertTrue(read("CLAUDE.md").contains(MAIN_FOCUS), "and the main guardrails are untouched");
+    }
+
+    /**
+     * The same removal when the emptied source set owned the only sidecar: main carries no
+     * annotation and nothing is routed. With one sidecar the merge path is not taken, and the
+     * single-module write is gated on this round having found annotations, which it did not. The
+     * file is rewritten anyway because this source set has just withdrawn from it (#781); without
+     * that the removed guardrail stays in {@code CLAUDE.md} for good, on a build reporting no
+     * changes.
+     */
+    @Test
+    void removingTheOnlyAnnotationInTheProjectClearsTheAlwaysLoadedFile() throws IOException {
+        optInto(List.of("CLAUDE.md"));
+        compileSourceSet("test", List.<String[]>of(
+            new String[]{"com.example.ledger.LedgerTest", TEST_SOURCE}));
+        assertTrue(read("CLAUDE.md").contains(TEST_FOCUS), "precondition: unrouted, so it is in CLAUDE.md");
+
+        compileSourceSet("test", List.<String[]>of(
+            new String[]{"com.example.ledger.LedgerTest", UNANNOTATED_TEST_SOURCE}));
+
+        assertTrue(Files.exists(root.resolve("CLAUDE.md")), "the opt-in file is never deleted");
+        assertFalse(read("CLAUDE.md").contains(TEST_FOCUS),
+            "a guardrail whose annotation is gone must not linger:\n" + read("CLAUDE.md"));
     }
 
     @Test

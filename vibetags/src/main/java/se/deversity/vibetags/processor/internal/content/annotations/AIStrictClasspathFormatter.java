@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIStrictClasspathFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         String className = element.path();
         AIStrictClasspath ann = element.annotation(AIStrictClasspath.class);
         String reason = ann == null ? "" : ann.reason();

@@ -59,6 +59,9 @@ AnnotationFormatter`:
   `AISecureFormatter`'s shape (a `switch (platform)` producing platform-appropriate syntax:
   Markdown bullet, XML element, YAML/TOML/JSON fragment). Platforms you don't handle fall through
   to `default: break;` — silent omission, not an error.
+- Implement `render(element, sb, family)`, not `format`. `AnnotationFormatter.format` is a default
+  method that resolves `Platform.rendersAs()` first, so `family` is never an alias: write
+  `case GEMINI:` and `GEMINI.md` gets the same words. Never add `case GEMINI_MD:` (#764).
 - Register it: add a `private static final AIYourNameFormatter YOUR_NAME = new
   AIYourNameFormatter();` field and `public static AIYourNameFormatter yourName() { return
   YOUR_NAME; }` getter to `FormatterRegistry`.
