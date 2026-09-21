@@ -104,88 +104,11 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
 
-## Locked Files
-- [TestLockedClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestLockedClass): Do not modify this code under any circumstances.
-- [AnnotationDefinitionsTest.testAILockedCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAILockedCanBeUsedOnMethods()): Test reason
-
 ## Contextual Rules
-- [TestContextClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestContextClass): Focus - test
-- [AnnotationDefinitionsTest.testAIContextCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIContextCanBeUsedOnMethods()): Focus - Test focus. Avoid - Test avoids
 - [GuardrailFileWriterLogContractTest](se.deversity.vibetags.processor.internal.GuardrailFileWriterLogContractTest): Focus - The event names and reason= values asserted here are the writer's published contract, not test scaffolding: people grep build logs for write.skip and reason=cache-unchanged. Add a case when you add an event. Avoid - Renaming or merging an asserted event to tidy the assertions; that is a breaking change for every consumer parsing a build log, and nothing else catches it
 
-## Security Audit Requirements
-- [TestAuditClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestAuditClass): check for XSS
-- [AnnotationDefinitionsTest.testAIAuditCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIAuditCanBeUsedOnMethods()): check for SQL Injection, Thread Safety
-
-## Ignored Elements
-- [TestIgnoreClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestIgnoreClass): excluded from AI context - Auto-generated code
-- [AnnotationDefinitionsTest.testAIIgnoreCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIIgnoreCanBeUsedOnMethods()): excluded from AI context - Test reason
-
-## Implementation Tasks
-- [AnnotationDefinitionsTest.testAIDraftCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIDraftCanBeUsedOnMethods()): Test instructions
-
-## PII / Privacy Guardrails
-- [TestPrivacyClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestPrivacyClass): Test PII field
-- [AnnotationDefinitionsTest.testAIPrivacyCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIPrivacyCanBeUsedOnMethods()): Test reason
-
-## 🧠 Core Functionality
-- [TestCoreClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestCoreClass): Sensitivity: High. Note: Core business logic
-- [AnnotationDefinitionsTest.testAICoreCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAICoreCanBeUsedOnMethods()): Sensitivity: Critical. Note: Test core logic
-
-## ⚡ Performance Constraints
-- [TestPerformanceClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestPerformanceClass): O(n) max
-- [AnnotationDefinitionsTest.testAIPerformanceCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIPerformanceCanBeUsedOnMethods()): O(1) required
-
-## 🔐 Contract-Frozen Signatures
-- [TestContractClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestContractClass): Stable public API
-- [AnnotationDefinitionsTest.testAIContractCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIContractCanBeUsedOnMethods()): Test contract
-
-## 🧪 Test-Driven Requirements
-- [TestTestDrivenClass](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestTestDrivenClass): Coverage goal: 100%. Framework: JUNIT_5.
-- [AnnotationDefinitionsTest.testAITestDrivenCanBeUsedOnMethods()](se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAITestDrivenCanBeUsedOnMethods()): Coverage goal: 90%. Framework: JUNIT_5, MOCKITO.
-
-## 🧵 Thread-Safe by Design
-- [TS](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.TS): Strategy: LOCK_FREE
-
-## ❄️ Immutable Types
-- [IM](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.IM): immutable type
-
-## ⚠️ Deprecated Elements
-- [DEP](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.DEP): Replaced by: `x.NewType`. Migrate any caller to the replacement.
-
-## 📡 Observability Instrumentation
-- [OB](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.OB): Metrics: m.
-
-## 📜 Regulatory Compliance
-- [RG](se.deversity.vibetags.processor.NewAnnotationsV3DefinitionTest.RG): GDPR Art. 17 — Implements a regulatory requirement. Any change must document its compliance impact.
-
 ## Strict Test Isolation
-- [PT](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.PT): Strict test isolation required. No shared mutable state or external resource conflicts.
 - [WriteCacheAsyncTest](se.deversity.vibetags.processor.WriteCacheAsyncTest): Strict test isolation required. No shared mutable state or external resource conflicts. Reason: Must keep running alone. Real platform threads plus detector instrumentation generate load that reaches the javac-based end-to-end tests beside it, and those fail as flakes far from this file, so the cost never points back here
-
-## Legacy Compatibility Bridge
-- [LB](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.LB): Legacy/compatibility bridge. Do not refactor structural patterns; only modify internal business logic as explicitly requested.
-
-## Architectural Boundary Constraints
-- [AR](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.AR): Belongs to layer: `domain`. Prohibited from referencing: [infra, web]
-
-## Public API Surface Protection
-- [PA](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.PA): Public API surface. Preserve signature, Javadoc, backwards compatibility, and binary/source stability.
-
-## Strict Exception Handling
-- [SE](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.SE): Strict exception handling required. Catching/throwing generic Exception/Throwable is prohibited.
-
-## Strict Type Safety
-- [ST](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.ST): Loose typing (Object, Map<String, Object>, raw types) is prohibited. Enforce type safety.
-
-## Internationalization Mandate
-- [IT](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.IT): Internationalization mandated. User-facing strings must not be hardcoded; retrieve from resources.
-
-## Strict Classpath Integrity
-- [SC](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.SC): Strict compile-time dependency/classpath constraints. Dynamic loading and reflection hacks prohibited.
-
-## Schema & Serialization Safety
-- [SS](se.deversity.vibetags.processor.NewAnnotationsV4DefinitionTest.SS): Schema/serialization safety guaranteed. Prohibit altering data formats or fields without migration plan.
 
 ## 🔐 Security-Critical Code
 - [TransitiveManifestReaderLimitsTest](se.deversity.vibetags.processor.internal.TransitiveManifestReaderLimitsTest): Security-critical code [Enforces the trust boundary: manifests come from third-party dependency JARs and their text is merged into the consumer's always-loaded instruction files. These cases are the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list; relaxing one to make a test pass widens what a dependency may put in front of an agent]. Do not weaken security properties. Flag any change for security review.

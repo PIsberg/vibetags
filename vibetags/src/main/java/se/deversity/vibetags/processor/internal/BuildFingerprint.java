@@ -105,7 +105,14 @@ public final class BuildFingerprint {
      */
     public static String compute(AnnotationCollector collector, Set<String> activeServices,
                                  String processorVersion) {
-        GuardrailModel model = collector.model();
+        // publishedModel, not model: the fingerprint's job is to notice when the generated content
+        // would differ, so it has to hash what is written rather than what was collected. Hashing
+        // the published set gets -Avibetags.exclude in for free and keeps invariant 12 true by
+        // construction, where folding the raw pattern strings in would make two patterns that
+        // exclude the same elements look like different builds. With no exclusions the two models
+        // are the same object, so every existing consumer's fingerprint is unchanged and no cache
+        // is invalidated by this.
+        GuardrailModel model = collector.publishedModel();
         StringBuilder sb = new StringBuilder(4096);
 
         sb.append("V{").append(processorVersion).append('}');

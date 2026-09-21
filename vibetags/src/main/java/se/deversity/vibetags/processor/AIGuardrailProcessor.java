@@ -25,6 +25,7 @@ import se.deversity.vibetags.processor.internal.ModuleRootResolver;
 import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
 import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
+import se.deversity.vibetags.processor.internal.ElementExclusions;
 import se.deversity.vibetags.processor.internal.PartialRoundDetector;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
 import se.deversity.vibetags.processor.model.ContentHash;
@@ -80,7 +81,8 @@ import java.util.stream.Collectors;
                    "vibetags.cache", "vibetags.check", "vibetags.module",
                    "vibetags.enforce", "vibetags.baseline.update",
                    "vibetags.manifest.origin", "vibetags.manifest.dir",
-                   "vibetags.manifest.packages", "vibetags.manifest.max"})
+                   "vibetags.manifest.packages", "vibetags.manifest.max",
+                   "vibetags.exclude"})
 public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Public constructor for the service loader. */
@@ -301,6 +303,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // walks and sorts a type's whole visible member set. Same opt-in shape as the locks report
         // below: pay for it only when something is going to read it.
         collector.captureSignatures(!this.enforceFamilies.isEmpty() || this.baselineUpdate);
+        // Elements that are collected but never published (#792). Set on the collector rather than
+        // applied at a call site, because every call site that renders is inside the locked
+        // generateFiles(); the collector hands the filtered model to the renderers and the
+        // unfiltered one to the source ledger, which is what keeps invariant 17 satisfied.
+        ElementExclusions exclusions = ElementExclusions.parse(options.get("vibetags.exclude"));
+        collector.setExclusions(exclusions);
+        if (log != null && !exclusions.isEmpty()) {
+            // An option that silently removes guardrails from the output is one somebody will have
+            // to explain a missing rule by, so the build says it is on and what it was given.
+            log.info("exclude.active patterns={}", exclusions.patterns());
+        }
         // Position resolution feeds only the .vibetags-locks report; skip it entirely (no Tree API
         // scanning, no per-element allocation) unless that opt-in file is present.
         this.locksReportEnabled = Files.exists(this.root.resolve(ServiceRegistry.LOCKS_REPORT_FILE));

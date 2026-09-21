@@ -92,7 +92,9 @@ public final class GuardrailContentBuilder {
     }
 
     public Result build() {
-        GuardrailModel model = collector.model();
+        // publishedModel, not model: anything -Avibetags.exclude names is collected so the source
+        // ledger stays satisfied, and dropped here so it reaches no file (#792).
+        GuardrailModel model = collector.publishedModel();
         // Pre-size renderer output buffers from the collected element count: ~160 bytes of rendered
         // content per annotated reference plus a fixed preamble allowance. Avoids repeated
         // grow-and-copy reallocation of the per-platform StringBuilders on large projects.

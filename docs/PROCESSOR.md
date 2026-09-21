@@ -18,6 +18,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `vibetags.check` | `false` | Opt-in check mode: verify generated files are in sync with the annotations instead of writing them; drift is reported as a compile **error** (CI enforcement). Writes none of the files VibeTags manages in the project — no output files, no sidecars, no cache. Dependency manifests still go to `CLASS_OUTPUT`; see below |
 | `vibetags.enforce` | (off) | Opt-in **enforcing mode**: comma-separated families (`locked`, `contract`, `publicapi`, or `all`) whose guarded elements must match `.vibetags-baseline`. A drift is a compile **error**. See below |
 | `vibetags.baseline.update` | `false` | Record the current shapes into `.vibetags-baseline` instead of checking them. The only thing that writes that file |
+| `vibetags.exclude` | (none) | Comma-separated globs over an element's path; a match is collected but never published. See below |
 | `vibetags.manifest.origin` | read from `.vibetags-manifest` | The `group:artifact:version` stamped into published manifests, overriding the marker file's first line |
 | `vibetags.manifest.dir` | (off) | Read dependency manifests from a directory of extracted `*.json` files instead of, or in addition to, the compile classpath |
 | `vibetags.manifest.packages` | (off) | Comma-separated package names to look up explicitly, for builds where the compiler exposes no Tree API |
@@ -34,6 +35,51 @@ instead of checking. The path options (`vibetags.root`, `vibetags.log.path`,
 this filesystem can represent; an illegal character used to throw out of `init()` and fail the
 whole compilation, which is the one thing VibeTags promises never to do. (`BooleanOptionTest`,
 `PathOptionRobustnessTest`)
+
+## Excluding elements from the output (`-Avibetags.exclude`)
+
+Some annotated elements are not guardrails. The clearest case is an annotation-definition fixture:
+one element per `@AI` type with a placeholder reason, written to prove the annotation compiles and
+applies to its targets. Published, it tells an agent never to edit a class called
+`TestLockedClass`, in a file that agent loads every session.
+
+```xml
+<compilerArgs>
+  <arg>-Avibetags.exclude=com.example.fixtures.*,com.example.*DefinitionTest*</arg>
+</compilerArgs>
+```
+
+Comma-separated globs. `*` matches any run of characters including dots, `?` matches exactly one,
+everything else is literal, and a pattern with no wildcard is an exact match. `/` is read as `.` and
+`**` as `*`, so a path-shaped pattern copied from a build file still means what its author intended.
+
+**Patterns match an element's path**, the same string the generated files print in their own
+`path="..."` attributes, so a pattern can be written by copying from the output it is meant to
+shrink. The path carries the enclosing type, which is what makes a pattern naming a fixture class
+take its annotated methods and nested types with it.
+
+A matched element is **collected and not published**. That distinction is the whole feature, and it
+is why this is not a compiler `<exclude>`:
+
+- Leaving the source out of the compilation means the round was not shown every annotated source in
+  its module. `PartialRoundDetector` then refuses to write anything at all, which is invariant 17
+  working correctly, and the measured result is `round.skip reason=partial-round` and no output.
+- An excluded element still reaches the collector, so the source ledger is satisfied and the round
+  writes as usual. It is dropped one step later, when the model is handed to the renderers.
+
+It applies to everything the build publishes: the aggregates, the per-element scoped rule files, and
+the `.vibetags-locks` positions. The exclusion is part of the fingerprint, so adding or removing a
+pattern regenerates rather than short-circuiting on the write cache, and `vibetags.log` records
+`exclude.active patterns=[...]` on any build that has one.
+
+**It removes guardrails from the output.** A pattern broader than intended silently drops real
+rules, and nothing downstream can tell that from an element nobody annotated. Prefer the narrowest
+pattern that covers the fixtures, and read the `exclude.active` line when a rule goes missing.
+
+One known limit: a pattern that stops an element being published does not always delete the scoped
+rule file a previous build wrote for it. In a reactor, a module round may not sweep the shared root
+directory (issue #383), so an orphaned root rule file survives until the root itself compiles. Check
+for leftovers the first time a pattern is added.
 
 ## Transitive guardrails (dependency tree propagation)
 
