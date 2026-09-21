@@ -108,37 +108,8 @@ These look wrong, redundant, or over-defensive and are deliberate. Refactoring i
 # Do not edit manually.
 
 ## LOCKED FILES (DO NOT EDIT)
-- **se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestLockedClass**: Do not modify this code under any circumstances.
-- **se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAILockedCanBeUsedOnMethods()**: Test reason
 
 ## CONTEXTUAL RULES
-
-## 🛡️ MANDATORY SECURITY AUDITS
-When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.
-
-* `se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestAuditClass`
-  - Required Checks: XSS
-* `se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIAuditCanBeUsedOnMethods()`
-  - Required Checks: SQL Injection, Thread Safety
-
-## IGNORED ELEMENTS
-The following elements must be completely excluded from AI context and completions:
-
-- `se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestIgnoreClass` - Auto-generated code
-- `se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIIgnoreCanBeUsedOnMethods()` - Test reason
-
-## 🔒 PII / PRIVACY GUARDRAILS
-The following elements handle PII. Never include their runtime values in logs,
-console output, external API calls, test fixtures, or mock data.
-
-- `se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestPrivacyClass`: Test PII field
-- `se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAIPrivacyCanBeUsedOnMethods()`: Test reason
-
-## 🧠 CORE FUNCTIONALITY
-The following elements are well-tested core components. Make changes with extreme caution.
-
-- **se.deversity.vibetags.annotations.AnnotationDefinitionsTest.TestCoreClass** (sensitivity: High): Core business logic
-- **se.deversity.vibetags.annotations.AnnotationDefinitionsTest.testAICoreCanBeUsedOnMethods()** (sensitivity: Critical): Test core logic
 
 ## 🔐 SECURITY-CRITICAL CODE
 Do not weaken security properties of these elements. Review every change for security impact:

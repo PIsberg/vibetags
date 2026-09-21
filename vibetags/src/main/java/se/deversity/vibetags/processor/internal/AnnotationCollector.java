@@ -196,6 +196,16 @@ public final class AnnotationCollector {
      */
     private @Nullable Map<TaggedElement, GranularBody> granularMemo;
 
+    /**
+     * What {@code -Avibetags.exclude} named, and the published model derived with it. Separate from
+     * {@link #memo} because the two answer different questions: the unfiltered one is what the
+     * source ledger is checked against, the filtered one is what gets written. See
+     * {@link #publishedModel()} for why collapsing them breaks invariant 17.
+     */
+    private ElementExclusions exclusions = ElementExclusions.NONE;
+
+    private @Nullable GuardrailModel publishedMemo;
+
     /** Creates every bucket up front, in registry order, so no caller can ever see a missing one. */
     public AnnotationCollector() {
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
@@ -214,6 +224,7 @@ public final class AnnotationCollector {
         if (this.captureSignatures != capture) {
             this.captureSignatures = capture;
             memo = null;
+            publishedMemo = null;
             granularMemo = null;
         }
     }
@@ -239,6 +250,7 @@ public final class AnnotationCollector {
         if (position != null) {
             lockedPositions.put(element, position);
             memo = null;
+            publishedMemo = null;
             granularMemo = null;
         }
     }
@@ -297,6 +309,7 @@ public final class AnnotationCollector {
             anyAnnotationsFound = true;
         }
         memo = null;
+        publishedMemo = null;
         granularMemo = null;
         return added;
     }
@@ -317,6 +330,7 @@ public final class AnnotationCollector {
         anyAnnotationsFound = false;
         sawSourceRoots = false;
         memo = null;
+        publishedMemo = null;
         granularMemo = null;
     }
 
@@ -389,6 +403,7 @@ public final class AnnotationCollector {
         }
         transitiveRules.addAll(rules);
         memo = null;
+        publishedMemo = null;
         granularMemo = null;
     }
 
@@ -415,17 +430,57 @@ public final class AnnotationCollector {
     }
 
     /**
+     * What this build actually writes: {@link #model()} minus anything {@code -Avibetags.exclude}
+     * names. Memoized alongside it.
+     *
+     * <p>Two accessors rather than one filtered model, deliberately. {@link #model()} is what
+     * {@link PartialRoundDetector} compares the source ledger against, and it must keep showing
+     * every element this round collected: filter there and an excluded-but-annotated source reads
+     * as one the round was never shown, so invariant 17 refuses to write anything at all. That is
+     * exactly what a compiler-level {@code <exclude>} does, and why it was not a route
+     * (<a href="https://github.com/PIsberg/vibetags/issues/792">issue #792</a>). Everything
+     * downstream of the ledger reads this one instead.
+     *
+     * <p>Identical to {@link #model()} when no pattern was given, which is every build that does
+     * not pass the option, so the default path allocates no second model.
+     */
+    public GuardrailModel publishedModel() {
+        if (exclusions.isEmpty()) {
+            return model();
+        }
+        GuardrailModel m = publishedMemo;
+        if (m == null) {
+            m = model().excluding(exclusions::excludes);
+            publishedMemo = m;
+        }
+        return m;
+    }
+
+    /**
+     * Sets the exclusions from {@code -Avibetags.exclude}. Called once from the processor's
+     * {@code init}, before any round has run.
+     */
+    public void setExclusions(ElementExclusions exclusions) {
+        this.exclusions = exclusions;
+        this.publishedMemo = null;
+        this.granularMemo = null;
+    }
+
+    /**
      * The per-element granular bodies for the current contents, rendered once per collected state.
      *
      * <p>Unmodifiable: every caller reads it, today only for its key set and to write one file per
      * entry, and sharing one map between the root build, the module builds and the mirror targets
      * only works while none of them can change it.
+     *
+     * <p>Rendered from {@link #publishedModel()}: an excluded element owns no scoped rule file
+     * either, which in the case that motivated the option was the larger half of the output.
      */
     public Map<TaggedElement, GranularBody> granularRules() {
         Map<TaggedElement, GranularBody> rules = granularMemo;
         if (rules == null) {
             rules = Collections.unmodifiableMap(
-                PlatformRendererRegistry.granularRenderer().renderGranular(model()));
+                PlatformRendererRegistry.granularRenderer().renderGranular(publishedModel()));
             granularMemo = rules;
         }
         return rules;

@@ -647,6 +647,12 @@
                                 <arg>-Avibetags.root=${project.basedir}/..</arg>
                                 <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
                                 <arg>-Avibetags.check=${vibetags.selfcheck}</arg>
+                                <!-- The annotation-definition fixtures carry one element per @AI type with
+                                     placeholder reasons, purely to prove each annotation compiles. They are
+                                     compile-proofs, not guardrails, and self-annotating the test sources
+                                     published them as though they were real: 6 638 bytes of CLAUDE.md
+                                     telling an agent never to edit a fixture called TestLockedClass (#792). -->
+                                <arg>-Avibetags.exclude=se.deversity.vibetags.annotations.AnnotationDefinitionsTest*,se.deversity.vibetags.processor.NewAnnotations*DefinitionTest*</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>
@@ -669,6 +675,12 @@
                                         <arg>-Avibetags.root=${project.basedir}/..</arg>
                                         <arg>-Avibetags.project=VibeTags Annotation Processor</arg>
                                 <arg>-Avibetags.check=${vibetags.selfcheck}</arg>
+                                <!-- The annotation-definition fixtures carry one element per @AI type with
+                                     placeholder reasons, purely to prove each annotation compiles. They are
+                                     compile-proofs, not guardrails, and self-annotating the test sources
+                                     published them as though they were real: 6 638 bytes of CLAUDE.md
+                                     telling an agent never to edit a fixture called TestLockedClass (#792). -->
+                                <arg>-Avibetags.exclude=se.deversity.vibetags.annotations.AnnotationDefinitionsTest*,se.deversity.vibetags.processor.NewAnnotations*DefinitionTest*</arg>
                                     </compilerArgs>
                                     <annotationProcessorPaths>
                                         <path>

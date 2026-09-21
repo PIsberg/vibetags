@@ -245,6 +245,36 @@ public final class GuardrailModel {
         return partition(false).build();
     }
 
+    /**
+     * This model with every element {@code excluded} accepts left out of every bucket: what
+     * {@code -Avibetags.exclude} publishes.
+     *
+     * <p>A derived view rather than a filter at collection time, and the distinction is the feature.
+     * The collected model is what {@code PartialRoundDetector} compares the source ledger against,
+     * so removing an element from it makes the round look as though it was never shown that source
+     * and invariant 17 refuses to write anything (issue #792). Dropping it here instead leaves the
+     * round complete and only the output smaller.
+     *
+     * <p>Locked positions follow their elements, so an excluded element leaves no entry behind in
+     * {@code .vibetags-locks}. Transitive rules are kept whole: they are a dependency's text rather
+     * than this project's elements, and no pattern over local names should silently drop them.
+     */
+    public GuardrailModel excluding(java.util.function.Predicate<TaggedElement> excluded) {
+        Builder view = builder();
+        buckets.forEach((type, bucket) -> bucket.forEach(element -> {
+            if (!excluded.test(element)) {
+                view.add(type, element);
+            }
+        }));
+        lockedPositions.forEach((element, position) -> {
+            if (!excluded.test(element)) {
+                view.lockedPosition(element, position);
+            }
+        });
+        view.transitiveRules(transitiveRules);
+        return view.build();
+    }
+
     private Builder partition(boolean safety) {
         Builder view = builder();
         buckets.forEach((type, bucket) -> {
