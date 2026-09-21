@@ -7,8 +7,11 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -31,9 +34,85 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class BuildToolchainParityTest {
 
-    /** The modules that compile Java and therefore owe the full stack. */
-    private static final List<String> MODULES =
-        List.of("vibetags", "vibetags-annotations", "vibetags-cli", "vibetags-ksp");
+    /**
+     * Modules deliberately exempt from the stack, each with the reason it is exempt.
+     *
+     * <p>Empty today, and kept as the shape the exemption must take: a named entry with a reason,
+     * not a module quietly missing from a list. A module that belongs here should be added here
+     * rather than by narrowing {@link #compilingModules()}.
+     */
+    private static final Map<String, String> EXEMPT = Map.of();
+
+    /**
+     * The modules that compile Java and therefore owe the full stack, derived from the tree.
+     *
+     * <p>Derived, not listed, and that is the whole point of #805. This was
+     * {@code List.of("vibetags", "vibetags-annotations", "vibetags-cli", "vibetags-ksp")}, and
+     * {@code load-tests} was not in it: roughly 2000 lines of Java, including the fixtures that
+     * decide what every recorded baseline actually measured, ran no Checkstyle, no PMD, no
+     * SpotBugs and no Error Prone. Nothing failed, because this guard cannot fail for a module
+     * nobody remembered to add, which is the same failure mode it exists to catch one level down.
+     *
+     * <p>A directory qualifies when it holds a {@code pom.xml} and at least one {@code .java} file
+     * under {@code src/}. That leaves {@code vibetags-bom} and {@code vibetags-parent} out on their
+     * own terms rather than by name, and puts a new module in the moment it has a source file.
+     *
+     * <p>Top level only. The projects under {@code examples/} are consumer fixtures: they exist to
+     * be compiled the way a consumer's project is, with VibeTags as a dependency and none of this
+     * repository's own analysis, and holding them to it would measure the wrong thing.
+     */
+    private static List<String> compilingModules() {
+        try (Stream<Path> entries = Files.list(repoRoot())) {
+            List<String> modules = entries
+                .filter(Files::isDirectory)
+                .filter(dir -> Files.isRegularFile(dir.resolve("pom.xml")))
+                .filter(BuildToolchainParityTest::hasJavaSources)
+                .map(dir -> String.valueOf(dir.getFileName()))
+                .filter(name -> !EXEMPT.containsKey(name))
+                .sorted()
+                .toList();
+            assertFalse(modules.isEmpty(),
+                "no compiling modules were found under " + repoRoot() + ". This test derives its "
+                    + "own list, so an empty one means the derivation is broken and every "
+                    + "assertion below is vacuously true.");
+            return modules;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /** Whether {@code module} has at least one {@code .java} file under {@code src/}. */
+    private static boolean hasJavaSources(Path module) {
+        Path src = module.resolve("src");
+        if (!Files.isDirectory(src)) {
+            return false;
+        }
+        try (Stream<Path> files = Files.walk(src)) {
+            return files.anyMatch(p -> String.valueOf(p.getFileName()).endsWith(".java"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * The derivation itself, pinned. Everything else here iterates {@link #compilingModules()}, so
+     * a derivation that quietly returned too few modules would make every other test pass while
+     * checking less, which is precisely the bug this file is about.
+     */
+    @Test
+    void theModuleListIsDerivedAndCoversEveryJavaModule() {
+        List<String> modules = compilingModules();
+
+        for (String known : List.of("vibetags", "vibetags-annotations", "vibetags-cli",
+                                    "vibetags-ksp", "load-tests")) {
+            assertTrue(modules.contains(known),
+                known + " compiles Java but the derived module list missed it: " + modules);
+        }
+        for (String noJava : List.of("vibetags-bom", "vibetags-parent")) {
+            assertFalse(modules.contains(noJava),
+                noJava + " has no Java sources and should not be held to the stack: " + modules);
+        }
+    }
 
     /**
      * Error Prone settings that must hold in every module. Per-module {@code -Xep:...:OFF} entries
@@ -64,7 +143,7 @@ class BuildToolchainParityTest {
 
     @Test
     void everyCompilingModule_runsErrorProneWithTheSameNullAwaySettings() {
-        for (String module : MODULES) {
+        for (String module : compilingModules()) {
             String pom = read(repoRoot().resolve(module + "/pom.xml"));
             for (String invariant : ERROR_PRONE_INVARIANTS) {
                 assertTrue(pom.contains(invariant),
@@ -76,7 +155,7 @@ class BuildToolchainParityTest {
 
     @Test
     void everyCompilingModule_runsSpotBugsWithFindSecurityBugs() {
-        for (String module : MODULES) {
+        for (String module : compilingModules()) {
             String pom = read(repoRoot().resolve(module + "/pom.xml"));
             for (String invariant : SPOTBUGS_INVARIANTS) {
                 assertTrue(pom.contains(invariant),
@@ -88,7 +167,7 @@ class BuildToolchainParityTest {
 
     @Test
     void everyCompilingModule_runsPmdAndCpdAgainstTheSharedRuleset() {
-        for (String module : MODULES) {
+        for (String module : compilingModules()) {
             String pom = read(repoRoot().resolve(module + "/pom.xml"));
             for (String invariant : PMD_INVARIANTS) {
                 assertTrue(pom.contains(invariant),
@@ -113,7 +192,7 @@ class BuildToolchainParityTest {
         assertTrue(expected.contains("--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"),
             reference + " no longer looks like the Error Prone export set; update this test deliberately.");
 
-        for (String module : MODULES) {
+        for (String module : compilingModules()) {
             Path config = repoRoot().resolve(module + "/.mvn/jvm.config");
             assertTrue(Files.isRegularFile(config),
                 config + " is missing. Without it Error Prone does not fail in " + module

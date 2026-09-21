@@ -310,6 +310,15 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-checkstyle-plugin</artifactId>
                     <version>${maven-checkstyle-plugin.version}</version>
+                    <configuration>
+                        <!-- checkstyle.xml refers to its sibling suppressions file through
+                             ${config_loc}, which the plugin only populates for a ruleset loaded
+                             off the classpath. Ours is a file path, so it has to be set here, and
+                             here rather than in each module so a new module cannot inherit the
+                             stack and still fail to parse the configuration. Every module is a
+                             direct child of the repository root, so one expression covers them. -->
+                        <propertyExpansion>config_loc=${project.basedir}/..</propertyExpansion>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>com.github.spotbugs</groupId>
