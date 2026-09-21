@@ -155,8 +155,8 @@ plugins {
 }
 
 dependencies {
-    implementation(platform("se.deversity.vibetags:vibetags-bom:1.3.5"))
-    ksp(platform("se.deversity.vibetags:vibetags-bom:1.3.5"))
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.3.6"))
+    ksp(platform("se.deversity.vibetags:vibetags-bom:1.3.6"))
 
     compileOnly("se.deversity.vibetags:vibetags-annotations")
     ksp("se.deversity.vibetags:vibetags-ksp")
@@ -403,7 +403,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: PIsberg/vibetags/action/locked-files@v1.3.5
+      - uses: PIsberg/vibetags/action/locked-files@v1.3.6
 ```
 
 The action touches `.vibetags-locks` itself, rebuilds the PR head (so the report is never stale), and flags three things as inline PR annotations: edits inside a locked line range, removal of an `@AILocked` annotation line, and deletion of a file that contained `@AILocked`. In a Java, Kotlin or Groovy source only a real annotation counts for the last two: `@AILocked` text inside a string literal, text block or comment, such as test fixture source, does not. A source the guard cannot lex keeps a plain text match, which errs toward failing; that includes any Groovy source with a `/` outside a comment, since a slashy string cannot be told from a division. A Kotlin `typealias` or a Groovy `@AnnotationCollector` that aliases the lock counts wherever in the repository it is declared; while a source that may declare one cannot be lexed, removing any annotation line in that language fails. Set `warn-only: true` to report without failing. See [action/locked-files/README.md](action/locked-files/README.md) for all inputs.
