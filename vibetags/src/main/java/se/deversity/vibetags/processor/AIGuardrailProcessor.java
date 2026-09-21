@@ -1658,10 +1658,42 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 sb.append("\n  - ").append(rel);
             }
             sb.append("\nRun a normal compile (without -Avibetags.check=true) and commit the regenerated files.");
+            // A verdict reached from one source set, with nothing on disk from any other, may be
+            // about content this round was simply never shown. Check mode writes no sidecar, on
+            // purpose, so on a clean checkout neither the main nor the test round can see the
+            // other's guardrails and the advice above is a dead end: a normal compile reproduces
+            // exactly the committed files (issue #794). Said here rather than left for the reader
+            // to work out, because the message they get today sends them to regenerate a tree that
+            // is already correct.
+            if (onlySourceSetInThisComparison(allSidecars, moduleId)) {
+                String seen = moduleIdentity == null ? "this" : moduleIdentity.sourceSet();
+                sb.append("\n\nNote: this comparison saw only the '").append(seen)
+                  .append("' source set, and no sidecar from another one. If this project also ")
+                  .append("annotates other source sets, their guardrails are committed but absent ")
+                  .append("here, and the drift above may be spurious (issue #794). Regenerate and ")
+                  .append("diff the tree instead: a normal full compile, then 'git status --porcelain'.");
+            }
             messager.printMessage(Diagnostic.Kind.ERROR, sb.toString());
             if (log != null) log.error("Check failed: {} guardrail file(s) out of date.", drift.size());
         }
         VibeTagsLogger.shutdown(root);
+    }
+
+    /**
+     * Whether this check verdict rests on one source set alone: the only sidecar in the merge is
+     * the one this round simulated for itself.
+     *
+     * <p>{@code allSidecars} in check mode comes from {@code peekAll}, which reads what is on disk,
+     * plus this round's own in-memory sidecar. Finding nothing else means no other source set and
+     * no sibling module contributed, so any file that also carries their guardrails will look stale
+     * whether or not it is. On a clean checkout that is every file, which is issue #794.
+     *
+     * <p>Deliberately a weak signal used only to add a sentence to an error. It is true of a
+     * genuinely single-source-set project too, where the note reads as a conditional that does not
+     * apply rather than as a wrong claim. Nothing branches on it, and the verdict is unchanged.
+     */
+    private static boolean onlySourceSetInThisComparison(List<ModuleSidecar> allSidecars, String moduleId) {
+        return allSidecars.size() == 1 && allSidecars.get(0).getModuleId().equals(moduleId);
     }
 
     /**
