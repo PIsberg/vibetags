@@ -1913,27 +1913,27 @@ public final class ModuleSidecar {
      *
      * <p>A stale sidecar is positive evidence, unlike the absence a module round cannot argue from
      * (issue #383): the file existed, it named its stems, and its module's directory is gone.
+     *
+     * <p>Through {@link #listPaths}, which is where the "a sidecar is a non-{@code .tmp} file whose
+     * name starts with the prefix" rule is kept, so this cannot drift from {@link #anyStale} and
+     * {@link #readAll} about what counts as one. It also fixes an order that used to be the
+     * filesystem's: the returned set is consumed in iteration order by
+     * {@code GranularRulesWriter.removeStems}, whose result is logged as
+     * {@code granular.departed.removed stems=}, so the same reactor printed the stems in a
+     * different order on a different filesystem. Sorted by sidecar filename, it does not.
      */
     public static Set<String> staleGranularStems(Path root) {
         Set<String> stems = new LinkedHashSet<>();
-        if (!Files.isDirectory(root)) return stems;
-        try (Stream<Path> stream = Files.list(root)) {
-            for (Path p : stream.toList()) {
-                Path fn = p.getFileName();
-                String name = fn == null ? "" : fn.toString();
-                if (!name.startsWith(SIDECAR_PREFIX) || name.endsWith(".tmp")) continue;
-                String modulePath = readModulePathHeader(p);
-                if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
-                    continue;
-                }
-                if (moduleDirExists(root, modulePath)) continue;
-                ModuleSidecar stale = load(p);
-                if (stale != null && stale != UNREADABLE && stale != FUTURE_VERSION) {
-                    stems.addAll(stale.getGranularStems());
-                }
+        for (Path p : listPaths(root)) {
+            String modulePath = readModulePathHeader(p);
+            if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
+                continue;
             }
-        } catch (IOException ignored) {
-            // A root we cannot list names no stems, which is the same outcome as one with none.
+            if (moduleDirExists(root, modulePath)) continue;
+            ModuleSidecar stale = load(p);
+            if (stale != null && stale != UNREADABLE && stale != FUTURE_VERSION) {
+                stems.addAll(stale.getGranularStems());
+            }
         }
         return stems;
     }
