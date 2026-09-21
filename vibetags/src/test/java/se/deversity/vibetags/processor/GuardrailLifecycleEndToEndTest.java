@@ -223,27 +223,27 @@ class GuardrailLifecycleEndToEndTest {
     }
 
     /**
-     * Pins the documented limitation rather than pretending it is not there: emptying a module of
-     * <em>every</em> annotation leaves its last contribution in the merged files.
+     * Emptying a module of <em>every</em> annotation retires its contribution (#781).
      *
-     * <p>That is deliberate, and the reason is in {@code docs/MULTI-MODULE.md} — two preservation
-     * guards stop a compile that saw no annotations from destroying content, because a module
-     * compiled without the processor seeing its sources would otherwise wipe everyone else's
-     * guardrails. The cost is this: the last annotation to leave a module leaves its rule behind
-     * until {@code .vibetags-mod-<id>} is deleted.
-     *
-     * <p>Written as a passing test of the current behaviour, not an ignored test of the desired
-     * one, so that changing it is a deliberate act with a failing test to update — and so the
-     * escape hatch is discoverable from the test suite rather than only from prose.
+     * <p>This test first pinned the opposite, as a documented limitation: a round that found no
+     * annotation never saved its sidecar, so the last annotation to leave a module left its rule
+     * behind until {@code .vibetags-mod-<id>} was deleted by hand. The guard it came from protects
+     * against a module compiled without the processor seeing its sources, which would otherwise read
+     * as "everything was deleted". That danger is still guarded, by a narrower test than "found
+     * nothing": the round must have been handed sources of its own, and a partial round is refused
+     * before generation starts (invariant 17), so a round that gets this far was shown every source
+     * its sidecar recorded. Only then is an empty result believed, and only about this module.
      */
     @Test
-    void emptyingAModuleEntirely_leavesItsLastContributionUntilTheSidecarIsDeleted(@TempDir Path root)
+    void emptyingAModuleEntirely_retiresItsContributionAndNobodyElses(@TempDir Path root)
             throws Exception {
         setUpReactor(root);
         compileModule(root, "module-core", "com.example.core.IrNode",
             locked("com.example.core", "IrNode", "Core IR node"));
         compileModule(root, "module-cli", "com.example.cli.Cli",
             locked("com.example.cli", "Cli", "CLI entry point"));
+        assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
+            "precondition: the module contributes while it is annotated");
 
         ProcessorTestHarness.awaitFilesystemTick(root);
         VibeTagsLogger.shutdown();
@@ -251,22 +251,12 @@ class GuardrailLifecycleEndToEndTest {
         compileModule(root, "module-cli", "com.example.cli.Cli",
             "package com.example.cli;\npublic class Cli {}\n");
 
-        assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
-            "documented behaviour: a module with no annotations left does not re-save its sidecar, "
-                + "so its previous contribution stays in the merged output");
-
-        // The documented escape hatch has to actually work.
-        Files.delete(root.resolve(".vibetags-mod-module-cli"));
-        ProcessorTestHarness.awaitFilesystemTick(root);
-        VibeTagsLogger.shutdown();
-
-        compileModule(root, "module-core", "com.example.core.IrNode",
-            locked("com.example.core", "IrNode", "Core IR node"));
-
-        assertFalse(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
-            "deleting the module's sidecar must retire its contribution — the documented remedy");
-        assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.core.IrNode"),
-            "and must not disturb the remaining module");
+        String claude = Files.readString(root.resolve("CLAUDE.md"));
+        assertFalse(claude.contains("com.example.cli.Cli"),
+            "a module shown all of its sources and found to have no annotation left must retire "
+                + "its contribution:\n" + claude);
+        assertTrue(claude.contains("com.example.core.IrNode"),
+            "and must not disturb the module that was not recompiled:\n" + claude);
     }
 
     @Test

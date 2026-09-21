@@ -366,10 +366,10 @@ deleting `TESTING.md` is noticed by a round whose sources did not change. Creati
 nothing until a test round runs. Deleting it and building only the main sources puts the test
 guardrails back: a routed round also stores what it would have written without the file, under
 the sidecar key `~tfull~<service>`, and the merge reads that once the opt-in is gone
-(`TestingMdLifecycleEndToEndTest`, `ModuleSidecarTestingFallbackTest`). Two limits: a module whose
-main sources carry no annotation has a single sidecar, so its test guardrails return on the next
-test compile and not on a main-only build; and removing the last annotation from a test source set
-leaves its guardrail in place, the same emptied-source-set limit that applies to every other file.
+(`TestingMdLifecycleEndToEndTest`, `ModuleSidecarTestingFallbackTest`). Two former limits are
+gone: a module whose main sources carry no annotation gets its test guardrails back on a main-only
+build too (#782), and removing the last annotation from a test source set empties its region
+(#781).
 
 **Log events.** `testing.route`, `testing.skip` and `merge.testing.fallback`; see
 [LOGGING.md](LOGGING.md). A project without `TESTING.md` logs none of them.
@@ -409,21 +409,28 @@ not the universal `"*"` this section used to claim — so a new VibeTags annotat
 automatically without touching the processor configuration, and a compilation carrying no VibeTags
 annotations never pays for the processor at all.
 
-The flip side: javac only invokes the processor when at least one VibeTags annotation is present
-in the compiled sources. A source set whose last `@AI*` annotation was just removed does not run
-VibeTags — nothing is regenerated or cleaned up for it, and `-Avibetags.check=true` verifies
-nothing either, so a CI drift gate passes vacuously until some VibeTags annotation exists again.
+The flip side: javac only invokes a processor whose claimed types match something in the compiled
+sources. Under the package wildcard alone, a source set whose last `@AI*` annotation was just
+removed would not run VibeTags: nothing regenerated or cleaned up, and `-Avibetags.check=true`
+verifying nothing, so a CI drift gate passing vacuously. That was the behaviour until #781, and it
+is why the claim widens to `"*"` whenever a `.vibetags-mod-*` sidecar at the root records elements
+(see below). A project with no sidecar, which is every project that has never had an annotation,
+still never pays for the processor. What remains out of reach is a source set with no sources left
+at all, which no build compiles.
 The round universe is also declaration-scoped: an `@AI*` annotation inside a method body (a local
 class, an anonymous class member) neither triggers the processor nor reaches it. When the
 processor runs for some other reason, `MethodBodyGuardrailScanner` spots those through the Tree
 API and warns instead of letting them be a silent no-op; a compilation whose only guardrails sit
 inside bodies stays wholly invisible.
 
-Two states widen the claim to `"*"`, so that a compilation with no VibeTags annotation still runs
+Three states widen the claim to `"*"`, so that a compilation with no VibeTags annotation still runs
 the processor: a project carrying the `.vibetags-transitive` marker, whose guardrails all come from
-dependencies, and a project where `TESTING.md` was deleted while a routed test round's sidecar
-still holds its unrouted body (#782). The second clears itself at the next test compile, which
-rewrites that sidecar unrouted. Without it, a main-only build of unannotated sources would leave
+dependencies; a project with a sidecar that records elements, so that a source set emptied of its
+annotations can retire them (#781); and a project where `TESTING.md` was deleted while a routed test round's sidecar
+still holds its unrouted body (#782). The last clears itself at the next test compile, which
+rewrites that sidecar unrouted. The cost of the middle one is that every compilation of a project
+that has guardrails now reaches the fingerprint check, its unannotated source sets included; an
+unannotated round with no sidecar under its own id writes nothing. Without it, a main-only build of unannotated sources would leave
 the test guardrails in a sidecar and in no file.
 
 ## Gradle incremental annotation processing

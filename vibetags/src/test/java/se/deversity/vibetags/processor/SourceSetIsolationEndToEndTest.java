@@ -264,6 +264,10 @@ class SourceSetIsolationEndToEndTest {
      * would delete a sibling source set's guardrails on every {@code mvn compile} (issue #383: a
      * round never argues from an absence it cannot see).
      *
+     * <p>Not to be confused with a source set that still has sources and merely lost its last
+     * annotation: that round does run since #781, and retires its own guardrails
+     * ({@code TestingMdRoutingEndToEndTest}). Here there is no round at all.
+     *
      * <p>The recorded escape is the same as for a module emptied entirely: delete the source set's
      * sidecar, {@code .vibetags-mod-<module>__test}. This test exists so that the day the behaviour
      * changes, it changes deliberately.

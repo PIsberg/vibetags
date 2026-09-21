@@ -1201,6 +1201,24 @@ public final class ModuleSidecar {
     }
 
     /**
+     * True when some sidecar at {@code root} records annotated elements, i.e. a source set of this
+     * project had guardrails the last time it compiled.
+     *
+     * <p>Asked before the first round (#781). javac never calls a processor whose supported
+     * annotation types match nothing, so a source set whose last annotation was just removed would
+     * never be shown to VibeTags, and its sidecar would keep contributing the removed guardrail for
+     * good. Which source set is compiling is not known until a round runs, so this cannot be asked
+     * of one sidecar; it is asked of all of them. A project with no sidecar, which is every project
+     * with no annotations, is unaffected.
+     */
+    public static boolean anyRecordsElements(Path root) {
+        for (ModuleSidecar s : peekAll(root, null)) {
+            if (!s.elementIds.isEmpty()) return true;
+        }
+        return false;
+    }
+
+    /**
      * True when the merge would read at least one sidecar's unrouted fallback: {@code TESTING.md}
      * is gone and a routed round's full body is still on record.
      *

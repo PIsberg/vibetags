@@ -34,6 +34,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Removing the last annotation from a source set left its guardrail behind for good (#781).**
+  Seen in `TESTING.md` and, without routing, in `CLAUDE.md`. Three causes, each shown necessary by
+  a test that fails without it. javac never called the processor for a source set with no
+  annotation left, so the claim now widens to `"*"` whenever a sidecar at the root records
+  elements; a project with no sidecar is unaffected. A round that found nothing never saved its
+  sidecar, so the old one kept contributing; an emptied round that was shown its sources now saves
+  its empty one. And the single-sidecar write was gated on the round having found annotations; it
+  now also rewrites the files that source set withdrew from. The last two are edits inside the
+  `@AILocked` `generateFiles()`, unlocked by the owner for this issue; its step order is unchanged
+  and `checkFiles()` mirrors both. A partial round is refused before generation (invariant 17),
+  which is what makes an empty result safe to believe. **Behaviour change:** every compilation of a
+  project that has guardrails now reaches the fingerprint check, unannotated source sets included.
 - **Deleting `TESTING.md` left test guardrails in no file when the main sources are unannotated
   (#782).** A main-only build after the deletion did not put them back in the always-loaded files
   until the tests were compiled again. Two guards decided it. javac never calls a processor whose

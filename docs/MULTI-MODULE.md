@@ -200,9 +200,14 @@ that orphaned it.
 
 Two preservation guards keep compiles with **no annotations** from destroying content: the module's
 sidecar is only saved when annotations were found, and shared-file writes with no contributions
-preserve the existing file content. Consequence: removing *all* annotations from a module leaves its
-last contribution in place until its `.vibetags-mod-*` file is deleted (or the module directory
-disappears).
+preserve the existing file content. Both have one exception since #781: a round that found nothing,
+**was handed sources of its own**, and whose sidecar on disk records elements has had its
+annotations removed, not hidden. It saves its empty sidecar and rewrites the files it withdrew
+from, so removing *all* annotations from a module or a source set retires its contribution on the
+next compile of it. What makes the empty result safe to believe is that a partial round is refused
+before generation (invariant 17). The case still out of reach is a module or source set with no
+sources left at all, which no build compiles: its contribution stays until its `.vibetags-mod-*`
+file is deleted (or the module directory disappears).
 
 ## Per-module (nested) output
 

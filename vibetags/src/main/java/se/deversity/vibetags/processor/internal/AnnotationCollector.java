@@ -123,6 +123,11 @@ public final class AnnotationCollector {
      */
     private boolean sawSourceRoots;
 
+    /** Whether any round of this compilation was handed sources of its own; see the field. */
+    public boolean sawSourceRoots() {
+        return sawSourceRoots;
+    }
+
     /**
      * Whether this project opted into inheriting guardrails from its dependencies
      * ({@code .vibetags-transitive}).

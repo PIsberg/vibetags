@@ -114,7 +114,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * only clue being javac's unrelated "options were not recognized by any processor" warning.
      *
      * <p>Widened only for projects carrying the {@code .vibetags-transitive} marker, and for as
-     * long as {@link #testingFallbackPending} holds (#782), never by default. Claiming {@code "*"} unconditionally would run VibeTags on every compilation of
+     * long as {@link #testingFallbackPending} (#782) or {@link #guardrailsOnRecord} (#781) holds,
+     * never for a project with no VibeTags state. Claiming {@code "*"} unconditionally would run VibeTags on every compilation of
      * every consumer, including those with opt-in files and no annotations at all, which today
      * produce nothing and would start producing empty scaffolding.
      *
@@ -124,7 +125,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return transitiveReader != null || testingFallbackPending
+        return transitiveReader != null || testingFallbackPending || guardrailsOnRecord
             ? Set.of("*", AILocked.class.getPackageName() + ".*")
             : super.getSupportedAnnotationTypes();
     }
@@ -247,6 +248,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private boolean testingFallbackPending;
 
     /**
+     * True when a sidecar at the root records annotated elements (#781). Widens the claimed
+     * annotation types for the same reason as the two fields above: a source set whose last
+     * annotation was removed carries nothing javac would match, so the round that could retire its
+     * guardrails is never handed to this processor, and the removed rule stays in the generated
+     * files for good. Unlike those two this is the common case, so the cost is stated: every
+     * compilation of a project that has guardrails now reaches the fingerprint check, including
+     * its unannotated source sets, where it previously stopped at {@code init()}.
+     */
+    private boolean guardrailsOnRecord;
+
+    /**
      * Cap on inherited advisory rules ({@code -Avibetags.manifest.max}); non-positive means no
      * limit. Safety-tier rules are never dropped, and a cap that drops anything says so as a NOTE.
      */
@@ -360,6 +372,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
             ? new TransitiveManifestReader(log) : null;
         this.testingFallbackPending = ModuleSidecar.holdsWithdrawnTestingFallback(this.root);
+        this.guardrailsOnRecord = ModuleSidecar.anyRecordsElements(this.root);
         this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
         Path dirOption = pathOption(options, "vibetags.manifest.dir", messager);
         this.manifestDir = dirOption != null ? this.root.resolve(dirOption).normalize() : null;
@@ -967,7 +980,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // identity but usually with zero annotations — an unconditional save would overwrite the
         // main compile's sidecar with an empty one, dropping this module from the merged output.
         // Mirrors the hasNewRules guard in GuardrailFileWriter for the single-module case.
-        if (collector.anyAnnotationsFound()) {
+        // The exception (#781): a source set that had annotations last time and, shown all of its
+        // sources, has none now. Its old sidecar would keep contributing the removed guardrails for
+        // good, so the empty one is saved over it. Sidecar ids are per source set (#330), so this
+        // cannot be the test-compile-clobbers-main case the guard was written for.
+        final Set<String> retiredServices = servicesRetiredByAnEmptiedRound(moduleId);
+        if (collector.anyAnnotationsFound() || !retiredServices.isEmpty()) {
             // Compare against what this same id recorded last time BEFORE overwriting it: a module
             // whose every element has been replaced by a disjoint set did not have its annotations
             // edited, it had them hidden from this round (issue #330's failure mode).
@@ -1058,9 +1076,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 }
                 boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
                 // hasNewRules: true if any module (not just this one) contributed to this service.
-                boolean anyContributed = isMultiModule(allSidecars)
+                // retiredServices: a file this source set has just withdrawn from must be rewritten
+                // even if nobody contributes to it any more, or the removed rule stays in it (#781).
+                boolean anyContributed = (isMultiModule(allSidecars)
                     ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
-                    : collector.anyAnnotationsFound();
+                    : collector.anyAnnotationsFound()) || retiredServices.contains(service);
                 boolean changed = writeFileIfChanged(filePath.toString(), content, anyContributed || isIgnoreFile);
                 String relPath = root.relativize(filePath).toString().replace('\\', '/');
                 statusQueue.add(new String[]{relPath, changed ? "updated" : "no changes"});
@@ -1584,7 +1604,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // stale sidecar — which is the only record of a departed module's rule files, and belongs
         // to the real build that acts on it.
         List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.peekAll(root));
-        if (collector.anyAnnotationsFound()) {
+        // Same two conditions as generateFiles() (#781): an emptied source set replaces its sidecar.
+        final Set<String> retiredServices = servicesRetiredByAnEmptiedRound(moduleId);
+        if (collector.anyAnnotationsFound() || !retiredServices.isEmpty()) {
             boolean replaced = false;
             for (int i = 0; i < allSidecars.size(); i++) {
                 if (allSidecars.get(i).getModuleId().equals(moduleId)) {
@@ -1620,9 +1642,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 continue; // rendered content for a service with no configured output path: nothing to check
             }
             boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
-            boolean anyContributed = isMultiModule(allSidecars)
+            boolean anyContributed = (isMultiModule(allSidecars)
                 ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
-                : collector.anyAnnotationsFound();
+                : collector.anyAnnotationsFound()) || retiredServices.contains(service);
             checkWriter.writeFileIfChanged(filePath.toString(), entry.getValue(), anyContributed || isIgnoreFile);
         }
         GranularRulesWriter checkGranular = new GranularRulesWriter(checkWriter);
@@ -1744,6 +1766,31 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         }
         return digests;
+    }
+
+    /**
+     * The services whose shared file this round must rewrite although it found no annotation,
+     * because this same source set contributed to them last time and has since been emptied (#781).
+     *
+     * <p>Empty unless all three hold: the round found nothing, it was handed sources of its own, and
+     * the sidecar on disk for {@code moduleId} records elements. The second is what makes the empty
+     * result a fact about the code rather than about the build, and it is safe to believe here for
+     * a reason that sits outside this method: {@code process()} refuses a partial round before
+     * generation starts (invariant 17), so a round that reaches this point was shown every source
+     * its sidecar recorded. A test-compile that merely has no annotations of its own has no sidecar
+     * under its source-set id, so it answers empty and nothing of the main round's is touched.
+     */
+    private Set<String> servicesRetiredByAnEmptiedRound(String moduleId) {
+        if (collector.anyAnnotationsFound() || !collector.sawSourceRoots()) {
+            return Set.of();
+        }
+        ModuleSidecar previous = ModuleSidecar.loadFor(root, moduleId);
+        if (previous == null || previous.getElementIds().isEmpty()) {
+            return Set.of();
+        }
+        Set<String> services = new java.util.LinkedHashSet<>(previous.getBodies().keySet());
+        services.addAll(previous.getUnroutedBodies().keySet());
+        return services;
     }
 
     /**
