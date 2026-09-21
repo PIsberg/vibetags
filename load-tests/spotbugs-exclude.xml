@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs exclusions for the load-test module. Narrow and reasoned: this module analyses two kinds
+  of code SpotBugs has no way to recognise, and blanket-disabling it here would have been the easy
+  answer and the wrong one (#805).
+-->
+<FindBugsFilter>
+
+    <!--
+      JMH's annotation processor generates a harness class per benchmark method, into its own
+      package. On the first run they were 5758 of this module's 5765 findings, 5632 of them
+      UUF_UNUSED_FIELD: JMH pads its state classes with runs of unused fields (p000..p0nn) on
+      purpose, to push hot fields onto separate cache lines and keep one thread's writes from
+      invalidating another's reads. An unused field is the point, not a defect, and the code is
+      not ours to change in any case.
+    -->
+    <Match>
+        <Package name="~se\.deversity\.vibetags\.loadtest\.jmh_generated.*"/>
+    </Match>
+
+    <!--
+      A JMH @State class is instantiated by the harness and filled in a @Setup method, never in a
+      constructor, so every benchmark field reads as written-but-not-initialised. That is the JMH
+      lifecycle rather than a bug, and moving the work into a constructor would run it inside the
+      measured region, which is the one thing a benchmark must not do.
+
+      Scoped to this bug pattern and this class, so every other detector still applies here.
+    -->
+    <Match>
+        <Class name="se.deversity.vibetags.loadtest.ProcessorHotPathBenchmark"/>
+        <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    </Match>
+    <Match>
+        <Class name="se.deversity.vibetags.loadtest.WriteCacheHitBenchmark"/>
+        <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    </Match>
+
+</FindBugsFilter>

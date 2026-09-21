@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+  Narrow, reasoned exceptions to checkstyle.xml. One entry per reason, and the reason belongs here
+  rather than in a commit message: a suppression nobody can justify later is one nobody dares
+  remove.
+
+  This file exists so that every module can run the same Checkstyle configuration (invariant 16)
+  rather than a module with an awkward case keeping a relaxed config of its own, which is how
+  "the same stack everywhere" quietly stops being true.
+-->
+<suppressions>
+
+    <!--
+      JMH benchmark method names carry the scenario in the name, separated by underscores:
+      writeFileIfChanged_noChange, small_marker_cacheHit. That is not a style preference here.
+      JMH writes the method name into its JSON results, tools/plot-cache-hit.py and
+      tools/plot-results.py key on it, and every committed baseline under load-tests/results/
+      records it. Renaming to satisfy MethodName would leave the plots matching nothing and make
+      new runs incomparable with every baseline in the repository, which is the one thing those
+      files exist to allow.
+
+      Scoped to the two benchmark classes, not to load-tests as a whole: the stress tests in the
+      same module are ordinary JUnit and are held to the shared rule.
+    -->
+    <suppress checks="MethodName"
+              files="[\\/]load-tests[\\/]src[\\/]main[\\/]java[\\/].*[\\/](ProcessorHotPathBenchmark|WriteCacheHitBenchmark)\.java$"/>
+
+</suppressions>

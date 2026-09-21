@@ -45,15 +45,17 @@ public final class SyntheticClassGenerator {
     private static String buildSource(String className, int index) {
         StringBuilder sb = new StringBuilder(512);
 
-        sb.append("package com.example.generated;\n\n");
-
-        // Imports — always include all, the compiler will ignore unused ones
-        sb.append("import se.deversity.vibetags.annotations.AILocked;\n");
-        sb.append("import se.deversity.vibetags.annotations.AIContext;\n");
-        sb.append("import se.deversity.vibetags.annotations.AIAudit;\n");
-        sb.append("import se.deversity.vibetags.annotations.AIIgnore;\n");
-        sb.append("import se.deversity.vibetags.annotations.AIPrivacy;\n");
-        sb.append("import se.deversity.vibetags.annotations.AIDraft;\n\n");
+        // One chained append per run of literals, not one statement each: PMD's
+        // ConsecutiveAppendsShouldReuse. The emitted text is unchanged, which matters more here
+        // than the rule does — these sources are the fixture every recorded baseline measured.
+        sb.append("package com.example.generated;\n\n")
+          // Imports — always include all, the compiler will ignore unused ones
+          .append("import se.deversity.vibetags.annotations.AILocked;\n")
+          .append("import se.deversity.vibetags.annotations.AIContext;\n")
+          .append("import se.deversity.vibetags.annotations.AIAudit;\n")
+          .append("import se.deversity.vibetags.annotations.AIIgnore;\n")
+          .append("import se.deversity.vibetags.annotations.AIPrivacy;\n")
+          .append("import se.deversity.vibetags.annotations.AIDraft;\n\n");
 
         // Class-level annotations
         if (index % 2 == 0) {
@@ -75,13 +77,13 @@ public final class SyntheticClassGenerator {
 
         // Field-level @AIPrivacy on every 5th class
         if (index % 5 == 0) {
-            sb.append("    @AIPrivacy(reason = \"Contains PII\")\n");
-            sb.append("    private String sensitiveField").append(index).append(";\n\n");
+            sb.append("    @AIPrivacy(reason = \"Contains PII\")\n")
+              .append("    private String sensitiveField").append(index).append(";\n\n");
         }
 
         // Simple non-empty body so the compiler produces bytecode
-        sb.append("    public int id() { return ").append(index).append("; }\n");
-        sb.append("}\n");
+        sb.append("    public int id() { return ").append(index).append("; }\n")
+          .append("}\n");
 
         return sb.toString();
     }

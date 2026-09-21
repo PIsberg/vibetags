@@ -8,6 +8,13 @@
     <property name="severity" value="error"/>
     <property name="fileExtensions" value="java, properties, xml"/>
 
+    <!-- Narrow, reasoned exceptions live in one file, with the reason next to each entry, so that
+         every module can run this same configuration (invariant 16) instead of an awkward case
+         keeping a relaxed config of its own. -->
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/checkstyle-suppressions.xml"/>
+    </module>
+
     <!-- Miscellaneous -->
     <module name="NewlineAtEndOfFile"/>
     <module name="Translation"/>

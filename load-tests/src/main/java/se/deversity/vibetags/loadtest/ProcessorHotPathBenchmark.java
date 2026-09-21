@@ -48,6 +48,12 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5, time = 2, timeUnit = TimeUnit.SECONDS)
 @Fork(value = 1, jvmArgsPrepend = {"-Xms256m", "-Xmx512m"})
 @State(Scope.Thread)
+// A JMH benchmark method carries its scenario in the name, separated by underscores. That is not
+// style here: JMH writes the method name into its JSON results, tools/plot-results.py keys on it,
+// and every committed baseline under results/ records it, so renaming to satisfy the naming rule
+// would leave the plots matching nothing and make new runs incomparable with every baseline in the
+// repository. Scoped to this one rule, so every other check still applies to this file (#805).
+@SuppressWarnings("PMD.MethodNamingConventions")
 public class ProcessorHotPathBenchmark {
 
     // -------------------------------------------------------------------------
@@ -101,7 +107,15 @@ public class ProcessorHotPathBenchmark {
         Files.createDirectories(allPresentRoot.resolve(".qwen").resolve("commands"));
         for (Map.Entry<String, Path> e : AIGuardrailProcessor.buildServiceFileMap(allPresentRoot).entrySet()) {
             Path p = e.getValue();
-            Files.createDirectories(p.getParent());
+            // getParent() is null for a path with no parent, and createDirectories(null) throws
+            // NullPointerException rather than saying which service file caused it. Every entry in
+            // this map is resolved against allPresentRoot today, so the branch is not reachable
+            // now; it is here because a new service whose file sits at the root would otherwise
+            // turn this setup into an NPE in a benchmark, where the failure is least legible.
+            Path parent = p.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
             if (!Files.exists(p)) Files.createFile(p);
         }
 
@@ -192,18 +206,40 @@ public class ProcessorHotPathBenchmark {
     // Helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * A {@link javax.annotation.processing.Messager} that discards everything.
+     *
+     * <p>Every method is deliberately empty: a benchmark measures the code under test, and letting
+     * a diagnostic reach the console would put I/O inside the timed region and make the number
+     * depend on how chatty the input happened to be.
+     */
     private static javax.annotation.processing.Messager noopMessager() {
         return new javax.annotation.processing.Messager() {
-            public void printMessage(javax.tools.Diagnostic.Kind k, CharSequence m) {}
+            @Override
+            public void printMessage(javax.tools.Diagnostic.Kind k, CharSequence m) {
+                // Discarded: see noopMessager().
+            }
+
+            @Override
             public void printMessage(javax.tools.Diagnostic.Kind k, CharSequence m,
-                                     javax.lang.model.element.Element e) {}
+                                     javax.lang.model.element.Element e) {
+                // Discarded: see noopMessager().
+            }
+
+            @Override
             public void printMessage(javax.tools.Diagnostic.Kind k, CharSequence m,
                                      javax.lang.model.element.Element e,
-                                     javax.lang.model.element.AnnotationMirror a) {}
+                                     javax.lang.model.element.AnnotationMirror a) {
+                // Discarded: see noopMessager().
+            }
+
+            @Override
             public void printMessage(javax.tools.Diagnostic.Kind k, CharSequence m,
                                      javax.lang.model.element.Element e,
                                      javax.lang.model.element.AnnotationMirror a,
-                                     javax.lang.model.element.AnnotationValue v) {}
+                                     javax.lang.model.element.AnnotationValue v) {
+                // Discarded: see noopMessager().
+            }
         };
     }
 }

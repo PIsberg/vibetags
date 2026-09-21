@@ -890,7 +890,12 @@ jobs:
             *) echo "could not resolve the processor version, got '$VT_VERSION'"; exit 1 ;;
           esac
           cd load-tests
-          mvn test -B \
+          # verify, not test. PMD, CPD and SpotBugs bind to the verify phase, so under `mvn test`
+          # this module was running Checkstyle and nothing else: the stack #805 added would have
+          # passed on a developer's machine and never run here, which is the same shape as the gap
+          # that issue is about. Checked against this job's own log, where the only goal executed
+          # against vibetags-load-tests was checkstyle:check.
+          mvn verify -B \
             -Dprocessor.version="$VT_VERSION" \
             -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest,TestingMdRoutingStressTest" \
             -Dstress.max.classes=500
