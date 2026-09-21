@@ -2,6 +2,8 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
+import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
@@ -41,7 +43,7 @@ class PlatformRenderersTest {
 
     @Test
     void clineRenderer_rendersEmptyModel() {
-        ClineRenderer renderer = new ClineRenderer();
+        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.CLINE);
         String output = renderer.render(GuardrailModel.EMPTY, Platform.CLINE, ctx);
         assertNotNull(output);
         assertTrue(output.contains("AUTO-GENERATED AI RULES"));
@@ -64,14 +66,14 @@ class PlatformRenderersTest {
 
     @Test
     void firebaseRenderer_rendersEmptyModel() {
-        FirebaseRenderer renderer = new FirebaseRenderer();
+        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.FIREBASE);
         String output = renderer.render(GuardrailModel.EMPTY, Platform.FIREBASE, ctx);
         assertTrue(output.contains("AUTO-GENERATED"));
     }
 
     @Test
     void voidRenderer_rendersEmptyModel() {
-        VoidRenderer renderer = new VoidRenderer();
+        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.VOID);
         String output = renderer.render(GuardrailModel.EMPTY, Platform.VOID, ctx);
         assertNotNull(output);
         assertTrue(output.contains("AUTO-GENERATED"));
@@ -267,6 +269,6 @@ class PlatformRenderersTest {
         assertNotNull(new ZedRenderer().render(fullModel, Platform.ZED, ctx));
         assertNotNull(new RooModesRenderer().render(fullModel, Platform.ROO_MODES, ctx));
         assertNotNull(new ClaudeLocalRenderer().render(fullModel, Platform.CLAUDE_LOCAL, ctx));
-        assertNotNull(new ClineRenderer().render(fullModel, Platform.CLINE, ctx));
+        assertNotNull(PlatformRendererRegistry.getRenderer(Platform.CLINE).render(fullModel, Platform.CLINE, ctx));
     }
 }

@@ -47,8 +47,9 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
   single-file `PlatformRenderer`.
 - **Ignore-file family** (a glob-pattern exclusion list driven only by `@AIIgnore`)? → reuse
   `IgnoreFileRenderer`, don't write a new renderer class.
-- **Byte-identical output to an existing renderer**? → delegate, don't reimplement (see
-  `FirebaseRenderer`, which wraps a shared `CursorRenderer` instance).
+- **Byte-identical output to an existing renderer**? → write no class at all: add the platform
+  as a fall-through `case` beside that renderer in `PlatformRendererRegistry.findRenderer`, with a
+  comment line saying what the file is (see `FIREBASE`, `GOOSE`, `REPLIT` beside `CURSOR`, #764).
 - **Implicitly-activated sidecar of another service** (`codex_config`/`codex_rules` under
   `codex`, `cline_safety` under `cline_granular`)? → do **not** add
   its own key to `ServiceRegistry.OPT_IN_KEYS`; wire it into the special-case block at the bottom
@@ -89,7 +90,9 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
      through `ServiceRegistry` and the registry but missed there is created, opted into, and left
      holding a header with no globs under it: nothing thrown, nothing logged, and an existence check
      green. Assert the glob in the test, never the file.
-   - *Delegating*: wrap and forward to the existing renderer's `render()` (`FirebaseRenderer`).
+   - *Delegating with a change* (a wrapper that adds or edits something): hold a shared instance
+     and forward to its `render()` (`JunieRenderer`, `ClaudeSkillRenderer`). A delegate that
+     changes nothing is a registry fall-through label, not a class.
    - **YAML output** — also override `mergeShape()`. A YAML document has one of each top-level key,
      and the multi-module merge stacks whole renderings unless told otherwise, so without this the
      file gets its `rules:` / `reviews:` / `customModes:` repeated once per module: invalid to a
