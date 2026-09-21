@@ -868,7 +868,12 @@ jobs:
       # a build with enforcement off must not allocate what only the enforcing mode reads. That is
       # a regression gate, and a regression gate that only runs on one laptop is not a gate. It
       # takes ~15s and does not depend on runner speed, unlike the volume sweep's wall-clock.
-      - name: Run annotation-volume stress test (N ≤ 500), concurrent-build and signature-capture tests
+      #
+      # TestingMdRoutingStressTest is in the list for the same reason, and for a second one: it is
+      # the only load test that compiles from files on disk, so it is the only one in which a test
+      # source set exists at all. Every other harness here hands javac in-memory sources, which
+      # carry no file, so TESTING.md routing is switched off in all of them (issue #789).
+      - name: Run annotation-volume stress test (N ≤ 500), concurrent-build, signature-capture and TESTING.md-routing tests
         run: |
           # load-tests/pom.xml pins <processor.version> to whichever release is being compared, and
           # that pin is deliberate for cross-version work. It is wrong for this job: a regression
@@ -887,7 +892,7 @@ jobs:
           cd load-tests
           mvn test -B \
             -Dprocessor.version="$VT_VERSION" \
-            -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest" \
+            -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest,TestingMdRoutingStressTest" \
             -Dstress.max.classes=500
 
       - name: Upload stress-test results
@@ -895,7 +900,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: stress-results-${{ github.run_id }}
-          path: load-tests/target/stress-results-*.txt
+          path: |
+            load-tests/target/stress-results-*.txt
+            load-tests/target/testing-md-routing-*.txt
 
   build-gradle:
     name: Gradle Build (JDK ${{ matrix.java }})
