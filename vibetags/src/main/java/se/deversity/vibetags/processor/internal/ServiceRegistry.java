@@ -44,13 +44,16 @@ public final class ServiceRegistry {
      *       merges its aggregates, and nothing is ever written to the file (#788).</li>
      *   <li>{@code testing} is read on demand by an agent already working on tests, never as a
      *       project instruction file, and is never what an {@code AGENTS.md} pointer points at.</li>
+     *   <li>{@code locks_report} is rendered and written, so excluding it is a decision and not an
+     *       observation: {@code .vibetags-locks} is JSON Lines for the {@code action/locked-files}
+     *       CI guard, and no AI tool loads it as instructions (#800).</li>
      * </ul>
      *
-     * <p>Counting either one made a project whose only AI config file is {@code AGENTS.md} stop
+     * <p>Counting any of them made a project whose only AI config file is {@code AGENTS.md} stop
      * having it written the moment it opted in, which is Tier-1 invariant 4 answering wrongly for
      * a reason no diagnostic explains.
      */
-    private static final Set<String> MARKER_ONLY_OPT_INS = Set.of("root_index", "testing");
+    private static final Set<String> MARKER_ONLY_OPT_INS = Set.of("root_index", "testing", "locks_report");
 
     /** Subset of service keys whose presence on disk activates a service. */
     private static final Set<String> OPT_IN_KEYS = Set.of(

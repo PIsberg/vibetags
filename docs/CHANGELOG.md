@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`AGENTS.md` stopped being written when `.vibetags-locks` was opted in (#800).** The sole-file
+  rule counted the locked-elements report as a second AI config file, so a project whose only
+  instruction file is `AGENTS.md` lost it the moment it asked for the report. `.vibetags-locks` is
+  JSON Lines read by the `action/locked-files` CI guard and by no AI tool, so it no longer counts,
+  the same answer `.vibetags-root-index` (#788) and `TESTING.md` already get. Verified failing
+  first: `AgentsMdSoleFallbackTest.agentsMdBesideOnlyTheLocksReportIsStillTheSoleAiConfigFile`
+  was red before the one-entry change and green after.
+
 ## [1.3.6] - 2026-09-21
 
 ### Added
