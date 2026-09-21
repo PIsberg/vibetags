@@ -425,6 +425,16 @@ What the vendors say (checked 2026-09-14):
   configured "separated by `,`" and that the setting "will be automatically synchronized to the
   `globs` field". The page has no front matter example with a `globs:` line.
 
+Both vendor pages were read again on 2026-09-20 and neither had changed its answer. Cursor still
+shows only the bare form and "Separate multiple patterns with commas"; Trae's English page gives the
+same rule as the `docs.trae.cn` wording quoted in the table above, "use wildcards to specify the
+files to which the rule applies (for example, `*.js`, `src/**/*.ts`), and you can configure multiple
+wildcards separated by `,`". `cursor.com/docs/context/rules` redirects to the URL cited here, so the
+link has not rotted. What that re-check does **not** add is a runtime observation, which is the one
+thing #711 asks for and the one thing neither read can supply. Trae has meanwhile renamed itself
+TraeCode and now imports `AGENTS.md` and `CLAUDE.md` natively (#809), which does not bear on the
+glob form.
+
 What the shipped code does. Neither tool is open source and neither was run for this check; the
 verdict rests on the vendor statements above and on reading each tool's own bundled JavaScript.
 
