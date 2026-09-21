@@ -1199,6 +1199,44 @@ public final class ModuleSidecar {
     }
 
     /**
+     * True when the merge would read at least one sidecar's unrouted fallback: {@code TESTING.md}
+     * is gone and a routed round's full body is still on record.
+     *
+     * <p>Admits a lone sidecar to the merge path (#782). A module whose main sources carry no
+     * annotation has exactly one sidecar, the test round's, and a merge gated on count alone never
+     * consults the fallback that exists for this case.
+     */
+    public static boolean isTestingFallbackInForce(List<ModuleSidecar> sidecars) {
+        for (ModuleSidecar s : sidecars) {
+            if (!s.testingWithdrawn) continue;
+            for (String unrouted : s.unroutedBodies.values()) {
+                if (!unrouted.isBlank()) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * True when a sidecar at {@code root} still holds a routed round's unrouted body while
+     * {@code TESTING.md} is no longer opted in, so guardrails sit in a sidecar and in no file.
+     *
+     * <p>Asked before the first round, to decide whether this compilation must run at all (#782):
+     * javac never calls a processor whose supported annotation types match nothing, so a main-only
+     * build of unannotated sources would leave the fallback unread until the tests are compiled
+     * again. Peeks rather than reads, since a question asked before any round must not prune.
+     */
+    public static boolean holdsWithdrawnTestingFallback(Path root) {
+        Path testing = ServiceRegistry.buildServiceFileMap(root).get("testing");
+        if (testing != null && ServiceRegistry.isOptedIn("testing", testing)) return false;
+        for (ModuleSidecar s : peekAll(root, null)) {
+            for (String unrouted : s.unroutedBodies.values()) {
+                if (!unrouted.isBlank()) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * The body this sidecar contributes to the shared file of {@code serviceKey}: the ordinary one,
      * unless the round that wrote it was routed and {@code TESTING.md} has since gone, in which case
      * the ordinary body is only the safety half and the unrouted body is the whole of it.

@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Deleting `TESTING.md` left test guardrails in no file when the main sources are unannotated
+  (#782).** A main-only build after the deletion did not put them back in the always-loaded files
+  until the tests were compiled again. Two guards decided it. javac never calls a processor whose
+  supported annotation types match nothing in the compilation, so VibeTags did not run at all;
+  it now claims `"*"` for as long as a routed sidecar holds an unrouted body and `TESTING.md` is
+  gone, the same narrow widening `.vibetags-transitive` uses. And the fallback body is substituted
+  only on the merge path, which a lone sidecar now reaches while the fallback is in force.
+  `TestingMdLifecycleEndToEndTest.deletingTestingMdLosesNothingEvenWhenTheMainSourcesAreUnannotated`
+  was committed `@Disabled` with #779 and is enabled; it stays red with either half removed.
 - **`AGENTS.md` stopped being written when `.vibetags-locks` was opted in (#800).** The sole-file
   rule counted the locked-elements report as a second AI config file, so a project whose only
   instruction file is `AGENTS.md` lost it the moment it asked for the report. `.vibetags-locks` is

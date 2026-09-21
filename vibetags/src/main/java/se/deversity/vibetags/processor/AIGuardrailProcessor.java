@@ -112,8 +112,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * inherited rules would never be written — the feature would appear to do nothing, with the
      * only clue being javac's unrelated "options were not recognized by any processor" warning.
      *
-     * <p>Widened only for projects carrying the {@code .vibetags-transitive} marker, never by
-     * default. Claiming {@code "*"} unconditionally would run VibeTags on every compilation of
+     * <p>Widened only for projects carrying the {@code .vibetags-transitive} marker, and for as
+     * long as {@link #testingFallbackPending} holds (#782), never by default. Claiming {@code "*"} unconditionally would run VibeTags on every compilation of
      * every consumer, including those with opt-in files and no annotations at all, which today
      * produce nothing and would start producing empty scaffolding.
      *
@@ -123,7 +123,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return transitiveReader != null
+        return transitiveReader != null || testingFallbackPending
             ? Set.of("*", AILocked.class.getPackageName() + ".*")
             : super.getSupportedAnnotationTypes();
     }
@@ -234,6 +234,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * Tree API and the result is consumed once, at the end.
      */
     private @Nullable TransitiveManifestReader transitiveReader;
+
+    /**
+     * True when a routed test round's guardrails are in a sidecar and in no file, because
+     * {@code TESTING.md} was deleted after it ran (#782). Widens the claimed annotation types the
+     * way {@link #transitiveReader} does, and for the same reason: a main-only build of
+     * unannotated sources is otherwise never handed to this processor, so the merge that would
+     * put those guardrails back never happens. Clears itself: the next test compile rewrites the
+     * sidecar unrouted.
+     */
+    private boolean testingFallbackPending;
 
     /**
      * Cap on inherited advisory rules ({@code -Avibetags.manifest.max}); non-positive means no
@@ -348,6 +358,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
             ? new TransitiveManifestReader(log) : null;
+        this.testingFallbackPending = ModuleSidecar.holdsWithdrawnTestingFallback(this.root);
         this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
         Path dirOption = pathOption(options, "vibetags.manifest.dir", messager);
         this.manifestDir = dirOption != null ? this.root.resolve(dirOption).normalize() : null;
@@ -2107,7 +2118,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // writes its own content over the main round's (issue #330). Whether the merged output
         // gains VIBETAGS-MODULE sub-markers is the separate question mergeFor() answers per region,
         // so a lone module compiled twice keeps its historical sub-marker-free shape.
-        return allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars);
+        // A lone sidecar whose unrouted fallback is in force merges too: the fallback is only ever
+        // substituted on the merge path, and a module with unannotated main sources never has a
+        // second sidecar to get it there (#782).
+        return allSidecars.size() > 1 || ModuleSidecar.isRootIndexMode(allSidecars)
+            || ModuleSidecar.isTestingFallbackInForce(allSidecars);
     }
 
     /**

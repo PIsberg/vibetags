@@ -419,6 +419,13 @@ processor runs for some other reason, `MethodBodyGuardrailScanner` spots those t
 API and warns instead of letting them be a silent no-op; a compilation whose only guardrails sit
 inside bodies stays wholly invisible.
 
+Two states widen the claim to `"*"`, so that a compilation with no VibeTags annotation still runs
+the processor: a project carrying the `.vibetags-transitive` marker, whose guardrails all come from
+dependencies, and a project where `TESTING.md` was deleted while a routed test round's sidecar
+still holds its unrouted body (#782). The second clears itself at the next test compile, which
+rewrites that sidecar unrouted. Without it, a main-only build of unannotated sources would leave
+the test guardrails in a sidecar and in no file.
+
 ## Gradle incremental annotation processing
 
 The processor is declared as **aggregating** in
