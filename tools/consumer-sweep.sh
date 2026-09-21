@@ -132,6 +132,22 @@ allprojects {
 INITEOF
   fi
 fi
+# Every row goes through row(), so the summary and the exit status are counted from the same
+# place the table is printed and cannot drift from it. The loop below is fed by a heredoc rather
+# than a pipe, so it runs in this shell and these counters survive it.
+attempted=0
+failures=0
+skips=0
+
+row() {
+  printf '%-22s %-8s %-9s %s\n' "$1" "$2" "$3" "$4"
+  case "$2" in
+    PASS)       attempted=$((attempted + 1)) ;;
+    FAIL|ERROR) attempted=$((attempted + 1)); failures=$((failures + 1)) ;;
+    SKIP)       skips=$((skips + 1)) ;;
+  esac
+}
+
 printf '%-22s %-8s %-9s %s\n' REPO RESULT EXIT NOTES
 printf '%s\n' "----------------------------------------------------------------------"
 
@@ -141,7 +157,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   [ -z "$repo" ] && continue
 
   want "$repo" "$@" || continue
-  [ -d "$ROOT/$repo/.git" ] || { printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "not a git repo under $ROOT"; continue; }
+  [ -d "$ROOT/$repo/.git" ] || { row "$repo" SKIP - "not a git repo under $ROOT"; continue; }
 
   # Is this repo swept in a worktree? Answered before the dirty check, because the answer
   # decides whether that check applies at all.
@@ -163,7 +179,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   # through. The footer prints identically either way, so a sweep covering four repos of
   # five read exactly like a complete one.
   if [ "$contended" -eq 0 ] && [ -n "$(git -C "$ROOT/$repo" status --porcelain)" ]; then
-    printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "working tree dirty; commit or stash first"
+    row "$repo" SKIP - "working tree dirty; commit or stash first"
     continue
   fi
 
@@ -191,11 +207,11 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
         *) [ "$cur_jdk" -ge "$jdk_low" ] && [ "$cur_jdk" -le "$jdk_high" ] && in_range=1 ;;
       esac
       if [ "$in_range" -eq 0 ]; then
-        printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "requires JDK $reqjdk, default is ${cur_jdk:-none} (set $jdk_var)"
+        row "$repo" SKIP - "requires JDK $reqjdk, default is ${cur_jdk:-none} (set $jdk_var)"
         continue
       fi
     elif [ ! -d "$repo_java_home" ]; then
-      printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "$jdk_var ($repo_java_home) not found"
+      row "$repo" SKIP - "$jdk_var ($repo_java_home) not found"
       continue
     fi
   fi
@@ -218,7 +234,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
         rm -rf "$existing_wt"
         git -C "$ROOT/$repo" worktree prune
       else
-        printf '%-22s %-8s %-9s %s\n' "$repo" SKIP - "branch in use by $existing_wt"
+        row "$repo" SKIP - "branch in use by $existing_wt"
         continue
       fi
     fi
@@ -231,15 +247,15 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
     # repo whose build was never attempted. The non-worktree path already used checkout -B
     # for exactly this reason.
     git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
-      printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "worktree add failed"; continue; }
+      row "$repo" ERROR - "worktree add failed"; continue; }
     work="$wt"
   else
     git -C "$work" checkout -q -B "$BRANCH" origin/main || {
-      printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "checkout failed"; continue; }
+      row "$repo" ERROR - "checkout failed"; continue; }
   fi
 
   if ! bump "$work" "$VERSION"; then
-    printf '%-22s %-8s %-9s %s\n' "$repo" ERROR - "no version declaration matched; update this script"
+    row "$repo" ERROR - "no version declaration matched; update this script"
     continue
   fi
 
@@ -324,9 +340,27 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   [ -n "$ginit" ] && [ "$tool" != maven ] && notes="mavenLocal() via init script; $notes"
   [ "$eolonly" -gt 0 ] && notes="${eolonly} file(s) touched; $notes"
   [ "$drift" -gt 0 ] && notes="GUARDRAIL DRIFT in $drift file(s); $notes"
-  printf '%-22s %-8s %-9s %s\n' "$repo" "$result" "$status" "$notes"
+  row "$repo" "$result" "$status" "$notes"
 done <<EOF
 $CONSUMERS
 EOF
 
-printf '\n%s\n' "Nothing was committed, pushed or opened. Review each repo, then decide."
+total=$((attempted + skips))
+printf '\n%s\n' "Built $attempted of $total consumer(s): $failures failed, $skips skipped."
+printf '%s\n' "Nothing was committed, pushed or opened. Review each repo, then decide."
+
+# The status says what happened, because the caller is usually an agent following the
+# consumer-regression-suite skill, and one that checks the exit code and reports "sweep passed"
+# is behaving correctly. Ending on the printf above made that report wrong for both bad
+# outcomes: every consumer failing, and every consumer being skipped so nothing was built at
+# all, were each indistinguishable from a clean pass (#806).
+#
+# A skip is not a milder failure, it is the absence of a measurement, so it gets its own code:
+# the caller can tell "a consumer is broken" from "nothing is known about that consumer".
+if [ "$failures" -gt 0 ]; then
+  exit 1
+fi
+if [ "$skips" -gt 0 ]; then
+  exit 2
+fi
+exit 0

@@ -63,6 +63,22 @@ Consumers, and how each declares the version:
 
 Add a repo by adding a row to `CONSUMERS` in the script, not by running it by hand.
 
+### The exit status, and why it has three values
+
+| status | meaning |
+|---:|---|
+| `0` | every consumer was built and passed |
+| `1` | at least one consumer failed or errored |
+| `2` | nothing failed, but at least one consumer was never built |
+
+The footer names the same thing in words: `Built 3 of 5 consumer(s): 0 failed, 2 skipped.`
+
+`2` exists because a skip is not a milder failure, it is the absence of a measurement, and the
+two call for opposite actions: `1` means go and look at a broken consumer, `2` means you still
+know nothing about the ones that did not run. Do not report a `2` as a pass. Until #806 the
+script ended on a `printf` and always exited `0`, so both of those read as a clean sweep to
+anything checking the status, including this skill's own reader.
+
 ## Step 3 — Read the results honestly
 
 A red result is a claim about VibeTags, and most red results are not. Before reporting any
