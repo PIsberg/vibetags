@@ -296,7 +296,8 @@ public final class BuildFingerprint {
             AIGenerated a = e.annotation(AIGenerated.class);
             return a == null ? "" : a.from() + "|" + a.regenerateWith() + "|" + a.editInstead();
         });
-        appendAnnotationSet(sb, "LB", model.loadBearing(), e -> {
+        // "LDB", not "LB": that tag is legacyBridge's, and tags are unique per annotation (#765).
+        appendAnnotationSet(sb, "LDB", model.loadBearing(), e -> {
             AILoadBearing a = e.annotation(AILoadBearing.class);
             return a == null ? "" : a.invariant() + "|" + a.breaksIf() + "|" + a.suppressAudit();
         });
