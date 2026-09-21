@@ -220,11 +220,15 @@ for rel in \
     tools/demo/pom.xml \
     README.md \
     .claude/skills/vibetags-usage/SKILL.md \
+    USAGE.md \
 ; do
     replace_in_file "$ROOT_DIR/$rel"
 done
 
-# The action's `uses:` ref, which no other pattern here matches.
+# The action's `uses:` ref, which no other pattern here matches. USAGE.md is in both lists on
+# purpose: it carries an action ref AND a vibetags-bom coordinate in its Kotlin/KSP snippet, and
+# being in this list alone is why that snippet sat at the previous version through the 1.3.6 bump.
+# The two passes match different things and neither is a superset of the other.
 for rel in \
     USAGE.md \
     action/locked-files/README.md \

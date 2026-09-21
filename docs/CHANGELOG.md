@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-09-21
+
 ### Added
 
 - **`vibetags-ksp`: VibeTags under KSP (#496).** A Kotlin project that has moved fully to KSP could
@@ -52,10 +54,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   next test compile after `TESTING.md` is deleted, not on a main-only build; and removing the last
   annotation from a test source set leaves its guardrail in place, as it already did in `CLAUDE.md`.
   Those three are tracked as issues #780, #782 and #781.
+- **`-Avibetags.exclude`: an annotated element that is not a guardrail (#792).** Some annotated
+  elements exist to prove an annotation compiles, not to instruct an agent. Annotation-definition
+  fixtures are the clear case: one element per `@AI` type carrying a placeholder reason. Published,
+  they tell an agent never to edit a class called `TestLockedClass`, in a file it loads every
+  session. In this repository they were 6 638 bytes of `CLAUDE.md`, a third of the file, and half
+  its scoped rule files. The new option takes comma-separated globs matched against an element's
+  path, the same string the generated files print in their own `path="..."` attributes, so a
+  pattern can be written by copying from the output it is meant to shrink; `/` reads as `.` and
+  `**` as `*`. A matched element is **collected and not published**, which is the whole point:
+  leaving the source out of the compilation instead makes the round look incomplete and invariant
+  17 correctly refuses to write anything at all. It applies to the aggregates, the scoped rule
+  files and the `.vibetags-locks` positions, and is part of the fingerprint, so adding or removing
+  a pattern regenerates rather than short-circuiting on the write cache. `vibetags.log` records
+  `exclude.active patterns=[...]` on any build that has one. Read the warning in
+  [docs/PROCESSOR.md](PROCESSOR.md): a pattern broader than intended silently drops real
+  guardrails, and nothing downstream can tell that from an element nobody annotated. One known
+  limit: a pattern that stops an element being published does not always delete the scoped rule
+  file a previous build wrote for it, because a reactor module round may not sweep the shared root
+  directory (#383), so check for leftovers the first time a pattern is added. This repository's own
+  always-loaded block went from 184 lines to 102, and `.claude/rules/` from 48 files to 24.
 
 ### Fixed
 
 - `write.update` logged `reason=size-differs` in the streaming fast path when on-disk and new sizes were equal but bytes differed (#775). It now logs `reason=bytes-differ`.
+
+- **A check-mode failure that saw one source set now says so (#794).** Check mode writes no
+  sidecar, deliberately, so on a clean checkout neither the main nor the test round can see the
+  other's guardrails and a project whose main and test sources are both annotated reports drift
+  against files that are perfectly correct. The verdict is unchanged and still wrong in that case,
+  which #794 tracks. What changes is the advice under it: it used to end with "Run a normal compile
+  and commit the regenerated files", and for this shape a normal compile reproduces exactly the
+  files already committed, so the reader regenerates a correct tree, sees no diff, and is left with
+  a red gate and no next step. When the comparison saw one source set and nothing on disk from
+  another, the error now says that, names the issue, and points at regenerating and diffing the
+  tree instead.
 
 - `vibetags doctor` reported a KSP project as unwired, because it looked only for
   `vibetags-processor` in the build file. `vibetags-ksp` now counts as the processor wiring.
@@ -5142,7 +5175,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.5...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.6...HEAD
+[1.3.6]: https://github.com/PIsberg/vibetags/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/PIsberg/vibetags/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/PIsberg/vibetags/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/PIsberg/vibetags/compare/v1.3.2...v1.3.3

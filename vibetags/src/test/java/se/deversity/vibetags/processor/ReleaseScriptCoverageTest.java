@@ -193,6 +193,63 @@ class ReleaseScriptCoverageTest {
         assertTrue(Files.readString(tmp.resolve("vibetags-parent/pom.xml")).contains("<revision>9.9.9</revision>"));
     }
 
+    /**
+     * A file can be named by one of the script's passes and still be missed by another.
+     *
+     * <p>{@code everyVersionCarryingFileIsInTheScript} asks whether the script mentions a file at
+     * all. That is not the same question as whether it rewrites what the file states, and
+     * {@code USAGE.md} is where the two came apart: it was listed only under the action-ref pass,
+     * so the check saw it covered while its {@code vibetags-bom} coordinate sat at the previous
+     * version through the entire 1.3.6 bump. Caught by the release itself, by grepping for the old
+     * version after running the script, which is a step easy to skim past.
+     *
+     * <p>So this one runs the real script against a file with both shapes in it and checks both
+     * moved. Mentioning a filename cannot satisfy it.
+     */
+    @Test
+    @DisplayName("a file carrying both an action ref and a coordinate has both rewritten")
+    void aFileInOnePassIsNotAssumedCoveredByAnother() throws IOException, InterruptedException {
+        Path script = REPO_ROOT.resolve("tools/set-version.sh");
+        assumeTrue(Files.isRegularFile(script), "set-version.sh not reachable; skipping");
+
+        Path tmp = Files.createTempDirectory("set-version-both-passes");
+        Files.createDirectories(tmp.resolve("tools"));
+        Files.copy(script, tmp.resolve("tools/set-version.sh"));
+        Files.createDirectories(tmp.resolve("vibetags-parent"));
+        Files.writeString(tmp.resolve("vibetags-parent/pom.xml"),
+            "<project><properties><revision>1.3.0</revision></properties></project>\n");
+
+        // USAGE.md's shape: the composite action's uses: ref and a Gradle/KSP BOM coordinate.
+        Files.writeString(tmp.resolve("USAGE.md"), String.join("\n",
+            "uses: PIsberg/vibetags/action/locked-files@v1.3.0",
+            "",
+            "dependencies {",
+            "    implementation(platform(\"se.deversity.vibetags:vibetags-bom:1.3.0\"))",
+            "    ksp(platform(\"se.deversity.vibetags:vibetags-bom:1.3.0\"))",
+            "}",
+            ""));
+
+        // ConsumerSweepShell, not a bare "sh": Maven started from PowerShell has no sh on PATH, so
+        // the plain form skips on Windows, and a guard that only runs on one OS is how this class
+        // of miss survives in the first place. It finds Git for Windows' bin/sh.exe and fails
+        // rather than skips under CI (#744).
+        Process bump = new ProcessBuilder(
+                ConsumerSweepShell.command("tools/set-version.sh", "9.9.9"))
+            .directory(tmp.toFile()).redirectErrorStream(true).start();
+        String log = new String(bump.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, bump.waitFor(), log);
+
+        String after = Files.readString(tmp.resolve("USAGE.md"), StandardCharsets.UTF_8);
+        assertTrue(after.contains("action/locked-files@v9.9.9"),
+            "the action ref must be rewritten:\n" + after);
+        assertTrue(after.contains("se.deversity.vibetags:vibetags-bom:9.9.9"),
+            "the BOM coordinate in the same file must be rewritten too. Being listed under one "
+                + "pass does not put a file in the other, and this is the miss that shipped a "
+                + "stale snippet through a version bump:\n" + after);
+        assertTrue(!after.contains("1.3.0"),
+            "nothing may still state the old version:\n" + after);
+    }
+
     @Test
     @DisplayName("no tracked file states the version without the script knowing about it")
     void everyVersionCarryingFileIsInTheScript() throws IOException, InterruptedException {
