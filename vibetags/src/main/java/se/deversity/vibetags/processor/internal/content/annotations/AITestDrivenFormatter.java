@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AITestDrivenFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AITestDriven td = element.annotation(AITestDriven.class);
         if (td == null) return;
         String className = element.path();

@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AISecureLoggingFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AISecureLogging secureLogging = element.annotation(AISecureLogging.class);
         if (secureLogging == null) return;
         String className = element.path();

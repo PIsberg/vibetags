@@ -78,7 +78,10 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
    - *Bespoke structured format* (XML/YAML/TOML/JSON): hand-roll like `ClaudeRenderer` /
      `CodeRabbitRenderer` / `PrAgentRenderer` — walk `model.xxx()` sets directly and call
      `FormatterRegistry.xxx().format(e, sb, platform)` per element. Every `AnnotationFormatter`
-     you rely on then needs a `case YOUR_PLATFORM:` (Step 5).
+     you rely on then needs a `case YOUR_PLATFORM:` (Step 5). The exception is a platform that
+     prints another one's words verbatim: make it an alias in `Platform.rendersAs()` instead, and
+     no formatter or `SectionCatalog` entry is needed at all (#764). Add it to
+     `PlatformAliasTest.ALIASES`.
    - *Ignore-only file*: don't write a renderer — add a `case YOUR_IGNORE:` to
      `IgnoreFileRenderer.getPlatformSpecificName()` and route the Platform enum constant to
      `IGNORE_FILE_RENDERER` in the registry (Step 4). **Then add the same case to

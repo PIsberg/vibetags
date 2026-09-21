@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AITemporaryFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AITemporary temp = element.annotation(AITemporary.class);
         if (temp == null) return;
         String className = element.path();

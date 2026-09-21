@@ -16,7 +16,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AILoadBearingFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AILoadBearing loadBearing = element.annotation(AILoadBearing.class);
         if (loadBearing == null) return;
         String className = element.path();

@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIDraftFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIDraft draft = element.annotation(AIDraft.class);
         if (draft == null) return;
         String className = element.path();
@@ -39,7 +39,6 @@ public final class AIDraftFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append("` - Task: ").append(instructions).append('\n');
                 break;
             case GEMINI:
-            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;
             case LLMS:

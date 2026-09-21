@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIInputSanitizedFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIInputSanitized inputSanitized = element.annotation(AIInputSanitized.class);
         if (inputSanitized == null) return;
         String className = element.path();

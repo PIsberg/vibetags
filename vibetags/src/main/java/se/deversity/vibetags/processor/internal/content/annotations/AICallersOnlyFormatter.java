@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AICallersOnlyFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AICallersOnly callersOnly = element.annotation(AICallersOnly.class);
         if (callersOnly == null) return;
         String className = element.path();

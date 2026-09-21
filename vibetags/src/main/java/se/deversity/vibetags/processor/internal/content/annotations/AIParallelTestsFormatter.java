@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIParallelTestsFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         String className = element.path();
         AIParallelTests ann = element.annotation(AIParallelTests.class);
         String reason = ann == null ? "" : ann.reason();

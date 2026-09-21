@@ -127,6 +127,24 @@ public enum Platform {
         return serviceKey;
     }
 
+    /**
+     * The platform whose wording this one prints: itself, except for an alias.
+     *
+     * <p>An alias is a second file that a tool's sibling reads in the same words. {@code GEMINI_MD}
+     * ({@code GEMINI.md}, Gemini CLI) renders as {@code GEMINI} ({@code .gemini/styleguide.md},
+     * Gemini Code Assist). Before this was a property, every alias was a pair of {@code case} labels
+     * in each formatter and a second registration in {@code SectionCatalog}, and a missed one printed
+     * the default wording with nothing failing (#721, #764).
+     *
+     * <p>Resolved once, by {@link AnnotationFormatter#format} and {@code SectionCatalog}, so a
+     * formatter only ever sees a family and cannot handle half of a pair. It answers "which words",
+     * never "which file": anything about where output goes, which directory governs it, or whether a
+     * file gets a section at all must keep asking the real platform.
+     */
+    public Platform rendersAs() {
+        return this == GEMINI_MD ? GEMINI : this;
+    }
+
     public static @Nullable Platform fromServiceKey(String serviceKey) {
         return BY_SERVICE_KEY.get(serviceKey);
     }

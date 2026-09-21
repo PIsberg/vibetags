@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIExplainFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIExplain explain = element.annotation(AIExplain.class);
         if (explain == null) return;
         String className = element.path();

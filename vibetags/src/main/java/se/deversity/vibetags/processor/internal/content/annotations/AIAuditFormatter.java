@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIAuditFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIAudit audit = element.annotation(AIAudit.class);
         if (audit == null) return;
         String[] checkFor = audit.checkFor();
@@ -39,7 +39,6 @@ public final class AIAuditFormatter implements AnnotationFormatter {
                 sb.append("- `").append(className).append("`\n  - Required Checks: ").append(checkForJoined).append('\n');
                 break;
             case GEMINI:
-            case GEMINI_MD:
                 // The blank line that separates two blocks opens each block rather than closing it:
                 // a trailing one doubled the gap before the next heading, which brings its own (#723).
                 sb.append("\nFile: `").append(className).append("`\nCritical Vulnerabilities to Prevent:");

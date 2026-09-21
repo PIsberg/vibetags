@@ -13,7 +13,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIObservabilityFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIObservability obs = element.annotation(AIObservability.class);
         if (obs == null) return;
         String className = element.path();
@@ -54,7 +54,6 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", details)).append('\n');
                 break;
             case GEMINI:
-            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", details)).append('\n');
                 break;
             case LLMS:

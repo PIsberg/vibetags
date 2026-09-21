@@ -276,12 +276,10 @@ public final class SectionCatalog {
         geminiOverrides.put(Key.PROTOTYPE, "\n## EXPERIMENTAL PROTOTYPE STUBS\nStrict QA constraints and tests are relaxed for these elements, but production classes must never import them:\n\n");
         geminiOverrides.put(Key.SUNSET, "\n## SUNSET DEPRECATED APIs\nStrictly sunset under deprecation. Introducing *new* references or calls to these elements is forbidden:\n\n");
         geminiOverrides.put(Key.TEMPORARY, "\n## TEMPORARY CODE WORKAROUNDS\nTemporary stubs or hacks that must be refactored or removed before their expiration limit:\n\n");
-        // One wording for both Gemini files. GEMINI.md's full render looked this map up under
-        // GEMINI (its section list is fixed to it), but its collapsed render asks for the platform
-        // it is actually writing, GEMINI_MD, and with nothing registered there it printed the shared
-        // headings instead (#721).
+        // One registration serves both Gemini files: header() and isHeaderless() look up
+        // platform.rendersAs(), so GEMINI_MD finds this entry. It used to need a second put here,
+        // and the one time that was missing GEMINI.md printed the shared headings instead (#721).
         OVERRIDES.put(Platform.GEMINI, geminiOverrides);
-        OVERRIDES.put(Platform.GEMINI_MD, geminiOverrides);
     }
 
     /**
@@ -293,7 +291,7 @@ public final class SectionCatalog {
         if (isHeaderless(platform, key)) {
             return null;
         }
-        Map<Key, String> overrides = OVERRIDES.get(platform);
+        Map<Key, String> overrides = OVERRIDES.get(platform.rendersAs());
         if (overrides != null && overrides.containsKey(key)) {
             return overrides.get(key);
         }
@@ -302,7 +300,7 @@ public final class SectionCatalog {
 
     /** True if {@code platform} renders {@code key}'s elements with no section heading. */
     public static boolean isHeaderless(Platform platform, Key key) {
-        Set<Key> keys = HEADERLESS.get(platform);
+        Set<Key> keys = HEADERLESS.get(platform.rendersAs());
         return keys != null && keys.contains(key);
     }
 }

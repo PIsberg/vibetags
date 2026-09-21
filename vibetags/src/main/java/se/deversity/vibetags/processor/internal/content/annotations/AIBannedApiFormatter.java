@@ -16,7 +16,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIBannedApiFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIBannedApi banned = element.annotation(AIBannedApi.class);
         if (banned == null) return;
         String className = element.path();

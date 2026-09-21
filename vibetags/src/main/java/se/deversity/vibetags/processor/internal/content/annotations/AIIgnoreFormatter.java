@@ -30,7 +30,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
     private static final String DEFAULT_REASON = defaultReason();
 
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         String className = element.path();
         String simpleName = element.simpleName();
         String globPattern = "**/" + simpleName + ".java\n";
@@ -67,7 +67,6 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
                 sb.append("* `").append(className).append('`').append(suffix).append('\n');
                 break;
             case GEMINI:
-            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
             case LLMS:

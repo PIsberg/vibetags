@@ -17,7 +17,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIThreadAffinityFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIThreadAffinity affinity = element.annotation(AIThreadAffinity.class);
         if (affinity == null) return;
         String className = element.path();

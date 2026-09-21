@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AISandboxOnlyFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AISandboxOnly sandboxOnly = element.annotation(AISandboxOnly.class);
         if (sandboxOnly == null) return;
         String className = element.path();

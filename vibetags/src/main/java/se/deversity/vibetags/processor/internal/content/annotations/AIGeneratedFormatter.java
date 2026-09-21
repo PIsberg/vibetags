@@ -17,7 +17,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
  */
 public final class AIGeneratedFormatter implements AnnotationFormatter {
     @Override
-    public void format(TaggedElement element, StringBuilder sb, Platform platform) {
+    public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         AIGenerated generated = element.annotation(AIGenerated.class);
         if (generated == null) return;
         String className = element.path();
