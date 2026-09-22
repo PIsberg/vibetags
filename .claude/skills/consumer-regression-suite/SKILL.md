@@ -124,9 +124,11 @@ Then stop. Opening the consumer PRs is a separate, deliberate act:
   of the report.
 - Each consumer PR is one bump in one repo. Do not fold in whatever else that repo's `main`
   is missing.
-- `async-test-lib` is swept in a `git worktree` rather than a checkout, because another agent
-  works in that tree and switching its branch underneath them is destructive. Keep it that
-  way. Clean up with `git -C ../async-test-lib worktree prune`.
+- **Every consumer is swept in a `git worktree`, never in its checkout.** Switching the branch
+  of a checkout somebody is working in is destructive, and on a developer machine a consumer
+  checkout is dirty far more often than not. Keep it that way: `IN_PLACE_REPOS` in the script
+  is empty and meant to stay empty. Clean up with
+  `git -C ../<repo> worktree prune`.
 
 If `main` was installed locally over a published version, offer to purge it so a later build
 resolves the real artifact:
@@ -144,8 +146,21 @@ rm -rf ~/.m2/repository/se/deversity/vibetags/*/<version>
   `$?` directly.
 - `sed -i` rewrites a file even when the pattern matches nothing, converting CRLF to LF on
   Windows and inventing drift in files the bump never needed to touch.
-- Sweeping a repo with uncommitted work either fails or drags that work into the branch. The
-  script skips dirty repos on purpose; do not force past it.
+- Sweeping a repo **in its checkout** with uncommitted work either fails or drags that work
+  into the branch, and the script skips such a repo on purpose. Never stash or commit somebody
+  else's work to get past it. Since every consumer is worktree-swept, this guard should now
+  never fire; if it does, a repo has been put back into `IN_PLACE_REPOS`.
+- **A partial sweep reads exactly like a complete one.** The footer prints the same either
+  way, so read the counts: "Built N of 5". This has produced a silently partial result twice,
+  in #617 and again on 2026-09-22 (#790), when four of five repos were skipped for dirty
+  trees and only the footer said so.
+- **A worktree has only what is committed, so a native artifact is missing from it.** blindbean
+  builds a `blindbean_fhe` native library that is not in git; swept in a worktree its FHE tests
+  all error with `UnsatisfiedLinkError: no blindbean_fhe in java.library.path`, in about 10 ms
+  each, and the repo reports FAIL. That is the environment, not VibeTags: guardrail drift is
+  still measured correctly, and only the test result is meaningless. Pass
+  `-Dblindbean.native.path=<dir>` pointing at the checkout's built library if the test result is
+  wanted, and never report this as a regression. Measured 2026-09-22 (#790).
 - **Run this repo's gates after `git add`, not before.** `ReleaseScriptCoverageTest` reads
   `git ls-files`, so a brand-new file is invisible to it while untracked. A local
   `mvn verify -Pe2e` went green on these very files and CI then failed on all 17 jobs, because

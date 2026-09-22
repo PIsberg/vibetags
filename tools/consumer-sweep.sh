@@ -25,8 +25,9 @@
 #     and the Maven on PATH here is 3.8.6, which fails before the build starts.
 #   * Never let a pipe eat the exit code. Every build writes to a log and the status is read
 #     immediately from $?, never from the tail of a pipeline.
-#   * async-test-lib gets a git worktree, not a checkout. Another agent works in that tree;
-#     switching its branch underneath them is the destructive move to avoid.
+#   * Every consumer is swept in a git worktree, not in its checkout. Switching the branch of
+#     a checkout somebody is working in is the destructive move to avoid, and on a developer
+#     machine a consumer checkout is dirty far more often than not.
 #   * A version bump that changes generated guardrail files is a finding, not noise: it means
 #     the new VibeTags renders differently and the consumer's committed files are now stale.
 #   * A failing test is not a regression until it has been shown to pass on the base. Rerun
@@ -54,7 +55,15 @@ skill3:gradle::clean build
 async-test-lib:both:clean verify:clean build
 "
 
-WORKTREE_REPOS="async-test-lib"
+# Consumers swept in their checkout rather than a worktree. Empty, and meant to stay empty:
+# the worktree is the default because it is the safe mode, not because a particular repo is
+# contended. A name here opts that repo back into `checkout -B`, and back into being skipped
+# whenever its tree is dirty.
+#
+# Overridable from the environment so the tests can still exercise the checkout path and its
+# dirty guard, which no consumer reaches by default any more. A seam, not a setting: nothing in
+# a real sweep sets it.
+IN_PLACE_REPOS="${VIBETAGS_SWEEP_IN_PLACE:-}"
 BRANCH="chore/vibetags-${VERSION}"
 LOGDIR="${TMPDIR:-/tmp}/vibetags-sweep"
 mkdir -p "$LOGDIR"
@@ -161,9 +170,9 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
 
   # Is this repo swept in a worktree? Answered before the dirty check, because the answer
   # decides whether that check applies at all.
-  contended=0
-  case " $WORKTREE_REPOS " in
-    *" $repo "*) contended=1 ;;
+  contended=1
+  case " $IN_PLACE_REPOS " in
+    *" $repo "*) contended=0 ;;
   esac
 
   # Refuse to sweep a repo with uncommitted work. `checkout -B` switches the branch of the
@@ -172,12 +181,14 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   #
   # A worktree repo is exempt, and that exemption is the point rather than a loophole:
   # `git worktree add` builds a separate directory from origin/main and never touches the
-  # contended checkout or its index. A dirty checkout is the *expected* state there, since a
-  # repo lands in WORKTREE_REPOS precisely because someone else is working in it. With the
-  # guard applied to them, async-test-lib was skipped on every sweep (#617), and it is the
-  # only consumer that commits its .vibetags-mod-* sidecars, the file class #590 was found
-  # through. The footer prints identically either way, so a sweep covering four repos of
-  # five read exactly like a complete one.
+  # checkout or its index, so a dirty checkout is simply not its business. That is why every
+  # consumer is swept that way now.
+  #
+  # The guard has produced a partial sweep that read like a complete one twice. In #617 it
+  # skipped async-test-lib on every run, the only consumer that commits its .vibetags-mod-*
+  # sidecars and the file class #590 was found through. On 2026-09-22 it skipped the four
+  # repos that were not yet worktree-swept, leaving one result of five (#790). The footer
+  # prints identically either way, which is what makes the failure quiet.
   if [ "$contended" -eq 0 ] && [ -n "$(git -C "$ROOT/$repo" status --porcelain)" ]; then
     row "$repo" SKIP - "working tree dirty; commit or stash first"
     continue
@@ -221,6 +232,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   # A contended repo is swept in a detached worktree so its checkout is never touched.
   work="$ROOT/$repo"
   wt=""
+  detached=0
   if [ "$contended" -eq 1 ]; then
     # Look up any existing worktree that currently holds $BRANCH
     existing_wt=$(git -C "$ROOT/$repo" worktree list --porcelain | awk -v branch="refs/heads/$BRANCH" '
@@ -234,8 +246,13 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
         rm -rf "$existing_wt"
         git -C "$ROOT/$repo" worktree prune
       else
-        row "$repo" SKIP - "branch in use by $existing_wt"
-        continue
+        # The branch is checked out somewhere else, which on this machine means the consumer
+        # checkout is parked on a previous sweep's branch with that sweep's bump still
+        # uncommitted. `git worktree add -B` cannot take a branch another worktree holds, and
+        # skipping here threw away the measurement over a name. Measure detached instead: the
+        # branch only ever existed so a result could become a consumer PR, and there is no
+        # result to turn into one if the repo is skipped.
+        detached=1
       fi
     fi
 
@@ -246,8 +263,13 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
     # same version died with "a branch named ... already exists" and reported ERROR for a
     # repo whose build was never attempted. The non-worktree path already used checkout -B
     # for exactly this reason.
-    git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
-      row "$repo" ERROR - "worktree add failed"; continue; }
+    if [ "$detached" -eq 1 ]; then
+      git -C "$ROOT/$repo" worktree add -q --detach "$wt" origin/main || {
+        row "$repo" ERROR - "detached worktree add failed"; continue; }
+    else
+      git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
+        row "$repo" ERROR - "worktree add failed"; continue; }
+    fi
     work="$wt"
   else
     git -C "$work" checkout -q -B "$BRANCH" origin/main || {
@@ -339,6 +361,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   [ -n "$repo_java_home" ] && notes="JDK $jdk_low via $jdk_var; $notes"
   [ -n "$ginit" ] && [ "$tool" != maven ] && notes="mavenLocal() via init script; $notes"
   [ "$eolonly" -gt 0 ] && notes="${eolonly} file(s) touched; $notes"
+  [ "$detached" -eq 1 ] && notes="detached (branch held by the checkout, no PR branch); $notes"
   [ "$drift" -gt 0 ] && notes="GUARDRAIL DRIFT in $drift file(s); $notes"
   row "$repo" "$result" "$status" "$notes"
 done <<EOF

@@ -23,11 +23,16 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * in. The worktree path does no such thing. {@code git worktree add} builds a separate directory
  * from {@code origin/main} and never touches the contended checkout or its index.
  *
- * <p>A repo is in {@code WORKTREE_REPOS} precisely because somebody else works in it, so a dirty
- * checkout is its normal state rather than an exception. With the guard applied to it,
- * {@code async-test-lib} was skipped on every sweep (#617). That is the consumer worth losing
- * least: it is the only one that commits its {@code .vibetags-mod-*} sidecars, which is the file
- * class #590 was found through.
+ * <p>Every consumer is worktree-swept by default now (#790), so no repo reaches the checkout path
+ * unless {@code IN_PLACE_REPOS} names one. This test names {@code blindbean} through the
+ * {@code VIBETAGS_SWEEP_IN_PLACE} seam so both halves stay covered: the guard that still protects
+ * a checkout, and its absence for a worktree.
+ *
+ * <p>A dirty checkout is the normal state of a consumer on a developer machine, not an exception.
+ * With the guard applied to a worktree repo, {@code async-test-lib} was skipped on every sweep
+ * (#617). That is the consumer worth losing least: it is the only one that commits its
+ * {@code .vibetags-mod-*} sidecars, which is the file class #590 was found through. The same guard
+ * then skipped four of five consumers on 2026-09-22, which is what moved the default (#790).
  *
  * <p>The failure is silent, which is why this is a test rather than a comment. The sweep's footer
  * prints the same words whether the loop covered five consumers or four, so a partial sweep reads
@@ -45,7 +50,8 @@ class ConsumerSweepWorktreeExemptionTest {
         Path script = REPO_ROOT.resolve("tools/consumer-sweep.sh");
         assumeTrue(Files.isRegularFile(script), "consumer-sweep.sh not reachable; skipping");
 
-        // blindbean is swept by checkout, async-test-lib by worktree. Both start dirty.
+        // blindbean is put back on the checkout path for this run, async-test-lib takes the
+        // default worktree path. Both start dirty.
         Path root = Files.createTempDirectory("sweep-consumer-root");
         dirtyRepoAt(root.resolve("blindbean"));
         dirtyRepoAt(root.resolve("async-test-lib"));
@@ -63,9 +69,9 @@ class ConsumerSweepWorktreeExemptionTest {
 
         assertTrue(!worktreeRow.contains("working tree dirty"),
             "async-test-lib was skipped for having a dirty checkout, but it is swept in a "
-                + "worktree, which cannot touch that checkout at all. A repo is in "
-                + "WORKTREE_REPOS because someone else works in it, so dirty is its normal "
-                + "state and this guard removes it from every sweep (#617). Row was: "
+                + "worktree, which cannot touch that checkout at all. Dirty is the normal state "
+                + "of a consumer checkout, so this guard removes worktree repos from every "
+                + "sweep (#617, and four of five in #790). Row was: "
                 + worktreeRow + System.lineSeparator() + all);
     }
 
@@ -76,6 +82,8 @@ class ConsumerSweepWorktreeExemptionTest {
         pb.directory(REPO_ROOT.toFile());
         pb.redirectErrorStream(true);
         pb.environment().put("VIBETAGS_CONSUMER_ROOT", root.toAbsolutePath().toString());
+        // The checkout path has no default membership any more; name it so the guard is reached.
+        pb.environment().put("VIBETAGS_SWEEP_IN_PLACE", "blindbean");
         // Keep the script's scratch directory inside the temp root. It rm -rf's its own worktree
         // path, and that path is shared with a real sweep run from the same machine.
         pb.environment().put("TMPDIR", root.toAbsolutePath().toString());
