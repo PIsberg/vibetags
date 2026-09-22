@@ -168,12 +168,33 @@ sweep's fixture to fix this, because that silently invalidates every baseline. `
 measures it beside them, at one fixed N, carrying the six-file level as an anchor column whose
 `OutputSize` must stay byte-identical to `stress.txt`'s.
 
+**The fixture emits six of the 44 annotations, and always has.** `SyntheticClassGenerator` rotates
+`@AIContext`, `@AILocked`, `@AIAudit`, `@AIIgnore`, `@AIPrivacy` and `@AIDraft`, so 38 formatters
+never ran in any sweep here. Same rule as above: do not widen it, measure beside it.
+`AnnotationBreadthStressTest` does, and reports the number nothing else here ever has, which is
+what one annotation costs on its own. Measured at N=100 on 2026-09-22, marginal over a round with
+no annotations: `@AITestDriven` 12.9 MB and `@AILocked` 12.5 MB at the top, `@AIContract` and
+`@AIPrivacy` about 5.7 MB at the bottom, a 2.0x spread. Rendered bytes do not predict it, so do
+not reason from `OutputSize` about which formatter is expensive: `@AIObservability` renders the
+most of any annotation, 121 KB, and costs less than `@AILocked`'s 34 KB. At N=500 the all-44
+fixture allocates 10.7x the six-annotation one, for 18x the annotated references, so the cost is
+sublinear per annotation on a class.
+
 **Every number here is a cold build.** Each sweep gives its N a fresh `@TempDir`, so
 `.vibetags-cache` is empty and the fingerprint has nothing to match: both short-circuits are
 structurally unreachable, and the build a developer actually waits for is unmeasured.
-`IncrementalRebuildStressTest` measures it. The answer is uncomfortable and worth knowing: the
-short-circuit fires and still leaves 96 % of the cost standing at N=1000, because the collector
-has walked every annotated element before a fingerprint can be computed.
+`IncrementalRebuildStressTest` measures it, against two denominators, and which one is quoted
+changes the answer by 4x. Against `-proc:none` the short-circuit saves 3.7 % at N=1000 and appears
+to leave 96 % standing. Against a no-op *processor*, which takes javac's own annotation-processing
+subsystem out of the base, the same saving is 14.9 %, and 28 % at N=100. Quote `SavedOwn`. The
+`-proc:none` column is about three quarters javac's, and issue #834 was opened on the diluted
+reading of it. The remaining opportunity is the `WarmOwn` column, 48.9 MB at N=1000, and that is
+what any proposal to decide earlier than `generateFiles()` is bidding for.
+
+Both `Own` columns reproduce to 0.1 % across two runs, where `ProcessorTaxStressTest`'s
+`vibetagsShare` moved 34 %. The difference is that all three compiles happen back-to-back inside
+one test method over one fixture, so the machine's mood applies to all of them. If a split like
+this has to reproduce, measure the arms adjacently rather than as separate test cases.
 
 **Write the engagement assertion before the threshold, and measure before choosing one.** That
 last test was first written asserting a 25 % saving, from the reasonable-sounding assumption that

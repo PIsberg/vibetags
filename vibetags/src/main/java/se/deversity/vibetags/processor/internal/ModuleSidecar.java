@@ -12,6 +12,7 @@ import se.deversity.vibetags.processor.internal.content.GranularPairing;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -133,6 +134,9 @@ public final class ModuleSidecar {
      * written before the trailer existed is read rather than discarded. Either way, never deleted.
      */
     static final String TRAILER = "# end";
+
+    /** One buffer per sidecar, reused for the whole file; see {@link #scanUnreadable}. */
+    private static final int SCAN_BUFFER_CHARS = 8192;
     private static final String KEY_MODULE_ID = "moduleId";
     private static final String KEY_MODULE_PATH = "modulePath";
     private static final String KEY_REGION_ID = "regionId";
@@ -596,28 +600,6 @@ public final class ModuleSidecar {
      * (skipped, and likewise never deleted).
      */
     static @Nullable ModuleSidecar load(Path path) {
-        return load(path, false);
-    }
-
-    /**
-     * Classifies a sidecar and reads its headers without materialising a single body.
-     *
-     * <p>For the callers that ask only what a sidecar <em>is</em>, not what it says.
-     * {@code unreadableSidecarNames} wants nothing but the sentinel, yet the full load
-     * base64-decodes every body, splits it, parses every granular contribution and fills every map
-     * first. Measured on the three-module example: 21 of that build's 57 sidecar loads, each
-     * decoding around 46 values.
-     *
-     * <p>Every value is still base64-validated, because that is how a corrupt sidecar is
-     * recognised and the caller prunes on the verdict. Only the decoded bytes are discarded
-     * instead of being turned into strings and maps. {@code ModuleSidecarSkeletonLoadTest} holds
-     * the two loads to the same classification, corrupt bodies included.
-     */
-    static @Nullable ModuleSidecar loadSkeleton(Path path) {
-        return load(path, true);
-    }
-
-    private static @Nullable ModuleSidecar load(Path path, boolean skeleton) {
         try {
             List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
             String moduleId = null;
@@ -657,14 +639,6 @@ public final class ModuleSidecar {
                 if (eq < 0) continue;
                 String key = line.substring(0, eq);
                 String val = line.substring(eq + 1);
-                // A skeleton load answers what this sidecar is, not what it says. Everything below
-                // the headers is base64 that only exists to become a body, a stem or a granular
-                // contribution, so validate it — that is how a corrupt sidecar is recognised, and
-                // the caller prunes on the verdict — and then drop it rather than materialise it.
-                if (skeleton && !isSkeletonKey(key)) {
-                    validate(val);
-                    continue;
-                }
                 if (KEY_MODULE_ID.equals(key)) {
                     moduleId = val;
                 } else if (KEY_MODULE_PATH.equals(key)) {
@@ -777,25 +751,6 @@ public final class ModuleSidecar {
             last = lines.get(i).strip();
         }
         return TRAILER.equals(last);
-    }
-
-    /** The keys a skeleton load keeps: the headers, plus the element ids the partial-round guard reads. */
-    private static boolean isSkeletonKey(String key) {
-        return KEY_MODULE_ID.equals(key)
-            || KEY_MODULE_PATH.equals(key)
-            || KEY_REGION_ID.equals(key)
-            || KEY_ELEMENT_IDS.equals(key);
-    }
-
-    /**
-     * Base64-validates a value without building a string from it.
-     *
-     * <p>The decoded bytes are deliberately discarded. What matters is that the decoder throws on
-     * a value that is not base64, exactly as it does in {@link #decode}, so a skeleton load reaches
-     * the same corrupt verdict as a full one.
-     */
-    private static void validate(String base64) {
-        Base64.getDecoder().decode(base64);
     }
 
     private static String decode(String base64) {
@@ -1363,22 +1318,177 @@ public final class ModuleSidecar {
      * generated files and the developer found it in a diff. This is what lets the round state it.
      *
      * <p>Deliberately re-reads rather than being folded into {@link #readAll}: that method is
-     * called from a step-ordered sequence this must not perturb, and a directory listing of a
-     * handful of files costs nothing next to the compile it runs inside.
+     * called from a step-ordered sequence this must not perturb. It re-reads cheaply, though, and
+     * that part took two goes. Reaching the verdict through {@link #load} parsed every sidecar a
+     * second time, and a sidecar is not a directory entry but its module's whole collected model:
+     * measured on a fixture of eight, that second parse allocated 7.3x the bytes on disk, which a
+     * release-to-release sweep saw as a 5.9 % step in the processor's allocation overhead
+     * (issue #833). {@link #scanUnreadable} answers the same question by streaming, so the cost is
+     * one buffer per file rather than a share of what the file weighs, and
+     * {@code ModuleSidecarUnreadableScanCostTest} keeps it that way.
      *
      * @return file names, sorted, or empty when every sidecar on disk was readable
      */
     public static List<String> unreadableSidecarNames(Path root) {
         List<String> unreadable = new ArrayList<>();
         for (Path p : listPaths(root)) {
-            // Skeleton: this asks only what the sidecar is. See loadSkeleton.
-            ModuleSidecar loaded = loadSkeleton(p);
-            if (loaded == UNREADABLE || loaded == FUTURE_VERSION) {
+            if (scanUnreadable(p)) {
                 unreadable.add(GuardrailFileWriter.fileName(p));
             }
         }
         Collections.sort(unreadable);
         return unreadable;
+    }
+
+    /**
+     * Whether {@link #load} would answer {@link #UNREADABLE} or {@link #FUTURE_VERSION} for this
+     * file, decided without materialising any of it.
+     *
+     * <p>Only three things in a sidecar can produce either verdict, and none of them is a body:
+     * the {@code # version} header, whether the file opens and decodes as UTF-8 at all, and
+     * whether {@link #TRAILER} is its last non-blank line. Every other outcome {@code load} can
+     * reach - healthy, stale, corrupt, headerless - is a {@code null} or a sidecar, and the caller
+     * names neither, so the base64 below the headers cannot change this answer and is read past
+     * rather than decoded.
+     *
+     * <p>The whole file is still decoded, not just its two ends: {@code load} reaches
+     * {@code UNREADABLE} through an {@code IOException}, and invalid UTF-8 in the middle of a file
+     * is one. Seeking straight to the trailer would be cheaper and would stop naming that file,
+     * which is the silent-disappearance shape this warning exists to break (issue #592).
+     *
+     * <p>{@code ModuleSidecarUnreadableScanAgreementTest} holds this to the classification {@code load}
+     * reaches, case by case, which is what makes the reasoning above falsifiable rather than
+     * merely stated.
+     */
+    private static boolean scanUnreadable(Path path) {
+        TrailerScan scan = new TrailerScan();
+        char[] buffer = new char[SCAN_BUFFER_CHARS];
+        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+            for (int read = reader.read(buffer); read >= 0; read = reader.read(buffer)) {
+                for (int i = 0; i < read; i++) {
+                    Boolean verdict = scan.accept(buffer[i]);
+                    if (verdict != null) {
+                        return verdict;
+                    }
+                }
+            }
+        } catch (IOException unreadable) {
+            // Could not read it, or it is not UTF-8. See UNREADABLE.
+            return true;
+        }
+        scan.endLine();
+        // Only a version that promises a trailer may be judged by one; see load's own comment.
+        return scan.version >= FORMAT_VERSION && !scan.lastNonBlankIsTrailer;
+    }
+
+    /**
+     * The running state {@link #scanUnreadable} keeps while it streams a sidecar past: the format
+     * version, and whether the last non-blank line so far is {@link #TRAILER}.
+     *
+     * <p>Fixed size on purpose. It captures a line only while that line's first non-blank
+     * character is a hash, and only up to {@link #CAPTURE_CHARS}, so the base64 bodies - which are
+     * the reason this class exists - flow through it without being held. What it captures is what
+     * {@code isWhole} would have compared against, kept honest about leading whitespace: a line's
+     * stripped form is what decides, so an indented trailer is still a trailer and a longer line
+     * is not one, both exactly as {@code String.strip} has it.
+     */
+    private static final class TrailerScan {
+
+        /** Long enough for the version header and the trailer; no other line is ever inspected. */
+        private static final int CAPTURE_CHARS = 128;
+
+        private int version;
+        private boolean lastNonBlankIsTrailer;
+
+        private final StringBuilder captured = new StringBuilder(CAPTURE_CHARS);
+        private int column;
+        private int firstNonBlank = -1;
+        private int strippedLength;
+        private boolean capturing;
+
+        /**
+         * Feeds one character in.
+         *
+         * @return {@code null} to carry on, or the final verdict when the version header has
+         *     already settled it, at the same line where {@code load} returns on it
+         */
+        @Nullable Boolean accept(char c) {
+            if (c == '\n' || c == '\r') {
+                // readAllLines breaks on LF, CR and CRLF alike, and the empty line a CRLF leaves
+                // between the two is blank, so endLine finds nothing to record for it.
+                Boolean verdict = endLineWithVerdict();
+                resetLine();
+                return verdict;
+            }
+            if (!Character.isWhitespace(c)) {
+                if (firstNonBlank < 0) {
+                    firstNonBlank = column;
+                    capturing = c == '#';
+                }
+                strippedLength = column - firstNonBlank + 1;
+            }
+            if (capturing && captured.length() < CAPTURE_CHARS) {
+                captured.append(c);
+            }
+            column++;
+            return null;
+        }
+
+        /** Closes the last line when the file did not end with a terminator. */
+        void endLine() {
+            endLineWithVerdict();
+            resetLine();
+        }
+
+        private @Nullable Boolean endLineWithVerdict() {
+            if (firstNonBlank < 0) {
+                return null; // blank line: isWhole skips it, so it cannot be the trailer
+            }
+            lastNonBlankIsTrailer = strippedLength == TRAILER.length()
+                && captured.length() >= TRAILER.length()
+                && TRAILER.contentEquals(captured.subSequence(0, TRAILER.length()));
+            return versionVerdict();
+        }
+
+        /**
+         * Applies the {@code # version} header the way {@code load} does, including where it
+         * returns early: a newer format is {@link #FUTURE_VERSION} and is named, while an older
+         * one and an unparseable one are {@code null} and are not.
+         */
+        private @Nullable Boolean versionVerdict() {
+            // firstNonBlank == 0 is what the startsWith in load requires: a header indented by a
+            // space is not one.
+            if (firstNonBlank != 0 || !startsWithVersionKey()) {
+                return null;
+            }
+            try {
+                int parsed = Integer.parseInt(
+                        captured.substring(KEY_FORMAT_VERSION.length() + 1).trim());
+                if (parsed > FORMAT_VERSION) {
+                    return Boolean.TRUE;
+                }
+                if (parsed < MIN_READABLE_VERSION) {
+                    return Boolean.FALSE;
+                }
+                version = parsed;
+                return null;
+            } catch (NumberFormatException malformed) {
+                return Boolean.FALSE;
+            }
+        }
+
+        private boolean startsWithVersionKey() {
+            String key = KEY_FORMAT_VERSION + "=";
+            return captured.length() > key.length() && captured.indexOf(key) == 0;
+        }
+
+        private void resetLine() {
+            captured.setLength(0);
+            column = 0;
+            firstNonBlank = -1;
+            strippedLength = 0;
+            capturing = false;
+        }
     }
 
     /**
