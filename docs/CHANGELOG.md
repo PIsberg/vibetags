@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Every consumer is swept in a git worktree, so a dirty checkout no longer silently shrinks the
+  sweep (#790).** `tools/consumer-sweep.sh` refused to sweep a repo with uncommitted work, which is
+  right, and then printed the same footer as a complete run. On 2026-09-22 that skipped four of five
+  consumers and reported one result; the same guard had already skipped `async-test-lib` on every
+  run until #617. `WORKTREE_REPOS` becomes `IN_PLACE_REPOS`, empty and meant to stay empty: a
+  worktree off `origin/main` is what the non-worktree path was trying to build anyway, and it never
+  touches the developer's checkout. Read the footer's "Built N of 5" either way.
 - **Docs: Bend's `LAWS.bend` is refused, and the request named a file that does not exist (#760).**
   Bend was asked for as a platform, as `bend/LAWS.md`. The file is `LAWS.bend`, and it is Bend
   source stating properties the compiler demands a matching proof for in `PROOF.bend`, not prose an

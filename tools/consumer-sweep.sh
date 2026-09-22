@@ -25,8 +25,9 @@
 #     and the Maven on PATH here is 3.8.6, which fails before the build starts.
 #   * Never let a pipe eat the exit code. Every build writes to a log and the status is read
 #     immediately from $?, never from the tail of a pipeline.
-#   * async-test-lib gets a git worktree, not a checkout. Another agent works in that tree;
-#     switching its branch underneath them is the destructive move to avoid.
+#   * Every consumer is swept in a git worktree, not in its checkout. Switching the branch of
+#     a checkout somebody is working in is the destructive move to avoid, and on a developer
+#     machine a consumer checkout is dirty far more often than not.
 #   * A version bump that changes generated guardrail files is a finding, not noise: it means
 #     the new VibeTags renders differently and the consumer's committed files are now stale.
 #   * A failing test is not a regression until it has been shown to pass on the base. Rerun
@@ -54,7 +55,11 @@ skill3:gradle::clean build
 async-test-lib:both:clean verify:clean build
 "
 
-WORKTREE_REPOS="async-test-lib"
+# Consumers swept in their checkout rather than a worktree. Empty, and meant to stay empty:
+# the worktree is the default because it is the safe mode, not because a particular repo is
+# contended. A name here opts that repo back into `checkout -B`, and back into being skipped
+# whenever its tree is dirty.
+IN_PLACE_REPOS=""
 BRANCH="chore/vibetags-${VERSION}"
 LOGDIR="${TMPDIR:-/tmp}/vibetags-sweep"
 mkdir -p "$LOGDIR"
@@ -161,9 +166,9 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
 
   # Is this repo swept in a worktree? Answered before the dirty check, because the answer
   # decides whether that check applies at all.
-  contended=0
-  case " $WORKTREE_REPOS " in
-    *" $repo "*) contended=1 ;;
+  contended=1
+  case " $IN_PLACE_REPOS " in
+    *" $repo "*) contended=0 ;;
   esac
 
   # Refuse to sweep a repo with uncommitted work. `checkout -B` switches the branch of the
@@ -172,12 +177,14 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   #
   # A worktree repo is exempt, and that exemption is the point rather than a loophole:
   # `git worktree add` builds a separate directory from origin/main and never touches the
-  # contended checkout or its index. A dirty checkout is the *expected* state there, since a
-  # repo lands in WORKTREE_REPOS precisely because someone else is working in it. With the
-  # guard applied to them, async-test-lib was skipped on every sweep (#617), and it is the
-  # only consumer that commits its .vibetags-mod-* sidecars, the file class #590 was found
-  # through. The footer prints identically either way, so a sweep covering four repos of
-  # five read exactly like a complete one.
+  # checkout or its index, so a dirty checkout is simply not its business. That is why every
+  # consumer is swept that way now.
+  #
+  # The guard has produced a partial sweep that read like a complete one twice. In #617 it
+  # skipped async-test-lib on every run, the only consumer that commits its .vibetags-mod-*
+  # sidecars and the file class #590 was found through. On 2026-09-22 it skipped the four
+  # repos that were not yet worktree-swept, leaving one result of five (#790). The footer
+  # prints identically either way, which is what makes the failure quiet.
   if [ "$contended" -eq 0 ] && [ -n "$(git -C "$ROOT/$repo" status --porcelain)" ]; then
     row "$repo" SKIP - "working tree dirty; commit or stash first"
     continue
