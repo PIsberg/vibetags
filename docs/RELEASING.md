@@ -176,10 +176,11 @@ file keeps being generated for a tool that no longer reads it. In the two platfo
 every path that was checked against the vendor's own docs instead of a cross-tool round-up turned
 out wrong or stale on at least one count (see [PLATFORMS.md](PLATFORMS.md)).
 
-List every path from the registry itself, so the list cannot drift from what the code writes:
+List every path from the platform table itself, so the list cannot drift from what the code
+writes:
 
 ```bash
-python corpus/check-platforms.py list vibetags/src/main/java/se/deversity/vibetags/processor/internal/ServiceRegistry.java
+python corpus/check-platforms.py list vibetags/src/main/java/se/deversity/vibetags/processor/internal/content/PlatformDescriptors.java
 ```
 
 For each tool, open the vendor's own documentation and confirm two things: the product still

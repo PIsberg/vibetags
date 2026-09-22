@@ -484,10 +484,12 @@ if [ "$status" -eq 0 ] && [ -n "${sweep_repo:-}" ]; then
   rm -rf "$sweep" "$dir/.corpus-sweep-classes"
   mkdir -p "$sweep" "$dir/.corpus-sweep-classes"
 
-  registry="$ROOT/vibetags/src/main/java/se/deversity/vibetags/processor/internal/ServiceRegistry.java"
-  # The list comes out of the registry itself. A hand-kept copy here would be a second source of
-  # truth whose failure is the quiet kind: a platform is added, this does not know, and the sweep
-  # reports success over a set that no longer matches the code.
+  registry="$ROOT/vibetags/src/main/java/se/deversity/vibetags/processor/internal/content/PlatformDescriptors.java"
+  # The list comes out of the platform table itself. A hand-kept copy here would be a second
+  # source of truth whose failure is the quiet kind: a platform is added, this does not know, and
+  # the sweep reports success over a set that no longer matches the code. The paths lived in
+  # ServiceRegistry.buildServiceFileMap until #762 moved them into PlatformDescriptors; this
+  # check is what caught the move, by refusing to sweep a subset it still recognised.
   # tr -d: Python on Windows prints CRLF, and a carriage return kept in the path creates
   # an opt-in file literally named ".aiderignore" that the processor never matches.
   # Same trap as annotate.py; the fix belongs at every boundary, not just the first.
@@ -504,14 +506,17 @@ if [ "$status" -eq 0 ] && [ -n "${sweep_repo:-}" ]; then
     # ".cursorrules" and ".claude/rules" both end in "rules" and only the second is a directory.
     # A name-based heuristic created most opt-ins as directories, the processor reported two
     # active services instead of sixty, and the sweep dutifully measured almost nothing.
+    # Only "file" and "dir" are opt-ins. An "implicit" entry is written because another
+    # service is active, and a "switch" changes how the aggregates render rather than naming
+    # a destination, so creating either would seed something the user never opts into. Both
+    # are still written by the run when they apply, and verified then.
     printf '%s\n' "$platform_files" | while IFS="$(printf '\t')" read -r kind rel; do
       [ -z "${rel:-}" ] && continue
-      if [ "$kind" = "dir" ]; then
-        mkdir -p "$sweep/$rel"
-      else
-        mkdir -p "$(dirname "$sweep/$rel")"
-        : > "$sweep/$rel"
-      fi
+      case "$kind" in
+        dir)  mkdir -p "$sweep/$rel" ;;
+        file) mkdir -p "$(dirname "$sweep/$rel")"; : > "$sweep/$rel" ;;
+        *)    ;;
+      esac
     done
     # AGENTS.md needs its marker pair, for the same reason as the opt-in phase: invariant 4.
     printf '%s\n%s\n' '<!-- VIBETAGS-START -->' '<!-- VIBETAGS-END -->' > "$sweep/AGENTS.md"

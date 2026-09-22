@@ -77,6 +77,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from values dumped out of the old structures, `examples/basic` regenerates byte-for-byte, and the
   explanatory comments that lived in the two `ServiceRegistry` lists and the renderer switch moved
   onto the entries they describe.
+- **The corpus sweep now sees every platform path, not 79 of 84 (#762).**
+  `corpus/check-platforms.py` scraped `map.put("key", root.resolve("literal"))` out of
+  `ServiceRegistry`, so it never matched the three granular safety files, `.vibetags-locks` or
+  `.vibetags-root-index`, whose paths came from a constant or a chained `resolve`. It reads
+  `PlatformDescriptors` now, where every path is a literal, and takes the file-or-directory answer
+  from the declared `Kind` instead of the `_granular` suffix. It also stops seeding what is not an
+  opt-in: the two Codex sidecars and the three safety files are written because another service is
+  active, and `.vibetags-root-index` changes how the aggregates render rather than naming a
+  destination. All five are still verified when a run produces them. Measured on a local
+  reproduction of the sweep: 63 platform files written and non-empty, 12 parsed, including the two
+  safety files and `.vibetags-locks` the old extraction never looked at. The gate that caught the
+  move was the extraction's own "expected 40 or more" floor, which refused to sweep the subset it
+  still recognised rather than reporting success over it.
 
 ### Fixed
 

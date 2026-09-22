@@ -245,7 +245,7 @@ pushes and opens nothing. Leave it that way.
 
 Required. The build cannot notice that a vendor retired a product or stopped documenting a path,
 so this is the only check that does. Follow docs/RELEASING.md step 0b: list the paths with
-`python corpus/check-platforms.py list vibetags/src/main/java/se/deversity/vibetags/processor/internal/ServiceRegistry.java`,
+`python corpus/check-platforms.py list vibetags/src/main/java/se/deversity/vibetags/processor/internal/content/PlatformDescriptors.java`,
 then confirm each against the vendor's own documentation, never a cross-tool round-up.
 
 Report per tool: still documented, renamed, retired, or **could not check**. A retired or
