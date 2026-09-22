@@ -1,0 +1,57 @@
+What the "processor overhead" number actually contains
+======================================================
+
+MemoryVolumeStressTest subtracts a `-proc:none` compile from a VibeTags compile and calls the
+difference the processor's overhead. That subtraction is wrong in a specific and expensive way:
+`-proc:none` switches off javac's entire annotation-processing subsystem: the extra rounds, the
+JavacProcessingEnvironment, the retained element model, the round-environment bookkeeping. All of
+it lands on VibeTags' side of the subtraction, and none of it is code VibeTags can make cheaper.
+
+ProcessorTaxStressTest measures three compiles of the same 1000 sources instead of two, adding a
+control that turns annotation processing ON and then does nothing (NoOpProcessor).
+
+Measured 2026-09-22, JDK 26, same machine, same session
+-------------------------------------------------------
+                              procNone      noOp   vibetags    apTax  vibetagsShare   share%
+  1.3.7-SNAPSHOT run a          148048    322689     400694   174641          78004    30.9%
+  1.3.7-SNAPSHOT run b          139217    316099     374250   176881          58151    24.7%
+  1.0.0-RC9                     147879    322592     379822   174712          57229    24.7%
+                                                                              (all values KB)
+
+  apTax          = noOp - procNone      the price of running ANY annotation processor
+  vibetagsShare  = vibetags - noOp      the price of running THIS one
+  share%         = vibetagsShare / (vibetags - procNone)
+
+The 1.0.0-RC9 row is that capture's run a, reproduced from
+`load-tests/results/1.0.0-RC9/processor-tax.txt` for context. It was measured on a different day
+and is not comparable to the two rows above at better than the spread between them.
+
+What this changes
+-----------------
+Roughly **three quarters of the number this harness reports as "processor overhead" is javac's,
+not VibeTags'.** At N=1000 the reported figure is 235 MB and VibeTags' own allocation is 57-78 MB.
+Every release baseline in this directory carries the same inflation, so the historical charts
+overstate the processor's cost by three to four times.
+
+It also changes what optimizing means. Effort aimed at the ~175 MB of apTax is aimed at nothing:
+no change to this codebase moves it.
+
+apTax reproduces, vibetagsShare does not
+----------------------------------------
+This is the correction this capture adds. The RC9 write-up reported that "two RC9 runs agreed to
+0.6 % on vibetagsShare" and treated that as the metric's reproducibility. Two runs in one session
+today gave 78004 KB and 58151 KB, a spread of 34 %, fifty times that.
+
+apTax meanwhile held: 174641 and 176881 KB here, 174712 / 174127 / 172850 KB at RC9. Five runs
+across two days inside 2.3 %. That is the expected shape, since apTax is javac's cost and does not
+depend on which processor is loaded.
+
+So `share%` is a rough split, not a metric to track. Quote it as "roughly a quarter to a third of
+the reported overhead is VibeTags' own", and use `memory-same-session.txt` for anything that has
+to resolve a few per cent.
+
+Not claimed here
+----------------
+That the share moved between RC9 and now. RC9's run a and this capture's run b both read 24.7 %,
+and this capture's run a reads 30.9 %; together the three say the metric is noisy, not that
+anything changed.

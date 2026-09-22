@@ -873,7 +873,7 @@ jobs:
       # the only load test that compiles from files on disk, so it is the only one in which a test
       # source set exists at all. Every other harness here hands javac in-memory sources, which
       # carry no file, so TESTING.md routing is switched off in all of them (issue #789).
-      - name: Run annotation-volume stress test (N ≤ 500), concurrent-build, signature-capture and TESTING.md-routing tests
+      - name: Run the load-test regression gates (N ≤ 500)
         run: |
           # load-tests/pom.xml pins <processor.version> to whichever release is being compared, and
           # that pin is deliberate for cross-version work. It is wrong for this job: a regression
@@ -897,7 +897,7 @@ jobs:
           # against vibetags-load-tests was checkstyle:check.
           mvn verify -B \
             -Dprocessor.version="$VT_VERSION" \
-            -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest,TestingMdRoutingStressTest" \
+            -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest,TestingMdRoutingStressTest,PlatformBreadthStressTest,IncrementalRebuildStressTest" \
             -Dstress.max.classes=500
 
       - name: Upload stress-test results
@@ -908,6 +908,8 @@ jobs:
           path: |
             load-tests/target/stress-results-*.txt
             load-tests/target/testing-md-routing-*.txt
+            load-tests/target/platform-breadth-*.txt
+            load-tests/target/incremental-rebuild-*.txt
 
   build-gradle:
     name: Gradle Build (JDK ${{ matrix.java }})
