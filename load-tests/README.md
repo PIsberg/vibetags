@@ -90,9 +90,21 @@ implicit:
   fingerprint have nothing to hit and both short-circuits are unreachable.
   See `IncrementalRebuildStressTest`.
 - **Six annotations out of 44.** `SyntheticClassGenerator` rotates `@AIContext`, `@AILocked`,
-  `@AIAudit`, `@AIIgnore`, `@AIPrivacy` and `@AIDraft`, so 38 formatters never run in any sweep
-  here. Still uncovered, deliberately: changing the generator's mix would invalidate every
-  committed baseline, and a new class measuring the full mix has not been written yet (#835).
+  `@AIAudit`, `@AIIgnore`, `@AIPrivacy` and `@AIDraft`, so 38 formatters never ran in any sweep
+  here. See `AnnotationBreadthStressTest`, which puts a second fixture beside that one rather than
+  widening it, for the reason the platform-breadth class gives: the sweeps' mix is what every
+  committed baseline measured (#835).
+
+  A project annotated with all 44 allocates **10.7x** what the six-annotation fixture does at the
+  same N=500 and renders 28.6x the bytes, but it carries 18x the annotations, so per annotated
+  reference it is *cheaper*: 59 750 B against 101 122 B. The cost is sublinear in the number of
+  annotations on a class, which is a thing no sweep here could previously have said either way.
+
+  Per annotation, one at a time on 100 classes, the spread is **2.0x**: `@AITestDriven` and
+  `@AILocked` are the dearest at about 12.9 MB and 12.5 MB of marginal overhead, `@AIContract` and
+  `@AIPrivacy` the cheapest at about 5.7 MB. Output size does not predict it. `@AILocked` is
+  second-dearest while rendering 34 KB, and `@AIObservability` renders 121 KB, the most of any
+  annotation, for less.
 
 ## What to measure for a library like this
 

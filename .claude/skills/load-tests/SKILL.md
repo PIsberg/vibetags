@@ -168,6 +168,18 @@ sweep's fixture to fix this, because that silently invalidates every baseline. `
 measures it beside them, at one fixed N, carrying the six-file level as an anchor column whose
 `OutputSize` must stay byte-identical to `stress.txt`'s.
 
+**The fixture emits six of the 44 annotations, and always has.** `SyntheticClassGenerator` rotates
+`@AIContext`, `@AILocked`, `@AIAudit`, `@AIIgnore`, `@AIPrivacy` and `@AIDraft`, so 38 formatters
+never ran in any sweep here. Same rule as above: do not widen it, measure beside it.
+`AnnotationBreadthStressTest` does, and reports the number nothing else here ever has, which is
+what one annotation costs on its own. Measured at N=100 on 2026-09-22, marginal over a round with
+no annotations: `@AITestDriven` 12.9 MB and `@AILocked` 12.5 MB at the top, `@AIContract` and
+`@AIPrivacy` about 5.7 MB at the bottom, a 2.0x spread. Rendered bytes do not predict it, so do
+not reason from `OutputSize` about which formatter is expensive: `@AIObservability` renders the
+most of any annotation, 121 KB, and costs less than `@AILocked`'s 34 KB. At N=500 the all-44
+fixture allocates 10.7x the six-annotation one, for 18x the annotated references, so the cost is
+sublinear per annotation on a class.
+
 **Every number here is a cold build.** Each sweep gives its N a fresh `@TempDir`, so
 `.vibetags-cache` is empty and the fingerprint has nothing to match: both short-circuits are
 structurally unreachable, and the build a developer actually waits for is unmeasured.
