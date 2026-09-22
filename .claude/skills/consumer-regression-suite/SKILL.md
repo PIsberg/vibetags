@@ -154,6 +154,13 @@ rm -rf ~/.m2/repository/se/deversity/vibetags/*/<version>
   way, so read the counts: "Built N of 5". This has produced a silently partial result twice,
   in #617 and again on 2026-09-22 (#790), when four of five repos were skipped for dirty
   trees and only the footer said so.
+- **A worktree has only what is committed, so a native artifact is missing from it.** blindbean
+  builds a `blindbean_fhe` native library that is not in git; swept in a worktree its FHE tests
+  all error with `UnsatisfiedLinkError: no blindbean_fhe in java.library.path`, in about 10 ms
+  each, and the repo reports FAIL. That is the environment, not VibeTags: guardrail drift is
+  still measured correctly, and only the test result is meaningless. Pass
+  `-Dblindbean.native.path=<dir>` pointing at the checkout's built library if the test result is
+  wanted, and never report this as a regression. Measured 2026-09-22 (#790).
 - **Run this repo's gates after `git add`, not before.** `ReleaseScriptCoverageTest` reads
   `git ls-files`, so a brand-new file is invisible to it while untracked. A local
   `mvn verify -Pe2e` went green on these very files and CI then failed on all 17 jobs, because

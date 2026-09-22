@@ -228,6 +228,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   # A contended repo is swept in a detached worktree so its checkout is never touched.
   work="$ROOT/$repo"
   wt=""
+  detached=0
   if [ "$contended" -eq 1 ]; then
     # Look up any existing worktree that currently holds $BRANCH
     existing_wt=$(git -C "$ROOT/$repo" worktree list --porcelain | awk -v branch="refs/heads/$BRANCH" '
@@ -241,8 +242,13 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
         rm -rf "$existing_wt"
         git -C "$ROOT/$repo" worktree prune
       else
-        row "$repo" SKIP - "branch in use by $existing_wt"
-        continue
+        # The branch is checked out somewhere else, which on this machine means the consumer
+        # checkout is parked on a previous sweep's branch with that sweep's bump still
+        # uncommitted. `git worktree add -B` cannot take a branch another worktree holds, and
+        # skipping here threw away the measurement over a name. Measure detached instead: the
+        # branch only ever existed so a result could become a consumer PR, and there is no
+        # result to turn into one if the repo is skipped.
+        detached=1
       fi
     fi
 
@@ -253,8 +259,13 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
     # same version died with "a branch named ... already exists" and reported ERROR for a
     # repo whose build was never attempted. The non-worktree path already used checkout -B
     # for exactly this reason.
-    git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
-      row "$repo" ERROR - "worktree add failed"; continue; }
+    if [ "$detached" -eq 1 ]; then
+      git -C "$ROOT/$repo" worktree add -q --detach "$wt" origin/main || {
+        row "$repo" ERROR - "detached worktree add failed"; continue; }
+    else
+      git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
+        row "$repo" ERROR - "worktree add failed"; continue; }
+    fi
     work="$wt"
   else
     git -C "$work" checkout -q -B "$BRANCH" origin/main || {
@@ -346,6 +357,7 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
   [ -n "$repo_java_home" ] && notes="JDK $jdk_low via $jdk_var; $notes"
   [ -n "$ginit" ] && [ "$tool" != maven ] && notes="mavenLocal() via init script; $notes"
   [ "$eolonly" -gt 0 ] && notes="${eolonly} file(s) touched; $notes"
+  [ "$detached" -eq 1 ] && notes="detached (branch held by the checkout, no PR branch); $notes"
   [ "$drift" -gt 0 ] && notes="GUARDRAIL DRIFT in $drift file(s); $notes"
   row "$repo" "$result" "$status" "$notes"
 done <<EOF
