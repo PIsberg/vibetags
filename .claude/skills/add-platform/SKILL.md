@@ -61,11 +61,29 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
    — add `YOUR_PLATFORM("your_platform")` to the enum. The string is the service key used
    everywhere else below.
 
-2. **`vibetags/.../internal/ServiceRegistry.java`** — two edits:
-   - `buildServiceFileMap()`: `map.put("your_platform", root.resolve("<relative/path>"));`
-     (a directory `Path` for granular platforms, a file `Path` otherwise).
-   - `OPT_IN_KEYS`: add the key(s) whose file/directory presence should activate the service.
-     Skip implicitly-derived keys (Step 0, last bullet) — they activate via their parent's key.
+2. **`vibetags/.../internal/content/PlatformDescriptors.java`** — append one
+   `new PlatformDescriptor(...)` entry **at the end** of `ALL`, and nothing else:
+
+   | column | what goes in it |
+   |---|---|
+   | `serviceKey` | the string from Step 1 |
+   | `relativePath` | root-relative, `/` separators, the directory itself for a granular platform |
+   | `kind` | `Kind.FILE` or `Kind.DIRECTORY` |
+   | `implicitParent` | the key whose activation activates this one, or `null` when its own presence on disk is the opt-in (Step 0, last bullet) |
+   | `platform` | `Platform.YOUR_PLATFORM` |
+   | `renderer` | the singleton from Step 3 |
+   | `ignoreLabel` | the tool's display name in an exclusion file's header, or `null` |
+   | `globSyntax` | `true` when `@AIIgnore` writes bare `.gitignore` globs into it |
+
+   That entry is the service map, the opt-in set, the file-or-directory answer, the renderer lookup
+   and both exclusion-file lists at once (#762), so `ServiceRegistry`, `PlatformRendererRegistry`,
+   `IgnoreFileRenderer` and `AIIgnoreFormatter` need no edit. Carry the reason your platform is
+   unusual into a comment on the entry: the entry is where the next reader will look.
+
+   Append, never insert or reorder. The order of `ALL` is the order `buildServiceFileMap` returns,
+   which is the order of the "create one of these files" note a new user copies from and of merge
+   and log iteration across a reactor. Add your row to the end of `PlatformDescriptorsTest.PINNED`
+   too, or that test fails and names it.
 
 3. **Renderer** — `vibetags/.../internal/content/platforms/<Name>Renderer.java implements
    PlatformRenderer`:
@@ -83,13 +101,13 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
      prints another one's words verbatim: make it an alias in `Platform.rendersAs()` instead, and
      no formatter or `SectionCatalog` entry is needed at all (#764). Add it to
      `PlatformAliasTest.ALIASES`.
-   - *Ignore-only file*: don't write a renderer — add a `case YOUR_IGNORE:` to
-     `IgnoreFileRenderer.getPlatformSpecificName()` and route the Platform enum constant to
-     `IGNORE_FILE_RENDERER` in the registry (Step 4). **Then add the same case to
-     `AIIgnoreFormatter`'s glob branch.** Its `default` arm writes nothing, so an ignore file wired
-     through `ServiceRegistry` and the registry but missed there is created, opted into, and left
-     holding a header with no globs under it: nothing thrown, nothing logged, and an existence check
-     green. Assert the glob in the test, never the file.
+   - *Ignore-only file*: don't write a renderer — point the entry's `renderer` at
+     `IGNORE_FILE_RENDERER`, give it an `ignoreLabel` and set `globSyntax` to `true`. All three used
+     to be separate case labels, and missing either of the last two produced an ignore file that was
+     created, opted into and left holding a header with no globs under it, or a header reading "AI
+     Platform": nothing thrown, nothing logged, an existence check green. `PlatformDescriptorsTest`
+     now fails on a labelled entry that takes no globs and on a glob entry with no label. Assert the
+     glob in the test, never the file.
    - *Delegating with a change* (a wrapper that adds or edits something): hold a shared instance
      and forward to its `render()` (`JunieRenderer`, `ClaudeSkillRenderer`). A delegate that
      changes nothing is a registry fall-through label, not a class.
@@ -110,10 +128,15 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
      `MultiModuleWholeFileMergeTest` derives the requirement by rendering your service empty and
      populated, so forgetting it fails the build.
 
-4. **`vibetags/.../internal/content/PlatformRendererRegistry.java`** — declare
-   `private static final XRenderer X_RENDERER = new XRenderer();` and add `case X:` (multiple
-   `case`s can fall through to one renderer, e.g. `CODEX`/`CODEX_CONFIG`/`CODEX_RULES`) in
-   `findRenderer()`. Granular platforms map to the existing `GRANULAR_RENDERER`.
+4. **`vibetags/.../internal/content/PlatformDescriptors.java`, again** — declare
+   `private static final XRenderer X_RENDERER = new XRenderer();` beside the other singletons and
+   name it in your entry. Several entries may name one renderer (`CODEX`, `CODEX_CONFIG` and
+   `CODEX_RULES` all name `CODEX_RENDERER`); granular platforms name the existing
+   `GRANULAR_RENDERER`. `PlatformRendererRegistry` reads the table and has no switch to edit.
+
+   A renderer must never read `PlatformDescriptors` from a static initializer: building the table
+   constructs every renderer, so it would see the table half-built. Reading it from a method, which
+   is what `IgnoreFileRenderer` and `AIIgnoreFormatter` do, is always safe.
 
 5. If your renderer walks per-annotation buckets, every `AnnotationFormatter` under
    `internal/content/annotations/*Formatter.java` needs a `case YOUR_PLATFORM:` in its

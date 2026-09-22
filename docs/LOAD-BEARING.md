@@ -159,16 +159,17 @@ Beyond what the generated section below describes:
 
 `GuardrailContentBuilder` snapshots the collector once and delegates all content generation here:
 
-- `Platform` (enum) + `PlatformRendererRegistry` — one entry per output file; the registry maps each platform to its `PlatformRenderer` in `content/platforms/` (~30 renderers)
+- `Platform` (enum) + `PlatformRendererRegistry` — one entry per output file; the registry answers which `PlatformRenderer` in `content/platforms/` (~30 renderers) renders it, by reading the table below
+- `PlatformDescriptor` + `PlatformDescriptors.ALL` — one entry per generated output holding its service key, root-relative path, file-or-directory kind, opt-in parent, `Platform`, renderer, and an exclusion file's label and glob flag. `ServiceRegistry`'s service map, opt-in set and `writesDirectory`, the renderer registry, `IgnoreFileRenderer` and `AIIgnoreFormatter`'s glob arm are all derived from it (#762)
 - `AnnotationFormatter` + `FormatterRegistry` — one `AI*Formatter` per annotation in `content/annotations/`; renderers pull per-annotation text from here rather than formatting inline
 - `AnnotationDescriptor` + `AnnotationDescriptors.ALL` — one entry per annotation holding its fingerprint tag and member extractor, its formatter, and its granular stanza's title and body; `BuildFingerprint`, `GranularRenderer`, `AiderConventionsRenderer`, `InterpreterRenderer` and `GuardrailInstructionBlock` walk it instead of each spelling out 44 arms (#765)
 - `SectionCatalog` / `AnnotationSections` — shared driver that walks annotation buckets into titled sections
 - `GranularBody` / `GranularSections` — structured stanzas for granular rule files, so a file hoists the constant rule sentence a section shares instead of repeating it per element
 - `GranularContribution` — one compilation's share of one granular rule file (its globs and body), recorded in the module sidecar so a file several modules write is merged rather than replaced (#365)
 
-Adding a platform touches `Platform` + registry + a renderer; adding an annotation touches
-`GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry` + one `AnnotationDescriptors.ALL` entry
-+ any bespoke renderers. Step-by-step
+Adding a platform touches `Platform` + one `PlatformDescriptors.ALL` entry + a renderer. Adding
+an annotation touches `GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry` + one
+`AnnotationDescriptors.ALL` entry + any bespoke renderers. Step-by-step
 checklists: the `add-platform` and `add-annotation` skills in `.claude/skills/`.
 
 `GuardrailAnnotations.ALL` is the single registry of collected annotation types. It fixes the order

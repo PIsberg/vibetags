@@ -3,6 +3,8 @@ package se.deversity.vibetags.processor.internal;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.processor.VibeTagsLogger;
 import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.PlatformDescriptor;
+import se.deversity.vibetags.processor.internal.content.PlatformDescriptors;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;
@@ -13,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -55,74 +58,27 @@ public final class ServiceRegistry {
      */
     private static final Set<String> MARKER_ONLY_OPT_INS = Set.of("root_index", "testing", "locks_report");
 
-    /** Subset of service keys whose presence on disk activates a service. */
-    private static final Set<String> OPT_IN_KEYS = Set.of(
-        "cursor", "claude", "aiexclude", "codex", "gemini", "copilot", "qwen",
-        // Qwen's /refactor command: opted into by its own presence, not implied by QWEN.md (#655)
-        "qwen_refactor",
-        "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
-        "llms", "llms_full", "aider_conventions", "aider_ignore",
-        "cursor_granular", "roo_granular", "trae_granular",
-        // v0.7.0 platforms
-        "windsurf", "zed", "cody", "cody_ignore", "supermaven_ignore",
-        "windsurf_granular", "continue_granular", "tabnine_granular",
-        "amazonq_granular", "ai_rules_granular",
-        // v0.8.0 platforms
-        "pearai_granular", "mentat", "sweep", "plandex",
-        "double_ignore", "interpreter", "codeium_ignore",
-        // Ignore files for Roo Code, Continue and Augment Code, each the tool's only
-        // exclusion mechanism (see docs/PLATFORMS.md for the three that were rejected)
-        "roo_ignore", "continue_ignore", "augment_ignore",
-        // v0.9.6 platforms
-        "gemini_md", "antigravity_ignore",
-        // v0.9.7 platforms
-        "cline", "junie", "kiro_granular",
-        // Junie's current file, checked before .junie/guidelines.md. Not the root AGENTS.md: a
-        // separate key, so the sole-file rule treats it like any other opt-in (#673)
-        "junie_agents",
-        // Cline's .clinerules/ directory, mutually exclusive with the .clinerules file above
-        "cline_granular",
-        // Firebase AI
-        "firebase",
-        // Claude Code local override, Skill, and granular rules; Copilot granular instructions
-        "claude_local", "claude_skill", "claude_granular", "copilot_granular",
-        // Gemini granular rules (#320): lets GEMINI.md collapse to a scoped-rules index
-        "gemini_granular",
-        // Grok Build scoped rules. Granular only: Grok reads AGENTS.md natively, so it has no
-        // VibeTags aggregate of its own and this key never collapses another file to an index.
-        "grok_granular",
-        // 2026-09 platform sweep: three granular directories and one aggregate
-        "antigravity_granular", "aiassistant_granular", "augment_granular", "goose",
-        // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent context file
-        "agents_skill", "zencoder_granular", "replit",
-        // Devin Desktop, formerly Windsurf (#671). Its preferred rules directory, beside the
-        // Windsurf paths it still reads, and its ignore file. Neither collapses .windsurfrules.
-        "devin_granular", "devin_ignore",
-        // Context-packer ignore files
-        "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
-        // AI pull-request reviewers
-        "coderabbit", "pr_agent", "ellipsis",
-        // Editors & modes
-        "void", "roo_modes",
-        // Machine-readable @AILocked report for CI diff guards
-        "locks_report",
-        // Gemini Code Assist for GitHub: the review style guide is a separate product from the
-        // Gemini CLI's GEMINI.md, with its own path.
-        "gemini_styleguide",
-        // Aider's config file. Without a read: entry aider never loads the CONVENTIONS.md
-        // VibeTags already writes, so this is what makes that platform do anything at all.
-        "aider_conf",
-        // Greptile's PR reviewer. greptile.json is the legacy single-file form, richly hand-configured
-        // in practice, so VibeTags owns only a delimited span inside two of its string values and
-        // leaves every other byte alone (#639). .greptile/rules.md is the recommended form, and
-        // .greptile/config.json carries its exclusions: VibeTags owns a span in ignorePatterns only (#651).
-        "greptile", "greptile_rules", "greptile_config",
-        // Lean indexed root aggregate (multi-module): link to per-module rules instead of embedding
-        "root_index",
-        // TESTING.md. No tool reads it by name: its presence asks for a test round's non-safety
-        // guardrails to be written there instead of into the always-loaded aggregates.
-        "testing"
-    );
+    /**
+     * Subset of service keys whose presence on disk activates a service: every entry of
+     * {@link PlatformDescriptors#ALL} that is not an implicit child of another one.
+     *
+     * <p>This was a second hand-kept list of the same keys, in a different order again, and
+     * nothing connected it to the path map (<a
+     * href="https://github.com/PIsberg/vibetags/issues/762">issue #762</a>). A key in the map and
+     * not here was an output the user had no way to opt into; a key here and not in the map was an
+     * opt-in that resolved to no path. Both compiled.
+     */
+    private static final Set<String> OPT_IN_KEYS = optInKeysFromDescriptors();
+
+    private static Set<String> optInKeysFromDescriptors() {
+        Set<String> keys = new LinkedHashSet<>();
+        for (PlatformDescriptor descriptor : PlatformDescriptors.ALL) {
+            if (descriptor.optIn()) {
+                keys.add(descriptor.serviceKey());
+            }
+        }
+        return Set.copyOf(keys);
+    }
 
     /**
      * The always-loaded safety file inside a granular directory whose rule files load only on a
@@ -163,124 +119,9 @@ public final class ServiceRegistry {
      */
     public static Map<String, Path> buildServiceFileMap(Path root) {
         Map<String, Path> map = new LinkedHashMap<>();
-        map.put("cursor",    root.resolve(".cursorrules"));
-        map.put("claude",    root.resolve("CLAUDE.md"));
-        map.put("aiexclude", root.resolve(".aiexclude"));
-        map.put("codex",     root.resolve("AGENTS.md"));
-        map.put("gemini",    root.resolve("gemini_instructions.md"));
-        map.put("copilot",   root.resolve(".github/copilot-instructions.md"));
-        map.put("qwen",      root.resolve("QWEN.md"));
-        map.put("cursor_ignore",  root.resolve(".cursorignore"));
-        map.put("claude_ignore",  root.resolve(".claudeignore"));
-        map.put("copilot_ignore", root.resolve(".copilotignore"));
-        map.put("qwen_ignore",    root.resolve(".qwenignore"));
-        map.put("codex_config",   root.resolve(".codex/config.toml"));
-        map.put("codex_rules",    root.resolve(".codex/rules/vibetags.rules"));
-        // .qwen/settings.json is deliberately not mapped (#650): it is Qwen Code's own project
-        // settings file, and a whole-file write erased the user's MCP servers and permissions.
-        map.put("qwen_refactor",  root.resolve(".qwen/commands/refactor.md"));
-        map.put("llms",           root.resolve("llms.txt"));
-        map.put("llms_full",      root.resolve("llms-full.txt"));
-        map.put("aider_conventions", root.resolve("CONVENTIONS.md"));
-        map.put("aider_ignore",      root.resolve(".aiderignore"));
-        map.put("aider_conf",        root.resolve(".aider.conf.yml"));
-        map.put("cursor_granular",   root.resolve(".cursor/rules"));
-        map.put("roo_granular",      root.resolve(".roo/rules"));
-        map.put("trae_granular",     root.resolve(".trae/rules"));
-        // New platforms
-        map.put("windsurf",          root.resolve(".windsurfrules"));
-        map.put("zed",               root.resolve(".rules"));
-        map.put("cody",              root.resolve(".cody/config.json"));
-        map.put("cody_ignore",       root.resolve(".codyignore"));
-        map.put("supermaven_ignore", root.resolve(".supermavenignore"));
-        map.put("windsurf_granular", root.resolve(".windsurf/rules"));
-        // Inside that directory: the safety tier as a trigger: always_on rule (issue #684). Implicit,
-        // like cline_safety, so it has no opt-in key of its own.
-        map.put("windsurf_safety",   root.resolve(".windsurf/rules").resolve(SAFETY_TIER_FILE));
-        map.put("continue_granular", root.resolve(".continue/rules"));
-        map.put("tabnine_granular",  root.resolve(".tabnine/guidelines"));
-        map.put("amazonq_granular",  root.resolve(".amazonq/rules"));
-        map.put("ai_rules_granular", root.resolve(".ai/rules"));
-        // v0.8.0 platforms
-        map.put("pearai_granular",  root.resolve(".pearai/rules"));
-        map.put("mentat",           root.resolve(".mentatconfig.json"));
-        map.put("sweep",            root.resolve("sweep.yaml"));
-        map.put("plandex",          root.resolve(".plandex.yaml"));
-        map.put("double_ignore",    root.resolve(".doubleignore"));
-        map.put("interpreter",      root.resolve(".interpreter/profiles/vibetags.yaml"));
-        map.put("codeium_ignore",   root.resolve(".codeiumignore"));
-        // Ignore files for three platforms whose rules directory VibeTags already writes
-        map.put("roo_ignore",       root.resolve(".rooignore"));
-        map.put("continue_ignore",  root.resolve(".continueignore"));
-        map.put("augment_ignore",   root.resolve(".augmentignore"));
-        // v0.9.6 platforms
-        map.put("gemini_md",          root.resolve("GEMINI.md"));
-        map.put("antigravity_ignore", root.resolve(".antigravityignore"));
-        // v0.9.7 platforms
-        map.put("cline",         root.resolve(".clinerules"));
-        // Cline's directory form, at the same path as the file. A path is one or the other, so
-        // isOptedIn lets exactly one of the two activate (issue #642).
-        map.put("cline_granular", root.resolve(".clinerules"));
-        // Inside that directory: the safety tier, always loaded (issue #648). Implicit, like
-        // codex_config under codex, so it has no opt-in key of its own.
-        map.put("cline_safety", root.resolve(".clinerules").resolve(CLINE_SAFETY_FILE));
-        map.put("junie",         root.resolve(".junie/guidelines.md"));
-        map.put("junie_agents",  root.resolve(".junie/AGENTS.md"));
-        map.put("kiro_granular", root.resolve(".kiro/steering"));
-        // Firebase AI
-        map.put("firebase",      root.resolve(".idx/airules.md"));
-        // Claude Code local override, Skill, and granular rules; Copilot granular instructions
-        map.put("claude_local",     root.resolve("CLAUDE.local.md"));
-        map.put("claude_skill",     root.resolve(".claude/skills/vibetags-guardrails/SKILL.md"));
-        // The cross-client Agent Skills location. Same SKILL.md, read by every client that scans
-        // .agents/skills/ rather than only its own vendor directory.
-        map.put("agents_skill",     root.resolve(".agents/skills/vibetags-guardrails/SKILL.md"));
-        map.put("claude_granular",  root.resolve(".claude/rules"));
-        map.put("copilot_granular", root.resolve(".github/instructions"));
-        map.put("gemini_granular", root.resolve(".gemini/rules"));
-        // Grok Build scoped rules
-        map.put("grok_granular",   root.resolve(".grok/rules"));
-        // 2026-09 platform sweep
-        map.put("antigravity_granular", root.resolve(".agents/rules"));
-        map.put("aiassistant_granular", root.resolve(".aiassistant/rules"));
-        map.put("augment_granular",     root.resolve(".augment/rules"));
-        map.put("zencoder_granular",    root.resolve(".zencoder/rules"));
-        // Devin Desktop, formerly Windsurf (#671)
-        map.put("devin_granular",       root.resolve(".devin/rules"));
-        // The same always-on safety file in the preferred directory (issue #684)
-        map.put("devin_safety",         root.resolve(".devin/rules").resolve(SAFETY_TIER_FILE));
-        map.put("devin_ignore",         root.resolve(".devinignore"));
-        map.put("replit",               root.resolve("replit.md"));
-        map.put("goose",                root.resolve(".goosehints"));
-        // Context-packer ignore files
-        map.put("repomix_ignore",    root.resolve(".repomixignore"));
-        map.put("gitingest_ignore",  root.resolve(".gitingestignore"));
-        map.put("gpt_ignore",        root.resolve(".gptignore"));
-        map.put("ghostcoder_ignore", root.resolve(".ghostcoderignore"));
-        map.put("pieces_ignore",     root.resolve(".piecesignore"));
-        // AI pull-request reviewers
-        map.put("coderabbit",    root.resolve(".coderabbit.yaml"));
-        map.put("pr_agent",      root.resolve(".pr_agent.toml"));
-        map.put("ellipsis",      root.resolve("ellipsis.yaml"));
-        // Gemini Code Assist for GitHub (PR reviewer) — distinct from the Gemini CLI's GEMINI.md
-        map.put("gemini_styleguide", root.resolve(".gemini/styleguide.md"));
-        // Greptile (PR reviewer). When both exist in the root, Greptile reads .greptile/ and
-        // ignores greptile.json entirely; docs/PLATFORMS.md says so.
-        map.put("greptile",       root.resolve("greptile.json"));
-        map.put("greptile_rules", root.resolve(".greptile/rules.md"));
-        map.put("greptile_config", root.resolve(".greptile/config.json"));
-        // Editors & modes
-        map.put("void",          root.resolve(".void/rules.md"));
-        map.put("roo_modes",     root.resolve(".roomodes"));
-        // Machine-readable @AILocked report (no extension → hash markers → multi-module merge)
-        map.put("locks_report",  root.resolve(LOCKS_REPORT_FILE));
-        // Lean indexed root aggregate opt-in (multi-module). No renderer: presence only flips the
-        // reactor-root CLAUDE.md/.cursorrules/.windsurfrules/copilot-instructions.md merge from
-        // embedding each module's guardrails to linking the module's own scoped rule files.
-        map.put("root_index",    root.resolve(ROOT_INDEX_FILE));
-        // Routing target for test-code guardrails. A .md file, so HTML markers and the ordinary
-        // multi-module merge; its renderer writes nothing outside a test round.
-        map.put("testing",       root.resolve("TESTING.md"));
+        for (PlatformDescriptor descriptor : PlatformDescriptors.ALL) {
+            map.put(descriptor.serviceKey(), root.resolve(descriptor.relativePath()));
+        }
         return map;
     }
 
@@ -401,15 +242,20 @@ public final class ServiceRegistry {
      * True when the service writes a directory of per-element rule files rather than a single file.
      *
      * <p>The one definition of that distinction, for everything that has to know which kind of entry
-     * a service's path is without looking at the disk: opt-in resolution below, the CLI's
-     * {@code init}, and the tests that count and fixture the outputs. The file name cannot answer it,
+     * a service path is without looking at the disk: opt-in resolution below, the CLI {@code init}
+     * command, and the tests that count and fixture the outputs. The file name cannot answer it,
      * because one path is both: {@code .clinerules} is the {@code cline} file and the
-     * {@code cline_granular} directory. The {@code _granular} suffix is already load-bearing
-     * elsewhere ({@code PlatformRendererRegistry} routes on it and {@code GuardrailContentBuilder}
-     * filters on it), so this names an existing convention rather than inventing a second one.
+     * {@code cline_granular} directory.
+     *
+     * <p>It used to read the {@code _granular} suffix, which is a naming convention and not a
+     * declaration: a directory service named anything else answered wrongly, and nothing said so.
+     * {@link PlatformDescriptor#kind()} is the declaration (<a
+     * href="https://github.com/PIsberg/vibetags/issues/762">issue #762</a>). A key that is not a
+     * generated output at all answers false, as it did before.
      */
     public static boolean writesDirectory(String key) {
-        return key.endsWith("_granular");
+        PlatformDescriptor descriptor = PlatformDescriptors.byKey(key);
+        return descriptor != null && descriptor.kind() == PlatformDescriptor.Kind.DIRECTORY;
     }
 
     /**

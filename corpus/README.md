@@ -224,14 +224,20 @@ current run has nine to parse; not re-measured.)
 Measured: **48 of 62 platform files written, 10 parsed.** The remainder are opted out or are mode
 switches. `.vibetags-root-index` is excluded from the emptiness rule by name, because its presence
 *is* the message: touching it turns the root aggregate into a lean index and nothing is ever
-written to it. `ServiceRegistry` says the same in code by excluding `root_index` from the keys it
-treats as output files.
+written to it. `PlatformDescriptors` says the same in code: `root_index` is the one entry with no
+`Platform` and no renderer.
 
-The list of platform files is extracted from `ServiceRegistry` rather than kept here. A copy would
-be a second source of truth whose failure is the quiet kind: a platform is added, the list does not
-know, and the sweep reports success over a set that no longer matches the code. The extraction
-asserts it found at least 40 entries, so a change to the registry's shape fails loudly instead of
-silently narrowing what is checked.
+The list of platform files is extracted from `PlatformDescriptors` rather than kept here. A copy
+would be a second source of truth whose failure is the quiet kind: a platform is added, the list
+does not know, and the sweep reports success over a set that no longer matches the code. The
+extraction asserts it found at least 40 entries, so a change to the table's shape fails loudly
+instead of silently narrowing what is checked; that is what caught #762 moving the paths out of
+`ServiceRegistry`.
+
+Only the entries that are opt-ins are seeded. The two Codex sidecars and the three granular
+safety files are written because another service is active, never because their own path exists,
+and `.clinerules/+vibetags-safety.md` could not be created anyway, since `.clinerules` is already
+seeded as the `cline` file. They are still verified when a run produces them.
 
 ## The repos, and why each is here
 

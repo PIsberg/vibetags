@@ -8,13 +8,13 @@ renderers nobody looks at are the cheapest ones to break (#489).
 
 Two modes:
 
-  list <ServiceRegistry.java>   prints one relative path per line, extracted from the registry
-                                itself so the list cannot drift from what the code writes
-  verify <root>                 checks every file that exists is non-empty, and parses the ones
-                                with a structured format
+  list <PlatformDescriptors.java>  prints one relative path per line, extracted from the platform
+                                   table itself so the list cannot drift from what the code writes
+  verify <root>                    checks every file that exists is non-empty, and parses the ones
+                                   with a structured format
 
 The list is read out of the source rather than maintained here on purpose. A hand-kept copy of
-the registry is a second source of truth, and the failure it produces is the quiet kind: a new
+the table is a second source of truth, and the failure it produces is the quiet kind: a new
 platform is added, nothing lists it, and the sweep reports success over a set that no longer
 matches reality.
 """
@@ -33,12 +33,16 @@ try:
 except ModuleNotFoundError:
     yaml = None
 
-# Pairs the service key with the path it resolves to, because the key is what says whether the
-# opt-in is a file or a directory. Guessing from the filename does not work and failed loudly:
-# ".cursorrules" and ".claude/rules" both end in "rules" and only one is a directory, so a
-# name-based heuristic created most opt-ins as directories, the processor saw two services
-# instead of sixty, and the sweep measured almost nothing.
-ENTRY = re.compile(r'map\.put\(\s*"([^"]+)"\s*,\s*root\.resolve\(\s*"([^"]+)"\s*\)')
+# Key, path and kind, in the order PlatformDescriptors declares them. Whether the opt-in is a
+# file or a directory is read from the entry rather than guessed, because guessing from the
+# filename does not work and failed loudly: ".cursorrules" and ".claude/rules" both end in
+# "rules" and only one is a directory, so a name-based heuristic created most opt-ins as
+# directories, the processor saw two services instead of sixty, and the sweep measured almost
+# nothing. The table carried that distinction out of ServiceRegistry in #762; before that this
+# read the "_granular" suffix, which was the same guess one step removed.
+ENTRY = re.compile(
+    r'new PlatformDescriptor\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*Kind\.(FILE|DIRECTORY)'
+    r'\s*,\s*(null|"[^"]+")')
 
 # Opt-ins that are a mode switch rather than a destination. Touching .vibetags-root-index turns
 # the root aggregate into a lean index (docs/MULTI-MODULE.md); its presence is the whole message
@@ -49,21 +53,29 @@ SWITCHES = {"root_index"}
 
 
 def list_entries(registry: pathlib.Path):
-    """Yields (kind, path) where kind is "dir" for a granular rules directory, else "file"."""
+    """Yields (kind, path), kind one of "file", "dir", "implicit", "switch".
+
+    Only "file" and "dir" are opt-ins the caller should create. An "implicit" entry is written
+    because another service is active, never because its own path exists, so creating it would
+    be seeding something that is not an opt-in - and for .clinerules/+vibetags-safety.md it is
+    not even possible, since .clinerules is already seeded as the `cline` file. They are still
+    verified when the run produces them. A "switch" is neither created nor verified: touching
+    .vibetags-root-index changes how the root aggregate renders, which would silently reshape
+    what the sweep is measuring.
+    """
     text = registry.read_text(encoding="utf-8")
     seen, entries = set(), []
     for m in ENTRY.finditer(text):
-        key, path = m.group(1), m.group(2)
+        key, path, declared, parent = m.group(1), m.group(2), m.group(3), m.group(4)
         if path in seen:
             continue
         seen.add(path)
-        # A granular service resolves to the directory its per-element rule files live in.
-        if key.endswith("_granular"):
-            kind = "dir"
-        elif key in SWITCHES:
+        if key in SWITCHES:
             kind = "switch"
+        elif parent != "null":
+            kind = "implicit"
         else:
-            kind = "file"
+            kind = "dir" if declared == "DIRECTORY" else "file"
         entries.append((kind, path))
     return entries
 
