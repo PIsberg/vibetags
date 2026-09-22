@@ -2,21 +2,18 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import se.deversity.vibetags.processor.internal.content.AnnotationDescriptor;
+import se.deversity.vibetags.processor.internal.content.AnnotationDescriptors;
+import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,8 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Every annotation's fingerprint tag is its own.
  *
  * <p>{@code BuildFingerprint} folds each annotation's contents into the hash under a short tag,
- * {@code appendAnnotationSet(sb, "L", model.locked(), ...)}. The {@code add-annotation} skill says
- * those tags must be unique, and until this test nothing checked it: {@code "LB"} was used by both
+ * the {@code fingerprintTag} of its entry in {@code AnnotationDescriptors.ALL}. This test used to
+ * parse the forty-four {@code appendAnnotationSet(sb, "L", model.locked(), ...)} calls out of the
+ * source; it reads the table now, which is what {@code BuildFingerprint} itself reads, so the tags
+ * checked here are the tags hashed rather than the ones a pattern happened to match. The
+ * {@code add-annotation} skill says those tags must be unique, and until this test nothing
+ * checked it: {@code "LB"} was used by both
  * {@code legacyBridge} and {@code loadBearing}
  * (<a href="https://github.com/PIsberg/vibetags/issues/765">issue #765</a>).
  *
@@ -53,23 +54,15 @@ class BuildFingerprintTagUniquenessTest {
      */
     private static final Map<String, String> KNOWN_COLLISIONS = Map.of();
 
-    /** {@code appendAnnotationSet(sb, "TAG", model.accessor(), ...)}. */
-    private static final Pattern CALL = Pattern.compile(
-        "appendAnnotationSet\\(\\s*sb\\s*,\\s*\"([^\"]+)\"\\s*,\\s*model\\.([A-Za-z]+)\\(\\)");
-
-    /** {@code vibetags/} is the surefire working directory; its parent is the repo root. */
-    private static final Path SOURCE = Paths.get("").toAbsolutePath()
-        .resolve("src/main/java/se/deversity/vibetags/processor/internal/BuildFingerprint.java");
-
     @Test
     @DisplayName("no two annotations share a tag, beyond the collisions recorded here")
     void everyFingerprintTagIsUniqueOrAKnownCollision() {
-        Map<String, List<String>> byTag = tagsToAccessors();
+        Map<String, List<String>> byTag = tagsToAnnotations();
 
         Map<String, List<String>> collisions = new LinkedHashMap<>();
-        byTag.forEach((tag, accessors) -> {
-            if (accessors.size() > 1) {
-                collisions.put(tag, accessors);
+        byTag.forEach((tag, annotations) -> {
+            if (annotations.size() > 1) {
+                collisions.put(tag, annotations);
             }
         });
 
@@ -90,51 +83,49 @@ class BuildFingerprintTagUniquenessTest {
     @Test
     @DisplayName("every recorded collision still exists")
     void noKnownCollisionIsStale() {
-        Map<String, List<String>> byTag = tagsToAccessors();
+        Map<String, List<String>> byTag = tagsToAnnotations();
 
         KNOWN_COLLISIONS.forEach((tag, reason) -> {
-            List<String> accessors = byTag.getOrDefault(tag, List.of());
-            assertTrue(accessors.size() > 1,
+            List<String> annotations = byTag.getOrDefault(tag, List.of());
+            assertTrue(annotations.size() > 1,
                 "KNOWN_COLLISIONS still allows the tag " + tag + ", but it is no longer shared "
-                    + "(used by " + accessors + "). Delete the entry: leaving it in place lets a "
+                    + "(used by " + annotations + "). Delete the entry: leaving it in place lets a "
                     + "new collision on that tag pass unnoticed.");
         });
     }
 
-    /** Every annotation in the registry is folded in, and each call is a tag plus an accessor. */
+    /**
+     * Every annotation in the registry has exactly one descriptor, so exactly one section of the
+     * hash. Compared as sets on purpose: the table's order is its own and is pinned elsewhere.
+     */
     @Test
-    @DisplayName("one fingerprint call per registered annotation")
+    @DisplayName("one descriptor per registered annotation")
     void everyRegisteredAnnotationIsHashed() {
-        Map<String, List<String>> byTag = tagsToAccessors();
-        int calls = byTag.values().stream().mapToInt(List::size).sum();
+        List<Class<? extends Annotation>> described = new ArrayList<>();
+        for (AnnotationDescriptor descriptor : AnnotationDescriptors.ALL) {
+            described.add(descriptor.type());
+        }
 
-        assertEquals(se.deversity.vibetags.processor.model.GuardrailAnnotations.ALL.size(), calls,
-            "BuildFingerprint folds in " + calls + " annotation sets but the registry has "
-                + se.deversity.vibetags.processor.model.GuardrailAnnotations.ALL.size()
-                + ". Anything that becomes generated content reaches BuildFingerprint (invariant "
-                + "12); an annotation missing here changes the output without changing the hash, "
-                + "so the write cache serves the old file.");
+        assertEquals(new LinkedHashSet<>(described).size(), described.size(),
+            "an annotation has two descriptors, so BuildFingerprint hashes it twice and every "
+                + "table-driven renderer prints it twice: " + described);
+        assertEquals(new HashSet<>(GuardrailAnnotations.ALL), new HashSet<>(described),
+            "AnnotationDescriptors.ALL and GuardrailAnnotations.ALL do not hold the same "
+                + "annotations. Anything that becomes generated content reaches BuildFingerprint "
+                + "(invariant 12); an annotation missing from the table changes the output "
+                + "without changing the hash, so the write cache serves the old file.");
     }
 
-    /** Tag to the accessors that use it, read from the source rather than from behaviour. */
-    private static Map<String, List<String>> tagsToAccessors() {
+    /** Tag to the annotations that use it, read from the table {@code BuildFingerprint} walks. */
+    private static Map<String, List<String>> tagsToAnnotations() {
         Map<String, List<String>> byTag = new LinkedHashMap<>();
-        Matcher m = CALL.matcher(read());
-        while (m.find()) {
-            byTag.computeIfAbsent(m.group(1), k -> new ArrayList<>()).add(m.group(2));
+        for (AnnotationDescriptor descriptor : AnnotationDescriptors.ALL) {
+            byTag.computeIfAbsent(descriptor.fingerprintTag(), k -> new ArrayList<>())
+                .add(descriptor.type().getSimpleName());
         }
         assertTrue(byTag.size() > 30,
-            "only " + byTag.size() + " fingerprint tags were parsed out of " + SOURCE
-                + ". The call shape this test matches has probably changed, and a pattern that "
-                + "matches nothing passes every assertion below it.");
+            "only " + byTag.size() + " fingerprint tags were read from AnnotationDescriptors.ALL. "
+                + "A table that yields nothing passes every assertion below it.");
         return byTag;
-    }
-
-    private static String read() {
-        try {
-            return Files.readString(SOURCE, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new UncheckedIOException("cannot read " + SOURCE, e);
-        }
     }
 }

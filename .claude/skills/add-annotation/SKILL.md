@@ -91,27 +91,50 @@ Cursor/Windsurf pull by default). Add `OVERRIDES` entries under the existing
 `geminiOverrides` maps only if that platform's wording should diverge from `DEFAULT` — otherwise
 it inherits `DEFAULT` automatically via `SectionCatalog.header()`'s fallback.
 
-**D. `GranularRenderer.renderGranular()`** — add a
-`for (TaggedElement e : model.yourName()) { ... appendToGranular(elementRules, e, "Section Title",
-"- **Field**: " + a.field()); }` block, or the annotation never appears in any granular rule file
-even while granular platforms are active — this loop is not driven by the SECTIONS lists above.
+**D. `AnnotationDescriptors.ALL`** (`vibetags/.../internal/content/AnnotationDescriptors.java`):
+append one `new AnnotationDescriptor(AIYourName.class, "XX", FormatterRegistry.yourName(), e -> {
+... }, "Section Title", e -> { ... })` entry **at the end**. That one entry is what
+`GranularRenderer`, `AiderConventionsRenderer`, `InterpreterRenderer`,
+`GuardrailInstructionBlock` (CodeRabbit, Ellipsis, PR-Agent, Roo modes, the Gemini styleguide and
+Greptile rules) and `BuildFingerprint` all walk, so none of those five needs an edit:
 
-**E. Every other renderer that walks `model.xxx()` directly** (`LlmsRenderer`,
-`AiderConventionsRenderer`, etc., plus any bespoke platform renderer from a previous
-`add-platform` pass) — run `grep -rn "model\.secure()" vibetags/src/main/java/.../content/
-platforms/` (or any other recent annotation's accessor) to enumerate every call site that needs a
-sibling for your new accessor.
+- the last two arguments are the granular stanza: its title, and a lambda returning the body
+  (`"- **Field**: " + a.field()`, lines joined with a newline) or `null` for no stanza. Without it
+  the annotation never appears in any granular rule file even while granular platforms are active;
+- the tag and the first lambda are Step 5.
+
+Append, never insert or reorder: the table's order is the printing order of those files and the
+hashing order of the fingerprint. `AnnotationDescriptorsTest` pins the tag sequence, so append
+your tag to its `PINNED_TAG_ORDER` too.
+
+**E. Every other renderer that walks `model.xxx()` directly** (`LlmsRenderer` and any
+bespoke platform renderer from a previous `add-platform` pass): these are not
+table-driven, because each puts the annotation in a position of its own. Run
+`grep -rn "model\.secure()" vibetags/src/main/java/.../content/platforms/` (or any other recent
+annotation's accessor) to enumerate every call site that needs a sibling for your new accessor.
 
 ## Step 5 — BuildFingerprint (do not skip this)
 
-`vibetags/.../internal/BuildFingerprint.java` — add one
-`appendAnnotationSet(sb, "XX", model.yourName(), e -> { ... join every attribute that affects
-rendered output with a delimiter ... });` call, `"XX"` a short tag not already used by a sibling
-call. Skipping this means editing the annotation's attributes on an already-annotated element
-does not change the fingerprint, so the top-level short-circuit in `generateFiles()` (locked —
-see the class's `@AILocked` javadoc) serves stale output on the next compile without any error.
-This exact regression shipped once and was fixed in commit `df01cb8`
-("fingerprint ignores the 12 newest annotation buckets").
+There is nothing to edit in `BuildFingerprint.java`: it hashes one section per entry of
+`AnnotationDescriptors.ALL`. What you owe it is inside the entry you added in Step 4D:
+
+- `"XX"`, a short tag no other entry uses (`BuildFingerprintTagUniquenessTest` fails on a
+  collision);
+- the first lambda, which joins **every attribute that affects rendered output** with a `|`
+  delimiter and returns `""` when the element carries no instance. Write it out member by member;
+  a reflective walk is not an option, since it cannot read a `Class`-valued member and would
+  change every consumer's cached fingerprint.
+
+Leaving a rendered attribute out means editing it on an already-annotated element does not change
+the fingerprint, so the top-level short-circuit in `generateFiles()` (locked, see the class's
+`@AILocked` javadoc) serves stale output on the next compile without any error. This exact
+regression shipped once and was fixed in commit `df01cb8` ("fingerprint ignores the 12 newest
+annotation buckets").
+
+A new entry appends a section to the hashed string, so `BuildFingerprintPinnedValueTest` goes red
+once: that is the one expected cause its class comment names. Replace its two literals with the
+values the failure prints, and say in the CHANGELOG that the first build on the new version misses
+the fingerprint short-circuit once.
 
 ## Step 6 — Validation rules (only if there is something to validate)
 
@@ -177,7 +200,7 @@ past the last wave — currently `V5`) unless you're extending an in-flight wave
 ```bash
 cd vibetags-annotations && mvn install && cd ..
 cd vibetags && mvn clean install && cd ..
-cd vibetags && mvn test -Dtest=NewAnnotationsV<N>DefinitionTest,NewAnnotationsV<N>EndToEndTest,NewAnnotationsV<N>ValidationTest,BuildFingerprintUnitTest,BuildFingerprintIntegrationTest,ProjectFactsConsistencyTest && cd ..
+cd vibetags && mvn test -Dtest=NewAnnotationsV<N>DefinitionTest,NewAnnotationsV<N>EndToEndTest,NewAnnotationsV<N>ValidationTest,BuildFingerprintUnitTest,BuildFingerprintIntegrationTest,BuildFingerprintTagUniquenessTest,BuildFingerprintPinnedValueTest,AnnotationDescriptorsTest,ProjectFactsConsistencyTest && cd ..
 cd vibetags-bom && mvn install && cd ..
 cd examples/basic && mvn clean compile && cd ../..
 ```
