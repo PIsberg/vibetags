@@ -67,6 +67,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   | `all-files` | 57 | 258.5 MB | 553 ms | 3 746 902 | 56 | 168 665 |
   | `all+granular` | 77 | 487.9 MB | 9 434 ms | 6 718 978 | 10 058 | 115 633 |
 
+  The 57 and the 65 count different things and both are right: 65 is every generated config file,
+  57 is the subset whose own presence is the opt-in, less the three switches
+  (`.vibetags-root-index`, `TESTING.md`, `.vibetags-locks`) that change what the other levels mean
+  rather than adding to them. The rest are implicit children another service activates.
+
   A fully opted-in project allocates 4.2x what the sweeps report, and 2.1x for single files alone.
   Scoped rules are the wall-clock story rather than the byte story: `all+granular` takes 17x as long
   as `all-files` for 1.8x the bytes, because it writes 10 058 files instead of 56. They are also the

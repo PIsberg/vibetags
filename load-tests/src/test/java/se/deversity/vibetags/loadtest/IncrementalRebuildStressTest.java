@@ -90,9 +90,10 @@ class IncrementalRebuildStressTest {
      * <p>This, not a threshold on the saving, is the gate. The first draft of this test asserted
      * that the warm round skipped at least 25 % of the cold round's processor-attributable
      * allocation, on the assumption that skipping "content build and writes" would be most of the
-     * cost. It is not: measured at 1.3.6 the saving is 9.0 % at N=100, 4.3 % at N=500 and 3.6 % at
-     * N=1000, because the collector has already walked every annotated element in the round before
-     * a fingerprint can be computed, and that walk is where the allocation is. A number that small
+     * cost. It is not: measured on main at 802d1420 the saving is 4.9 % at N=100, 3.3 % at N=500
+     * and 3.6 % at N=1000 (recorded in {@code results/1.3.7-SNAPSHOT/incremental-rebuild.txt}),
+     * because the collector has already walked every annotated element in the round before a
+     * fingerprint can be computed, and that walk is where the allocation is. A number that small
      * cannot carry a regression gate — it is close enough to the run-to-run floor that a threshold
      * either fails healthy builds or passes a broken short-circuit. The note is deterministic, so
      * it is asserted instead, and the saving is reported rather than gated.

@@ -282,6 +282,13 @@ What to take from it:
 - `AGENTS.md` is an opt-in that writes nothing here (5 files from 6 opt-ins, 56 from 57): invariant
   4 only writes it as the sole AI config file.
 
+The 57 in the `all-files` row and the 65 in the paragraph above count different things, and both
+are right. 65 is every generated config file. 57 is the subset this test creates: files whose own
+presence is the opt-in, less the three switches (`.vibetags-root-index`, `TESTING.md`,
+`.vibetags-locks`) that change what the other levels mean rather than adding to them. The rest are
+implicit children another service activates, such as the safety tier inside a scoped-rules
+directory, which appear in the output without being opted into separately.
+
 The levels are derived from `ServiceRegistry` at run time, not from a list in the test, so a
 platform added tomorrow is measured tomorrow.
 
