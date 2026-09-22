@@ -59,7 +59,11 @@ async-test-lib:both:clean verify:clean build
 # the worktree is the default because it is the safe mode, not because a particular repo is
 # contended. A name here opts that repo back into `checkout -B`, and back into being skipped
 # whenever its tree is dirty.
-IN_PLACE_REPOS=""
+#
+# Overridable from the environment so the tests can still exercise the checkout path and its
+# dirty guard, which no consumer reaches by default any more. A seam, not a setting: nothing in
+# a real sweep sets it.
+IN_PLACE_REPOS="${VIBETAGS_SWEEP_IN_PLACE:-}"
 BRANCH="chore/vibetags-${VERSION}"
 LOGDIR="${TMPDIR:-/tmp}/vibetags-sweep"
 mkdir -p "$LOGDIR"

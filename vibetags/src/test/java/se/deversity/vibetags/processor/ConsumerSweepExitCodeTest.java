@@ -59,7 +59,10 @@ class ConsumerSweepExitCodeTest {
         dirtyRepoAt(root.resolve("blindbean"));
         dirtyRepoAt(root.resolve("codekarta"));
 
-        Result result = runSweep(root, "blindbean", "codekarta");
+        // Both on the checkout path, where a dirty tree is still refused. No consumer takes
+        // that path by default since #790, so the skip has to be asked for to be tested; what
+        // is under test here is the exit code of a sweep that measured nothing, not the guard.
+        Result result = runSweepInPlace(root, "blindbean codekarta", "blindbean", "codekarta");
 
         assertTrue(result.rows().stream().anyMatch(r -> r.contains("SKIP")),
             "precondition: both consumers should have been skipped for a dirty tree" + result);
@@ -121,6 +124,15 @@ class ConsumerSweepExitCodeTest {
 
     /** Runs the sweep over a synthetic consumer root and keeps its exit status. */
     private static Result runSweep(Path root, String... repos) throws IOException, InterruptedException {
+        return runSweepInPlace(root, null, repos);
+    }
+
+    /**
+     * Runs the sweep with {@code inPlace} naming the consumers to sweep by checkout rather than in
+     * a worktree, space separated, or {@code null} for the default (every consumer in a worktree).
+     */
+    private static Result runSweepInPlace(Path root, String inPlace, String... repos)
+            throws IOException, InterruptedException {
         String[] args = new String[repos.length + 1];
         args[0] = "9.9.9";
         System.arraycopy(repos, 0, args, 1, repos.length);
@@ -129,6 +141,9 @@ class ConsumerSweepExitCodeTest {
         pb.directory(REPO_ROOT.toFile());
         pb.redirectErrorStream(true);
         pb.environment().put("VIBETAGS_CONSUMER_ROOT", root.toAbsolutePath().toString());
+        if (inPlace != null) {
+            pb.environment().put("VIBETAGS_SWEEP_IN_PLACE", inPlace);
+        }
         // Keep the script's scratch directory inside the temp root: it rm -rf's its own worktree
         // path, which is shared with a real sweep run from the same machine.
         pb.environment().put("TMPDIR", root.toAbsolutePath().toString());

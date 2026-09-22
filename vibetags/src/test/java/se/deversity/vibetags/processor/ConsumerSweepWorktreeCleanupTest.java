@@ -59,8 +59,8 @@ class ConsumerSweepWorktreeCleanupTest {
     }
 
     @Test
-    @DisplayName("a non-sweep worktree holding the branch skips the repo and is preserved")
-    void nonSweepWorktreeHoldingBranchSkipsRepoAndIsPreserved() throws Exception {
+    @DisplayName("a non-sweep worktree holding the branch is preserved, and the repo is still measured")
+    void nonSweepWorktreeHoldingBranchIsPreservedAndRepoStillMeasured() throws Exception {
         Path script = REPO_ROOT.resolve("tools/consumer-sweep.sh");
         assumeTrue(Files.isRegularFile(script), "consumer-sweep.sh not reachable; skipping");
 
@@ -81,11 +81,19 @@ class ConsumerSweepWorktreeCleanupTest {
         String worktreeRow = rowFor(rows, "async-test-lib");
         String all = String.join(System.lineSeparator(), rows);
 
-        assertTrue(worktreeRow.contains("SKIP"),
-            "non-sweep worktree holding branch should cause SKIP, not ERROR or deletion. Row was: "
-                + worktreeRow + System.lineSeparator() + all);
+        // The property that matters, and the one #736 is about: somebody else's worktree is
+        // never touched. It held first by skipping the repo; it holds now by measuring it in a
+        // detached worktree instead, because skipping threw away the measurement over a branch
+        // name and left three of five consumers unswept (#790).
         assertTrue(Files.isDirectory(agentWt),
             "non-sweep worktree must never be deleted by the sweep: " + agentWt);
+        assertTrue(worktreeRow.contains("detached"),
+            "the branch is held by another worktree, so the sweep must measure this repo "
+                + "detached and say so, rather than skip it or error. Row was: "
+                + worktreeRow + System.lineSeparator() + all);
+        assertFalse(worktreeRow.contains("ERROR"),
+            "a branch held elsewhere is an expected state, not an error. Row was: "
+                + worktreeRow + System.lineSeparator() + all);
     }
 
     private static List<String> runSweep(Path root, Path tmpDir, String version, String repo)
