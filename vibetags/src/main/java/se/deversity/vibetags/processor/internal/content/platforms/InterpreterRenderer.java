@@ -2,7 +2,8 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.model.GuardrailModel;
-import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
+import se.deversity.vibetags.processor.internal.content.AnnotationDescriptor;
+import se.deversity.vibetags.processor.internal.content.AnnotationDescriptors;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -21,50 +22,11 @@ public final class InterpreterRenderer implements PlatformRenderer {
           .append("instructions: |\n");
 
         StringBuilder rules = new StringBuilder();
-        for (TaggedElement e : model.locked()) FormatterRegistry.locked().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.context()) FormatterRegistry.context().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.ignore()) FormatterRegistry.ignore().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.audit()) FormatterRegistry.audit().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.draft()) FormatterRegistry.draft().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.privacy()) FormatterRegistry.privacy().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.core()) FormatterRegistry.core().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.performance()) FormatterRegistry.performance().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.contract()) FormatterRegistry.contract().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.testDriven()) FormatterRegistry.testDriven().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.threadSafe()) FormatterRegistry.threadSafe().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.immutable()) FormatterRegistry.immutable().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.deprecated()) FormatterRegistry.deprecated().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.observability()) FormatterRegistry.observability().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.regulation()) FormatterRegistry.regulation().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.parallelTests()) FormatterRegistry.parallelTests().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.legacyBridge()) FormatterRegistry.legacyBridge().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.architecture()) FormatterRegistry.architecture().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.publicApi()) FormatterRegistry.publicApi().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.strictExceptions()) FormatterRegistry.strictExceptions().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.strictTypes()) FormatterRegistry.strictTypes().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.internationalized()) FormatterRegistry.internationalized().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.strictClasspath()) FormatterRegistry.strictClasspath().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.schemaSafe()) FormatterRegistry.schemaSafe().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.idempotent()) FormatterRegistry.idempotent().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.featureFlag()) FormatterRegistry.featureFlag().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.secure()) FormatterRegistry.secure().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.callersOnly()) FormatterRegistry.callersOnly().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.sandboxOnly()) FormatterRegistry.sandboxOnly().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.memoryBudget()) FormatterRegistry.memoryBudget().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.pure()) FormatterRegistry.pure().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.domainModel()) FormatterRegistry.domainModel().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.extensible()) FormatterRegistry.extensible().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.inputSanitized()) FormatterRegistry.inputSanitized().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.secureLogging()) FormatterRegistry.secureLogging().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.explain()) FormatterRegistry.explain().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.prototype()) FormatterRegistry.prototype().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.sunset()) FormatterRegistry.sunset().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.temporary()) FormatterRegistry.temporary().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.generated()) FormatterRegistry.generated().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.loadBearing()) FormatterRegistry.loadBearing().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.bannedApi()) FormatterRegistry.bannedApi().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.threadAffinity()) FormatterRegistry.threadAffinity().format(e, rules, Platform.INTERPRETER);
-        for (TaggedElement e : model.keepInSync()) FormatterRegistry.keepInSync().format(e, rules, Platform.INTERPRETER);
+        for (AnnotationDescriptor descriptor : AnnotationDescriptors.ALL) {
+            for (TaggedElement e : model.of(descriptor.type())) {
+                descriptor.formatter().format(e, rules, Platform.INTERPRETER);
+            }
+        }
 
         if (rules.length() > 0) {
             sb.append("  ## Project Guardrails (Generated by VibeTags)\n\n");

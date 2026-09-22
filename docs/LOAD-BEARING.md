@@ -161,19 +161,24 @@ Beyond what the generated section below describes:
 
 - `Platform` (enum) + `PlatformRendererRegistry` — one entry per output file; the registry maps each platform to its `PlatformRenderer` in `content/platforms/` (~30 renderers)
 - `AnnotationFormatter` + `FormatterRegistry` — one `AI*Formatter` per annotation in `content/annotations/`; renderers pull per-annotation text from here rather than formatting inline
+- `AnnotationDescriptor` + `AnnotationDescriptors.ALL` — one entry per annotation holding its fingerprint tag and member extractor, its formatter, and its granular stanza's title and body; `BuildFingerprint`, `GranularRenderer`, `AiderConventionsRenderer`, `InterpreterRenderer` and `GuardrailInstructionBlock` walk it instead of each spelling out 44 arms (#765)
 - `SectionCatalog` / `AnnotationSections` — shared driver that walks annotation buckets into titled sections
 - `GranularBody` / `GranularSections` — structured stanzas for granular rule files, so a file hoists the constant rule sentence a section shares instead of repeating it per element
 - `GranularContribution` — one compilation's share of one granular rule file (its globs and body), recorded in the module sidecar so a file several modules write is merged rather than replaced (#365)
 
 Adding a platform touches `Platform` + registry + a renderer; adding an annotation touches
-`GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry` + any bespoke renderers. Step-by-step
+`GuardrailAnnotations.ALL` + a formatter + `FormatterRegistry` + one `AnnotationDescriptors.ALL` entry
++ any bespoke renderers. Step-by-step
 checklists: the `add-platform` and `add-annotation` skills in `.claude/skills/`.
 
 `GuardrailAnnotations.ALL` is the single registry of collected annotation types. It fixes the order
 buckets are populated in and therefore the insertion order of every `LinkedHashSet` downstream —
 appending is safe, reordering changes generated files. It is deliberately **not** the order
-`BuildFingerprint` hashes in; that one is pinned separately, in that class, because changing it
-invalidates every consumer's cached fingerprint.
+`BuildFingerprint` hashes in; that one is pinned separately, as the order of
+`AnnotationDescriptors.ALL` (`internal/content`), because changing it invalidates every consumer's
+cached fingerprint. That table is also what `GranularRenderer`, `AiderConventionsRenderer`,
+`InterpreterRenderer` and `GuardrailInstructionBlock` walk, so it is append only for two reasons:
+`AnnotationDescriptorsTest` pins its tag order and `BuildFingerprintPinnedValueTest` the hash.
 
 ## The invariants, stated in full
 

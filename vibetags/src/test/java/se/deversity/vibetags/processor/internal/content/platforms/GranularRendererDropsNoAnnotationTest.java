@@ -20,10 +20,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * must: {@code .claude/rules/com-example-Foo.md} is the only place a scoped-rules project keeps the
  * detail, and a bucket the renderer forgets to walk is a guardrail that reaches nobody.
  *
- * <p>{@code renderGranular} is one 250-line method with forty-four hand-written bucket loops, and
+ * <p>{@code renderGranular} was one 250-line method with forty-four hand-written bucket loops, and
  * PIT could delete nineteen of those {@code appendToGranular} calls outright without a single test
  * failing. Deleting one is exactly the bug that had already happened four times in the aggregate
  * renderers — a loop that never got added when the annotation did.
+ *
+ * <p>It walks {@code AnnotationDescriptors.ALL} now (#765), so the loop cannot be forgotten, but an
+ * entry can: what this test catches today is an annotation with no descriptor, or a descriptor
+ * whose stanza answers nothing for its own element.
  *
  * <p>Derived from {@link GuardrailAnnotations#ALL}, so annotation 45 is covered on the day it lands
  * and the failure names it. The stanza's text is deliberately not pinned: wording is the renderer's
@@ -45,7 +49,7 @@ class GranularRendererDropsNoAnnotationTest {
         }
 
         assertEquals(List.of(), dropped,
-            "renderGranular walks a hand-written list of buckets and these are not in it, so an "
+            "renderGranular walks AnnotationDescriptors.ALL and these produced no stanza from it, so an "
                 + "element carrying one of them gets a rule file with no mention of it at all");
     }
 
