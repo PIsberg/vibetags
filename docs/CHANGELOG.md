@@ -49,6 +49,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   measured jar reported: main @ 802d1420 was installed as `1.3.7-SNAPSHOT` on purpose, so that
   building it did not overwrite the published 1.3.6 jar it has to be compared against.
 
+- **A no-op-processor column on `IncrementalRebuildStressTest`, because the saving was being
+  quoted in a unit that is three quarters javac's (#834).** That test reported what a rebuild of
+  unchanged sources saves against a `-proc:none` baseline, which switches off javac's whole
+  annotation-processing subsystem and charges all of it to VibeTags. `ProcessorTaxStressTest` has
+  said for two releases that this inflates the figure three to four times; the incremental table
+  was reading it anyway, and #834's headline, "a no-op rebuild still costs 96 % of a cold build",
+  is that reading.
+
+  A `NoOpProcessor` arm gives the base a change to this codebase can actually move. Two runs,
+  same session, on this branch:
+
+  | N | saved vs `-proc:none` | saved vs no-op processor | warm, VibeTags' own |
+  |---:|---:|---:|---:|
+  | 100 | 7.5 / 7.8 % | **27.9 / 29.7 %** | 4.8 / 4.6 MB |
+  | 500 | 4.2 / 4.1 % | **16.2 / 15.9 %** | 25.8 / 25.9 MB |
+  | 1000 | 3.7 / 3.7 % | **14.9 / 14.9 %** | 48.9 / 48.9 MB |
+
+  The fingerprint short-circuit already returns 15 % to 30 % of what VibeTags itself allocates,
+  not 3.6 %, and the whole remaining opportunity is the last column: 48.9 MB at N=1000, against
+  the 226 MB the diluted column shows still standing. That is what any proposal to decide earlier
+  than `generateFiles()` is bidding for, and it is a quarter of the size the issue implied.
+
+  It also corrects the correction. That test's own javadoc records a first draft asserting a 25 %
+  saving and calls the assumption behind it wrong; against the honest denominator 25 % was close.
+  What was wrong was the denominator as much as the guess, and the javadoc now says so.
+
+  The pair reproduces to 0.1 % where `ProcessorTaxStressTest`'s equivalent split moved 34 % across
+  two runs. The difference is that all three compiles here happen back-to-back inside one test
+  method over one fixture, so whatever the machine is doing applies to all of them. Worth copying
+  the next time a split has to reproduce.
+
 - **`AnnotationBreadthStressTest`, because every baseline in this repository measures six of the
   44 annotations.** `SyntheticClassGenerator` has rotated `@AIContext`, `@AILocked`, `@AIAudit`,
   `@AIIgnore`, `@AIPrivacy` and `@AIDraft` since 0.5.4, so 38 formatters never ran in any sweep

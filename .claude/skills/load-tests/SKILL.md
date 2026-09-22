@@ -183,9 +183,18 @@ sublinear per annotation on a class.
 **Every number here is a cold build.** Each sweep gives its N a fresh `@TempDir`, so
 `.vibetags-cache` is empty and the fingerprint has nothing to match: both short-circuits are
 structurally unreachable, and the build a developer actually waits for is unmeasured.
-`IncrementalRebuildStressTest` measures it. The answer is uncomfortable and worth knowing: the
-short-circuit fires and still leaves 96 % of the cost standing at N=1000, because the collector
-has walked every annotated element before a fingerprint can be computed.
+`IncrementalRebuildStressTest` measures it, against two denominators, and which one is quoted
+changes the answer by 4x. Against `-proc:none` the short-circuit saves 3.7 % at N=1000 and appears
+to leave 96 % standing. Against a no-op *processor*, which takes javac's own annotation-processing
+subsystem out of the base, the same saving is 14.9 %, and 28 % at N=100. Quote `SavedOwn`. The
+`-proc:none` column is about three quarters javac's, and issue #834 was opened on the diluted
+reading of it. The remaining opportunity is the `WarmOwn` column, 48.9 MB at N=1000, and that is
+what any proposal to decide earlier than `generateFiles()` is bidding for.
+
+Both `Own` columns reproduce to 0.1 % across two runs, where `ProcessorTaxStressTest`'s
+`vibetagsShare` moved 34 %. The difference is that all three compiles happen back-to-back inside
+one test method over one fixture, so the machine's mood applies to all of them. If a split like
+this has to reproduce, measure the arms adjacently rather than as separate test cases.
 
 **Write the engagement assertion before the threshold, and measure before choosing one.** That
 last test was first written asserting a 25 % saving, from the reasonable-sounding assumption that

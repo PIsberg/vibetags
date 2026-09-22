@@ -59,7 +59,36 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *       fingerprint from the cold round on disk.</li>
  *   <li><b>saved</b> — {@code cold - warm} as a share of the cold round's processor-attributable
  *       allocation. This is the number the fingerprint short-circuit exists to produce.</li>
+ *   <li><b>coldOwn / warmOwn / savedOwn</b> — the same three against a {@link NoOpProcessor}
+ *       control rather than {@code -proc:none}, so javac's own annotation-processing subsystem is
+ *       out of the denominator. See below.</li>
  * </ul>
+ *
+ * <h2>Two denominators, and only one of them is VibeTags'</h2>
+ *
+ * <p>The first draft of this table had one, and it is the diluted one. {@code -proc:none} switches
+ * off javac's entire annotation-processing machinery, which at N=1000 is about three quarters of
+ * the figure and which no change to this codebase can touch, so a saving reported against it reads
+ * far smaller than the saving actually is. Issue #834 was opened on that reading: "a no-op rebuild
+ * still costs 96 % of a cold build". Measured against the no-op control instead, on this branch:
+ *
+ * <pre>
+ *   N       saved (vs -proc:none)     savedOwn (vs no-op processor)     warmOwn
+ *   100     7.5 / 7.8 %               27.9 / 29.7 %                     4.8 / 4.6 MB
+ *   500     4.2 / 4.1 %               16.2 / 15.9 %                     25.8 / 25.9 MB
+ *   1000    3.7 / 3.7 %               14.9 / 14.9 %                     48.9 / 48.9 MB
+ * </pre>
+ *
+ * <p>Two runs, same session. So the short-circuit already returns 15 % to 30 % of what VibeTags
+ * itself allocates, not 3.6 %, and {@code warmOwn} is the whole remaining opportunity: 48.9 MB at
+ * N=1000, against the 226 MB the diluted column reports as still standing. Any proposal to decide
+ * earlier than {@code generateFiles()} is bidding for a share of that 48.9 MB.
+ *
+ * <p>The pair reproduces where {@code ProcessorTaxStressTest}'s equivalent does not: that class
+ * measured {@code vibetagsShare} 34 % apart across two runs, while {@code coldOwn} and
+ * {@code warmOwn} here agreed to 0.1 %. The difference is that all three compiles happen
+ * back-to-back inside one test method over one fixture, so whatever the machine is doing applies
+ * to all of them.
  *
  * <p>The generated files are compared byte for byte across the two rounds. A short-circuit that
  * is fast because it stopped writing the right content would otherwise read as an improvement.
@@ -93,10 +122,15 @@ class IncrementalRebuildStressTest {
      * cost. It is not: measured on main at 802d1420 the saving is 4.9 % at N=100, 3.3 % at N=500
      * and 3.6 % at N=1000 (recorded in {@code results/1.3.7-SNAPSHOT/incremental-rebuild.txt}),
      * because the collector has already walked every annotated element in the round before a
-     * fingerprint can be computed, and that walk is where the allocation is. A number that small
-     * cannot carry a regression gate — it is close enough to the run-to-run floor that a threshold
-     * either fails healthy builds or passes a broken short-circuit. The note is deterministic, so
-     * it is asserted instead, and the saving is reported rather than gated.
+     * fingerprint can be computed, and that walk is where the allocation is.
+     *
+     * <p>Against the no-op control the same saving is 15 % to 30 %, so 25 % was nearer the mark
+     * than the first correction gave it credit for; what was wrong was the denominator, not only
+     * the guess. Neither number can carry a gate. The diluted one is close enough to the
+     * run-to-run floor that a threshold either fails healthy builds or passes a broken
+     * short-circuit, and the honest one is a difference of two measurements, each with its own
+     * floor. The note is deterministic, so it is asserted instead, and both savings are reported
+     * rather than gated.
      */
     private static final String SHORT_CIRCUIT_NOTE = "inputs unchanged since last run";
 
@@ -117,10 +151,17 @@ class IncrementalRebuildStressTest {
         try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(RESULTS_FILE,
                 StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
             pw.println("VibeTags Incremental-Rebuild Stress Test Results");
-            pw.println("=".repeat(96));
-            pw.printf("%-10s %-16s %-16s %-12s %-12s %-14s%n",
-                "Classes", "ColdAlloc(KB)", "WarmAlloc(KB)", "Cold(ms)", "Warm(ms)", "Saved(%)");
-            pw.println("-".repeat(96));
+            pw.println("=".repeat(140));
+            pw.println("ColdAlloc/WarmAlloc/Saved are against a -proc:none baseline, so they carry"
+                + " javac's whole annotation-processing");
+            pw.println("subsystem as well as VibeTags'. ColdOwn/WarmOwn/SavedOwn are against a"
+                + " no-op processor, which is the only");
+            pw.println("base a change to this codebase can move (#834).");
+            pw.println();
+            pw.printf("%-10s %-16s %-16s %-12s %-12s %-14s %-16s %-16s %-14s%n",
+                "Classes", "ColdAlloc(KB)", "WarmAlloc(KB)", "Cold(ms)", "Warm(ms)", "Saved(%)",
+                "ColdOwn(KB)", "WarmOwn(KB)", "SavedOwn(%)");
+            pw.println("-".repeat(140));
         }
     }
 
@@ -143,6 +184,7 @@ class IncrementalRebuildStressTest {
         compile(sources, root(tempDir, "warmup"), tempDir, "classes-warmup");
 
         long baseline = compileWithoutProcessor(sources, tempDir);
+        long noOp = compileWithNoOpProcessor(sources, tempDir);
 
         Path projectRoot = root(tempDir, "project");
         Measurement cold = compile(sources, projectRoot, tempDir, "classes-cold");
@@ -154,8 +196,17 @@ class IncrementalRebuildStressTest {
         long warmOverhead = warm.allocatedBytes - baseline;
         double savedShare = coldOverhead <= 0 ? 0.0 : 100.0 * (coldOverhead - warmOverhead) / coldOverhead;
 
-        String line = String.format(Locale.ROOT, "%-10d %-16d %-16d %-12d %-12d %-14.1f",
-            n, coldOverhead / 1024, warmOverhead / 1024, cold.elapsedMillis, warm.elapsedMillis, savedShare);
+        // The same saving over the only base a change to this codebase can move. See
+        // compileWithNoOpProcessor: `overhead` carries javac's whole annotation-processing
+        // subsystem, and `own` does not.
+        long coldOwn = cold.allocatedBytes - noOp;
+        long warmOwn = warm.allocatedBytes - noOp;
+        double savedOwnShare = coldOwn <= 0 ? 0.0 : 100.0 * (coldOwn - warmOwn) / coldOwn;
+
+        String line = String.format(Locale.ROOT,
+            "%-10d %-16d %-16d %-12d %-12d %-14.1f %-16d %-16d %-14.1f",
+            n, coldOverhead / 1024, warmOverhead / 1024, cold.elapsedMillis, warm.elapsedMillis,
+            savedShare, coldOwn / 1024, warmOwn / 1024, savedOwnShare);
         System.out.println(line);
         append(line);
 
@@ -273,15 +324,39 @@ class IncrementalRebuildStressTest {
 
     /** The same compile with no annotation processing: javac's own share, subtracted from both rounds. */
     private static long compileWithoutProcessor(List<JavaFileObject> sources, Path tempDir) throws IOException {
+        return compileWithOptions(sources, tempDir, "classes-baseline", List.of("-proc:none"));
+    }
+
+    /**
+     * The same compile with annotation processing on and a processor that does nothing.
+     *
+     * <p>The reason this column exists is the reason {@code ProcessorTaxStressTest} exists, and it
+     * matters more here than anywhere else in the harness. Subtracting {@code -proc:none} charges
+     * VibeTags for javac's entire annotation-processing subsystem, which at N=1000 is about three
+     * quarters of the figure. A saving reported against that base is diluted by the part of the
+     * build no change to this codebase can touch, and {@code Saved(%)} was being read as if it
+     * were VibeTags' own (issue #834). {@link NoOpProcessor} is the honest denominator: the price
+     * of running <em>an</em> annotation processor, which the short-circuit cannot avoid because
+     * the processor still has to be invoked.
+     */
+    private static long compileWithNoOpProcessor(List<JavaFileObject> sources, Path tempDir)
+            throws IOException {
+        return compileWithOptions(sources, tempDir, "classes-noop",
+            List.of("-processor", NoOpProcessor.class.getName()));
+    }
+
+    private static long compileWithOptions(List<JavaFileObject> sources, Path tempDir,
+                                           String classesDirName, List<String> extra)
+            throws IOException {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        Path classesDir = tempDir.resolve("classes-baseline");
+        Path classesDir = tempDir.resolve(classesDirName);
         Files.createDirectories(classesDir);
-        List<String> options = List.of(
+        List<String> options = new ArrayList<>(List.of(
             "-source", "17",
             "-target", "17",
             "-d", classesDir.toString(),
-            "-classpath", System.getProperty("java.class.path"),
-            "-proc:none");
+            "-classpath", System.getProperty("java.class.path")));
+        options.addAll(extra);
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         System.gc();
         long tid = Thread.currentThread().getId();

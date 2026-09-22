@@ -89,6 +89,16 @@ implicit:
 - **Cold builds only.** Each N gets a fresh `@TempDir`, so the write cache and the build
   fingerprint have nothing to hit and both short-circuits are unreachable.
   See `IncrementalRebuildStressTest`.
+
+  That test now reports its saving against two denominators, and the difference is the whole
+  story. Against `-proc:none` a no-op rebuild saves 3.7 % at N=1000, which is where #834's
+  headline came from. Against a no-op *processor*, which takes javac's own annotation-processing
+  subsystem out of the base, the same saving is **14.9 %**, and at N=100 it is **28 %**. The
+  short-circuit was never returning 3.6 %; the number was being read in a unit that is about three
+  quarters javac's. The remaining opportunity is `WarmOwn`, 48.9 MB at N=1000, not the 226 MB the
+  diluted column shows still standing. Both pairs reproduce to 0.1 % across two runs, which
+  `ProcessorTaxStressTest`'s equivalent split does not, because all three compiles here happen
+  back-to-back in one test method over one fixture.
 - **Six annotations out of 44.** `SyntheticClassGenerator` rotates `@AIContext`, `@AILocked`,
   `@AIAudit`, `@AIIgnore`, `@AIPrivacy` and `@AIDraft`, so 38 formatters never ran in any sweep
   here. See `AnnotationBreadthStressTest`, which puts a second fixture beside that one rather than
