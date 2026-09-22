@@ -4,6 +4,8 @@ import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
 import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.PlatformDescriptor;
+import se.deversity.vibetags.processor.internal.content.PlatformDescriptors;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 
@@ -36,28 +38,18 @@ public final class IgnoreFileRenderer implements PlatformRenderer {
         return sb.toString();
     }
 
+    /**
+     * The tool name in the header comment of an exclusion file.
+     *
+     * <p>Declared by the platform entry rather than by a switch here (<a
+     * href="https://github.com/PIsberg/vibetags/issues/762">issue #762</a>). The switch had a
+     * {@code default} arm, so a new exclusion file whose label nobody added shipped a header that
+     * said "AI Platform" and no test could tell that from a deliberate one. The fallback stays for
+     * a platform that is not an exclusion file at all and should never reach here.
+     */
     private static String getPlatformSpecificName(Platform platform) {
-        switch (platform) {
-            case CURSOR_IGNORE:      return "Cursor";
-            case CLAUDE_IGNORE:      return "Claude";
-            case COPILOT_IGNORE:     return "Copilot";
-            case QWEN_IGNORE:        return "Qwen";
-            case CODY_IGNORE:        return "Cody";
-            case SUPERMAVEN_IGNORE:  return "Supermaven";
-            case DOUBLE_IGNORE:      return "Double.bot";
-            case CODEIUM_IGNORE:     return "Codeium";
-            case ROO_IGNORE:         return "Roo Code";
-            case CONTINUE_IGNORE:    return "Continue";
-            case AUGMENT_IGNORE:     return "Augment Code";
-            case DEVIN_IGNORE:       return "Devin Desktop";
-            case ANTIGRAVITY_IGNORE: return "Antigravity AI";
-            case AIDER_IGNORE:       return "Aider";
-            case REPOMIX_IGNORE:     return "Repomix";
-            case GITINGEST_IGNORE:   return "Gitingest";
-            case GPT_IGNORE:         return "GPT context packer";
-            case GHOSTCODER_IGNORE:  return "Ghostcoder";
-            case PIECES_IGNORE:      return "Pieces for Developers";
-            default:                 return "AI Platform";
-        }
+        PlatformDescriptor descriptor = PlatformDescriptors.byPlatform(platform);
+        String label = descriptor == null ? null : descriptor.ignoreLabel();
+        return label == null ? "AI Platform" : label;
     }
 }

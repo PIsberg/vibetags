@@ -51,6 +51,13 @@
     <Bug pattern="MS_EXPOSE_REP"/>
   </Match>
 
+  <!-- MS_EXPOSE_REP: PlatformDescriptors holds the same singleton renderers and hands them to
+       PlatformRendererRegistry, for the same reason (#762). -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.content.PlatformDescriptors"/>
+    <Bug pattern="MS_EXPOSE_REP"/>
+  </Match>
+
   <!-- EI_EXPOSE_REP2: GuardrailFileWriter stores a shared WriteCache reference by design.
        WriteCache is the shared per-build cache instance owned by the processor; the
        SynchronizedMessager swap in generateFiles() explicitly creates a second

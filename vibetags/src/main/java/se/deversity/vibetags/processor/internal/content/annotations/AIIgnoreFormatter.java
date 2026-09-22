@@ -7,6 +7,8 @@ import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
 import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.PlatformDescriptor;
+import se.deversity.vibetags.processor.internal.content.PlatformDescriptors;
 
 /**
  * Formats @AIIgnore annotations for all platforms.
@@ -43,6 +45,16 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
         String reason = ignore == null || ignore.reason() == null ? "" : ignore.reason();
         boolean explained = !reason.isBlank() && !reason.equals(DEFAULT_REASON);
         String suffix = explained ? " - " + reason : "";
+
+        // An exclusion list takes bare .gitignore globs and nothing else. That was twenty-two
+        // case labels below, with a silent default arm: a new exclusion file whose label nobody
+        // added got a header and no globs, which the add-platform skill had to warn about in prose
+        // (issue #762). The platform entry declares it now, so there is no label to forget.
+        PlatformDescriptor descriptor = PlatformDescriptors.byPlatform(platform);
+        if (descriptor != null && descriptor.globSyntax()) {
+            sb.append(globPattern);
+            return;
+        }
 
         switch (platform) {
             case CURSOR:
@@ -92,33 +104,6 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case INTERPRETER:
                 sb.append("- `").append(className).append("` (excluded): treat as non-existent")
                   .append(suffix).append('\n');
-                break;
-            // Ignore/exclusion files get standard globs:
-            case AI_EXCLUDE:
-            case CURSOR_IGNORE:
-            case CLAUDE_IGNORE:
-            case COPILOT_IGNORE:
-            case QWEN_IGNORE:
-            case CODY_IGNORE:
-            case SUPERMAVEN_IGNORE:
-            case DOUBLE_IGNORE:
-            case CODEIUM_IGNORE:
-            case ROO_IGNORE:
-            case CONTINUE_IGNORE:
-            case AUGMENT_IGNORE:
-            case DEVIN_IGNORE:
-            case ANTIGRAVITY_IGNORE:
-            case AIDER_IGNORE:
-            case REPOMIX_IGNORE:
-            case GITINGEST_IGNORE:
-            case GPT_IGNORE:
-            case GHOSTCODER_IGNORE:
-            case PIECES_IGNORE:
-            // greptile.json's ignorePatterns is a .gitignore-syntax list inside a JSON string
-            case GREPTILE:
-            // ... and so is .greptile/config.json's (#651)
-            case GREPTILE_CONFIG:
-                sb.append(globPattern);
                 break;
             default:
                 break;

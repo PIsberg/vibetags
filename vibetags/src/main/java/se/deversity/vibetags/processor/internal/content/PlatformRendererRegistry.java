@@ -1,46 +1,12 @@
 package se.deversity.vibetags.processor.internal.content;
 
 import org.jspecify.annotations.Nullable;
-import se.deversity.vibetags.processor.internal.content.platforms.*;
+import se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer;
 
 /**
  * A central registry for retrieving the stateless PlatformRenderer for any given Platform.
  */
 public final class PlatformRendererRegistry {
-
-    private static final CursorRenderer CURSOR_RENDERER = new CursorRenderer();
-    private static final ClaudeRenderer CLAUDE_RENDERER = new ClaudeRenderer();
-    private static final AiExcludeRenderer AI_EXCLUDE_RENDERER = new AiExcludeRenderer();
-    private static final CodexRenderer CODEX_RENDERER = new CodexRenderer();
-    private static final CopilotRenderer COPILOT_RENDERER = new CopilotRenderer();
-    private static final QwenRenderer QWEN_RENDERER = new QwenRenderer();
-    private static final GeminiRenderer GEMINI_RENDERER = new GeminiRenderer();
-    private static final LlmsRenderer LLMS_RENDERER = new LlmsRenderer();
-    private static final AiderConventionsRenderer AIDER_CONVENTIONS_RENDERER = new AiderConventionsRenderer();
-    private static final IgnoreFileRenderer IGNORE_FILE_RENDERER = new IgnoreFileRenderer();
-    private static final WindsurfRenderer WINDSURF_RENDERER = new WindsurfRenderer();
-    private static final ZedRenderer ZED_RENDERER = new ZedRenderer();
-    private static final CodyRenderer CODY_RENDERER = new CodyRenderer();
-    private static final MentatRenderer MENTAT_RENDERER = new MentatRenderer();
-    private static final SweepRenderer SWEEP_RENDERER = new SweepRenderer();
-    private static final PlandexRenderer PLANDEX_RENDERER = new PlandexRenderer();
-    private static final InterpreterRenderer INTERPRETER_RENDERER = new InterpreterRenderer();
-    private static final ClineSafetyRenderer CLINE_SAFETY_RENDERER = new ClineSafetyRenderer();
-    private static final JunieRenderer JUNIE_RENDERER = new JunieRenderer();
-    private static final ClaudeLocalRenderer CLAUDE_LOCAL_RENDERER = new ClaudeLocalRenderer();
-    private static final ClaudeSkillRenderer CLAUDE_SKILL_RENDERER = new ClaudeSkillRenderer();
-    private static final CodeRabbitRenderer CODERABBIT_RENDERER = new CodeRabbitRenderer();
-    private static final PrAgentRenderer PR_AGENT_RENDERER = new PrAgentRenderer();
-    private static final EllipsisRenderer ELLIPSIS_RENDERER = new EllipsisRenderer();
-    private static final RooModesRenderer ROO_MODES_RENDERER = new RooModesRenderer();
-    private static final LocksReportRenderer LOCKS_REPORT_RENDERER = new LocksReportRenderer();
-    private static final GranularRenderer GRANULAR_RENDERER = new GranularRenderer();
-    private static final GeminiStyleguideRenderer GEMINI_STYLEGUIDE_RENDERER = new GeminiStyleguideRenderer();
-    private static final AiderConfRenderer AIDER_CONF_RENDERER = new AiderConfRenderer();
-    private static final GreptileRenderer GREPTILE_RENDERER = new GreptileRenderer();
-    private static final GreptileRulesRenderer GREPTILE_RULES_RENDERER = new GreptileRulesRenderer();
-    private static final GreptileConfigRenderer GREPTILE_CONFIG_RENDERER = new GreptileConfigRenderer();
-    private static final RoutedTestingRenderer TESTING_RENDERER = new RoutedTestingRenderer();
 
     private PlatformRendererRegistry() {}
 
@@ -105,136 +71,22 @@ public final class PlatformRendererRegistry {
         return renderer == null ? null : renderer.wholeFileMerge();
     }
 
+    /**
+     * The renderer declared for this platform in {@link PlatformDescriptors#ALL}, or {@code null}
+     * when the platform has none.
+     *
+     * <p>This was a switch with one label per platform and a {@code default} arm that existed
+     * because {@code GEMINI_GRANULAR} had been forgotten once (<a
+     * href="https://github.com/PIsberg/vibetags/issues/762">issue #762</a>). A forgotten label did
+     * not fail to compile and did not fail a test: it threw only on the path that filters the key
+     * out first. The table has no default arm to fall through to.
+     */
     private static @Nullable PlatformRenderer findRenderer(Platform platform) {
-        switch (platform) {
-            case CURSOR:
-            // Five free-form Markdown files with no schema of their own take .cursorrules' output
-            // as is. They were five classes that each held a private CursorRenderer and forwarded
-            // to it (#764); a fall-through label says the same thing without a class to keep in
-            // step. CursorRenderer formats as CURSOR whatever platform it is handed, and passes
-            // the real one to the scoped-rules index, where none of these five has a governing
-            // directory, so they never collapse.
-            //   CLINE    the legacy single .clinerules file.
-            //   FIREBASE .idx/airules.md.
-            //   VOID     .void/rules.md.
-            //   GOOSE    .goosehints. goose also reads AGENTS.md, which VibeTags writes only as the
-            //            sole AI config file (invariant 4), so this is the file that reaches a goose
-            //            user whose project also uses Claude or Cursor (#610).
-            //   REPLIT   replit.md, root only. The Replit Agent writes to this file itself, so
-            //            VibeTags is not its only author. That is survivable only because of the
-            //            marker contract: the region between the HTML-comment markers is replaced
-            //            and whatever the Agent adds around it is kept. The failure mode is a stale
-            //            block between two compiles, not lost content.
-            case CLINE:
-            case FIREBASE:
-            case VOID:
-            case GOOSE:
-            case REPLIT:
-                return CURSOR_RENDERER;
-            case CLAUDE:
-                return CLAUDE_RENDERER;
-            case AI_EXCLUDE:
-                return AI_EXCLUDE_RENDERER;
-            case CODEX:
-            case CODEX_CONFIG:
-            case CODEX_RULES:
-                return CODEX_RENDERER;
-            case COPILOT:
-                return COPILOT_RENDERER;
-            case QWEN:
-            case QWEN_REFACTOR:
-                return QWEN_RENDERER;
-            case GEMINI:
-            case GEMINI_MD:
-                return GEMINI_RENDERER;
-            case LLMS:
-            case LLMS_FULL:
-                return LLMS_RENDERER;
-            case AIDER_CONVENTIONS:
-                return AIDER_CONVENTIONS_RENDERER;
-            case AIDER_CONF:
-                return AIDER_CONF_RENDERER;
-            case GEMINI_STYLEGUIDE:
-                return GEMINI_STYLEGUIDE_RENDERER;
-            case GREPTILE:
-                return GREPTILE_RENDERER;
-            case GREPTILE_RULES:
-                return GREPTILE_RULES_RENDERER;
-            case GREPTILE_CONFIG:
-                return GREPTILE_CONFIG_RENDERER;
-            case AIDER_IGNORE:
-            case CURSOR_IGNORE:
-            case CLAUDE_IGNORE:
-            case COPILOT_IGNORE:
-            case QWEN_IGNORE:
-            case CODY_IGNORE:
-            case SUPERMAVEN_IGNORE:
-            case DOUBLE_IGNORE:
-            case CODEIUM_IGNORE:
-            case ROO_IGNORE:
-            case CONTINUE_IGNORE:
-            case AUGMENT_IGNORE:
-            case DEVIN_IGNORE:
-            case ANTIGRAVITY_IGNORE:
-            case REPOMIX_IGNORE:
-            case GITINGEST_IGNORE:
-            case GPT_IGNORE:
-            case GHOSTCODER_IGNORE:
-            case PIECES_IGNORE:
-                return IGNORE_FILE_RENDERER;
-            case WINDSURF:
-            case WINDSURF_SAFETY:
-            case DEVIN_SAFETY:
-                return WINDSURF_RENDERER;
-            case ZED:
-                return ZED_RENDERER;
-            case CODY:
-                return CODY_RENDERER;
-            case MENTAT:
-                return MENTAT_RENDERER;
-            case SWEEP:
-                return SWEEP_RENDERER;
-            case PLANDEX:
-                return PLANDEX_RENDERER;
-            case INTERPRETER:
-                return INTERPRETER_RENDERER;
-            case CLINE_SAFETY:
-                return CLINE_SAFETY_RENDERER;
-            case JUNIE:
-            case JUNIE_AGENTS:
-                return JUNIE_RENDERER;
-            case CLAUDE_LOCAL:
-                return CLAUDE_LOCAL_RENDERER;
-            case CLAUDE_SKILL:
-            case AGENTS_SKILL:
-                return CLAUDE_SKILL_RENDERER;
-            case CODERABBIT:
-                return CODERABBIT_RENDERER;
-            case PR_AGENT:
-                return PR_AGENT_RENDERER;
-            case ELLIPSIS:
-                return ELLIPSIS_RENDERER;
-            case ROO_MODES:
-                return ROO_MODES_RENDERER;
-            case LOCKS_REPORT:
-                return LOCKS_REPORT_RENDERER;
-            case TESTING:
-                return TESTING_RENDERER;
-            default:
-                // Every *_GRANULAR service shares one renderer, and this used to be thirteen case
-                // labels written by hand — of which only twelve were ever written. GEMINI_GRANULAR
-                // was missing, so getRenderer threw "Unsupported platform" for it. Nothing failed,
-                // because GuardrailContentBuilder filters *_granular keys out before asking, which
-                // is exactly what a latent crash looks like. Deriving it from the platform's own
-                // name means the fourteenth constant needs no edit here.
-                //
-                // The suffix is already load-bearing elsewhere (the content builder routes on it),
-                // so this reads the same convention rather than inventing one.
-                return platform.name().endsWith("_GRANULAR") ? GRANULAR_RENDERER : null;
-        }
+        PlatformDescriptor descriptor = PlatformDescriptors.byPlatform(platform);
+        return descriptor == null ? null : descriptor.renderer();
     }
 
     public static GranularRenderer granularRenderer() {
-        return GRANULAR_RENDERER;
+        return PlatformDescriptors.granularRenderer();
     }
 }
