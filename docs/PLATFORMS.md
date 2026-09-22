@@ -713,3 +713,31 @@ another file already covers:
 Counts are GitHub public code search, 2026-09-12. The pattern is the one #611 recorded: every row
 that was checked against the vendor rather than an aggregator turned up something the aggregator
 did not say.
+
+### Bend's `LAWS.bend` is not an instruction file, and is refused
+
+[Bend](https://github.com/bendlang/bend) was requested as a platform, as `bend/LAWS.md`
+([#760](https://github.com/PIsberg/vibetags/issues/760)). No such file exists. Bend's file is
+`LAWS.bend`, and it is not an instruction file at all: it is Bend source, stating properties the
+compiler then demands a matching proof for in `PROOF.bend`. The README's own example is
+`law you_cant_win: for moves: List<Game.Move> board = Game.replay(Game.start(), moves)
+{Game.is_won(board) == False{} : Bool}` — a dependent-typed proposition over the project's own
+types, not prose an agent reads.
+
+Three things follow, and any one of them is enough.
+
+- **There is nothing to render from.** VibeTags turns `@AI*` attributes on Java elements into
+  sentences. A law quantifies over Bend types, and a Bend project has no annotated Java for those
+  types to come from. The two never meet in one compilation.
+- **A law VibeTags could write would break the build.** `bend PROOF.bend` is what the README tells
+  the agent to run before committing, and it fails on a law with no proof. VibeTags cannot produce
+  proofs, so emitting laws would hand the consumer a red build — the opposite of what every other
+  output does.
+- **Bend already asks for the file VibeTags writes.** Its integration instruction is a paragraph in
+  `AGENTS.md`: "When using Bend: - run `bend guide` to learn it - use `LAWS.bend` to keep important
+  rules - run `bend PROOF.bend` before committing - parallelize the code whenever possible."
+  `AGENTS.md` is the `codex` service, already generated, under the sole-file rule of invariant 4.
+
+Read from the vendor's README on 2026-09-22, not run. The pattern is the one this document keeps
+recording: the request named a path, the path did not exist, and the tool the request named turned
+out to want a file VibeTags already writes.
