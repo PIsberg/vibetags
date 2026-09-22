@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
 import se.deversity.vibetags.processor.internal.content.Platform;
+import se.deversity.vibetags.processor.internal.content.PlatformDescriptor;
+import se.deversity.vibetags.processor.internal.content.PlatformDescriptors;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.internal.content.TransitiveSection;
@@ -144,27 +146,41 @@ public final class GuardrailContentBuilder {
             }
         }
 
-        // Implicit platform activations: the Codex sidecar, the one documented exception to invariant 1
-        if (activeServices.contains("codex")) {
-            putRendered(contentByService, "codex_config", Platform.CODEX_CONFIG, views.of("codex_config"), context);
-            putRendered(contentByService, "codex_rules", Platform.CODEX_RULES, views.of("codex_rules"), context);
-        }
-        // Qwen has no implicit outputs. .qwen/settings.json is the user's Qwen Code settings file and is
-        // never written (#650); .qwen/commands/refactor.md is an ordinary opt-in, rendered by the loop
-        // above only when the file exists (#655). Cody is an ordinary opt-in too.
-        // Cline's .clinerules/ directory has no aggregate beside it, because its aggregate is the
-        // same path, so the always-loaded safety tier gets a file inside the directory (issue #648).
-        if (activeServices.contains("cline_granular")) {
-            putRendered(contentByService, "cline_safety", Platform.CLINE_SAFETY, model, context);
-        }
-        // Devin Desktop's rules directories load every rule file on a glob match, so each gets an
-        // always-on safety file of its own (issue #684). Rendered whenever the directory is active;
-        // the renderer decides whether the tier is in it or already loaded from another file.
-        if (activeServices.contains("windsurf_granular")) {
-            putRendered(contentByService, "windsurf_safety", Platform.WINDSURF_SAFETY, model, context);
-        }
-        if (activeServices.contains("devin_granular")) {
-            putRendered(contentByService, "devin_safety", Platform.DEVIN_SAFETY, model, context);
+        // Implicit platform activations, the documented exceptions to invariant 1: an output whose
+        // own presence on disk is not the opt-in, because another service's is. The descriptor
+        // table names the parent (PlatformDescriptor.implicitParent), ServiceRegistry.optInKeys()
+        // is derived from it, and this walks the same field rather than repeating it as one `if`
+        // per child (issue #830). ImplicitActivationFanOutTest drives this loop off the table, so a
+        // sixth entry is rendered the day it is added rather than silently written by nobody.
+        //
+        // The two Codex sidecars are the file-per-tool exception (.codex/config.toml and
+        // .codex/rules/vibetags.rules). The three *_safety files are the rules-directory exception:
+        // a directory whose aggregate is the same path has nowhere else to put the always-loaded
+        // safety tier, so it gets a file inside the directory (issues #648, #684), and the renderer
+        // decides whether the tier belongs there or is already loaded from another file.
+        //
+        // Qwen has no implicit outputs. .qwen/settings.json is the user's Qwen Code settings file
+        // and is never written (#650); .qwen/commands/refactor.md is an ordinary opt-in, rendered
+        // by the loop above only when the file exists (#655). Cody is an ordinary opt-in too.
+        //
+        // views.of for everyone, where the Codex pair asked the router before and the three safety
+        // files were handed the whole model. That is the same thing for them: routesTestGuardrails
+        // answers false for every *_safety key, so views.of gives back the whole model, and it
+        // answers false for a reason rather than by accident, since a safety file carries the six
+        // always-loaded buckets and those are exactly the guardrails that never move to TESTING.md.
+        // (codex_rules does route, and routed before this too.) Asking the router is also what
+        // keeps a future child's answer in ServiceRoutingContractTest, where every key is decided
+        // by hand, rather than in an `if` written here. Pinned by the last case in
+        // ImplicitActivationFanOutTest, which is where the first draft of this comment, claiming
+        // no implicit child routes at all, was caught being wrong about codex_rules.
+        for (PlatformDescriptor child : PlatformDescriptors.ALL) {
+            String parent = child.implicitParent();
+            Platform platform = child.platform();
+            if (parent == null || platform == null || !activeServices.contains(parent)) {
+                continue;
+            }
+            putRendered(contentByService, child.serviceKey(), platform,
+                views.of(child.serviceKey()), context);
         }
 
         // Special case for AIExclude platform, which has strict activation criteria
