@@ -156,14 +156,17 @@ def main() -> None:
 
     # The noise floor belongs on the chart, not only in the commit message: without it a reader
     # cannot tell which of these bars means anything.
-    ax2.text(
-        0.5, -0.30,
+    # fig.text, not ax2.text with a negative axes offset: that put the line below the figure
+    # canvas, so every committed comparison PNG shipped without the caption its own comment calls
+    # load-bearing. Measured on the 1.0.4 and 1.0.0-RC9 plots — 107 px of blank below the last ink.
+    fig.text(
+        0.5, 0.015,
         "Repeat runs of the same build agree to within 0.6 % at these N — "
         "bars under ~1 % are noise, not change.",
-        transform=ax2.transAxes, ha="center", fontsize=8, style="italic", color="#555555",
+        ha="center", fontsize=8, style="italic", color="#555555",
     )
 
-    fig.tight_layout(rect=(0, 0.04, 1, 0.94))
+    fig.tight_layout(rect=(0, 0.045, 1, 0.94))
     out = RESULTS / "_plots" / f"alloc-release-comparison-{args.version}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=140)

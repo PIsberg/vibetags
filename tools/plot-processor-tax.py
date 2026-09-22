@@ -102,12 +102,12 @@ def main() -> None:
                   f"VibeTags' real cost", fontsize=10)
     ax2.grid(True, axis="y", linestyle="--", alpha=0.35, zorder=0)
     ax2.set_ylim(0, reported * 1.25)
-    ax2.text(0.5, -0.22,
+    fig.text(0.5, 0.015,
              "The difference is javac's annotation-processing subsystem, which no change to this "
              "codebase can move.",
-             transform=ax2.transAxes, ha="center", fontsize=8, style="italic", color="#555555")
+             ha="center", fontsize=8, style="italic", color="#555555")
 
-    fig.tight_layout(rect=(0, 0.04, 1, 0.92))
+    fig.tight_layout(rect=(0, 0.045, 1, 0.92))
     out = RESULTS / "_plots" / f"processor-tax-{args.version}.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=140)

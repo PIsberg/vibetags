@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -105,8 +106,46 @@ public class ProcessorHotPathBenchmark {
         Files.createDirectories(allPresentRoot.resolve(".codex").resolve("rules"));
         Files.createDirectories(allPresentRoot.resolve(".github"));
         Files.createDirectories(allPresentRoot.resolve(".qwen").resolve("commands"));
-        for (Map.Entry<String, Path> e : AIGuardrailProcessor.buildServiceFileMap(allPresentRoot).entrySet()) {
-            Path p = e.getValue();
+        createEveryServiceEntry(AIGuardrailProcessor.buildServiceFileMap(allPresentRoot));
+
+        emptyRoot = tempDir.resolve("empty");
+        Files.createDirectories(emptyRoot);
+    }
+
+    /**
+     * Creates every entry of the service map on disk, as a directory where the map says a path is
+     * one and as an empty file otherwise.
+     *
+     * <p>This used to be a one-line loop creating every path as a file, and it threw
+     * {@code FileAlreadyExistsException} from the moment a service file was added <em>inside</em>
+     * another service's directory: {@code .windsurf/rules} is a scoped-rules directory and
+     * {@code .windsurf/rules/+vibetags-safety.md} is a file in it (issue #684, shipped in 1.3.5).
+     * Whichever came first in map order won, and creating the other threw. The whole setup is
+     * {@code @Setup(Level.Trial)}, so every benchmark in this class failed, and
+     * {@code java -jar benchmarks.jar -rf json} exits 0 having written an empty JSON array —
+     * which is how the class stayed broken with nothing red anywhere.
+     *
+     * <p>Which paths are directories is derived from the map rather than from
+     * {@code ServiceRegistry.writesDirectory}: any path that is a strict ancestor of another path
+     * in the map has to be a directory, and that is true of every processor version this harness
+     * is pointed at, including the ones whose jars have no such method.
+     */
+    private static void createEveryServiceEntry(Map<String, Path> serviceFiles) throws IOException {
+        Set<Path> directories = new HashSet<>();
+        for (Path candidate : serviceFiles.values()) {
+            for (Path other : serviceFiles.values()) {
+                if (!other.equals(candidate) && other.startsWith(candidate)) {
+                    directories.add(candidate);
+                }
+            }
+        }
+        for (Path directory : directories) {
+            Files.createDirectories(directory);
+        }
+        for (Path p : serviceFiles.values()) {
+            if (directories.contains(p)) {
+                continue;
+            }
             // getParent() is null for a path with no parent, and createDirectories(null) throws
             // NullPointerException rather than saying which service file caused it. Every entry in
             // this map is resolved against allPresentRoot today, so the branch is not reachable
@@ -116,11 +155,10 @@ public class ProcessorHotPathBenchmark {
             if (parent != null) {
                 Files.createDirectories(parent);
             }
-            if (!Files.exists(p)) Files.createFile(p);
+            if (!Files.exists(p)) {
+                Files.createFile(p);
+            }
         }
-
-        emptyRoot = tempDir.resolve("empty");
-        Files.createDirectories(emptyRoot);
     }
 
     @TearDown(Level.Trial)

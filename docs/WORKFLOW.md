@@ -106,8 +106,8 @@ Single JDK 21 leg, `needs: build-maven`. Steps:
 1. **Harden runner**, **checkout**, **set up JDK 21** (Maven cache).
 2. **Install VibeTags annotations** — `cd vibetags-annotations && mvn install -B`.
 3. **Install VibeTags processor** — `cd vibetags && mvn install -DskipTests -B`.
-3. **Run stress tests** — `cd load-tests && mvn test -B -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest" -Dstress.max.classes=500`. Two scenarios: scaling annotation volume up to 500 classes, and concurrent builds.
-4. **Upload stress-test results** — `if: always()`, so artifacts upload even on failure. Glob `load-tests/target/stress-results-*.txt`, retained as `stress-results-${{ github.run_id }}`.
+3. **Run the load-test regression gates** — `cd load-tests && mvn verify -B -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest,TestingMdRoutingStressTest,PlatformBreadthStressTest,IncrementalRebuildStressTest" -Dstress.max.classes=500`, against the processor this run built rather than the pom's `<processor.version>` pin. `verify`, not `test`, because PMD, CPD and SpotBugs bind to that phase. These are gates, not measurements: each asserts that the feature it covers engaged (routing routes, scoped rules collapse the aggregate, the fingerprint short-circuit fires, enforcement-off still saves), and nothing here compares a timing against a baseline. Measurement lives in `load-tests/results/`, captured by hand.
+4. **Upload stress-test results** — `if: always()`, so artifacts upload even on failure. Globs `load-tests/target/{stress-results,testing-md-routing,platform-breadth,incremental-rebuild}-*.txt`, retained as `stress-results-${{ github.run_id }}`.
 
 ### Job: `build-gradle`
 

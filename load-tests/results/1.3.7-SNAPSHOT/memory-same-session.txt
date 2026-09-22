@@ -1,0 +1,137 @@
+Same-session allocation comparison: 1.2.5 through main
+=======================================================
+
+Why this file exists
+--------------------
+The per-release `memory.txt` baselines were each captured on the day that release was cut, and
+they are not comparable to one another at the precision this table needs. The 1.0.0-RC9 capture
+proved it: reading two cross-day baselines against each other suggested a 4.4 % regression that
+turned out to be the *baseline* column moving, not the processor. So every column below was
+measured back-to-back in one session, same JDK, same machine, same working set, switching only
+`-Dprocessor.version`.
+
+Earlier files of this name held two or three columns, enough to answer "did this release move".
+This one holds eleven, because nothing had asked the other question, where the curve moved over
+a run of releases, and the answer turned out to be a step nobody had noticed.
+
+What is being compared
+----------------------
+Ten published releases from the local repository, and main.
+
+The last column is `1.3.7-SNAPSHOT`: main @ 802d1420, which is v1.3.6 plus the unreleased work
+(the `PlatformDescriptors` and `AnnotationDescriptors` table refactors, #762 and #765). It was
+built under that revision on purpose, so that installing it did not overwrite the published
+1.3.6 jar in the local repository, which is one of the columns it has to be compared against.
+
+Every column resolved the annotations at `vibetags-annotations:jar:1.3.6`, because the harness
+declares them at the parent's `${revision}` independently of `-Dprocessor.version`. The
+annotations are 44 SOURCE-retention `@interface` declarations with no code in them, so this does
+not affect what is measured, but each column is that release's *processor*, not that release's
+exact pairing.
+
+Method
+------
+    cd load-tests
+    for V in 1.2.5 1.2.6 1.2.7 1.3.0 1.3.1 1.3.2 1.3.3 1.3.4 1.3.5 1.3.6 1.3.7-SNAPSHOT; do
+      mvn test -Dprocessor.version=$V -Dtest=MemoryVolumeStressTest -Dstress.max.classes=1000
+    done
+
+Version resolution was verified per column rather than assumed, with
+`mvn dependency:tree -Dprocessor.version=<V> | grep vibetags-processor:jar`.
+
+Environment
+-----------
+JDK:    java version "26" 2026-03-17 (build 26+35-2893), HotSpot 64-Bit Server VM
+OS:     Windows 11 (MINGW64_NT-10.0-26200), x86-64
+CPU:    12th Gen Intel(R) Core(TM) i7-1260P, developer workstation, NOT quiescent
+Date:   2026-09-22
+Commit: main @ 802d1420, captured from branch test/load-test-coverage-and-comparison
+
+OverheadAlloc (KB) = processorAlloc - baselineAlloc, via ThreadMXBean
+---------------------------------------------------------------------
+   N              1.2.5           1.2.6           1.2.7           1.3.0           1.3.1           1.3.2           1.3.3           1.3.4           1.3.5           1.3.6  1.3.7-SNAPSHOT
+   10              3121            3123            3125            3120            3153            3368            3374            3369            3846            3969            3982
+  100             23019           23108           23096           23061           23270           24639           24645           24614           24778           24889           24887
+  500            111925          112069          112205          112040          112884          120157          120015          119853          118705          118868          118945
+ 1000            222093          221781          222535          222164          223818          236925          237173          236816          233831          233715          233998
+
+BaselineAlloc (KB) = the same compile with -proc:none, the control column
+-------------------------------------------------------------------------
+   N              1.2.5           1.2.6           1.2.7           1.3.0           1.3.1           1.3.2           1.3.3           1.3.4           1.3.5           1.3.6  1.3.7-SNAPSHOT
+   10             11254           11255           11252           11254           11257           11261           11260           11260           11269           11265           11272
+  100             23183           23178           23162           23155           23185           23204           23198           23197           23183           23146           23176
+  500             75943           76001           75905           75930           75985           76032           76021           75969           75938           75781           75851
+ 1000            141401          141229          141367          141495          141395          141627          141349          141407          141469          141375          141547
+
+PeakHeap (MB)
+-------------
+   N              1.2.5           1.2.6           1.2.7           1.3.0           1.3.1           1.3.2           1.3.3           1.3.4           1.3.5           1.3.6  1.3.7-SNAPSHOT
+   10                22              22              22              22              22              22              21              22              22              22              26
+  100                36              36              41              32              36              32              32              32              37              36              36
+  500                87              87              83              88              88              87              83              86              83              87              87
+ 1000               147             148             148             171             148             147             148             147             147             147             148
+
+Read the baseline column first
+------------------------------
+It is the control, and it is the reason anything below can be believed. Across eleven runs of the
+identical `-proc:none` compile it moves from 141229 to 141627 KB at N=1000: a spread of 0.28 %.
+The machine did not drift during the session, so a move in the overhead row that is several times
+that is the processor and not the afternoon.
+
+What the numbers say
+--------------------
+* **1.3.2 costs about 6 % more allocation than 1.3.1, and it is real.** At N=1000, 223818 to
+  236925 KB (+5.9 %, +12.8 MB). It reproduces at every size measured (+5.9 % at N=100, +6.4 % at
+  N=500), which is the signature of a per-element cost rather than a one-off. 1.3.3 and 1.3.4 hold
+  the new level.
+
+  Bisected to a commit rather than guessed from the changelog, by building each of the five
+  processor-source commits between v1.3.1 and v1.3.2 in its own worktree and sweeping each in one
+  session:
+
+      v1.3.1     226533 KB      (this session's control, baseline 144387)
+      cd09d259   225867 KB      correctness hunt, five bugs
+      bd348a95   226410 KB      granular heading through the cross-module merge
+      56e7e769   225419 KB      per-module write-cache fingerprints
+      dac1ad34   226071 KB      read a sidecar written before the trailer existed
+      f9b0e83f   237912 KB      name the sidecars a round could not read  <-- +5.2 %
+
+  The first four sit inside a 0.5 % band; the step is entirely in f9b0e83f (#595). The mechanism
+  is `ModuleSidecar.unreadableSidecarNames`, which `generateFiles` calls on every build and which
+  `load()`s every sidecar on disk a second time, to report the ones it could not read. In an
+  ordinary build it reads all of them, finds every one readable, and returns an empty list. Its
+  javadoc says the re-read is deliberate and that "a directory listing of a handful of files costs
+  nothing next to the compile it runs inside". For a 1000-class module that second parse is
+  11.6 MB, and this is the first measurement anyone has taken of it.
+
+  Note the absolute numbers in the bisect table are 1.5 % above the eleven-column table's: it is a
+  different session with a different baseline column (144.3 MB against 141.4 MB). Only the
+  comparisons within each table hold.
+
+* **1.3.5 gives about a quarter of it back.** 236816 to 233831 KB at N=1000 (-1.3 %) and
+  119853 to 118705 at N=500 (-1.0 %). At N=100 it moves +0.7 %, inside the floor, so the saving
+  is at the larger sizes. Not attributed to a commit; 1.3.5 is the platform sweep and is large.
+
+* **Main is indistinguishable from 1.3.6.** 233715 to 233998 KB at N=1000 is +0.12 %, and +0.06 %
+  at N=500. The unreleased descriptor-table refactors replaced 811 lines of hand-written per
+  annotation arms and five parallel per-platform structures with two table walks, and they cost
+  nothing measurable. That was the result to want and it is worth having measured: a table walked
+  once per annotation per platform is the shape that could have gone the other way.
+
+* **Over eleven releases the curve moved +5.4 %** at N=1000, 222093 to 233998 KB, and all of it is
+  the one step.
+
+* PeakHeap is reported for completeness and supports no claim. It depends on when GC ran; the
+  N=1000 column reads 147, 148, 148, 171, 148 across five builds that differ by nothing it could
+  see.
+
+N=10 is excluded from every chart drawn from this file
+------------------------------------------------------
+Across sessions it is not reproducible: two runs of one build have given 2995 KB and 12187 KB, and
+the 1.0.4 capture's two sweeps of it disagreed by 4.3x. Within this one session it is oddly
+stable (3121, 3123, 3125, 3120 for the four 1.2.x/1.3.0 columns), which says the instability is
+between sessions, not between versions, and does not make it safe to quote. At ten classes the
+number is JIT warmup and classloading, not processor cost.
+
+N=100, 500 and 1000 reproduce to within 0.6 % on this harness, so a difference larger than about
+1 % there is the processor and a smaller one is not.

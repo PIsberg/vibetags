@@ -29,6 +29,15 @@ Write a targeted JMH benchmark or a targeted stress test instead — `WriteCache
 `SignatureCaptureStressTest` are the two worked examples in the repo, and both exist because the
 general sweeps could not see the effect they were built to measure.
 
+**"Where did the curve move over the last few releases?"** The release-trend plots cannot answer
+it: they overlay per-release captures taken months apart. Sweep every release you care about in
+one sitting instead, switching only `-Dprocessor.version`, and plot it with
+`tools/plot-release-history.py`. Done over 1.2.5..main on 2026-09-22 this found a 6 % step at
+1.3.2 that eight releases of cross-day baselines had not shown. If it finds one, bisect it to a
+commit with `git worktree` rather than guessing from the changelog. The guess that session made
+from the changelog was wrong, and the commit the measurement named was one whose javadoc asserted
+the cost was negligible.
+
 ## Step 2 — Install the version under test first
 
 The harness resolves `vibetags-processor` from the local Maven repository. It does not build it.
@@ -151,6 +160,29 @@ python tools/plot-cache-hit.py          # cache-hit proof
 python tools/plot-release-comparison.py --version $TAG   # same-session allocation comparison
 ```
 
+**The fixture opts into six of 65 output files, and always has.** `OPT_IN_FILES` has held the
+same six since 0.5.4, so every committed baseline describes a project that uses six platforms.
+Measured at N=500 on 2026-09-22: a fully opted-in project allocates 4.2x what the sweep reports,
+and its wall-clock is 17x, because scoped rules write 10 058 files instead of 56. Do not widen the
+sweep's fixture to fix this, because that silently invalidates every baseline. `PlatformBreadthStressTest`
+measures it beside them, at one fixed N, carrying the six-file level as an anchor column whose
+`OutputSize` must stay byte-identical to `stress.txt`'s.
+
+**Every number here is a cold build.** Each sweep gives its N a fresh `@TempDir`, so
+`.vibetags-cache` is empty and the fingerprint has nothing to match: both short-circuits are
+structurally unreachable, and the build a developer actually waits for is unmeasured.
+`IncrementalRebuildStressTest` measures it. The answer is uncomfortable and worth knowing: the
+short-circuit fires and still leaves 96 % of the cost standing at N=1000, because the collector
+has walked every annotated element before a fingerprint can be computed.
+
+**Write the engagement assertion before the threshold, and measure before choosing one.** That
+last test was first written asserting a 25 % saving, from the reasonable-sounding assumption that
+skipping "content build and writes" would be most of the cost. The real figure is 3.6 %. A
+threshold picked from a guess fails a healthy build; a threshold picked from one measurement of a
+3.6 % effect cannot separate the effect from the floor. Gate on the deterministic thing, here the
+processor's own "inputs unchanged since last run" note, asserted present on the warm round and
+absent on the cold one, and report the percentage without gating it.
+
 ## Traps this harness has already paid for
 
 - **`@TempDir` cleanup used to fail on Windows, and no longer does.** `vibetags.log` was held
@@ -166,5 +198,20 @@ python tools/plot-release-comparison.py --version $TAG   # same-session allocati
 - **`cmd | tail` reports `tail`'s exit code.** Every build here writes to a log and the status
   is read from `$?` directly.
 - **The JMH class filter is load-bearing.** See Step 3.
+- **A JMH run whose every benchmark failed still exits 0**, having written `[]` to the `-rff`
+  file. `ProcessorHotPathBenchmark` was dead that way from 1.3.5 to 1.3.7. Its `@Setup(Level.Trial)`
+  created every service path as a file, and #684 put `.windsurf/rules/+vibetags-safety.md` inside
+  the `.windsurf/rules` directory service, so creating one of the two threw. Nothing anywhere went red, because CI never runs
+  JMH. Count the benchmarks in the file after every run; `jmh.json` must hold 6.
+- **A caption positioned with `ax.text(..., transform=ax.transAxes)` at a negative y is dropped by
+  `savefig` without a word.** Every committed comparison and processor-tax PNG shipped without the
+  caption its own script's comment called load-bearing. Use `fig.text(0.5, 0.015, ...)`, and check
+  the rendered PNG rather than the code.
+- **A test in `load-tests` that calls a processor method directly breaks every older-jar run.**
+  The module is deliberately compiled against older `-Dprocessor.version` jars to compare
+  releases, so a call to a method those jars lack fails `testCompile` and takes the volume sweeps
+  down with it. `PlatformBreadthStressTest` reaches `ServiceRegistry` reflectively and skips when
+  the jar is too old, for exactly this reason: it failed a five-point bisect the first time it
+  did not.
 - **Do not compare a JMH run against a baseline captured on another machine or JDK.** All
   committed baselines used JDK Temurin 26 on one i7-1260P; the CI matrix is 21/25/26.
