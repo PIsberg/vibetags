@@ -37,28 +37,47 @@ class ServiceRegistryKeyParityTest {
     }
 
     /**
-     * {@code generateFiles()} is locked and still spells the ignore-file predicate inline, with a
-     * third term, {@code "aider_ignore".equals(service)}, that {@code isIgnoreService} leaves out as
-     * redundant. This holds the two to the same answer for every key a build can see, so check mode
-     * and the module writer, which call the helper, cannot disagree with generation.
+     * {@code isIgnoreService} answers for the keys it is meant to and not for the rest.
+     *
+     * <p>This replaces a parity case that compared the helper against a hand-written copy of the
+     * predicate {@code generateFiles()} spelled inline, because that method was locked and could
+     * not be made to call it. Both rounds reach the helper now, through
+     * {@code AIGuardrailProcessor.hasNewRules} (#766), so there is no second spelling to hold it
+     * to and a test that kept one would be testing the copy in the test.
+     *
+     * <p>What still needs saying is what the helper is for: an exclusion list is rewritten on
+     * every build whether or not the round had annotations, and a rule file is not. So the answer
+     * is asserted against the registry's own keys rather than a literal list, and against both
+     * shapes an exclusion list comes in: the {@code *_ignore} suffix and {@code .aiexclude}, which
+     * has neither the suffix nor anything else in common with them.
      */
     @Test
-    void isIgnoreService_agreesWithThePredicateInlinedInGenerateFiles_forEveryServiceKey() {
-        Set<String> disagreeing = new TreeSet<>();
-        Set<String> ignoreKeys = new TreeSet<>();
+    void isIgnoreService_picksOutTheExclusionLists_andNothingElse() {
+        Set<String> exclusionLists = new TreeSet<>();
+        Set<String> ruleFiles = new TreeSet<>();
         for (String service : ServiceRegistry.buildServiceFileMap(Path.of(".")).keySet()) {
-            boolean inlined = service.endsWith("_ignore") || "aider_ignore".equals(service)
-                || "aiexclude".equals(service);
-            if (inlined != ServiceRegistry.isIgnoreService(service)) {
-                disagreeing.add(service);
-            }
-            if (inlined) {
-                ignoreKeys.add(service);
-            }
+            (ServiceRegistry.isIgnoreService(service) ? exclusionLists : ruleFiles).add(service);
         }
 
-        assertTrue(disagreeing.isEmpty(), "isIgnoreService disagrees with generateFiles() on: " + disagreeing);
-        assertTrue(ignoreKeys.contains("aider_ignore") && ignoreKeys.contains("aiexclude"),
-            "the comparison ran over no ignore keys, so it proved nothing: " + ignoreKeys);
+        assertTrue(exclusionLists.contains("aiexclude"),
+            ".aiexclude is an exclusion list and carries no _ignore suffix to be recognised by: "
+                + exclusionLists);
+        assertTrue(exclusionLists.contains("aider_ignore"),
+            "the suffix form is not recognised either, so nothing here is: " + exclusionLists);
+        assertTrue(exclusionLists.size() > 2,
+            "only the two named keys were classified as exclusion lists, so this ran over a"
+                + " registry that has lost its others: " + exclusionLists);
+
+        Set<String> suffixed = new TreeSet<>();
+        for (String service : ruleFiles) {
+            if (service.endsWith("_ignore")) {
+                suffixed.add(service);
+            }
+        }
+        assertTrue(suffixed.isEmpty(),
+            "these carry the exclusion-list suffix and were classified as rule files, so a build"
+                + " would stop rewriting them on a round with no annotations: " + suffixed);
+        assertTrue(ruleFiles.contains("claude"),
+            "no ordinary rule-file key was classified as one, so the negative half proved nothing");
     }
 }

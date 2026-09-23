@@ -271,12 +271,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private List<String> manifestPackages = List.of();
 
     private final AnnotationCollector collector = new AnnotationCollector();
-    // Only the three sets actually read in generateFiles() are kept as fields.
-    // The rest (contextElements, draftElements, privacyElements, coreElements,
-    // performanceElements) were written-only — logSummary() calls collector.*() directly.
-    private final Set<Element> lockedElements = collector.locked();
-    private final Set<Element> ignoreElements = collector.ignore();
-    private final Set<Element> auditElements  = collector.audit();
 
     /** Per-element granular rule sections, populated by GuardrailContentBuilder.build(). */
     private Map<TaggedElement, se.deversity.vibetags.processor.internal.content.GranularBody> elementRules =
@@ -1074,14 +1068,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     }
                     return;
                 }
-                boolean isIgnoreFile = service.endsWith("_ignore") || "aider_ignore".equals(service) || "aiexclude".equals(service);
-                // hasNewRules: true if any module (not just this one) contributed to this service.
-                // retiredServices: a file this source set has just withdrawn from must be rewritten
-                // even if nobody contributes to it any more, or the removed rule stays in it (#781).
-                boolean anyContributed = (isMultiModule(allSidecars)
-                    ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
-                    : collector.anyAnnotationsFound()) || retiredServices.contains(service);
-                boolean changed = writeFileIfChanged(filePath.toString(), content, anyContributed || isIgnoreFile);
+                // The same predicate checkFiles() passes, from the same method, so the two rounds
+                // cannot answer it differently (#766). What it means is on hasNewRules.
+                boolean changed = writeFileIfChanged(filePath.toString(), content,
+                    hasNewRules(service, allSidecars, retiredServices));
                 String relPath = root.relativize(filePath).toString().replace('\\', '/');
                 statusQueue.add(new String[]{relPath, changed ? "updated" : "no changes"});
             })).get();
@@ -1129,7 +1119,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // round". `compilationRoot.equals(root)` alone is NOT equivalent and was tried: a
         // single-module project with no pom.xml to anchor the compilation root fails it, and five
         // rename/delete cleanup tests went red because ordinary orphan cleanup stopped happening.
-        boolean maySweepRoot = moduleIdentity == null || compilationRoot.equals(root);
+        boolean maySweepRoot = maySweepRoot(compilationRoot);
         Set<String> removedQNames = maySweepRoot
             ? granularWriter.cleanupAll(serviceFiles, activeServices, writtenQNames)
             : Set.of();
@@ -1167,10 +1157,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             collector, moduleBuilt, projectName, GENERATED_HEADER, moduleRoles, this.fileWriter,
             messager, allSidecars, regionId, moduleId);
 
+        // Read off the collector here rather than through three fields aliasing its sets. Those
+        // fields existed because this method could not be edited to call it (#766).
         checkOrphanedAnnotations(messager, activeServices,
-            !lockedElements.isEmpty(),
-            !ignoreElements.isEmpty(),
-            !auditElements.isEmpty());
+            !collector.locked().isEmpty(),
+            !collector.ignore().isEmpty(),
+            !collector.audit().isEmpty());
 
         if (writeCache != null) {
             writeCache.setBuildFingerprint(fingerprint);
@@ -1478,8 +1470,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /**
      * The opt-out mirror of the loop above, and the reason this pair is about partial merges
-     * generally rather than only about opt-ins. The entry point above kept its narrower name
-     * because renaming it would edit {@code generateFiles()}, which is locked.
+     * generally rather than only about opt-ins. The entry point above took its narrower name
+     * because renaming it would have edited {@code generateFiles()}, which is locked. That reason
+     * is gone (#766) and the name is kept anyway: it describes what the entry point does, and
+     * churning a call site in a locked method to widen a name buys nothing.
      *
      * <p>While a granular directory is opted in, each module renders its region as a scoped-rules
      * index: a list of elements plus the rule file that is authoritative for each. Opting the
@@ -1641,11 +1635,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (filePath == null) {
                 continue; // rendered content for a service with no configured output path: nothing to check
             }
-            boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
-            boolean anyContributed = (isMultiModule(allSidecars)
-                ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
-                : collector.anyAnnotationsFound()) || retiredServices.contains(service);
-            checkWriter.writeFileIfChanged(filePath.toString(), entry.getValue(), anyContributed || isIgnoreFile);
+            checkWriter.writeFileIfChanged(filePath.toString(), entry.getValue(),
+                hasNewRules(service, allSidecars, retiredServices));
         }
         GranularRulesWriter checkGranular = new GranularRulesWriter(checkWriter);
         Set<String> writtenQNames = new java.util.LinkedHashSet<>(
@@ -1795,13 +1786,47 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /**
      * Whether this round may sweep the shared root's granular directories for orphans: only a
-     * round compiling the root itself, never a reactor module round (issue #383). {@code
-     * generateFiles()} carries the same predicate inline, because its body is locked; {@code
-     * CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration} is what keeps the two
-     * in step, and the reasoning is at the sweep in {@code generateFiles()}.
+     * round compiling the root itself, never a reactor module round (issue #383). The reasoning is
+     * at the sweep in {@code generateFiles()}, which calls this rather than spelling it again
+     * (#766); {@code CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration} is what
+     * proves the two rounds still reach the same verdict end to end.
      */
     private boolean maySweepRoot(Path compilationRoot) {
         return moduleIdentity == null || compilationRoot.equals(root);
+    }
+
+    /**
+     * The {@code hasNewRules} argument both writers pass, computed once (#766).
+     *
+     * <p>False means "this round produced nothing for this service", and the writer answers it by
+     * leaving an existing file alone rather than replacing its block with an empty one. So the two
+     * rounds disagreeing here is not a cosmetic drift: check mode would report that a file needs
+     * rewriting that generation would have left, or the reverse, and the verdict would be about
+     * the predicate rather than about the project.
+     *
+     * <p>They did disagree by copying. {@code generateFiles()} spelled the ignore-file test inline
+     * with a third, redundant term while {@code checkFiles()} called
+     * {@link ServiceRegistry#isIgnoreService}, and the whole {@code anyContributed} expression
+     * existed twice. Both were held together by a test comparing a hand-written copy of one
+     * against the other, which is what a shared method makes unnecessary.
+     *
+     * <p>Three inputs, each load-bearing:
+     * <ul>
+     *   <li><b>any module contributed</b>, not just this one. In a reactor the file is the merge of
+     *       every sidecar, so a module that rendered nothing this round must not be read as the
+     *       project having nothing.</li>
+     *   <li><b>a service this source set has just withdrawn from</b> must be rewritten even when
+     *       nobody contributes to it any more, or the removed rule stays in the file (#781).</li>
+     *   <li><b>an exclusion list</b> is rewritten on every build whether or not the round had
+     *       annotations, because its content is a list of paths rather than a set of rules.</li>
+     * </ul>
+     */
+    private boolean hasNewRules(String service, List<ModuleSidecar> allSidecars,
+                                Set<String> retiredServices) {
+        boolean anyContributed = (isMultiModule(allSidecars)
+            ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
+            : collector.anyAnnotationsFound()) || retiredServices.contains(service);
+        return anyContributed && !ServiceRegistry.isIgnoreService(service);
     }
 
     /**
@@ -2150,9 +2175,14 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * Returns the messager from {@code processingEnv}. Both call sites run after
+     * Returns the messager from {@code processingEnv}. Every call site runs after
      * {@link #init(javax.annotation.processing.ProcessingEnvironment)} has populated
      * {@code processingEnv} via {@code super.init(...)}, so the field is non-null here.
+     *
+     * <p>"Both call sites" until this was counted: there are 28 of them. The name is stale too -
+     * nothing here is unsafe - and it is kept because renaming it would touch the locked
+     * {@code generateFiles()} for no gain, which is the same trade recorded on
+     * {@code warnAboutSiblingRuleFilesThatAreMissing} (#766).
      */
     private Messager getSafeMessager() {
         return processingEnv.getMessager();
