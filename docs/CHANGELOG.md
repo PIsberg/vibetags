@@ -243,15 +243,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`generateFiles()` and `checkFiles()` share predicates through single methods rather than inlined duplicates (#766).**
-  `hasNewRules(service, allSidecars, retiredServices)` computes the
-  `(anyContributed || retiredServices) && !isIgnoreService` predicate once for both writer loops,
-  eliminating the duplicated logic and the redundant inlined term (`aider_ignore`).
-  `maySweepRoot(compilationRoot)` is called directly in both writer loops rather than inlined in one.
-  The field aliases `lockedElements`, `ignoreElements`, `auditElements` are removed in favor of
-  reading directly off `collector`. `ServiceRegistryKeyParityTest` now asserts classification of
-  exclusion lists and rule files against the registry rather than against an inlined twin copy.
-
 - **The builder walks the descriptor table's implicit activations instead of restating them
   (#830).** Five outputs have no opt-in file of their own: the two Codex sidecars and the three
   always-loaded safety files that live inside a rules directory. `PlatformDescriptors.ALL` records
