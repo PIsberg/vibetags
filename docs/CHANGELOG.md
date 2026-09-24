@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A source-hash arm on `IncrementalRebuildStressTest`, the measurement #834's spike said
+  decides it.** An exit ahead of the collection walk would need a content proof that no source
+  changed, since an mtime proxy fails towards stale guardrail files. `SourceHashProcessor` hashes
+  every source in the first round and does nothing else, which is the least such an exit would
+  spend. Two runs, same session:
+
+  | N | `WarmOwn` | `HashOwn` | headroom, upper bound |
+  |---:|---:|---:|---:|
+  | 100 | 4.4 / 4.2 MB | -0.9 / -0.9 MB | 5.3 / 5.2 MB |
+  | 500 | 25.4 / 25.8 MB | 0.6 / 0.5 MB | 24.9 / 25.3 MB |
+  | 1000 | 48.4 / 49.0 MB | 1.5 / 1.7 MB | 46.9 / 47.3 MB |
+
+  Hashing costs about 3 % of the warm round at N=1000 and sits below the noise floor at N=100. So
+  cost does not rule an early exit out. The transitive-manifest proof and invariant 17's
+  partial-round rule, both recorded on #834, are what remain. The test asserts the arm hashed all
+  N sources, so a control that silently read nothing cannot report the cheapest proxy ever measured.
+
+  **It also corrects the no-op-processor entry below.** Its "15 % to 30 %" was measured against a
+  processor jar from before #833. Bisected with processor jars built at 5411b87b and d623cecd:
+  before #833 the saving is 27.1 / 16.1 / 14.7 % at N=100 / 500 / 1000, and with #833 it is
+  16.8 / 1.6 / -0.8 %. #833 stopped `unreadableSidecarNames` re-parsing the round's own sidecar,
+  about 9 MB at N=1000 on the path the short-circuit skips, so the cold round fell from 57.5 MB to
+  48.1 MB and the warm round did not move. The short-circuit still saves the writes and about 15 %
+  of wall-clock at N=1000, and it now saves almost no allocation from N=500 up.
+
 - **A load-test baseline for main, and the first allocation comparison that spans a run of
   releases.** The previous baseline in `load-tests/results/` was `1.0.4`, captured on 2026-08-11,
   twelve releases back. The release-trend plots cannot close that gap: they overlay per-release

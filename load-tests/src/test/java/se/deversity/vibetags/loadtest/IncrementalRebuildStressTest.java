@@ -14,7 +14,9 @@ import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.management.ManagementFactory;
 import java.net.URI;
@@ -62,6 +64,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  *   <li><b>coldOwn / warmOwn / savedOwn</b> — the same three against a {@link NoOpProcessor}
  *       control rather than {@code -proc:none}, so javac's own annotation-processing subsystem is
  *       out of the denominator. See below.</li>
+ *   <li><b>hashOwn / headroom</b> — what a {@link SourceHashProcessor} allocates over the same
+ *       no-op control, and {@code warmOwn - hashOwn}. See below.</li>
  * </ul>
  *
  * <h2>Two denominators, and only one of them is VibeTags'</h2>
@@ -70,25 +74,56 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * off javac's entire annotation-processing machinery, which at N=1000 is about three quarters of
  * the figure and which no change to this codebase can touch, so a saving reported against it reads
  * far smaller than the saving actually is. Issue #834 was opened on that reading: "a no-op rebuild
- * still costs 96 % of a cold build". Measured against the no-op control instead, on this branch:
+ * still costs 96 % of a cold build". Measured against the no-op control instead:
  *
  * <pre>
- *   N       saved (vs -proc:none)     savedOwn (vs no-op processor)     warmOwn
- *   100     7.5 / 7.8 %               27.9 / 29.7 %                     4.8 / 4.6 MB
- *   500     4.2 / 4.1 %               16.2 / 15.9 %                     25.8 / 25.9 MB
- *   1000    3.7 / 3.7 %               14.9 / 14.9 %                     48.9 / 48.9 MB
+ *   N       savedOwn, before #833     savedOwn, since #833     warmOwn, since #833
+ *   100     27.1 %                    18.3 / 17.4 %            4.4 / 4.2 MB
+ *   500     16.1 %                    -0.8 / -1.0 %            25.4 / 25.8 MB
+ *   1000    14.7 %                    -1.3 / -1.2 %            48.4 / 49.0 MB
  * </pre>
  *
- * <p>Two runs, same session. So the short-circuit already returns 15 % to 30 % of what VibeTags
- * itself allocates, not 3.6 %, and {@code warmOwn} is the whole remaining opportunity: 48.9 MB at
- * N=1000, against the 226 MB the diluted column reports as still standing. Any proposal to decide
- * earlier than {@code generateFiles()} is bidding for a share of that 48.9 MB.
+ * <p>The first column is one run of a processor built at 5411b87b, and it reproduces the 15 % to
+ * 30 % the first version of this column reported: that figure was measured against a processor
+ * jar from before #833. The other two are two runs of the current processor, same session. #833
+ * stopped {@code ModuleSidecar.unreadableSidecarNames} re-parsing the round's own sidecar on every
+ * build. That cost about 9 MB at N=1000 and sat on the path the short-circuit skips, so it was
+ * most of what the short-circuit saved. Removing it took the cold round from 57.5 MB to 48.1 MB and
+ * left the warm round where it was. From N=500 up the short-circuit now saves no allocation to
+ * speak of. It still saves the writes, which is its point, and about 15 % of wall-clock at N=1000.
+ *
+ * <p>So {@code warmOwn} is the whole remaining opportunity, about 48 MB at N=1000, against the
+ * 225 MB the diluted column reports as still standing, and almost all of it is the live-round work
+ * that runs before a fingerprint can be computed. Any proposal to decide earlier than
+ * {@code generateFiles()} is bidding for a share of that.
  *
  * <p>The pair reproduces where {@code ProcessorTaxStressTest}'s equivalent does not: that class
  * measured {@code vibetagsShare} 34 % apart across two runs, while {@code coldOwn} and
  * {@code warmOwn} here agreed to 0.1 %. The difference is that all three compiles happen
  * back-to-back inside one test method over one fixture, so whatever the machine is doing applies
  * to all of them.
+ *
+ * <h2>What deciding earlier would cost</h2>
+ *
+ * <p>An exit ahead of the collection walk needs a proof that no annotated source changed, and an
+ * mtime proxy is ruled out because it fails towards stale guardrail files. So the proxy reads
+ * content, and {@link SourceHashProcessor} does exactly that much: it hashes every source in the
+ * first round and nothing else. {@code headroom} is what would be left to win if that hash
+ * replaced everything the warm round still does, and it is an upper bound, because the control
+ * leaves out the digest table, its persistence and the transitive-manifest proof a real exit
+ * would also need. A headroom near zero, or below it, settles #834 without designing the rest.
+ *
+ * <pre>
+ *   N       hashOwn          headroom
+ *   100     -0.9 / -0.9 MB   5.3 / 5.2 MB
+ *   500     0.6 / 0.5 MB     24.9 / 25.3 MB
+ *   1000    1.5 / 1.7 MB     46.9 / 47.3 MB
+ * </pre>
+ *
+ * <p>Two runs, same session. It is not near zero. Hashing every source costs about 3 % of
+ * {@code warmOwn} at N=1000, and at N=100 it sits below the run-to-run floor, which is what a
+ * negative figure means. So cost is not what stops an early exit. What stops it is correctness:
+ * the transitive-manifest proof and invariant 17's partial-round rule, both recorded on #834.
  *
  * <p>The generated files are compared byte for byte across the two rounds. A short-circuit that
  * is fast because it stopped writing the right content would otherwise read as an improvement.
@@ -124,9 +159,9 @@ class IncrementalRebuildStressTest {
      * because the collector has already walked every annotated element in the round before a
      * fingerprint can be computed, and that walk is where the allocation is.
      *
-     * <p>Against the no-op control the same saving is 15 % to 30 %, so 25 % was nearer the mark
-     * than the first correction gave it credit for; what was wrong was the denominator, not only
-     * the guess. Neither number can carry a gate. The diluted one is close enough to the
+     * <p>Against the no-op control the same saving was 15 % to 30 % before #833, and since #833
+     * it is about zero from N=500 up, because that change removed most of what the short-circuit
+     * was skipping (see the class javadoc). Neither number can carry a gate. The diluted one is close enough to the
      * run-to-run floor that a threshold either fails healthy builds or passes a broken
      * short-circuit, and the honest one is a difference of two measurements, each with its own
      * floor. The note is deterministic, so it is asserted instead, and both savings are reported
@@ -151,17 +186,20 @@ class IncrementalRebuildStressTest {
         try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(RESULTS_FILE,
                 StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
             pw.println("VibeTags Incremental-Rebuild Stress Test Results");
-            pw.println("=".repeat(140));
+            pw.println("=".repeat(170));
             pw.println("ColdAlloc/WarmAlloc/Saved are against a -proc:none baseline, so they carry"
                 + " javac's whole annotation-processing");
             pw.println("subsystem as well as VibeTags'. ColdOwn/WarmOwn/SavedOwn are against a"
                 + " no-op processor, which is the only");
-            pw.println("base a change to this codebase can move (#834).");
+            pw.println("base a change to this codebase can move (#834). HashOwn is what hashing every"
+                + " source costs over the same no-op");
+            pw.println("processor, the minimum an exit ahead of the collection walk would spend."
+                + " Headroom is WarmOwn - HashOwn, an upper bound.");
             pw.println();
-            pw.printf("%-10s %-16s %-16s %-12s %-12s %-14s %-16s %-16s %-14s%n",
+            pw.printf("%-10s %-16s %-16s %-12s %-12s %-14s %-16s %-16s %-14s %-14s %-14s%n",
                 "Classes", "ColdAlloc(KB)", "WarmAlloc(KB)", "Cold(ms)", "Warm(ms)", "Saved(%)",
-                "ColdOwn(KB)", "WarmOwn(KB)", "SavedOwn(%)");
-            pw.println("-".repeat(140));
+                "ColdOwn(KB)", "WarmOwn(KB)", "SavedOwn(%)", "HashOwn(KB)", "Headroom(KB)");
+            pw.println("-".repeat(170));
         }
     }
 
@@ -185,6 +223,8 @@ class IncrementalRebuildStressTest {
 
         long baseline = compileWithoutProcessor(sources, tempDir);
         long noOp = compileWithNoOpProcessor(sources, tempDir);
+        long hash = compileWithSourceHashProcessor(sources, tempDir);
+        int hashedCount = SourceHashProcessor.lastHashedCount();
 
         Path projectRoot = root(tempDir, "project");
         Measurement cold = compile(sources, projectRoot, tempDir, "classes-cold");
@@ -203,15 +243,25 @@ class IncrementalRebuildStressTest {
         long warmOwn = warm.allocatedBytes - noOp;
         double savedOwnShare = coldOwn <= 0 ? 0.0 : 100.0 * (coldOwn - warmOwn) / coldOwn;
 
+        // What an early "sources unchanged" exit would have to spend, over the same control, and
+        // what would be left for it to win (#834). See SourceHashProcessor for why this is a
+        // lower bound on the cost and so an upper bound on the headroom.
+        long hashOwn = hash - noOp;
+        long headroom = warmOwn - hashOwn;
+
         String line = String.format(Locale.ROOT,
-            "%-10d %-16d %-16d %-12d %-12d %-14.1f %-16d %-16d %-14.1f",
+            "%-10d %-16d %-16d %-12d %-12d %-14.1f %-16d %-16d %-14.1f %-14d %-14d",
             n, coldOverhead / 1024, warmOverhead / 1024, cold.elapsedMillis, warm.elapsedMillis,
-            savedShare, coldOwn / 1024, warmOwn / 1024, savedOwnShare);
+            savedShare, coldOwn / 1024, warmOwn / 1024, savedOwnShare, hashOwn / 1024,
+            headroom / 1024);
         System.out.println(line);
         append(line);
 
         nothingMoved(afterCold, afterWarm, n);
         shortCircuitFired(cold, warm, n);
+        assertEquals(n, hashedCount,
+            "the source-hash control hashed " + hashedCount + " of " + n + " sources, so HashOwn"
+                + " is the price of hashing fewer files than an early exit would have to read");
     }
 
     /**
@@ -345,6 +395,16 @@ class IncrementalRebuildStressTest {
             List.of("-processor", NoOpProcessor.class.getName()));
     }
 
+    /**
+     * The same compile with a processor that hashes every source and does nothing else: the
+     * least an exit ahead of the collection walk would have to spend (#834).
+     */
+    private static long compileWithSourceHashProcessor(List<JavaFileObject> sources, Path tempDir)
+            throws IOException {
+        return compileWithOptions(sources, tempDir, "classes-hash",
+            List.of("-processor", SourceHashProcessor.class.getName()));
+    }
+
     private static long compileWithOptions(List<JavaFileObject> sources, Path tempDir,
                                            String classesDirName, List<String> extra)
             throws IOException {
@@ -384,6 +444,14 @@ class IncrementalRebuildStressTest {
             @Override
             public CharSequence getCharContent(boolean ignoreEncodingErrors) {
                 return code;
+            }
+
+            // SourceHashProcessor reads bytes, as a proxy over files on disk would. This one
+            // materialises each file once where a disk read streams it, which overstates the hash
+            // arm by at most the fixture's source bytes, well under the run-to-run floor.
+            @Override
+            public InputStream openInputStream() {
+                return new ByteArrayInputStream(code.getBytes(StandardCharsets.UTF_8));
             }
         };
     }
