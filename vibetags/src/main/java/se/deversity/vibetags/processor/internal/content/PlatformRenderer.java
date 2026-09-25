@@ -58,6 +58,21 @@ public interface PlatformRenderer {
     }
 
     /**
+     * How the bodies several source sets of one module rendered for this file are joined, or
+     * {@code null} for blank-line concatenation.
+     *
+     * <p>Only the {@code CLAUDE.md} renderers override this. Concatenation loses nothing there,
+     * but it repeats the whole {@code <project_guardrails>} scaffold once per source set, in a file
+     * loaded on every session (issue #839). A YAML renderer does not need it: its
+     * {@link #mergeShape()} already joins source sets, because for YAML concatenation is data loss.
+     *
+     * @return the merge, or {@code null} for plain concatenation
+     */
+    default @Nullable SourceSetMerge sourceSetMerge() {
+        return null;
+    }
+
+    /**
      * Text every module's body of this file opens with, and which therefore belongs once at the
      * top of a reactor's file rather than inside each module's region.
      *

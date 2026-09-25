@@ -78,6 +78,7 @@ public final class Main {
             return switch (command) {
                 case "init" -> new InitCommand(out, err, dir).run(rest);
                 case "doctor" -> {
+                    boolean context = rest.remove("--context");
                     Optional<List<Path>> classpath = doctorClasspath(rest, err);
                     if (classpath.isEmpty()) {
                         yield 2;
@@ -86,10 +87,15 @@ public final class Main {
                         /* A stray argument used to be ignored, so "doctor /other/project" quietly
                            reported on the current directory instead. */
                         err.println("error: doctor takes no arguments (use --dir <path>, "
-                            + "--classpath <entries>): " + String.join(" ", rest));
+                            + "--classpath <entries>, --context): " + String.join(" ", rest));
                         yield 2;
                     }
-                    yield new DoctorCommand(out, dir, classpath.get()).run();
+                    int health = new DoctorCommand(out, dir, classpath.get()).run();
+                    if (context) {
+                        // Informational: a heavy file is not a finding, so the exit code stays health's.
+                        new ContextWeight(out, dir).run();
+                    }
+                    yield health;
                 }
                 case "--version", "version" -> {
                     out.println("vibetags-cli " + version());
@@ -157,6 +163,8 @@ public final class Main {
               vibetags doctor                          report the project's VibeTags health
               vibetags doctor --classpath <entries>    also read Kotlin value classes from these jars
                                                        and class directories (a compile classpath)
+              vibetags doctor --context                also weigh the active guardrail files: bytes,
+                                                       the generated share, and per-section sizes
               vibetags --version                       print the CLI version
 
             Options:

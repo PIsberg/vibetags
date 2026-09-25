@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.AnnotationDescriptor;
 import se.deversity.vibetags.processor.internal.content.AnnotationDescriptors;
@@ -44,7 +45,8 @@ public final class GranularRenderer implements PlatformRenderer {
             for (TaggedElement e : model.of(descriptor.type())) {
                 String body = descriptor.granularStanza().of(e);
                 if (body != null) {
-                    appendToGranular(elementRules, e, descriptor.granularTitle(), body);
+                    appendToGranular(elementRules, e, descriptor.granularTitle(), body,
+                        GuardrailAnnotations.SAFETY.contains(descriptor.type()));
                 }
             }
         }
@@ -80,14 +82,15 @@ public final class GranularRenderer implements PlatformRenderer {
      * and {@code ArchitectureRule} already warn at compile time that the annotation will be
      * ignored.
      */
-    private void appendToGranular(Map<TaggedElement, GranularBody> elementRules, TaggedElement element, String title, String content) {
+    private void appendToGranular(Map<TaggedElement, GranularBody> elementRules, TaggedElement element, String title,
+                                  String content, boolean safetyTier) {
         List<String> lines = carryingLines(content);
         if (lines.isEmpty()) {
             return;
         }
         TaggedElement owner = element.owner();
         elementRules.computeIfAbsent(owner, k -> new GranularBody())
-            .add(new GranularBody.Entry(owner, element, title, lines));
+            .add(new GranularBody.Entry(owner, element, title, lines), safetyTier);
     }
 
     /**

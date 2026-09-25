@@ -10,6 +10,7 @@ import se.deversity.vibetags.annotations.AIThreadSafe;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.content.GranularPairing;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 import se.deversity.vibetags.processor.internal.content.YamlMergeShape;
 import java.io.IOException;
 import java.io.Reader;
@@ -1653,6 +1654,22 @@ public final class ModuleSidecar {
                 return merged;
             }
         }
+        return joinSourceSets(serviceKey, parts);
+    }
+
+    /**
+     * {@code parts} as one body through the renderer's {@link SourceSetMerge}, or blank-line
+     * concatenated when it declares none or declines. Concatenation keeps every guardrail; the merge
+     * only stops a structured body repeating its scaffold once per source set (issue #839).
+     */
+    private static String joinSourceSets(String serviceKey, List<String> parts) {
+        SourceSetMerge merge = PlatformRendererRegistry.sourceSetMergeFor(serviceKey);
+        if (merge != null && parts.size() > 1) {
+            String merged = merge.merge(parts);
+            if (merged != null) {
+                return merged;
+            }
+        }
         return String.join("\n\n", parts);
     }
 
@@ -1778,7 +1795,7 @@ public final class ModuleSidecar {
         for (String body : bodies) {
             parts.add(withoutFrontMatter(body, frontMatter).strip());
         }
-        return parts.isEmpty() ? "" : withFrontMatter(frontMatter, String.join("\n\n", parts));
+        return parts.isEmpty() ? "" : withFrontMatter(frontMatter, joinSourceSets(serviceKey, parts));
     }
 
     /**

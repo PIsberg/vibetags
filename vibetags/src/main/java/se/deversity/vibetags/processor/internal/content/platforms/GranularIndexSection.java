@@ -151,7 +151,9 @@ final class GranularIndexSection {
      * no owners.
      */
     static void appendXmlIndex(StringBuilder sb, Platform platform, RenderingContext context) {
-        Set<TaggedElement> owners = context.granularOwners();
+        // indexOwners, not granularOwners: an owner whose file holds only the safety tier is
+        // already inline above, and a line pointing at it spends context on nothing (#839).
+        Set<TaggedElement> owners = context.indexOwners();
         if (owners.isEmpty() || context.safetyDigest()) {
             return;
         }
@@ -177,7 +179,9 @@ final class GranularIndexSection {
      * matching the convention of the other markdown renderers. Emits nothing when there are no owners.
      */
     static void appendMarkdownIndex(StringBuilder sb, Platform platform, RenderingContext context) {
-        Set<TaggedElement> owners = context.granularOwners();
+        // indexOwners, not granularOwners: an owner whose file holds only the safety tier is
+        // already inline above, and a line pointing at it spends context on nothing (#839).
+        Set<TaggedElement> owners = context.indexOwners();
         if (owners.isEmpty() || context.safetyDigest()) {
             return;
         }

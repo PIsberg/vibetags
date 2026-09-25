@@ -1,9 +1,11 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
 import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.internal.content.ClaudeSectionMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 /**
  * PlatformRenderer for generating `CLAUDE.local.md`.
@@ -11,6 +13,11 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * for the same project, so the content model is identical.
  */
 public final class ClaudeLocalRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return ClaudeSectionMerge::merge;
+    }
+
     // ClaudeRenderer is stateless — one shared instance is sufficient.
     private static final ClaudeRenderer CLAUDE_RENDERER = new ClaudeRenderer();
 

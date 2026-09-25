@@ -112,8 +112,14 @@ public final class GuardrailContentBuilder {
                 ? collector.granularRules()
                 : new java.util.LinkedHashMap<>();
 
+        Set<TaggedElement> indexOwners = new java.util.LinkedHashSet<>();
+        elementRules.forEach((owner, body) -> {
+            if (body.beyondSafetyTier()) {
+                indexOwners.add(owner);
+            }
+        });
         RenderingContext context = new RenderingContext(projectName, generatedHeader, activeServices,
-                estimatedContentSize, elementRules.keySet(), roles);
+                estimatedContentSize, elementRules.keySet(), roles).withIndexOwners(indexOwners);
         if (safetyDigest) {
             context = context.asSafetyDigest();
         }

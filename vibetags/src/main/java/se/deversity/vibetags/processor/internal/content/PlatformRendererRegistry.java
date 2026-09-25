@@ -44,6 +44,16 @@ public final class PlatformRendererRegistry {
         return renderer == null ? null : renderer.mergeShape();
     }
 
+    /** How this service's renderer joins one module's source sets, or {@code null} to concatenate. */
+    public static @Nullable SourceSetMerge sourceSetMergeFor(String serviceKey) {
+        Platform platform = Platform.fromServiceKey(serviceKey);
+        if (platform == null) {
+            return null;
+        }
+        PlatformRenderer renderer = findRenderer(platform);
+        return renderer == null ? null : renderer.sourceSetMerge();
+    }
+
     /** The prologue this service's renderer declares, or {@code ""} when it declares none. */
     public static String filePrologueFor(String serviceKey) {
         Platform platform = Platform.fromServiceKey(serviceKey);

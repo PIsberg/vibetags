@@ -50,10 +50,40 @@ public final class GranularBody implements CharSequence {
      */
     private volatile @Nullable String rendered;
 
-    /** Records one stanza. Stanzas are rendered in insertion order within their section. */
+    /**
+     * Set once a stanza from outside the six safety annotations is recorded. Volatile for the
+     * reason {@link #rendered} is: a body built on one thread is read on another.
+     */
+    private volatile boolean beyondSafetyTier;
+
+    /**
+     * Records one stanza. Stanzas are rendered in insertion order within their section. A stanza
+     * recorded without saying where it came from counts as beyond the safety tier, so its owner
+     * keeps its index entry.
+     */
     public void add(Entry entry) {
+        add(entry, false);
+    }
+
+    /**
+     * Records one stanza, noting whether it came from one of the six safety annotations
+     * ({@code GuardrailAnnotations.SAFETY}).
+     */
+    public void add(Entry entry, boolean safetyTier) {
         entries.add(entry);
         rendered = null;
+        if (!safetyTier) {
+            beyondSafetyTier = true;
+        }
+    }
+
+    /**
+     * True when this file says something the always-loaded aggregate does not. The aggregate keeps
+     * the safety tier inline, so a file holding nothing else would be an index entry pointing at
+     * text the agent has already read (issue #839).
+     */
+    public boolean beyondSafetyTier() {
+        return beyondSafetyTier;
     }
 
     /** The recorded stanzas, in insertion order — used for cross-owner grouping in role files. */

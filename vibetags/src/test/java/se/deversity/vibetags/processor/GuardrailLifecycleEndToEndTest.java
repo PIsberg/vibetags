@@ -146,6 +146,9 @@ class GuardrailLifecycleEndToEndTest {
         ProcessorTestHarness first = optedIn(dir, "CLAUDE.md");
         Files.createDirectories(dir.resolve(".claude/rules"));
         first.addSource("com.example.Ledger", ledger("Reconciliation is load-bearing"));
+        // A guardrail outside the safety tier: a locked-only owner is inline already and gets no
+        // index line (#839), so without this there would be no index to leave behind.
+        first.addSource("com.example.Router", ROUTER);
         first.compile();
         assertTrue(first.readFile("CLAUDE.md").contains(".claude/rules/"),
             "precondition: the aggregate collapsed to a scoped-rules index");
@@ -156,6 +159,7 @@ class GuardrailLifecycleEndToEndTest {
 
         ProcessorTestHarness second = optedIn(dir, "CLAUDE.md");
         second.addSource("com.example.Ledger", ledger("Reconciliation is load-bearing"));
+        second.addSource("com.example.Router", ROUTER);
         second.compile();
 
         String claude = second.readFile("CLAUDE.md");
@@ -317,6 +321,11 @@ class GuardrailLifecycleEndToEndTest {
         }
         return h;
     }
+
+    private static final String ROUTER = "package com.example;\n"
+        + "import se.deversity.vibetags.annotations.AIContext;\n"
+        + "@AIContext(focus = \"route by tenant\")\n"
+        + "public class Router {}\n";
 
     private static String ledger(String reason) {
         return locked("com.example", "Ledger", reason);

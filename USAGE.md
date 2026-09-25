@@ -526,6 +526,14 @@ that resolves the Maven coordinate.
   least one finding needs action — usable as a cheap CI step. Either command exits 2 on a
   usage error: an argument it does not understand, or a `--dir` that is not a directory.
 - **`--dir <path>`** points either command at another project root.
+- **`doctor --context`** also weighs the active guardrail files, to show what a session loads
+  before the agent reads any code: bytes per file, the share inside the `VIBETAGS` markers, and
+  for each generated block its sections, largest first, with entry counts. A section that
+  appears more than once in one file is flagged, the signature of a block rendered once per
+  source set. Scoped rule directories are listed apart, as file counts and bytes, since they
+  load when a matching source file is opened rather than on every session. Tokens are shown as
+  bytes / 4, an estimate and not a tokenizer. The report is information: it never changes the
+  exit code. Run it before and after a change to measure what the change cost or saved.
 - **`doctor --classpath <entries>`** also reads Kotlin value classes from the given jars and class
   directories, separated by `:` (`;` on Windows) as for `java -cp`, so a function taking a value
   class from a dependency is reported too. Pass the compile classpath, for example from
