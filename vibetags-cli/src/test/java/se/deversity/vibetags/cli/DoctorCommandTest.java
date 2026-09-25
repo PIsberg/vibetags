@@ -57,6 +57,53 @@ class DoctorCommandTest {
             """);
     }
 
+    /**
+     * {@code doctor --context} (issue #840) weighs what a session loads. The numbers are asserted
+     * against the bytes the test wrote, and the stacked block is the case it exists to expose:
+     * one section appearing twice in one file, the shape a per-source-set render left behind (#839).
+     */
+    @Test
+    void contextReport_weighsTheFilesAndNamesASectionThatAppearsTwice() throws Exception {
+        mavenProjectWiredForVibeTags();
+        String block = """
+            <project_guardrails>
+              <scoped_rules>
+                <note>rules load by glob</note>
+                <element path="a.One"/>
+                <element path="a.Two"/>
+              </scoped_rules>
+            </project_guardrails>
+            """;
+        String claude = "# Hand-written\n\n<!-- VIBETAGS-START -->\n" + block
+            + block.replace("a.One\"/>\n    <element path=\"a.Two", "a.Three") + "<!-- VIBETAGS-END -->\n";
+        Files.writeString(dir.resolve("CLAUDE.md"), claude);
+        Files.createDirectories(dir.resolve(".claude/rules"));
+        Files.writeString(dir.resolve(".claude/rules/a-One.md"), "12345");
+        Files.writeString(dir.resolve(".claude/rules/a-Two.md"), "123");
+
+        PrintStream stream = new PrintStream(stdout, true, StandardCharsets.UTF_8);
+        int code = Main.run(new String[]{"doctor", "--context"}, stream, stream, dir);
+
+        assertEquals(0, code, "a heavy file is information, not a finding:\n" + out());
+        int total = claude.getBytes(StandardCharsets.UTF_8).length;
+        String generated = claude.substring(claude.indexOf("-->") + 3, claude.lastIndexOf("<!-- VIBETAGS-END"));
+        int generatedBytes = generated.getBytes(StandardCharsets.UTF_8).length;
+        assertTrue(out().contains(String.format(java.util.Locale.ROOT, "%,9d B", total)), out());
+        assertTrue(out().contains(String.format(java.util.Locale.ROOT, "generated %,d B (%d%%)",
+            generatedBytes, generatedBytes * 100 / total)), out());
+        assertTrue(out().lines().anyMatch(l -> l.contains("<scoped_rules>") && l.contains("3 entries")
+            && l.contains("appears 2 times")), "three elements over two copies of the section:\n" + out());
+        assertTrue(out().lines().anyMatch(l -> l.contains(".claude/rules/") && l.contains("8 B")
+            && l.contains("2 files")), out());
+    }
+
+    @Test
+    void withoutContext_doctorDoesNotWeighAnything() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "<!-- VIBETAGS-START -->\n<!-- VIBETAGS-END -->\n");
+        doctor();
+        assertFalse(out().contains("context weight"), out());
+    }
     @Test
     void wiredProjectWithIntactMarkers_isHealthy() throws Exception {
         mavenProjectWiredForVibeTags();
