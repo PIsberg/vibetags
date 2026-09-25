@@ -2,9 +2,11 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.internal.content.MarkdownSectionMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 /**
  * PlatformRenderer for generating `.claude/skills/vibetags-guardrails/SKILL.md`.
@@ -12,6 +14,11 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * (`name` + `description`) that Claude Code Skills require to be discoverable.
  */
 public final class ClaudeSkillRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return MarkdownSectionMerge::merge;
+    }
+
     // CursorRenderer is stateless — one shared instance is sufficient.
     private static final CursorRenderer CURSOR_RENDERER = new CursorRenderer();
 

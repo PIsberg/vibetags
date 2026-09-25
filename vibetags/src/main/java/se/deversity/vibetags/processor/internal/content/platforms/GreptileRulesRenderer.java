@@ -1,9 +1,11 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
 import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.internal.content.MarkdownSectionMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 /**
  * PlatformRenderer for Greptile's {@code .greptile/rules.md}.
@@ -17,6 +19,10 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * {@link GeminiStyleguideRenderer}: the two differ only in the two literals passed below.
  */
 public final class GreptileRulesRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return MarkdownSectionMerge::merge;
+    }
 
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {

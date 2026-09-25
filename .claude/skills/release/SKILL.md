@@ -269,9 +269,10 @@ create the release before the PR is merged — the release tags `main`.
 ## Step 7 — Create the GitHub release (after the PR is merged)
 
 Only once the user confirms the PR is merged. `tools/release-notes.sh` extracts the
-section from the CHANGELOG and rewrites the relative image paths to absolute raw URLs
-pinned to the tag, because GitHub resolves `changelog-assets/…` from the repo root on a
-release page and an unrewritten link 404s there:
+section from the CHANGELOG and rewrites every relative link to an absolute URL pinned to
+the tag (`raw/` for images, `blob/` for other files), because GitHub resolves a relative
+link from the repo root on a release page, not from `docs/`, and an unrewritten link 404s
+there. It refuses, and emits nothing, if a link resolves outside the repository:
 
 ```bash
 TAG=v<version>

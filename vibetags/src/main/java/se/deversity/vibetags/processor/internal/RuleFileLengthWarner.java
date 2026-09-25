@@ -77,7 +77,7 @@ public final class RuleFileLengthWarner {
         // contracts (invariant 15, docs/LOGGING.md) and fire today for small files; a reader who
         // asked for DEBUG still gets them, and pays the read to do so. With DEBUG off, which is
         // every ordinary build, nothing observable is lost.
-        if ((log == null || !log.isDebugEnabled()) && withinCapByBytes(file)) {
+        if ((log == null || !log.isDebugEnabled()) && withinCapByBytes(file, RuleFileLengthRule.limit(serviceKey))) {
             return;
         }
         String content;
@@ -96,29 +96,34 @@ public final class RuleFileLengthWarner {
             }
             return;
         }
-        if (!RuleFileLengthRule.exceedsLimit(content)) {
+        if (!RuleFileLengthRule.exceedsLimit(serviceKey, content)) {
             return;
         }
-        int length = RuleFileLengthRule.length(content);
+        int length = RuleFileLengthRule.length(serviceKey, content);
         Path fileName = file.getFileName();
         boolean safetyFile = fileName != null && ServiceRegistry.SAFETY_TIER_FILE.equals(fileName.toString());
         messager.printMessage(Diagnostic.Kind.WARNING,
             ValidationContext.PREFIX + RuleFileLengthRule.message(serviceKey, shown, length, safetyFile));
-        if (log != null) {
+        if (log != null && RuleFileLengthRule.countsBytes(serviceKey)) {
+            log.warn("validation.rule-file-over-limit file={} bytes={} limit={}",
+                shown, length, RuleFileLengthRule.limit(serviceKey));
+        } else if (log != null) {
             log.warn("validation.rule-file-over-limit file={} chars={} limit={}",
-                shown, length, RuleFileLengthRule.WORKSPACE_RULE_FILE_LIMIT);
+                shown, length, RuleFileLengthRule.limit(serviceKey));
         }
     }
 
     /**
-     * True when the file is small enough in bytes that it cannot exceed the cap in characters.
+     * True when the file is small enough in bytes that it cannot exceed {@code limit}: exactly so
+     * for a cap in bytes, and for a cap in characters because a UTF-8 file cannot hold more UTF-16
+     * units than it has bytes.
      *
      * <p>A file whose size cannot be read answers {@code false}, so the caller falls through to the
      * ordinary read and reaches the same verdict it always did, including its skip event.
      */
-    private static boolean withinCapByBytes(Path file) {
+    private static boolean withinCapByBytes(Path file, int limit) {
         try {
-            return Files.size(file) <= RuleFileLengthRule.WORKSPACE_RULE_FILE_LIMIT;
+            return Files.size(file) <= limit;
         } catch (IOException | RuntimeException unsizable) {
             return false;
         }

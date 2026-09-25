@@ -15,6 +15,7 @@ AI tools reading this file should respect the guardrails defined below. These ru
 - [OrderService.calculateTax(java.lang.String,double)](com.example.service.OrderService.calculateTax(java.lang.String,double)): Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
 - [OrderService.processPayment(java.lang.String,double)](com.example.service.OrderService.processPayment(java.lang.String,double)): Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
 - [OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)](com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)): Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
+- [GoldenPayloadFixtures](com.example.testing.GoldenPayloadFixtures): These byte sequences are the partner's recorded settlement responses. Regenerating or reformatting them makes the suite agree with itself and disagree with production.
 
 ## Contextual Rules
 - [SecurityConfig](com.example.security.SecurityConfig): Focus - This class is READ-ONLY for AI assistants. Do not suggest modifications.. Avoid - Any changes to encryption algorithms, key sizes, or validation logic
@@ -24,6 +25,7 @@ AI tools reading this file should respect the guardrails defined below. These ru
 - [PricingService](com.example.service.PricingService): Focus - Optimize pricing calculations for accuracy and throughput. Internal algorithms may use any efficient approach.. Avoid - Floating-point arithmetic for monetary values — use BigDecimal internally, but note that the contract-frozen signatures use double for backwards compatibility
 - [PaymentStrategy](com.example.strategy.PaymentStrategy): Focus - Follow the Strategy pattern strictly. Each payment method should be a separate strategy class implementing this interface.. Avoid - Monolithic if-else chains, hard-coded payment logic, single class handling all payment types
 - [StringParser](com.example.utils.StringParser): Focus - Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.. Avoid - java.util.regex, String.split(), StringBuilder in loops
+- [PaymentFixturesTest](com.example.testing.PaymentFixturesTest): Focus - Build payments through PaymentFixtures, never with the PaymentRequest constructor: the fixture is what keeps minor units and currency consistent across the suite. Avoid - Asserting on formatted amounts; assert on the minor-unit long
 
 ## Security Audit Requirements
 - [DatabaseConnector](com.example.database.DatabaseConnector): check for SQL Injection, Thread Safety issues
@@ -182,16 +184,4 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 ## Mirrored Elements
 - [EvidenceBasedShowcase.CATALOG_VERSION](com.example.service.EvidenceBasedShowcase.CATALOG_VERSION): Editing this requires the same edit at: pom.xml:<version>, README.md version badge, docs/CHANGELOG.md. The release version is duplicated across build config, docs, and the badge. Enforced by ProjectFactsConsistencyTest.
-
-# This Project
-
-> AI guardrail rules generated from source annotations by VibeTags.
-
-AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
-
-## Locked Files
-- [GoldenPayloadFixtures](com.example.testing.GoldenPayloadFixtures): These byte sequences are the partner's recorded settlement responses. Regenerating or reformatting them makes the suite agree with itself and disagree with production.
-
-## Contextual Rules
-- [PaymentFixturesTest](com.example.testing.PaymentFixturesTest): Focus - Build payments through PaymentFixtures, never with the PaymentRequest constructor: the fixture is what keeps minor units and currency consistent across the suite. Avoid - Asserting on formatted amounts; assert on the minor-unit long
 <!-- VIBETAGS-END -->

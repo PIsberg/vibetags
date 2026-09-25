@@ -30,9 +30,11 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 ## Locked Files
 - [IrNode](com.example.multimodule.core.IrNode): Core IR node: structural changes break every downstream module
+- [IrGraphFixturesTest](com.example.multimodule.core.IrGraphFixturesTest): The golden graphs below are the layout engine's recorded output for the 1.0 release. Regenerating them makes the suite agree with the current engine instead of with the release it is meant to protect.
 
 ## Contextual Rules
 - [core](com.example.multimodule.core): Focus - Immutable IR data model shared across every module of the reactor.. Avoid - Adding mutable state, framework annotations, or a dependency on any sibling module.
+- [IrGraphFixturesTest](com.example.multimodule.core.IrGraphFixturesTest): Focus - Build IrGraph fixtures through IrGraphFixtures.of(...), never by mutating a graph in place: the engine's layout cache keys on node identity. Avoid - Sharing one fixture graph between cases; the engine mutates what it lays out
 
 ## 🧵 Thread-Safe by Design
 - [core](com.example.multimodule.core): Strategy: IMMUTABLE. Note: Every type in this package is safe to publish across threads without synchronization.
@@ -45,18 +47,6 @@ AI tools reading this file should respect the guardrails defined below. These ru
 
 ## Framework-Free Domain Entities
 - [IrNode](com.example.multimodule.core.IrNode): Pure Domain Model. Banned imports: [Spring, JPA, Hibernate, Jackson, etc.]. No external framework imports permitted.
-
-# VibeTags Multi-Module Example
-
-> AI guardrail rules generated from source annotations by VibeTags.
-
-AI tools reading this file should respect the guardrails defined below. These rules were extracted from Java source annotations at compile time and apply to all AI assistants including Windsurf Cascade, Cursor, Claude, GitHub Copilot, and Gemini.
-
-## Locked Files
-- [IrGraphFixturesTest](com.example.multimodule.core.IrGraphFixturesTest): The golden graphs below are the layout engine's recorded output for the 1.0 release. Regenerating them makes the suite agree with the current engine instead of with the release it is meant to protect.
-
-## Contextual Rules
-- [IrGraphFixturesTest](com.example.multimodule.core.IrGraphFixturesTest): Focus - Build IrGraph fixtures through IrGraphFixtures.of(...), never by mutating a graph in place: the engine's layout cache keys on node identity. Avoid - Sharing one fixture graph between cases; the engine mutates what it lays out
 <!-- VIBETAGS-MODULE-END: core -->
 <!-- VIBETAGS-MODULE: engine -->
 # VibeTags Multi-Module Example

@@ -61,9 +61,11 @@ public interface PlatformRenderer {
      * How the bodies several source sets of one module rendered for this file are joined, or
      * {@code null} for blank-line concatenation.
      *
-     * <p>Only the {@code CLAUDE.md} renderers override this. Concatenation loses nothing there,
-     * but it repeats the whole {@code <project_guardrails>} scaffold once per source set, in a file
-     * loaded on every session (issue #839). A YAML renderer does not need it: its
+     * <p>The {@code CLAUDE.md} renderers declare {@link ClaudeSectionMerge} (issue #839) and the
+     * Markdown renderers {@link MarkdownSectionMerge} (issue #841). Concatenation loses nothing,
+     * but it repeats the whole scaffold, header and every section heading, once per source set,
+     * in files loaded on every session. {@code MarkdownSourceSetMergeEndToEndTest} fails for a
+     * prose renderer that does not declare one. A YAML renderer does not need it: its
      * {@link #mergeShape()} already joins source sets, because for YAML concatenation is data loss.
      *
      * @return the merge, or {@code null} for plain concatenation

@@ -5,9 +5,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import se.deversity.vibetags.processor.internal.validation.RuleFileLengthRule;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -38,8 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Tag("e2e")
 class PlatformSweep202609EndToEndTest {
 
-    /** Antigravity caps a single rule file at 12,000 characters. */
-    private static final int ANTIGRAVITY_RULE_LIMIT = 12_000;
+    /** Antigravity truncates a single rule file past 24,000 bytes (#850; 12,000 characters before). */
+    private static final int ANTIGRAVITY_RULE_LIMIT = RuleFileLengthRule.ANTIGRAVITY_RULE_FILE_BYTES;
 
     private static final List<String> GRANULAR_DIRS =
         List.of(".agents/rules", ".aiassistant/rules", ".augment/rules");
@@ -98,13 +98,13 @@ class PlatformSweep202609EndToEndTest {
     }
 
     /**
-     * Antigravity caps a rule file at 12,000 characters. #609 flagged this as the one constraint the
+     * Antigravity truncates a rule file past 24,000 bytes. #609 flagged this as the one constraint the
      * codebase had never had to respect, and unlike the other assertions here it is a property of
      * the <em>content</em>, so it can start failing later from an annotation change alone rather
      * than from a code change. Asserted over every file in the directory for that reason.
      */
     @Test
-    void noAntigravityRuleExceedsTheDocumentedCharacterCap() throws IOException {
+    void noAntigravityRuleExceedsTheDocumentedByteCap() throws IOException {
         Path dir = harness.root().resolve(".agents/rules");
         assertTrue(Files.isDirectory(dir), ".agents/rules must exist after an opted-in run");
         List<String> oversized = new ArrayList<>();
@@ -114,15 +114,15 @@ class PlatformSweep202609EndToEndTest {
                 if (name.equals(".vibetags")) {
                     continue;
                 }
-                int length = Files.readString(file, StandardCharsets.UTF_8).length();
+                long length = Files.size(file);
                 if (length > ANTIGRAVITY_RULE_LIMIT) {
-                    oversized.add(name + " (" + length + " chars)");
+                    oversized.add(name + " (" + length + " bytes)");
                 }
             }
         }
         assertTrue(oversized.isEmpty(),
-            "Antigravity truncates or rejects a rule file over " + ANTIGRAVITY_RULE_LIMIT
-                + " characters, so these would be silently incomplete guardrails: " + oversized
+            "Antigravity truncates a rule file over " + ANTIGRAVITY_RULE_LIMIT
+                + " bytes, so these would be silently incomplete guardrails: " + oversized
                 + ". Role grouping via .vibetags-roles is the likely cause when this fires; splitting "
                 + "the role is the fix, not raising this number.");
     }

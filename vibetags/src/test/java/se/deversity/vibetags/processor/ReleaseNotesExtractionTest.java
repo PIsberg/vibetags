@@ -110,10 +110,54 @@ class ReleaseNotesExtractionTest {
                 + absent.err());
     }
 
-    /** A changelog with one real section, a following section, and nothing else. */
-    private static Path syntheticChangelog() throws IOException {
-        Path file = Files.createTempDirectory("release-notes").resolve("CHANGELOG.md");
-        Files.writeString(file, String.join(System.lineSeparator(),
+    /**
+     * GitHub resolves a relative link on a release page from the repository root, while the same
+     * link in the CHANGELOG resolves from {@code docs/}. One release section embedded three plots as
+     * {@code ../load-tests/...}, which the script left alone because it only knew the
+     * {@code changelog-assets/} form, so they would have 404'd on the release page (#849).
+     */
+    @Test
+    @DisplayName("every relative link is resolved against docs/ and pinned to the tag")
+    void relativeLinksArePinnedToTheTag() throws Exception {
+        Result run = runScript(syntheticChangelog(
+            "- ![plot](../load-tests/results/_plots/alloc.png)",
+            "- ![shot](changelog-assets/9.9.9/doctor.png)",
+            "- see [the platform table](PLATFORMS.md#deprecated) and "
+                + "[#12](https://github.com/PIsberg/vibetags/issues/12)",
+            "- back to [the top](#changelog)"), "9.9.9");
+        assertEquals(0, run.exit(), run.err());
+
+        String repo = "https://github.com/PIsberg/vibetags/";
+        assertTrue(run.out().contains("](" + repo + "raw/v9.9.9/load-tests/results/_plots/alloc.png)"),
+            "a ../ image is resolved against docs/ and served raw from the tag:"
+                + System.lineSeparator() + run.out());
+        assertTrue(run.out().contains("](" + repo + "raw/v9.9.9/docs/changelog-assets/9.9.9/doctor.png)"),
+            "a docs-relative image is served raw from the tag:" + System.lineSeparator() + run.out());
+        assertTrue(run.out().contains("](" + repo + "blob/v9.9.9/docs/PLATFORMS.md#deprecated)"),
+            "a relative document link opens the file at the tag, anchor kept:"
+                + System.lineSeparator() + run.out());
+        assertTrue(run.out().contains("](https://github.com/PIsberg/vibetags/issues/12)"),
+            "an absolute link is left alone:" + System.lineSeparator() + run.out());
+        assertTrue(run.out().contains("](#changelog)"),
+            "an in-page anchor is left alone:" + System.lineSeparator() + run.out());
+    }
+
+    @Test
+    @DisplayName("a link that climbs out of the repository is refused rather than published")
+    void aLinkOutsideTheRepositoryIsRefused() throws Exception {
+        Result run = runScript(syntheticChangelog("- ![plot](../../elsewhere/plot.png)"), "9.9.9");
+
+        assertNotEquals(0, run.exit(),
+            "../../ from docs/ leaves the repository, so no tag URL can serve it, and the notes "
+                + "were emitted anyway:" + System.lineSeparator() + run.out());
+        assertTrue(run.err().contains("Refusing") && run.err().contains("../../elsewhere/plot.png"),
+            "the refusal has to name the link, since its caller is one step from publishing: "
+                + run.err());
+    }
+
+    /** A changelog with one real section, optionally extended, a following section, and nothing else. */
+    private static Path syntheticChangelog(String... extraBodyLines) throws IOException {
+        List<String> lines = new ArrayList<>(List.of(
             "# Changelog",
             "",
             "## [9.9.9] - 2026-01-02",
@@ -122,14 +166,18 @@ class ReleaseNotesExtractionTest {
             "",
             "- first body line",
             "- middle body line",
-            "- last body line",
+            "- last body line"));
+        lines.addAll(List.of(extraBodyLines));
+        lines.addAll(List.of(
             "",
             "## [9.9.8] - 2026-01-01",
             "",
             "### Fixed",
             "",
             "- belongs to the previous release",
-            ""), StandardCharsets.UTF_8);
+            ""));
+        Path file = Files.createTempDirectory("release-notes").resolve("CHANGELOG.md");
+        Files.writeString(file, String.join(System.lineSeparator(), lines), StandardCharsets.UTF_8);
         return file;
     }
 

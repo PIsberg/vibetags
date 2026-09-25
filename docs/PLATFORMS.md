@@ -89,7 +89,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.aiassistant/rules/*.md` | JetBrains AI Assistant (granular, per element) | Markdown |
 | `.augment/rules/*.md` | Augment Code (granular, per element) | Markdown |
 | `.zencoder/rules/*.md` | Zencoder (granular, per element) | YAML front-matter + Markdown |
-| `.goosehints` | goose (Block) | Markdown |
+| `.goosehints` | goose (Agentic AI Foundation, formerly Block) | Markdown |
 | `.antigravityignore` | Antigravity AI (**deprecated**, see below) | Glob patterns |
 | `.clinerules` | Cline AI assistant (single file, **deprecated**, see below) | Markdown |
 | `.clinerules/*.md` | Cline AI assistant (granular, per element; same path as the file, see [below](#clines-two-shapes-at-one-path)) | YAML front-matter + Markdown |
@@ -100,7 +100,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.void/rules.md` | Void Editor (**deprecated**, see below) | Markdown |
 | `replit.md` | Replit Agent | Markdown |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
-| `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |
+| `.pr_agent.toml` | PR-Agent (AI PR reviewer, community-owned; formerly Qodo/Codium) | TOML (`extra_instructions`) |
 | `ellipsis.yaml` | Ellipsis (AI PR reviewer, **deprecated**, see below) | YAML (`pr_review.rules`) |
 | `.gemini/styleguide.md` | Gemini Code Assist (AI PR reviewer) | Markdown |
 | `.greptile/rules.md` | Greptile (AI PR reviewer) | Markdown |
@@ -164,14 +164,18 @@ Code and `.ai/rules/` get no glob in their front matter, so nothing is joined. C
 read the value as a string, not a YAML list, which is why their headers are bare rather than
 bracketed; see [Cursor and Trae read `globs:` as a comma-separated string](#cursor-and-trae-read-globs-as-a-comma-separated-string) (#699).
 
-**A per-file length cap.** Devin Desktop and Antigravity document a character cap on a single rule
+**A per-file length cap.** Devin Desktop and Antigravity document a cap on a single rule
 file, and VibeTags warns when a file it generated in one of their directories passes it
 (`validation.rule-file-over-limit` in `vibetags.log`). Devin Desktop gives `.devin/rules/` and
 `.windsurf/rules/` "Limited to 12,000 characters per file" (#695; see
 [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop)).
-[Antigravity's rules page](https://antigravity.google/docs/rules-workflows) says of `.agents/rules/`
-"Rules files are limited to 12,000 characters each." (#701). Neither page says whether a longer file
-is cut or dropped. Antigravity has no always-on safety file, so its warning suggests splitting the
+Antigravity's rules page said of `.agents/rules/` "Rules files are limited to 12,000 characters
+each." (#701). [That page](https://antigravity.google/docs/rules) now says "Antigravity truncates
+any single rule file that exceeds 24,000 bytes", counted after its `@` includes are expanded
+(re-checked 2026-09-25), so VibeTags measures an `.agents/rules/` file in UTF-8 bytes against 24,000
+and a Devin Desktop file in characters against 12,000 (#850). The
+Devin Desktop page does not say whether a longer file is cut or dropped. Antigravity has no
+always-on safety file, so its warning suggests splitting the
 role in `.vibetags-roles` or shortening the annotation text, never `.windsurfrules`. No other granular
 directory's vendor documents a per-file cap (checked 2026-09-14): Grok Build says "Files are loaded
 in full, with no size cap" ([docs.x.ai](https://docs.x.ai/build/features/project-rules)); Claude
@@ -539,6 +543,13 @@ into `.clinerules/default-rules.md`. The next build sees a directory, switches t
 and sweeps the moved VibeTags block out of `default-rules.md` as a stale copy, leaving your own text
 in place. `ClineRulesDirectoryEndToEndTest` replays that conversion step for step.
 
+**`.cline/rules/` is the same directory under a second name, and is not written (#852).** Cline's
+[rules page](https://docs.cline.bot/features/cline-rules) (checked 2026-09-25) says "Workspace rules
+go in `.clinerules/` or `.cline/rules/` at your project root" and describes the two as equivalent
+locations. VibeTags already writes `.clinerules/`, so a second copy under `.cline/rules/` would give
+Cline every rule twice in a project that has both, and a project that keeps its own rules in
+`.cline/rules/` already gets VibeTags' through `.clinerules/`.
+
 **How the README counts it.** `.clinerules` is counted once among the config files and once among
 the scoped-rule directories, because VibeTags can write it as either. The project-facts line names
 it, and `ProjectFactsConsistencyTest` fails if a path shared this way is not named there. The safety
@@ -566,6 +577,11 @@ guidelines (still supported)". VibeTags writes both Junie files with the same re
   claimed `.junie/AGENTS.md`, so a root `AGENTS.md` whose only companion was `.junie/AGENTS.md`
   counted as the sole AI config file and had the Codex rendering written into it. It is now left
   untouched unless it carries a marker pair. `JunieAgentsMdEndToEndTest` pins both sides.
+- **`.junie/rules/` is not written (#852).** Re-checked 2026-09-25: the page reads every
+  `.junie/rules/*.md` file only as part of its second entry, "combined with" the root `AGENTS.md`,
+  behind `.junie/AGENTS.md`, which VibeTags writes. It also describes no front matter or path
+  scoping for those files, so per-element rule files there would all load in every session, which
+  is what `.junie/AGENTS.md` already carries in one file.
 - **Junie may have created the file already.** The same page says that when Junie CLI finds other
   agents' guidelines files on first opening a project, "it will suggest importing the instructions
   into .junie/AGENTS.md". An imported file is hand-written content: the next build adds the VibeTags
@@ -696,7 +712,10 @@ Code keys did, because a key is what `vibetags init --platforms` takes. The new 
 exclusion mechanism its tool has, and VibeTags already writes that tool's rules directory:
 [`.rooignore`](https://docs.zoocode.dev/features/rooignore) (Zoo Code, the fork of the retired Roo Code: prevents reading and
 writing, the closest match to what `@AIIgnore` means),
-[`.continueignore`](https://docs.continue.dev/customize/deep-dives/codebase) and
+[`.continueignore`](https://docs.continue.dev/reference/deprecated-codebase) (documented now only on
+the page for Continue's deprecated `@Codebase` provider, with no deprecation of the file itself, and
+still read by `core/indexing/continueignore.ts` in Continue's source on 2026-09-25, so it is not
+deprecated, #852) and
 [`.augmentignore`](https://docs.augmentcode.com/setup-augment/workspace-indexing) (both exclude
 from indexing, which is the whole of what those tools offer).
 

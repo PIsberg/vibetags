@@ -2,9 +2,11 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.GuardrailModel;
+import se.deversity.vibetags.processor.internal.content.MarkdownSectionMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 /**
  * PlatformRenderer for Junie's two guidelines files: {@code .junie/AGENTS.md}, which Junie checks
@@ -16,6 +18,11 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * never produces its content.
  */
 public final class JunieRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return MarkdownSectionMerge::merge;
+    }
+
     // CursorRenderer is stateless — one shared instance is sufficient.
     private static final CursorRenderer CURSOR_RENDERER = new CursorRenderer();
 
