@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RuleFileLengthWarnerTest {
 
     private static final int LIMIT = 12_000;
+    private static final int ANTIGRAVITY_BYTES = 24_000;
 
     private ch.qos.logback.classic.Logger logger;
     private ListAppender<ILoggingEvent> appender;
@@ -118,25 +119,66 @@ class RuleFileLengthWarnerTest {
     }
 
     /**
-     * Antigravity's {@code .agents/rules/} carries the same cap (#701) and the same WARN event. A
+     * Antigravity's {@code .agents/rules/} is capped in bytes, not characters (#850): its rules page
+     * says "Antigravity truncates any single rule file that exceeds 24,000 bytes". The WARN event
+     * carries {@code bytes=} there, so a log reader is never told a byte count is characters. A
      * marker-carrying file named like the Devin Desktop safety file is not given the
-     * {@code .windsurfrules} remedy there: Antigravity has no such file.
+     * {@code .windsurfrules} remedy: Antigravity has no such file.
      */
     @Test
-    void anOversizedAntigravityRuleLogsTheContractEventAndNamesAntigravity(@TempDir Path root) throws IOException {
+    void anOversizedAntigravityRuleLogsItsLengthInBytesAndNamesAntigravity(@TempDir Path root) throws IOException {
         Files.createDirectories(root.resolve(".agents/rules"));
         Files.writeString(root.resolve(".agents/rules/+vibetags-safety.md"),
+            generated("a".repeat(ANTIGRAVITY_BYTES + 1 - markerOverhead())), StandardCharsets.UTF_8);
+
+        warn(root);
+
+        assertEquals(List.of("validation.rule-file-over-limit file=.agents/rules/+vibetags-safety.md bytes=24001 limit=24000"),
+            warnEvents());
+        assertEquals(1, warnings.size(), "one build warning per oversized file: " + warnings);
+        String warning = warnings.get(0);
+        assertTrue(warning.startsWith("VibeTags: .agents/rules/+vibetags-safety.md is 24001 bytes, over the 24000"
+            + " bytes Antigravity reads"), warning);
+        assertTrue(warning.contains("truncates"), "the vendor now says what happens past the cap: " + warning);
+        assertFalse(warning.contains(".windsurfrules") || warning.contains("Devin") || warning.contains("Windsurf"), warning);
+    }
+
+    /** The old 12,000-character figure warned about Antigravity files well within its 24,000-byte cap. */
+    @Test
+    void anAntigravityRuleOverTwelveThousandCharactersButWithinTheByteCapIsSilent(@TempDir Path root)
+            throws IOException {
+        Files.createDirectories(root.resolve(".agents/rules"));
+        Files.writeString(root.resolve(".agents/rules/web.md"),
             generated("a".repeat(LIMIT + 1 - markerOverhead())), StandardCharsets.UTF_8);
 
         warn(root);
 
-        assertEquals(List.of("validation.rule-file-over-limit file=.agents/rules/+vibetags-safety.md chars=12001 limit=12000"),
+        assertEquals(List.of(), warnEvents());
+        assertEquals(List.of(), warnings);
+    }
+
+    /**
+     * The other direction, which a character count can never see: 9,000 CJK characters are three
+     * UTF-8 bytes each, under any character cap and over Antigravity's byte cap. Run with DEBUG off,
+     * so the byte prefilter is the path under test.
+     */
+    @Test
+    @DisplayName("a multi-byte Antigravity rule over the byte cap warns even with DEBUG off")
+    void aMultiByteAntigravityRuleUnderTheCharacterCountButOverTheByteCapWarns(@TempDir Path root)
+            throws IOException {
+        logger.setLevel(Level.WARN);
+        Files.createDirectories(root.resolve(".agents/rules"));
+        Path file = root.resolve(".agents/rules/web.md");
+        Files.writeString(file, generated("中".repeat(9_000)), StandardCharsets.UTF_8);
+        long bytes = Files.size(file);
+        assertTrue(bytes > ANTIGRAVITY_BYTES && Files.readString(file).length() < LIMIT,
+            "the fixture must be under 12,000 characters and over 24,000 bytes, was " + bytes + " bytes");
+
+        warn(root);
+
+        assertEquals(List.of("validation.rule-file-over-limit file=.agents/rules/web.md bytes=" + bytes + " limit=24000"),
             warnEvents());
-        assertEquals(1, warnings.size(), "one build warning per oversized file: " + warnings);
-        String warning = warnings.get(0);
-        assertTrue(warning.startsWith("VibeTags: .agents/rules/+vibetags-safety.md is 12001 characters, over the 12000"
-            + " Antigravity accepts"), warning);
-        assertFalse(warning.contains(".windsurfrules") || warning.contains("Devin") || warning.contains("Windsurf"), warning);
+        assertEquals(1, warnings.size(), warnings.toString());
     }
 
     /**

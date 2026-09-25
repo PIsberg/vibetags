@@ -30,8 +30,9 @@ Write events, not positions:
   pins `platform.deprecated key= file= replacement=`, the WARN a build with a deprecated output
   opted in writes once per file (`replacement=none` where the vendor names no successor), and
   `RuleFileLengthWarnerTest` pins `validation.rule-file-over-limit file= chars= limit=`, the WARN for
-  a generated `.devin/rules/`, `.windsurf/rules/` or `.agents/rules/` file over the per-file cap
-  Devin Desktop and Antigravity document, with
+  a generated `.devin/rules/` or `.windsurf/rules/` file over Devin Desktop's per-file character cap,
+  and `validation.rule-file-over-limit file= bytes= limit=` for an `.agents/rules/` file over
+  Antigravity's byte cap (#850: the key names the unit, so a byte count is never logged as chars), with
   `validation.skip check=rule-file-length reason=no-markers` for a rule file VibeTags did not write,
   and `TestingRoutingLogContractTest` pins the `TESTING.md` routing decision:
   `testing.route sourceSet= routed= moved= kept=` (INFO, a routed test round: files routed,

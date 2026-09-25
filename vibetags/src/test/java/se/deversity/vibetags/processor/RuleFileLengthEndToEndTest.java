@@ -22,12 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Devin Desktop, formerly Windsurf, caps a workspace rule file at 12,000 characters (issue #695), and
- * Antigravity caps a rules file at the same length (issue #701).
+ * Antigravity truncates a rules file past 24,000 bytes (issues #701, #850).
  *
- * <p>docs.devin.ai, Memories &amp; Rules: "{@code .devin/rules/*.md} (preferred) or
- * {@code .windsurf/rules/*.md} (fallback) | One file per rule ... Limited to 12,000 characters per
- * file." antigravity.google/docs/rules-workflows: "Rules files are limited to 12,000 characters
- * each." Neither page says whether a longer file is cut or dropped, and either way the build
+ * <p>docs.devin.ai, Memories &amp; Rules: "Workspace rule files are limited to 12,000 characters
+ * each." antigravity.google/docs/rules: "Antigravity truncates any single rule file that exceeds
+ * 24,000 bytes"; the page said 12,000 characters when #701 was written. Devin Desktop does not say
+ * whether a longer file is cut or dropped, and either way the build
  * used to report success, so the guardrails past the cap went missing with nothing said. A role
  * grouping many elements, a long annotation text, or the always-on safety file of a project with
  * many safety annotations can each pass the cap.
@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class RuleFileLengthEndToEndTest {
 
     private static final int LIMIT = 12_000;
+    private static final int ANTIGRAVITY_BYTES = 24_000;
     private static final String RULE = "/com-example-web-Big.md";
 
     @AfterEach
@@ -57,7 +58,7 @@ class RuleFileLengthEndToEndTest {
         return diagnostics.stream()
             .filter(d -> d.getKind() == Diagnostic.Kind.WARNING)
             .map(d -> d.getMessage(null))
-            .filter(m -> m.contains("characters, over the 12000"))
+            .filter(m -> m.contains("characters, over the 12000") || m.contains("bytes, over the 24000"))
             .toList();
     }
 
@@ -66,7 +67,7 @@ class RuleFileLengthEndToEndTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {".devin/rules", ".windsurf/rules", ".agents/rules"})
+    @ValueSource(strings = {".devin/rules", ".windsurf/rules"})
     void aRuleFileOverTheCapWarnsWithItsNameAndLength(String dir, @TempDir Path root) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(root, false);
         Files.createDirectories(root.resolve(dir));
@@ -81,23 +82,39 @@ class RuleFileLengthEndToEndTest {
     }
 
     /**
-     * Antigravity documents the same cap for {@code .agents/rules/} (#701), and the warning names the
-     * tool whose cap it is. The Devin Desktop and Windsurf wording, and the {@code .windsurfrules}
-     * remedy, do not apply there.
+     * Antigravity caps {@code .agents/rules/} at 24,000 bytes and truncates past it (#850, which
+     * replaced #701's 12,000 characters when the vendor page changed). The warning gives the length in
+     * bytes and names the tool whose cap it is; the Devin Desktop and Windsurf wording, and the
+     * {@code .windsurfrules} remedy, do not apply there.
      */
     @Test
-    void anAntigravityRuleNamesAntigravityAndNoWindsurfRemedy(@TempDir Path root) throws IOException {
+    void anAntigravityRuleOverTheByteCapWarnsInBytesAndNamesAntigravity(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        Files.createDirectories(root.resolve(".agents/rules"));
+        h.addSource("com.example.web.Big", draftSource(ANTIGRAVITY_BYTES + 500));
+
+        List<String> warnings = lengthWarnings(h.compileReturningDiagnostics());
+
+        long bytes = Files.size(root.resolve(".agents/rules" + RULE));
+        assertEquals(1, warnings.size(), "one warning, for the one oversized file: " + warnings);
+        String warning = warnings.get(0);
+        assertTrue(warning.contains(".agents/rules" + RULE + " is " + bytes + " bytes"), warning);
+        assertTrue(warning.contains("Antigravity"), warning);
+        assertFalse(warning.contains("Devin") || warning.contains("Windsurf") || warning.contains(".windsurfrules"),
+            warning);
+    }
+
+    /** A rule over 12,000 characters but within 24,000 bytes is one Antigravity reads whole. */
+    @Test
+    void anAntigravityRuleWithinTheByteCapIsSilent(@TempDir Path root) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(root, false);
         Files.createDirectories(root.resolve(".agents/rules"));
         h.addSource("com.example.web.Big", draftSource(LIMIT + 500));
 
         List<String> warnings = lengthWarnings(h.compileReturningDiagnostics());
 
-        assertEquals(1, warnings.size(), "one warning, for the one oversized file: " + warnings);
-        String warning = warnings.get(0);
-        assertTrue(warning.contains("Antigravity"), warning);
-        assertFalse(warning.contains("Devin") || warning.contains("Windsurf") || warning.contains(".windsurfrules"),
-            warning);
+        assertTrue(h.readFile(".agents/rules" + RULE).length() > LIMIT, "the fixture must be over 12,000 characters");
+        assertEquals(List.of(), warnings);
     }
 
     /**

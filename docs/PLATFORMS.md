@@ -164,7 +164,7 @@ Code and `.ai/rules/` get no glob in their front matter, so nothing is joined. C
 read the value as a string, not a YAML list, which is why their headers are bare rather than
 bracketed; see [Cursor and Trae read `globs:` as a comma-separated string](#cursor-and-trae-read-globs-as-a-comma-separated-string) (#699).
 
-**A per-file length cap.** Devin Desktop and Antigravity document a character cap on a single rule
+**A per-file length cap.** Devin Desktop and Antigravity document a cap on a single rule
 file, and VibeTags warns when a file it generated in one of their directories passes it
 (`validation.rule-file-over-limit` in `vibetags.log`). Devin Desktop gives `.devin/rules/` and
 `.windsurf/rules/` "Limited to 12,000 characters per file" (#695; see
@@ -172,7 +172,8 @@ file, and VibeTags warns when a file it generated in one of their directories pa
 Antigravity's rules page said of `.agents/rules/` "Rules files are limited to 12,000 characters
 each." (#701). [That page](https://antigravity.google/docs/rules) now says "Antigravity truncates
 any single rule file that exceeds 24,000 bytes", counted after its `@` includes are expanded
-(re-checked 2026-09-25); VibeTags still warns at 12,000 characters there, which #850 tracks. The
+(re-checked 2026-09-25), so VibeTags measures an `.agents/rules/` file in UTF-8 bytes against 24,000
+and a Devin Desktop file in characters against 12,000 (#850). The
 Devin Desktop page does not say whether a longer file is cut or dropped. Antigravity has no
 always-on safety file, so its warning suggests splitting the
 role in `.vibetags-roles` or shortening the annotation text, never `.windsurfrules`. No other granular

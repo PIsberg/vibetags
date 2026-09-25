@@ -27,6 +27,13 @@ disappeared from any of them. A project without annotated test sources sees no c
 
 ### Fixed
 
+- **Antigravity rule files are measured against its 24,000-byte cap, not 12,000 characters (#850).**
+  Antigravity's rules page now says it "truncates any single rule file that exceeds 24,000 bytes";
+  the 12,000-character figure #701 used is gone from it. An `.agents/rules/` file of 12,001 ASCII
+  characters no longer warns, and one of 9,000 CJK characters (27,000 bytes), which no character
+  count flags, now does. The WARN event for that directory is
+  `validation.rule-file-over-limit file= bytes= limit=24000`; Devin Desktop's `.devin/rules/` and
+  `.windsurf/rules/` keep `chars= limit=12000`, re-checked at the vendor the same day.
 - **`tools/release-notes.sh` pins every relative link to the tag, not just `changelog-assets/` (#849).**
   A section that embedded plots as `../load-tests/...` produced notes whose images 404 on the
   release page, because GitHub resolves them from the repository root rather than `docs/`. Every
