@@ -182,6 +182,15 @@ produces one `VIBETAGS-MODULE` region and a single-module project with annotated
 historical sub-marker-free output. `ModuleSidecar.regionCount()`, not the sidecar count, is what
 decides whether a build is multi-module.
 
+Inside a region the source sets' bodies are joined main first. A YAML platform joins them through
+its `mergeShape()`, because two stacked documents repeat a top-level key. `CLAUDE.md` and
+`CLAUDE.local.md` join them through `ClaudeSectionMerge` (`PlatformRenderer.sourceSetMerge()`):
+one `<project_guardrails>` block, each section once with both source sets' entries, each rule
+sentence once. Stacked, the test round repeated the header, the wrapper and every rule, 955 of
+the 1,755 bytes it added to this repository's `CLAUDE.md` (#839). The merge declines, and the
+bodies are concatenated as before, when a body is not the shape it knows, for example a sidecar
+written by another processor version. Every other format is still concatenated.
+
 Each sidecar also records the granular rule stems it wrote (`GranularRulesWriter.stemsFor`, a pure
 function computed *before* the write so the `@AILocked` `generateFiles()` step order is unchanged).
 Every cleanup pass adds every *other* sidecar's stems to its exclusion list, which is what stops a

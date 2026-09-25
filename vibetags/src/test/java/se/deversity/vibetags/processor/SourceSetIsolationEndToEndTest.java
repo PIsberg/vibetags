@@ -210,6 +210,53 @@ class SourceSetIsolationEndToEndTest {
             "one module is still one module — no sub-markers:\n" + claude);
     }
 
+    /**
+     * Two source sets rendering CLAUDE.md are one document, not two stacked ones (issue #839).
+     * Stacked, the test round's body repeats the header, the wrapper, every section's rule and the
+     * closing rule, which on this repository was 955 of the 1,755 bytes the test round added to a
+     * file loaded on every session. Asserted by count, since the defect is repetition and every
+     * guardrail was already present in the stacked form.
+     */
+    @Test
+    void twoSourceSetsRenderOneGuardrailBlockInClaudeMd() throws IOException {
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        Files.writeString(reactorRoot.resolve("pom.xml"), "<project/>", StandardCharsets.UTF_8);
+        String lockedTest = """
+            package com.example.core;
+
+            import se.deversity.vibetags.annotations.AILocked;
+
+            @AILocked(reason = "pins the wire format byte for byte")
+            public class IrNodeTest {
+            }
+            """;
+
+        for (String[] pair : new String[][]{
+                {"main", "com.example.core.IrNode", MAIN_SOURCE},
+                {"test", "com.example.core.IrNodeTest", lockedTest}}) {
+            ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
+            harness.writeSourceFile("src/" + pair[0] + "/java/" + pair[1].replace('.', '/') + ".java", pair[2]);
+            harness.compile();
+        }
+
+        String claude = Files.readString(reactorRoot.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(claude.contains(MAIN_REASON), claude);
+        assertTrue(claude.contains("pins the wire format byte for byte"), claude);
+        assertEquals(1, occurrences(claude, "<project_guardrails>"), claude);
+        assertEquals(1, occurrences(claude, "  <locked_files>\n"), claude);
+        assertEquals(1, occurrences(claude, "<rule>Never propose edits to files listed in <locked_files>.</rule>"), claude);
+        assertTrue(claude.indexOf(MAIN_REASON) < claude.indexOf("pins the wire format byte for byte"),
+            "main source set first, as the stacked form had it:\n" + claude);
+    }
+
+    private static int occurrences(String text, String needle) {
+        int count = 0;
+        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + needle.length())) {
+            count++;
+        }
+        return count;
+    }
+
     /** A second module's rule files are equally invisible to this module's round. */
     @Test
     void oneModuleRoundKeepsAnotherModulesRootScopedRuleFiles() throws IOException {
