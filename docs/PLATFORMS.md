@@ -89,7 +89,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.aiassistant/rules/*.md` | JetBrains AI Assistant (granular, per element) | Markdown |
 | `.augment/rules/*.md` | Augment Code (granular, per element) | Markdown |
 | `.zencoder/rules/*.md` | Zencoder (granular, per element) | YAML front-matter + Markdown |
-| `.goosehints` | goose (Block) | Markdown |
+| `.goosehints` | goose (Agentic AI Foundation, formerly Block) | Markdown |
 | `.antigravityignore` | Antigravity AI (**deprecated**, see below) | Glob patterns |
 | `.clinerules` | Cline AI assistant (single file, **deprecated**, see below) | Markdown |
 | `.clinerules/*.md` | Cline AI assistant (granular, per element; same path as the file, see [below](#clines-two-shapes-at-one-path)) | YAML front-matter + Markdown |
@@ -100,7 +100,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.void/rules.md` | Void Editor (**deprecated**, see below) | Markdown |
 | `replit.md` | Replit Agent | Markdown |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
-| `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) | TOML (`extra_instructions`) |
+| `.pr_agent.toml` | PR-Agent (AI PR reviewer, community-owned; formerly Qodo/Codium) | TOML (`extra_instructions`) |
 | `ellipsis.yaml` | Ellipsis (AI PR reviewer, **deprecated**, see below) | YAML (`pr_review.rules`) |
 | `.gemini/styleguide.md` | Gemini Code Assist (AI PR reviewer) | Markdown |
 | `.greptile/rules.md` | Greptile (AI PR reviewer) | Markdown |
@@ -169,9 +169,12 @@ file, and VibeTags warns when a file it generated in one of their directories pa
 (`validation.rule-file-over-limit` in `vibetags.log`). Devin Desktop gives `.devin/rules/` and
 `.windsurf/rules/` "Limited to 12,000 characters per file" (#695; see
 [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop)).
-[Antigravity's rules page](https://antigravity.google/docs/rules-workflows) says of `.agents/rules/`
-"Rules files are limited to 12,000 characters each." (#701). Neither page says whether a longer file
-is cut or dropped. Antigravity has no always-on safety file, so its warning suggests splitting the
+Antigravity's rules page said of `.agents/rules/` "Rules files are limited to 12,000 characters
+each." (#701). [That page](https://antigravity.google/docs/rules) now says "Antigravity truncates
+any single rule file that exceeds 24,000 bytes (after expanding `@[label](path)` includes)"
+(re-checked 2026-09-25); VibeTags still warns at 12,000 characters there, which #850 tracks. The
+Devin Desktop page does not say whether a longer file is cut or dropped. Antigravity has no
+always-on safety file, so its warning suggests splitting the
 role in `.vibetags-roles` or shortening the annotation text, never `.windsurfrules`. No other granular
 directory's vendor documents a per-file cap (checked 2026-09-14): Grok Build says "Files are loaded
 in full, with no size cap" ([docs.x.ai](https://docs.x.ai/build/features/project-rules)); Claude
@@ -696,7 +699,8 @@ Code keys did, because a key is what `vibetags init --platforms` takes. The new 
 exclusion mechanism its tool has, and VibeTags already writes that tool's rules directory:
 [`.rooignore`](https://docs.zoocode.dev/features/rooignore) (Zoo Code, the fork of the retired Roo Code: prevents reading and
 writing, the closest match to what `@AIIgnore` means),
-[`.continueignore`](https://docs.continue.dev/customize/deep-dives/codebase) and
+[`.continueignore`](https://docs.continue.dev/reference/deprecated-codebase) (documented now only on
+the page for Continue's deprecated `@Codebase` provider, with no deprecation of the file itself) and
 [`.augmentignore`](https://docs.augmentcode.com/setup-augment/workspace-indexing) (both exclude
 from indexing, which is the whole of what those tools offer).
 
