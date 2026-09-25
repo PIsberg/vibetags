@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`vibetags doctor --context` weighs the active guardrail files (#840).** Bytes per file, the
+  share inside the `VIBETAGS` markers, and per generated block its sections, largest first, with
+  entry counts and a flag on any section that appears more than once in one file. Scoped rule
+  directories are listed apart, since they load on demand. Tokens are shown as bytes / 4 and
+  labelled an estimate. It never changes doctor's exit code.
+- **An eval for the path where only the index names a rule (#839).** `scoped-rule-unopened` asks
+  for a bulk sed rename of `BuildFingerprint.compute`, whose frozen signature only its scoped rule
+  file states, so the agent need never open the file. `VARIANT=no-index` replaces the
+  `<scoped_rules>` list with a one-sentence pointer, to measure that change before making it. The
+  runner also accepts `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, so the bank runs on a
+  subscription as well as an API key.
 - **A source-hash arm on `IncrementalRebuildStressTest`, the measurement #834's spike said
   decides it.** An exit ahead of the collection walk would need a content proof that no source
   changed, since an mtime proxy fails towards stale guardrail files. `SourceHashProcessor` hashes
@@ -268,6 +279,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`CLAUDE.md` renders one guardrail block per module, not one per source set (#839).** A test
+  round wrote a second `<project_guardrails>` block under the first, repeating the header, the
+  wrapper and every rule sentence. `ClaudeSectionMerge` joins the source sets' bodies instead:
+  each section once, main entries first, each rule once. It declines, and the old concatenation
+  runs, on any body it does not recognise, so no guardrail can be lost to it. The other prose
+  formats (`AGENTS.md`, `GEMINI.md`, `llms.txt`) are still stacked; `doctor --context` shows it.
+- **The scoped-rules index leaves out an element whose rule file holds only the safety tier
+  (#839).** Those stanzas are already inline in the aggregate, so the index line pointed at a file
+  with nothing new in it. The file is still written. On this repository, measured with
+  `doctor --context` before and after regenerating from a clean cache: `CLAUDE.md` 14,878 to
+  13,444 bytes, its generated block 9,106 to 7,672, and `<scoped_rules>` 3,089 bytes in two copies
+  with 24 entries to 2,002 bytes in one copy with 18.
 - **The builder walks the descriptor table's implicit activations instead of restating them
   (#830).** Five outputs have no opt-in file of their own: the two Codex sidecars and the three
   always-loaded safety files that live inside a rules directory. `PlatformDescriptors.ALL` records
