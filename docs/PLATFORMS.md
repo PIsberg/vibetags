@@ -171,7 +171,7 @@ file, and VibeTags warns when a file it generated in one of their directories pa
 [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop)).
 Antigravity's rules page said of `.agents/rules/` "Rules files are limited to 12,000 characters
 each." (#701). [That page](https://antigravity.google/docs/rules) now says "Antigravity truncates
-any single rule file that exceeds 24,000 bytes (after expanding `@[label](path)` includes)"
+any single rule file that exceeds 24,000 bytes", counted after its `@` includes are expanded
 (re-checked 2026-09-25); VibeTags still warns at 12,000 characters there, which #850 tracks. The
 Devin Desktop page does not say whether a longer file is cut or dropped. Antigravity has no
 always-on safety file, so its warning suggests splitting the
