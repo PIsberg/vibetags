@@ -298,9 +298,9 @@ Go to [GitHub Releases](https://github.com/PIsberg/vibetags/releases) and click 
 
 #### Image-path gotcha — must rewrite relative paths
 
-`docs/CHANGELOG.md` uses paths like `changelog-assets/0.X.Y/foo.png` for embedded images. **In the repo view** GitHub resolves these relative to the file's location (`docs/`), so they work. **In a GitHub Release page** GitHub resolves the same paths from the **repo root**, so they 404.
+`docs/CHANGELOG.md` uses relative paths for embedded images, both `changelog-assets/0.X.Y/foo.png` and `../load-tests/results/_plots/foo.png`. **In the repo view** GitHub resolves these relative to the file's location (`docs/`), so they work. **In a GitHub Release page** GitHub resolves the same paths from the **repo root**, so they 404.
 
-Before uploading the release notes, rewrite the relative paths to absolute raw-content URLs pinned to the tag. From the repo root:
+`tools/release-notes.sh` resolves every relative link against `docs/` and pins it to the tag: raw-content URLs for images, `blob/` URLs for other files. Absolute links and `#anchors` pass through. A link that resolves outside the repository makes it refuse and emit nothing. Until #849 it rewrote only `changelog-assets/`, and a release's `../load-tests/` plots had to be fixed by hand. From the repo root:
 
 ```bash
 TAG=v<version>

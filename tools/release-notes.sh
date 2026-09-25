@@ -60,7 +60,46 @@ if [ "$count" -lt 5 ]; then
   exit 1
 fi
 
-# GitHub resolves a relative image path from the repository root on a release page, so an
-# unrewritten changelog-assets link 404s there while rendering correctly in the CHANGELOG.
-printf '%s\n' "$notes" \
-  | sed "s|](changelog-assets/$VERSION/|](https://github.com/PIsberg/vibetags/raw/v$VERSION/docs/changelog-assets/$VERSION/|g"
+# GitHub resolves a relative link on a release page from the repository root, while the same link
+# in the CHANGELOG resolves from docs/. So every relative target is resolved against docs/ and
+# pinned to the tag: raw/ for an image, blob/ for anything else. Absolute URLs and in-page anchors
+# are left alone. This used to rewrite only `changelog-assets/<version>/`, so a section embedding
+# plots as `../load-tests/...` would have shipped three 404s to the release page (#849).
+#
+# A target that still climbs above the root after resolving (`../../x`) has no tag URL, so the
+# script refuses and emits nothing, for the same reason as the line-count guard above.
+printf '%s\n' "$notes" | awk -v repo="https://github.com/PIsberg/vibetags" -v tag="v$VERSION" '
+  function lastindex(s, c,    i) {
+    for (i = length(s); i > 0; i--) if (substr(s, i, 1) == c) return i
+    return 0
+  }
+  function rewrite(line,    out, pre, target, lb, kind, resolved) {
+    out = ""
+    while (match(line, /\]\([^) ]+\)/)) {
+      pre = substr(line, 1, RSTART)
+      target = substr(line, RSTART + 2, RLENGTH - 3)
+      line = substr(line, RSTART + RLENGTH)
+      if (target ~ /^(#|[A-Za-z][A-Za-z0-9+.-]*:)/) {
+        out = out pre "(" target ")"
+        continue
+      }
+      lb = lastindex(pre, "[")
+      kind = (lb > 1 && substr(pre, lb - 1, 1) == "!") ? "raw" : "blob"
+      if (target ~ /^\//)          resolved = substr(target, 2)
+      else if (target ~ /^\.\.\//) resolved = substr(target, 4)
+      else                         resolved = "docs/" target
+      if (resolved ~ /^\.\.\// || resolved ~ /\/\.\.\//) escaped = escaped "  " target "\n"
+      out = out pre "(" repo "/" kind "/" tag "/" resolved ")"
+    }
+    return out line
+  }
+  { buf = buf rewrite($0) "\n" }
+  END {
+    if (escaped != "") {
+      printf "release-notes.sh: these links resolve outside the repository, so no tag URL can serve them:\n%s", escaped > "/dev/stderr"
+      printf "  Refusing to emit notes for a release, because the publish step it feeds cannot be undone.\n" > "/dev/stderr"
+      exit 1
+    }
+    printf "%s", buf
+  }
+'

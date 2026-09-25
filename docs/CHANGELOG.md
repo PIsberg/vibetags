@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`tools/release-notes.sh` pins every relative link to the tag, not just `changelog-assets/` (#849).**
+  A section that embedded plots as `../load-tests/...` produced notes whose images 404 on the
+  release page, because GitHub resolves them from the repository root rather than `docs/`. Every
+  relative target is now resolved against `docs/`: images become `raw/<tag>/` URLs and other files
+  `blob/<tag>/` URLs. A link that climbs out of the repository makes the script refuse and emit
+  nothing.
+
 ## [1.3.7] - 2026-09-25
 
 **Upgrading from 1.3.6: what moves in your committed files.** If an element's scoped rule file
