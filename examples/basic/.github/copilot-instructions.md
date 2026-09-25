@@ -60,9 +60,7 @@ Detailed per-element guardrails live in scoped rule files that load automaticall
 - `com.example.concurrent.SessionCache`
 - `com.example.config.AsyncTestConfig`
 - `com.example.config.ParallelTestSettings`
-- `com.example.database.DatabaseConnector`
 - `com.example.database.UserEntity`
-- `com.example.internal.GeneratedMetadata`
 - `com.example.legacy.LegacyBridgeService`
 - `com.example.legacy.OldPaymentApi`
 - `com.example.metrics.OrderMetrics`
@@ -100,7 +98,6 @@ Do not suggest changes to the following files:
 ## Scoped Rules Index
 Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .github/instructions/{path, every non-alphanumeric character replaced by '-'}.instructions.md. Consult the file before modifying an element:
 
-- `com.example.testing.GoldenPayloadFixtures`
 - `com.example.testing.PaymentFixturesTest`
 
 Guardrails for test code are in TESTING.md. Read it before modifying anything under a test source set.

@@ -63,9 +63,7 @@ Detailed per-element guardrails live in scoped rule files that Gemini CLI does n
 - `com.example.concurrent.SessionCache`
 - `com.example.config.AsyncTestConfig`
 - `com.example.config.ParallelTestSettings`
-- `com.example.database.DatabaseConnector`
 - `com.example.database.UserEntity`
-- `com.example.internal.GeneratedMetadata`
 - `com.example.legacy.LegacyBridgeService`
 - `com.example.legacy.OldPaymentApi`
 - `com.example.metrics.OrderMetrics`
@@ -102,7 +100,6 @@ Do not suggest modifications to the following files:
 ## Scoped Rules Index
 Detailed per-element guardrails live in scoped rule files that Gemini CLI does not load on its own. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Before modifying an element listed below, open its file with read_file and apply the guardrails there:
 
-- `com.example.testing.GoldenPayloadFixtures`
 - `com.example.testing.PaymentFixturesTest`
 
 Guardrails for test code are in TESTING.md. Read it before modifying anything under a test source set.

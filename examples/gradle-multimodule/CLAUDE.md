@@ -112,9 +112,7 @@
     <element path="com.example.concurrent.SessionCache"/>
     <element path="com.example.config.AsyncTestConfig"/>
     <element path="com.example.config.ParallelTestSettings"/>
-    <element path="com.example.database.DatabaseConnector"/>
     <element path="com.example.database.UserEntity"/>
-    <element path="com.example.internal.GeneratedMetadata"/>
     <element path="com.example.legacy.LegacyBridgeService"/>
     <element path="com.example.legacy.OldPaymentApi"/>
     <element path="com.example.metrics.OrderMetrics"/>
@@ -200,7 +198,6 @@ Conventions the dependency's authors documented. Follow them unless this project
   <scoped_rules>
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
     <element path="com.example.gmm.core" rules=".claude/rules/reactor-spine.md"/>
-    <element path="com.example.gmm.core.IrNode" rules=".claude/rules/reactor-spine.md"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>
