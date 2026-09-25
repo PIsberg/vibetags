@@ -36,7 +36,7 @@ import java.util.Map;
  */
 @AICore(
     sensitivity = "high",
-    note = "Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files"
+    note = "A false positive, stale output taken as unchanged, silently leaves generated files wrong"
 )
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.SYNCHRONIZED,

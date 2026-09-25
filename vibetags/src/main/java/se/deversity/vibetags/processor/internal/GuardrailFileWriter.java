@@ -36,7 +36,7 @@ import java.util.stream.Stream;
  */
 @AICore(
     sensitivity = "high",
-    note = "Atomic marker-aware file writer; invariant: hand-authored content outside VIBETAGS-START/END markers must never be overwritten or lost"
+    note = "Invariant 2 lives here: hand-authored content outside VIBETAGS-START/END must never be overwritten or lost"
 )
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.IMMUTABLE,

@@ -41,10 +41,8 @@ import se.deversity.vibetags.annotations.AISecure;
  * <p>So both halves are the contract: stop at the cap, and say that you did.
  */
 @AISecure(
-    aspect = "Enforces the trust boundary: manifests come from third-party dependency JARs "
-        + "and their text is merged into the consumer's always-loaded instruction files. "
-        + "These cases are the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list; relaxing one "
-        + "to make a test pass widens what a dependency may put in front of an agent"
+    aspect = "Pins the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list of TransitiveManifestReader; "
+        + "relaxing a case to make it pass widens what a dependency may put in front of an agent"
 )
 class TransitiveManifestReaderLimitsTest {
 

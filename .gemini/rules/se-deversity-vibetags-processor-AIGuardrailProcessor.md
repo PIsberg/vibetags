@@ -6,7 +6,7 @@
 
 ## Core Functionality
 - **Sensitivity**: critical
-- **Note**: JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes
+- **Note**: Runs inside every consumer's javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build
 
 ### Rules for method process
 - **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.

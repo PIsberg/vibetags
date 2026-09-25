@@ -7,7 +7,7 @@ paths: ["**/WriteCache.java"]
 
 ## Core Functionality
 - **Sensitivity**: high
-- **Note**: Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files
+- **Note**: A false positive, stale output taken as unchanged, silently leaves generated files wrong
 
 ### Rules for method isUnchanged
 - **Rule**: Optimal complexity required. O(n^2) is forbidden on hot paths.

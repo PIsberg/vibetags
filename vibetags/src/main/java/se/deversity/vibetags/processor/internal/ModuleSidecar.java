@@ -63,7 +63,7 @@ import java.util.stream.Stream;
  */
 @AICore(
     sensitivity = "high",
-    note = "Per-module sidecar for multi-module Maven/Gradle builds; the .vibetags-mod-* file format is shared across independently compiled modules — format changes break backward compatibility"
+    note = "The .vibetags-mod-* format is read by modules compiled separately, possibly by another processor version; changing it breaks them"
 )
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.OTHER,

@@ -88,15 +88,15 @@ answers; use it when the topic is not below.
   <core_elements>
     <element path="se.deversity.vibetags.processor.AIGuardrailProcessor">
       <sensitivity>critical</sensitivity>
-      <note>JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes</note>
+      <note>Runs inside every consumer&#39;s javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build</note>
     </element>
     <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter">
       <sensitivity>high</sensitivity>
-      <note>Atomic marker-aware file writer; invariant: hand-authored content outside VIBETAGS-START/END markers must never be overwritten or lost</note>
+      <note>Invariant 2 lives here: hand-authored content outside VIBETAGS-START/END must never be overwritten or lost</note>
     </element>
     <element path="se.deversity.vibetags.processor.internal.ModuleSidecar">
       <sensitivity>high</sensitivity>
-      <note>Per-module sidecar for multi-module Maven/Gradle builds; the .vibetags-mod-* file format is shared across independently compiled modules — format changes break backward compatibility</note>
+      <note>The .vibetags-mod-* format is read by modules compiled separately, possibly by another processor version; changing it breaks them</note>
     </element>
     <element path="se.deversity.vibetags.processor.internal.PartialRoundDetector">
       <sensitivity>high</sensitivity>
@@ -104,7 +104,7 @@ answers; use it when the topic is not below.
     </element>
     <element path="se.deversity.vibetags.processor.internal.WriteCache">
       <sensitivity>high</sensitivity>
-      <note>Per-file content cache backed by .vibetags-cache; false positives (wrongly treating stale output as unchanged) would silently corrupt generated files</note>
+      <note>A false positive, stale output taken as unchanged, silently leaves generated files wrong</note>
     </element>
   </core_elements>
 
@@ -120,7 +120,7 @@ answers; use it when the topic is not below.
       <aspect>Output encoding for the generated instruction files. Every interpolated value reaches an aggregate through here, including annotation attributes copied verbatim out of third-party dependency JARs; a weakened method lets that text close a tag and forge its own &lt;locked_files&gt; or &lt;rule&gt; entries in a file the agent loads on every session.</aspect>
     </element>
     <element path="se.deversity.vibetags.processor.internal.TransitiveManifestReaderLimitsTest">
-      <aspect>Enforces the trust boundary: manifests come from third-party dependency JARs and their text is merged into the consumer&#39;s always-loaded instruction files. These cases are the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list; relaxing one to make a test pass widens what a dependency may put in front of an agent</aspect>
+      <aspect>Pins the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list of TransitiveManifestReader; relaxing a case to make it pass widens what a dependency may put in front of an agent</aspect>
     </element>
   </security_elements>
 

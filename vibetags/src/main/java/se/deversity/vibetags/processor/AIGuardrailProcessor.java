@@ -70,7 +70,7 @@ import java.util.stream.Collectors;
  */
 @AICore(
     sensitivity = "critical",
-    note = "JSR 269 entry point; orchestrates annotation discovery, fingerprint short-circuit, sidecar aggregation, and all file writes"
+    note = "Runs inside every consumer's javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build"
 )
 @AITestDriven(
     coverageGoal = 90,

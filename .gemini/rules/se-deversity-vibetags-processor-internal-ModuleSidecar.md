@@ -3,7 +3,7 @@
 
 ## Core Functionality
 - **Sensitivity**: high
-- **Note**: Per-module sidecar for multi-module Maven/Gradle builds; the .vibetags-mod-* file format is shared across independently compiled modules — format changes break backward compatibility
+- **Note**: The .vibetags-mod-* format is read by modules compiled separately, possibly by another processor version; changing it breaks them
 
 ### Rules for method mergeFor
 - **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.

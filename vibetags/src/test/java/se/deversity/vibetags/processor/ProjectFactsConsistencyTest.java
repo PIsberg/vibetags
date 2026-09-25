@@ -53,6 +53,9 @@ class ProjectFactsConsistencyTest {
     /** {@code vibetags/} is the surefire working directory; its parent is the repo root. */
     private static final Path REPO_ROOT = Paths.get("").toAbsolutePath().getParent();
 
+    /** Bytes the always-loaded block may spend; see {@link #claudeMdGeneratedBlockStaysWithinItsBudget}. */
+    private static final int CLAUDE_MD_BLOCK_BUDGET = 7_000;
+
     /**
      * Docs that state a version's own historical scope, which must keep their original numbers.
      * A changelog entry saying a release "extends the set to 39 annotations" was true when written
@@ -449,7 +452,47 @@ class ProjectFactsConsistencyTest {
                 + "it holds " + scopedRuleLines(rulesDir) + ". Update the README sentence.");
     }
 
+    /**
+     * The generated block in this repository's {@code CLAUDE.md} loads into every session, and it
+     * grew by about 1.5 KB when the test round started publishing guardrails, without anyone
+     * deciding to spend it (#752). This is the decision point: a change that pushes the block past
+     * the budget fails here, and raising the number is an edit someone has to make and explain.
+     * Measured in UTF-8 bytes, marker lines included.
+     */
+    @Test
+    void claudeMdGeneratedBlockStaysWithinItsBudget() throws IOException {
+        Path claudeMd = REPO_ROOT.resolve("CLAUDE.md");
+        assumeTrue(Files.isRegularFile(claudeMd),
+            "repo layout not reachable from the test working directory; skipping");
+
+        int bytes = generatedBlockBytes(claudeMd);
+
+        assertTrue(bytes <= CLAUDE_MD_BLOCK_BUDGET,
+            "the generated block in CLAUDE.md is " + bytes + " bytes, over its budget of "
+                + CLAUDE_MD_BLOCK_BUDGET + ". Every session pays for it. Trim a reason that restates"
+                + " the code, or raise the budget in this test and say why in the commit.");
+    }
+
     // -----------------------------------------------------------------------
+
+    /** UTF-8 bytes from {@code <!-- VIBETAGS-START -->} to {@code <!-- VIBETAGS-END -->}, each line with its newline. */
+    private static int generatedBlockBytes(Path claudeMd) throws IOException {
+        List<String> lines = Files.readAllLines(claudeMd, StandardCharsets.UTF_8);
+        int bytes = 0;
+        boolean inside = false;
+        for (String line : lines) {
+            if ("<!-- VIBETAGS-START -->".equals(line.strip())) {
+                inside = true;
+            }
+            if (inside) {
+                bytes += line.getBytes(StandardCharsets.UTF_8).length + 1;
+            }
+            if (inside && "<!-- VIBETAGS-END -->".equals(line.strip())) {
+                return bytes;
+            }
+        }
+        throw new AssertionError("no VIBETAGS marker pair in " + claudeMd);
+    }
 
     /** Lines from {@code <!-- VIBETAGS-START -->} to {@code <!-- VIBETAGS-END -->}, inclusive. */
     /**
