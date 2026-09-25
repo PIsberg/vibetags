@@ -543,6 +543,13 @@ into `.clinerules/default-rules.md`. The next build sees a directory, switches t
 and sweeps the moved VibeTags block out of `default-rules.md` as a stale copy, leaving your own text
 in place. `ClineRulesDirectoryEndToEndTest` replays that conversion step for step.
 
+**`.cline/rules/` is the same directory under a second name, and is not written (#852).** Cline's
+[rules page](https://docs.cline.bot/features/cline-rules) (checked 2026-09-25) says "Workspace rules
+go in `.clinerules/` or `.cline/rules/` at your project root" and describes the two as equivalent
+locations. VibeTags already writes `.clinerules/`, so a second copy under `.cline/rules/` would give
+Cline every rule twice in a project that has both, and a project that keeps its own rules in
+`.cline/rules/` already gets VibeTags' through `.clinerules/`.
+
 **How the README counts it.** `.clinerules` is counted once among the config files and once among
 the scoped-rule directories, because VibeTags can write it as either. The project-facts line names
 it, and `ProjectFactsConsistencyTest` fails if a path shared this way is not named there. The safety
@@ -570,6 +577,11 @@ guidelines (still supported)". VibeTags writes both Junie files with the same re
   claimed `.junie/AGENTS.md`, so a root `AGENTS.md` whose only companion was `.junie/AGENTS.md`
   counted as the sole AI config file and had the Codex rendering written into it. It is now left
   untouched unless it carries a marker pair. `JunieAgentsMdEndToEndTest` pins both sides.
+- **`.junie/rules/` is not written (#852).** Re-checked 2026-09-25: the page reads every
+  `.junie/rules/*.md` file only as part of its second entry, "combined with" the root `AGENTS.md`,
+  behind `.junie/AGENTS.md`, which VibeTags writes. It also describes no front matter or path
+  scoping for those files, so per-element rule files there would all load in every session, which
+  is what `.junie/AGENTS.md` already carries in one file.
 - **Junie may have created the file already.** The same page says that when Junie CLI finds other
   agents' guidelines files on first opening a project, "it will suggest importing the instructions
   into .junie/AGENTS.md". An imported file is hand-written content: the next build adds the VibeTags
@@ -701,7 +713,9 @@ exclusion mechanism its tool has, and VibeTags already writes that tool's rules 
 [`.rooignore`](https://docs.zoocode.dev/features/rooignore) (Zoo Code, the fork of the retired Roo Code: prevents reading and
 writing, the closest match to what `@AIIgnore` means),
 [`.continueignore`](https://docs.continue.dev/reference/deprecated-codebase) (documented now only on
-the page for Continue's deprecated `@Codebase` provider, with no deprecation of the file itself) and
+the page for Continue's deprecated `@Codebase` provider, with no deprecation of the file itself, and
+still read by `core/indexing/continueignore.ts` in Continue's source on 2026-09-25, so it is not
+deprecated, #852) and
 [`.augmentignore`](https://docs.augmentcode.com/setup-augment/workspace-indexing) (both exclude
 from indexing, which is the whole of what those tools offer).
 
