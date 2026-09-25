@@ -71,7 +71,11 @@ Add a repo by adding a row to `CONSUMERS` in the script, not by running it by ha
 | `1` | at least one consumer failed or errored |
 | `2` | nothing failed, but at least one consumer was never built |
 
-The footer names the same thing in words: `Built 3 of 5 consumer(s): 0 failed, 2 skipped.`
+The footer names the same thing in words:
+`Built 3 of 5 consumer(s): 0 failed, 0 errored before building, 2 skipped.` An error before
+the build (worktree add, checkout, no version declaration to bump) exits `1` like a failure,
+but it is not counted as built. Until #848 it was, and a consumer whose worktree never
+checked out appeared in "Built 5 of 5".
 
 `2` exists because a skip is not a milder failure, it is the absence of a measurement, and the
 two call for opposite actions: `1` means go and look at a broken consumer, `2` means you still

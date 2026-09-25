@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   relative target is now resolved against `docs/`: images become `raw/<tag>/` URLs and other files
   `blob/<tag>/` URLs. A link that climbs out of the repository makes the script refuse and emit
   nothing.
+- **The consumer sweep no longer counts an error before the build as a build (#848).** A consumer
+  whose `git worktree add` failed was reported as `ERROR` and then counted in `Built N of M`, so
+  one sweep's footer read "Built 5 of 5" with a consumer never compiled. The footer now reads
+  `Built 4 of 5 consumer(s): 1 failed, 1 errored before building, 0 skipped.`, and the exit status
+  is still `1`. `git worktree add` also runs with `core.longpaths=true`, so a deep `TMPDIR` on
+  Windows no longer fails the checkout with `Filename too long`.
 
 ## [1.3.7] - 2026-09-25
 

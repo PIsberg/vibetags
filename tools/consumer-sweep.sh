@@ -144,16 +144,23 @@ fi
 # Every row goes through row(), so the summary and the exit status are counted from the same
 # place the table is printed and cannot drift from it. The loop below is fed by a heredoc rather
 # than a pipe, so it runs in this shell and these counters survive it.
+#
+# An ERROR with no exit status ("-") happened before any build started: worktree add, checkout,
+# or no version declaration to bump. It fails the sweep like a FAIL does, but it is not a build,
+# and counting it as one made the footer read "Built 5 of 5" while a consumer had never been
+# compiled (#848). A toolchain ERROR carries the build's real status and was a build.
 attempted=0
 failures=0
+errored=0
 skips=0
 
 row() {
   printf '%-22s %-8s %-9s %s\n' "$1" "$2" "$3" "$4"
-  case "$2" in
-    PASS)       attempted=$((attempted + 1)) ;;
-    FAIL|ERROR) attempted=$((attempted + 1)); failures=$((failures + 1)) ;;
-    SKIP)       skips=$((skips + 1)) ;;
+  case "$2:$3" in
+    PASS:*)    attempted=$((attempted + 1)) ;;
+    ERROR:-)   errored=$((errored + 1)) ;;
+    FAIL:*|ERROR:*) attempted=$((attempted + 1)); failures=$((failures + 1)) ;;
+    SKIP:*)    skips=$((skips + 1)) ;;
   esac
 }
 
@@ -263,11 +270,14 @@ while IFS=: read -r repo tool mvncmd gradlecmd reqjdk; do
     # same version died with "a branch named ... already exists" and reported ERROR for a
     # repo whose build was never attempted. The non-worktree path already used checkout -B
     # for exactly this reason.
+    # core.longpaths: on Windows a deep TMPDIR plus a consumer's long test file names crosses
+    # the 260-character limit and the checkout dies with "Filename too long" (#848). The
+    # setting is ignored everywhere else.
     if [ "$detached" -eq 1 ]; then
-      git -C "$ROOT/$repo" worktree add -q --detach "$wt" origin/main || {
+      git -c core.longpaths=true -C "$ROOT/$repo" worktree add -q --detach "$wt" origin/main || {
         row "$repo" ERROR - "detached worktree add failed"; continue; }
     else
-      git -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
+      git -c core.longpaths=true -C "$ROOT/$repo" worktree add -q -B "$BRANCH" "$wt" origin/main || {
         row "$repo" ERROR - "worktree add failed"; continue; }
     fi
     work="$wt"
@@ -368,8 +378,8 @@ done <<EOF
 $CONSUMERS
 EOF
 
-total=$((attempted + skips))
-printf '\n%s\n' "Built $attempted of $total consumer(s): $failures failed, $skips skipped."
+total=$((attempted + errored + skips))
+printf '\n%s\n' "Built $attempted of $total consumer(s): $failures failed, $errored errored before building, $skips skipped."
 printf '%s\n' "Nothing was committed, pushed or opened. Review each repo, then decide."
 
 # The status says what happened, because the caller is usually an agent following the
@@ -380,7 +390,7 @@ printf '%s\n' "Nothing was committed, pushed or opened. Review each repo, then d
 #
 # A skip is not a milder failure, it is the absence of a measurement, so it gets its own code:
 # the caller can tell "a consumer is broken" from "nothing is known about that consumer".
-if [ "$failures" -gt 0 ]; then
+if [ "$failures" -gt 0 ] || [ "$errored" -gt 0 ]; then
   exit 1
 fi
 if [ "$skips" -gt 0 ]; then

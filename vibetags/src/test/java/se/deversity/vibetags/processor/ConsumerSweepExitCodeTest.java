@@ -105,6 +105,39 @@ class ConsumerSweepExitCodeTest {
                 + "one that says something is broken rather than unmeasured" + result);
     }
 
+    /**
+     * An {@code ERROR} before the build (worktree add, checkout, no version declaration) used to be
+     * counted as attempted, the same as a {@code FAIL}, so the footer claimed a build that never
+     * happened. In the 1.3.x pre-release sweep a {@code Filename too long} at {@code git worktree
+     * add} left one consumer unbuilt while the footer read "Built 5 of 5" (#848). The exit status
+     * was right; the sentence a reader trusts was not.
+     */
+    @Test
+    @DisplayName("an error before the build is not counted as a build")
+    void aPreBuildErrorIsNotCountedAsBuilt() throws Exception {
+        requireScript();
+        Path root = Files.createTempDirectory("sweep-exit-prebuild");
+        cleanRepoWithUnbuildablePomAt(root.resolve("blindbean"));
+        // No vibetags.version anywhere, so the bump refuses before any build starts.
+        // common-license-lib rather than codekarta: codekarta is pinned to JDK 21-25 and is skipped
+        // on a newer default JDK before it gets as far as the bump.
+        repoAt(root.resolve("common-license-lib"), "<project/>");
+
+        Result result = runSweep(root, "blindbean", "common-license-lib");
+
+        assertTrue(result.rows().stream().anyMatch(r -> r.startsWith("common-license-lib")
+                && r.contains("ERROR") && r.contains("no version declaration")),
+            "precondition: common-license-lib should have errored before building" + result);
+        String footer = result.rows().stream().filter(r -> r.startsWith("Built ")).findFirst()
+            .orElseThrow(() -> new AssertionError("no footer" + result));
+        assertEquals("Built 1 of 2 consumer(s): 1 failed, 1 errored before building, 0 skipped.", footer,
+            "only blindbean reached a build; common-license-lib was never compiled and the footer "
+                + "must not say it was" + result);
+        assertEquals(SOMETHING_FAILED, result.exitCode(),
+            "an error before the build is still a consumer nobody measured against this version, "
+                + "and it is not a clean pass" + result);
+    }
+
     // -------------------------------------------------------------------------
 
     /** The sweep's exit status and the lines it printed. */
