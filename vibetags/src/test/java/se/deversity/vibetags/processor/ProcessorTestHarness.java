@@ -13,7 +13,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Self-contained test harness that compiles annotated Java sources directly via
@@ -32,6 +35,37 @@ import java.util.List;
  * }</pre>
  */
 class ProcessorTestHarness {
+
+    /**
+     * Whether {@code text} names {@code qualifiedName}: literally, or as a member of a grouped
+     * scoped-rules index line, {@code <elements in="a.b">C</elements>} or {@code - `a.b`: `C`}
+     * (issue #839). Use it for a negative assertion on an aggregate that may be indexed; a plain
+     * {@code contains} there is false either way and the assertion cannot fail.
+     */
+    static boolean mentions(String text, String qualifiedName) {
+        if (text.contains(qualifiedName)) {
+            return true;
+        }
+        int dot = qualifiedName.lastIndexOf('.');
+        if (dot <= 0) {
+            return false;
+        }
+        String prefix = Pattern.quote(qualifiedName.substring(0, dot));
+        String name = qualifiedName.substring(dot + 1);
+        Matcher xml = Pattern.compile("<elements in=\"" + prefix + "\">([^<]*)</elements>").matcher(text);
+        while (xml.find()) {
+            if (Arrays.asList(xml.group(1).split(", ")).contains(name)) {
+                return true;
+            }
+        }
+        Matcher md = Pattern.compile("(?m)^- `" + prefix + "`: (.*)").matcher(text);
+        while (md.find()) {
+            if (Arrays.asList(md.group(1).replace("`", "").split(", ")).contains(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * One file manager per test thread, reused across every compilation that thread runs.

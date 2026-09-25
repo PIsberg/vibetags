@@ -1075,8 +1075,8 @@ jobs:
           # Telemetry is unrouted, so since #626 its file is named by the convention stated once
           # in the index note rather than by a path repeated on its entry. Assert the entry, the
           # note, and (below) the file itself: that is the same two-stem-namespace property the
-          # explicit path used to prove.
-          grep -qF '<element path="com.example.gmm.platform.Telemetry"/>' CLAUDE.md
+          # explicit path used to prove. Since #839 the entry is a name in its package's group.
+          grep -qE '<elements in="com\.example\.gmm\.platform">([^<]*, )?Telemetry(, |</elements>)' CLAUDE.md
           grep -qF '.claude/rules/{path, every non-alphanumeric character replaced by' CLAUDE.md
           # The safety bucket must NOT move into a scoped file: an agent has to see @AILocked
           # without opening anything.
@@ -1229,10 +1229,13 @@ jobs:
           # be reachable, so the count is asserted rather than merely the region marker.
           grep -qF "VIBETAGS-MODULE: annotations-showcase" CLAUDE.md \
             || { echo "::error::annotations-showcase is missing from the reactor root merge"; exit 1; }
-          # Counts index entries, not explicit rules= pointers: since #626 a conventionally
+          # Counts indexed elements, not explicit rules= pointers: since #626 a conventionally
           # named entry carries only its path=, so counting the attribute would count zero on a
-          # perfectly merged reactor.
-          indexed=$(grep -c '<element path="com.example' CLAUDE.md)
+          # perfectly merged reactor. Since #839 conventionally named elements share one
+          # <elements in="..."> line per package, so a group counts once per name in it.
+          indexed=$(grep -oE '<elements in="com\.example[^"]*">[^<]*</elements>|<element path="com\.example[^"]*"' CLAUDE.md \
+            | sed -E 's#<elements in="[^"]*">([^<]*)</elements>#\1#; s#<element path="[^"]*"#one#' \
+            | tr ',' '\n' | grep -c .)
           if [ "$indexed" -lt 30 ]; then
             echo "::error::the root index names only $indexed showcase elements; the merge dropped some"
             exit 1
@@ -1310,6 +1313,11 @@ jobs:
               echo "::error::LEAKED into core/CLAUDE.md: $foreign"; exit 1
             fi
           done
+          # Since #839 an indexed element is a name in its package's group, where the literal FQN
+          # above never occurs, so a sibling's package must not head any group either.
+          if grep -qE '<elements in="com[.]example[.]gmm[.](app|platform)">' core/CLAUDE.md; then
+            echo "::error::LEAKED into core/CLAUDE.md: an app or platform element in its index"; exit 1
+          fi
           if grep -qF "com.example.gmm.core.IrNode" platform/CLAUDE.md; then
             echo "::error::LEAKED into platform/CLAUDE.md: the core guardrail"; exit 1
           fi

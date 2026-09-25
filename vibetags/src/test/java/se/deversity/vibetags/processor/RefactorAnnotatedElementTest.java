@@ -129,7 +129,7 @@ class RefactorAnnotatedElementTest {
         String claudeMd = after.readFile("CLAUDE.md");
         assertTrue(claudeMd.contains("com.example.billing.OrderManager"),
             "CLAUDE.md must reference the new fully-qualified name");
-        assertFalse(claudeMd.contains("com.example.payment.OrderManager"),
+        assertFalse(ProcessorTestHarness.mentions(claudeMd, "com.example.payment.OrderManager"),
             "CLAUDE.md must no longer reference the old package path");
     }
 
@@ -217,7 +217,7 @@ class RefactorAnnotatedElementTest {
         String claudeMd = after.readFile("CLAUDE.md");
         assertTrue(claudeMd.contains("com.example.UserProfile.taxId"),
             "CLAUDE.md privacy section must reference the renamed field path");
-        assertFalse(claudeMd.contains("com.example.UserProfile.ssn"),
+        assertFalse(ProcessorTestHarness.mentions(claudeMd, "com.example.UserProfile.ssn"),
             "CLAUDE.md privacy section must no longer reference the old field path");
     }
 

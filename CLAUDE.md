@@ -126,25 +126,13 @@ answers; use it when the topic is not below.
 
 <rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>
   <scoped_rules>
-    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
-    <element path="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
-    <element path="se.deversity.vibetags.processor.VibeTagsLogger"/>
-    <element path="se.deversity.vibetags.processor.internal.AnnotationCollector"/>
-    <element path="se.deversity.vibetags.processor.internal.BuildFingerprint"/>
-    <element path="se.deversity.vibetags.processor.internal.EnforcementBaseline"/>
-    <element path="se.deversity.vibetags.processor.internal.GranularRulesWriter"/>
-    <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter"/>
-    <element path="se.deversity.vibetags.processor.internal.JsonValueSpans"/>
-    <element path="se.deversity.vibetags.processor.internal.ModuleSidecar"/>
-    <element path="se.deversity.vibetags.processor.internal.ServiceRegistry"/>
-    <element path="se.deversity.vibetags.processor.internal.WriteCache"/>
-    <element path="se.deversity.vibetags.processor.internal.content"/>
-    <element path="se.deversity.vibetags.processor.internal.content.PlatformRenderer"/>
-    <element path="se.deversity.vibetags.processor.internal.validation.ValidationRule"/>
-    <element path="se.deversity.vibetags.processor.model"/>
-    <element path="se.deversity.vibetags.processor.MultiModuleYamlValidityTest"/>
-    <element path="se.deversity.vibetags.processor.WriteCacheAsyncTest"/>
-    <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriterLogContractTest"/>
+    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. An elements entry lists names under a shared prefix: in="a.b" listing C, D means a.b.C and a.b.D. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
+    <elements in="se.deversity.vibetags.processor">AIGuardrailProcessor, VibeTagsLogger, model</elements>
+    <elements in="se.deversity.vibetags.processor.internal">AnnotationCollector, BuildFingerprint, EnforcementBaseline, GranularRulesWriter, GuardrailFileWriter, JsonValueSpans, ModuleSidecar, ServiceRegistry, WriteCache, content</elements>
+    <elements in="se.deversity.vibetags.processor.internal.content">PlatformRenderer</elements>
+    <elements in="se.deversity.vibetags.processor.internal.validation">ValidationRule</elements>
+    <elements in="se.deversity.vibetags.processor">MultiModuleYamlValidityTest, WriteCacheAsyncTest</elements>
+    <elements in="se.deversity.vibetags.processor.internal">GuardrailFileWriterLogContractTest</elements>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>

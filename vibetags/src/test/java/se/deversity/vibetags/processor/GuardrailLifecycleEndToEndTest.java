@@ -213,14 +213,14 @@ class GuardrailLifecycleEndToEndTest {
                 + "class Keeper {}\n");
 
         String claude = Files.readString(root.resolve("CLAUDE.md"));
-        assertFalse(claude.contains("com.example.cli.Cli"),
+        assertFalse(ProcessorTestHarness.mentions(claude, "com.example.cli.Cli"),
             "the de-annotated element must leave the merged CLAUDE.md");
         assertTrue(claude.contains("com.example.core.IrNode"),
             "the module that was not recompiled must keep its guardrails — its sidecar is the only "
                 + "record of them");
 
         String mentat = Files.readString(root.resolve(".mentatconfig.json"));
-        assertFalse(mentat.contains("com.example.cli.Cli"),
+        assertFalse(ProcessorTestHarness.mentions(mentat, "com.example.cli.Cli"),
             "the whole-file JSON is assembled from sidecars, so a removal has to reach it too");
         assertTrue(mentat.contains("com.example.core.IrNode"),
             "and must still carry the module that did not recompile");
@@ -256,7 +256,7 @@ class GuardrailLifecycleEndToEndTest {
             "package com.example.cli;\npublic class Cli {}\n");
 
         String claude = Files.readString(root.resolve("CLAUDE.md"));
-        assertFalse(claude.contains("com.example.cli.Cli"),
+        assertFalse(ProcessorTestHarness.mentions(claude, "com.example.cli.Cli"),
             "a module shown all of its sources and found to have no annotation left must retire "
                 + "its contribution:\n" + claude);
         assertTrue(claude.contains("com.example.core.IrNode"),

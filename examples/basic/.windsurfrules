@@ -52,39 +52,23 @@ Never weaken security properties of these elements. Every change requires securi
 * `com.example.security.SecurityConfig` - Security-critical code [authentication]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .windsurf/rules/{path, every non-alphanumeric character replaced by '-'}.md. Consult the file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. A line `a.b`: `C`, `D` names a.b.C and a.b.D. Unless an entry carries an explicit path, its file is .windsurf/rules/{path, every non-alphanumeric character replaced by '-'}.md. Consult the file before modifying an element:
 
-- `com.example.NotificationService`
-- `com.example.compliance.GdprService`
-- `com.example.concurrent.SessionCache`
-- `com.example.config.AsyncTestConfig`
-- `com.example.config.ParallelTestSettings`
-- `com.example.database.UserEntity`
-- `com.example.legacy.LegacyBridgeService`
-- `com.example.legacy.OldPaymentApi`
-- `com.example.metrics.OrderMetrics`
-- `com.example.payment.PaymentDetails`
-- `com.example.payment.PaymentProcessor`
-- `com.example.security.SecurityConfig`
-- `com.example.service.EvidenceBasedShowcase`
-- `com.example.service.InventoryService`
-- `com.example.service.LayeredDomainService`
-- `com.example.service.NewAnnotationsShowcase`
-- `com.example.service.NewAnnotationsShowcase.DraftKafkaIntegrationSpike`
-- `com.example.service.NewAnnotationsShowcase.ImmutableProductPrice`
-- `com.example.service.NewAnnotationsShowcase.SandboxTestHelper`
-- `com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy`
-- `com.example.service.NotificationService`
-- `com.example.service.OrderService`
-- `com.example.service.PricingService`
-- `com.example.service.PublicPaymentController`
-- `com.example.service.TransactionalPaymentService`
-- `com.example.strategy.PaymentStrategy`
-- `com.example.strategy.impl.CreditCardStrategy`
-- `com.example.utils.I18nMessageHelper`
-- `com.example.utils.StrictUtility`
-- `com.example.utils.StringParser`
-- `com.example.testing.PaymentFixturesTest`
+- `com.example`: `NotificationService`
+- `com.example.compliance`: `GdprService`
+- `com.example.concurrent`: `SessionCache`
+- `com.example.config`: `AsyncTestConfig`, `ParallelTestSettings`
+- `com.example.database`: `UserEntity`
+- `com.example.legacy`: `LegacyBridgeService`, `OldPaymentApi`
+- `com.example.metrics`: `OrderMetrics`
+- `com.example.payment`: `PaymentDetails`, `PaymentProcessor`
+- `com.example.security`: `SecurityConfig`
+- `com.example.service`: `EvidenceBasedShowcase`, `InventoryService`, `LayeredDomainService`, `NewAnnotationsShowcase`, `NotificationService`, `OrderService`, `PricingService`, `PublicPaymentController`, `TransactionalPaymentService`
+- `com.example.service.NewAnnotationsShowcase`: `DraftKafkaIntegrationSpike`, `ImmutableProductPrice`, `SandboxTestHelper`, `TaxCalculatorStrategy`
+- `com.example.strategy`: `PaymentStrategy`
+- `com.example.strategy.impl`: `CreditCardStrategy`
+- `com.example.utils`: `I18nMessageHelper`, `StrictUtility`, `StringParser`
+- `com.example.testing`: `PaymentFixturesTest`
 
 # Guardrails for test code are in TESTING.md. Read it before modifying anything under a test source set.
 # VIBETAGS-END

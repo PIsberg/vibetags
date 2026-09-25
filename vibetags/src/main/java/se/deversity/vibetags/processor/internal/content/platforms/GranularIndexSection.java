@@ -2,6 +2,10 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 
 import se.deversity.vibetags.processor.model.RoleConfig;
 import org.jspecify.annotations.Nullable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.Escape;
@@ -159,13 +163,21 @@ final class GranularIndexSection {
         }
         sb.append("  <scoped_rules>\n")
             .append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened.")
+            .append(" An elements entry lists names under a shared prefix: in=\"a.b\" listing C, D means a.b.C and a.b.D.")
             .append(Escape.xml(conventionNote(platform)))
             .append(" Consult the file before modifying an element.</note>\n");
-        for (TaggedElement owner : owners) {
-            String path = scopedPath(platform, owner, context);
-            sb.append("    <element path=\"").append(Escape.xml(owner.toString()));
-            if (!path.equals(conventionalPath(platform, owner))) {
-                sb.append("\" rules=\"").append(Escape.xml(path));
+        for (IndexLine line : indexLines(platform, owners, context)) {
+            if (line.prefix != null) {
+                sb.append("    <elements in=\"").append(Escape.xml(line.prefix)).append("\">");
+                for (int i = 0; i < line.names.size(); i++) {
+                    sb.append(i == 0 ? "" : ", ").append(Escape.xml(line.names.get(i)));
+                }
+                sb.append("</elements>\n");
+                continue;
+            }
+            sb.append("    <element path=\"").append(Escape.xml(line.names.get(0)));
+            if (line.rules != null) {
+                sb.append("\" rules=\"").append(Escape.xml(line.rules));
             }
             sb.append("\"/>\n");
         }
@@ -190,17 +202,87 @@ final class GranularIndexSection {
             .append(loadsItself
                 ? "Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file."
                 : "Detailed per-element guardrails live in scoped rule files that Gemini CLI does not load on its own.")
+            .append(" A line `a.b`: `C`, `D` names a.b.C and a.b.D.")
             .append(conventionNote(platform))
             .append(loadsItself
                 ? " Consult the file before modifying an element:\n\n"
                 : " Before modifying an element listed below, open its file with read_file and apply the guardrails there:\n\n");
-        for (TaggedElement owner : owners) {
-            String path = scopedPath(platform, owner, context);
-            sb.append("- `").append(owner.toString()).append('`');
-            if (!path.equals(conventionalPath(platform, owner))) {
-                sb.append(" → `").append(path).append('`');
+        for (IndexLine line : indexLines(platform, owners, context)) {
+            if (line.prefix != null) {
+                sb.append("- `").append(line.prefix).append("`: ");
+                for (int i = 0; i < line.names.size(); i++) {
+                    sb.append(i == 0 ? "`" : ", `").append(line.names.get(i)).append('`');
+                }
+                sb.append('\n');
+                continue;
+            }
+            sb.append("- `").append(line.names.get(0)).append('`');
+            if (line.rules != null) {
+                sb.append(" → `").append(line.rules).append('`');
             }
             sb.append('\n');
+        }
+    }
+
+    /**
+     * The index as lines, grouping every conventionally named owner under the text before its simple
+     * name, so a shared package is written once rather than once per element (issue #839). A group
+     * sits where its first owner would have, and {@code prefix + "." + name} is that owner again, so
+     * nothing is lost. An owner whose file is not at the conventional path keeps a line of its own
+     * with the explicit pointer, as does one whose name has no prefix to share.
+     *
+     * <p>Grouping per line rather than hoisting one base over the whole index is what keeps the
+     * source-set merges working: a line is self-contained, so the main and test rounds' lines can be
+     * kept side by side even when both name one package, where a hoisted base differs per round.
+     */
+    private static List<IndexLine> indexLines(Platform platform, Set<TaggedElement> owners, RenderingContext context) {
+        List<IndexLine> lines = new ArrayList<>();
+        Map<String, IndexLine> groups = new LinkedHashMap<>();
+        for (TaggedElement owner : owners) {
+            String path = scopedPath(platform, owner, context);
+            boolean conventional = path.equals(conventionalPath(platform, owner));
+            String prefix = conventional ? prefixOf(owner) : null;
+            if (prefix == null) {
+                IndexLine single = new IndexLine(null, conventional ? null : path);
+                single.names.add(owner.toString());
+                lines.add(single);
+                continue;
+            }
+            IndexLine group = groups.get(prefix);
+            if (group == null) {
+                group = new IndexLine(prefix, null);
+                groups.put(prefix, group);
+                lines.add(group);
+            }
+            group.names.add(owner.simpleName());
+        }
+        return lines;
+    }
+
+    /**
+     * What precedes {@code owner}'s simple name, or {@code null} when nothing does. Derived from the
+     * simple name rather than the last dot, so it is only ever a prefix that reproduces the
+     * qualified name exactly when joined back with a dot.
+     */
+    private static @Nullable String prefixOf(TaggedElement owner) {
+        String name = owner.qualifiedName();
+        String simple = owner.simpleName();
+        int cut = name.length() - simple.length() - 1;
+        if (simple.isEmpty() || cut <= 0 || !name.endsWith("." + simple)) {
+            return null;
+        }
+        return name.substring(0, cut);
+    }
+
+    /** One index line: owners sharing {@code prefix}, or with a {@code null} prefix one owner in full. */
+    private static final class IndexLine {
+        private final @Nullable String prefix;
+        private final List<String> names = new ArrayList<>();
+        private final @Nullable String rules;
+
+        IndexLine(@Nullable String prefix, @Nullable String rules) {
+            this.prefix = prefix;
+            this.rules = rules;
         }
     }
 }

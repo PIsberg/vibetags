@@ -131,7 +131,7 @@ class GranularIndexEndToEndTest {
         assertFalse(claude.contains("<contextual_instructions>"), "context moves to scoped files");
         // The index is present and points at the real scoped files.
         assertTrue(claude.contains("<scoped_rules>"), "scoped-rules index present");
-        assertTrue(claude.contains("<element path=\"com.example.Gateway\"/>"),
+        assertTrue(claude.contains("<elements in=\"com.example\">Gateway</elements>"),
             "a conventionally named entry resolves through the stated convention, not a repeated path");
         assertTrue(claude.contains(".claude/rules/{path, every non-alphanumeric"),
             "the note states the naming convention the entry relies on");
@@ -159,15 +159,15 @@ class GranularIndexEndToEndTest {
         h.compile();
 
         String claude = h.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<element path=\"com.example.Gateway\"/>"), claude);
-        assertFalse(claude.contains("<element path=\"com.example.Vault\"/>"),
+        // The whole line: Vault shares Gateway's package, so it would join this group if listed.
+        assertTrue(claude.contains("    <elements in=\"com.example\">Gateway</elements>\n"),
             "Vault's file repeats what <locked_files> and <pii_guardrails> already say:\n" + claude);
         assertTrue(claude.contains("crypto keys"), "Vault's guardrail itself stays inline:\n" + claude);
         assertTrue(h.fileExists(".claude/rules/com-example-Vault.md"), "the scoped file is still written");
 
         String gemini = h.readFile("GEMINI.md");
-        assertTrue(gemini.contains("- `com.example.Gateway`"), gemini);
-        assertFalse(gemini.contains("- `com.example.Vault`\n"), "an index line, not the inline locked entry:\n" + gemini);
+        assertTrue(gemini.contains("- `com.example`: `Gateway`\n"),
+            "an index line naming Gateway alone, Vault left out:\n" + gemini);
     }
 
     /** With nothing beyond the safety tier anywhere, there is no index, and the file stays collapsed. */
@@ -215,7 +215,7 @@ class GranularIndexEndToEndTest {
         assertTrue(gemini.contains("LOCKED FILES"), "locked stays inline");
         // The index is present and points at the real scoped file.
         assertTrue(gemini.contains("## Scoped Rules Index"), "scoped-rules index present");
-        assertTrue(gemini.contains("- `com.example.Gateway`"),
+        assertTrue(gemini.contains("- `com.example`: `Gateway`"),
             "the index lists the Gateway element");
         assertTrue(gemini.contains(".gemini/rules/{path, every non-alphanumeric"),
             "the note states the naming convention that names its scoped file");
@@ -427,8 +427,8 @@ class GranularIndexEndToEndTest {
         h.compile();
 
         String claude = h.readFile("CLAUDE.md");
-        assertTrue(claude.contains("<element path=\"com.example.Gateway\"/>"),
-            "a conventionally named entry is just its FQN");
+        assertTrue(claude.contains("<elements in=\"com.example\">Gateway</elements>"),
+            "a conventionally named entry is just its name under its package");
         assertFalse(claude.contains("rules=\".claude/rules/com-example-Gateway.md\""),
             "the derived path must not be restated next to the FQN it derives from");
         assertTrue(claude.contains(".claude/rules/"),
@@ -487,8 +487,8 @@ class GranularIndexEndToEndTest {
         h.compile();
 
         String gemini = h.readFile("GEMINI.md");
-        assertTrue(gemini.contains("- `com.example.Gateway`"),
-            "a conventionally named entry is just its FQN");
+        assertTrue(gemini.contains("- `com.example`: `Gateway`"),
+            "a conventionally named entry is just its name under its package");
         assertFalse(gemini.contains("\u2192 `.gemini/rules/com-example-Gateway.md`"),
             "the derived path must not be restated next to the FQN it derives from");
         assertTrue(gemini.contains(".gemini/rules/"),

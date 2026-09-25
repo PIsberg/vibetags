@@ -103,7 +103,7 @@ class GranularEmptyMemberEndToEndTest {
         assertFalse(harness.fileExists(".claude/rules/com-example-bare-Focused.md"),
             "a heading with nothing under it reads as an annotation that says nothing, so no "
                 + "stanza is recorded and there is nothing to put in a file");
-        assertFalse(harness.readFile("CLAUDE.md").contains("com.example.bare.Focused"),
+        assertFalse(ProcessorTestHarness.mentions(harness.readFile("CLAUDE.md"), "com.example.bare.Focused"),
             "with the granular directory opted in the aggregate is an index of rule files, so an "
                 + "element with no rule file has no entry: an index line pointing at a file that "
                 + "says nothing is the same empty label one level up. CLAUDE.md:"
@@ -115,7 +115,7 @@ class GranularEmptyMemberEndToEndTest {
     void bareArchitectureProducesNoRuleFile() throws IOException {
         assertFalse(harness.fileExists(".claude/rules/com-example-bare-Layered.md"),
             "a layer nobody named and no prohibited references leave nothing to say");
-        assertFalse(harness.readFile("CLAUDE.md").contains("com.example.bare.Layered"),
+        assertFalse(ProcessorTestHarness.mentions(harness.readFile("CLAUDE.md"), "com.example.bare.Layered"),
             "no rule file means no index entry, for the reason the @AIContext case states");
     }
 
@@ -130,8 +130,8 @@ class GranularEmptyMemberEndToEndTest {
             "a stated focus must still reach the rule file");
 
         String index = harness.readFile("CLAUDE.md");
-        assertTrue(index.contains("com.example.filled.Domain")
-                && index.contains("com.example.filled.Narrowed"),
+        assertTrue(ProcessorTestHarness.mentions(index, "com.example.filled.Domain")
+                && ProcessorTestHarness.mentions(index, "com.example.filled.Narrowed"),
             "dropping the empty ones must not drop the populated ones with them:"
                 + System.lineSeparator() + index);
     }

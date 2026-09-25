@@ -35,26 +35,14 @@ Do not weaken security properties of these elements. Flag any change for securit
 - `se.deversity.vibetags.processor.internal.TransitiveManifestReaderLimitsTest`: Security-critical code [Enforces the trust boundary: manifests come from third-party dependency JARs and their text is merged into the consumer's always-loaded instruction files. These cases are the MAX_LOOKUPS cap and the SKIPPED_PREFIXES list; relaxing one to make a test pass widens what a dependency may put in front of an agent]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that Gemini CLI does not load on its own. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Before modifying an element listed below, open its file with read_file and apply the guardrails there:
+Detailed per-element guardrails live in scoped rule files that Gemini CLI does not load on its own. A line `a.b`: `C`, `D` names a.b.C and a.b.D. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Before modifying an element listed below, open its file with read_file and apply the guardrails there:
 
-- `se.deversity.vibetags.processor.AIGuardrailProcessor`
-- `se.deversity.vibetags.processor.VibeTagsLogger`
-- `se.deversity.vibetags.processor.internal.AnnotationCollector`
-- `se.deversity.vibetags.processor.internal.BuildFingerprint`
-- `se.deversity.vibetags.processor.internal.EnforcementBaseline`
-- `se.deversity.vibetags.processor.internal.GranularRulesWriter`
-- `se.deversity.vibetags.processor.internal.GuardrailFileWriter`
-- `se.deversity.vibetags.processor.internal.JsonValueSpans`
-- `se.deversity.vibetags.processor.internal.ModuleSidecar`
-- `se.deversity.vibetags.processor.internal.ServiceRegistry`
-- `se.deversity.vibetags.processor.internal.WriteCache`
-- `se.deversity.vibetags.processor.internal.content`
-- `se.deversity.vibetags.processor.internal.content.PlatformRenderer`
-- `se.deversity.vibetags.processor.internal.validation.ValidationRule`
-- `se.deversity.vibetags.processor.model`
-- `se.deversity.vibetags.processor.MultiModuleYamlValidityTest`
-- `se.deversity.vibetags.processor.WriteCacheAsyncTest`
-- `se.deversity.vibetags.processor.internal.GuardrailFileWriterLogContractTest`
+- `se.deversity.vibetags.processor`: `AIGuardrailProcessor`, `VibeTagsLogger`, `model`
+- `se.deversity.vibetags.processor.internal`: `AnnotationCollector`, `BuildFingerprint`, `EnforcementBaseline`, `GranularRulesWriter`, `GuardrailFileWriter`, `JsonValueSpans`, `ModuleSidecar`, `ServiceRegistry`, `WriteCache`, `content`
+- `se.deversity.vibetags.processor.internal.content`: `PlatformRenderer`
+- `se.deversity.vibetags.processor.internal.validation`: `ValidationRule`
+- `se.deversity.vibetags.processor`: `MultiModuleYamlValidityTest`, `WriteCacheAsyncTest`
+- `se.deversity.vibetags.processor.internal`: `GuardrailFileWriterLogContractTest`
 
 Guardrails for test code are in TESTING.md. Read it before modifying anything under a test source set.
 <!-- VIBETAGS-END -->

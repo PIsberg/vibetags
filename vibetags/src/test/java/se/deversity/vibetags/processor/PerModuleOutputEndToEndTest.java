@@ -85,7 +85,7 @@ class PerModuleOutputEndToEndTest {
         String moduleClaude = Files.readString(reactorRoot.resolve("module-core/CLAUDE.md"));
         assertTrue(moduleClaude.contains("com.example.core.IrNode"),
             "module-core/CLAUDE.md must contain module-core's own @AILocked");
-        assertFalse(moduleClaude.contains("com.example.cli.KartaCli"),
+        assertFalse(ProcessorTestHarness.mentions(moduleClaude, "com.example.cli.KartaCli"),
             "module-core/CLAUDE.md must NOT contain a sibling module's guardrails");
 
         // The reactor-root file is unchanged behavior: it still merges ALL modules via sidecars.

@@ -269,7 +269,7 @@ class ProjectLifecycleEndToEndTest {
         String partial = Files.readString(root.resolve(".pr_agent.toml"), StandardCharsets.UTF_8);
         assertTrue(partial.contains("com.example.cli.Cli"),
             "the module that recompiled must reach the newly opted-in file");
-        assertFalse(partial.contains("com.example.core.IrNode"),
+        assertFalse(ProcessorTestHarness.mentions(partial, "com.example.core.IrNode"),
             "measured limitation: a module that did not recompile has no body for the new service "
                 + "in its sidecar, so it is missing from the file. If this now fails, the partial-"
                 + "file window has been closed — assert the module IS present instead");
@@ -314,7 +314,7 @@ class ProjectLifecycleEndToEndTest {
             locked("com.example.core", "IrNode", "Core IR node, revised"));
 
         String claude = Files.readString(root.resolve("CLAUDE.md"));
-        assertFalse(claude.contains("com.example.cli.Cli"),
+        assertFalse(ProcessorTestHarness.mentions(claude, "com.example.cli.Cli"),
             "a module deleted from the reactor must leave the merged aggregate — its guardrails "
                 + "describe code that is no longer in the repository");
         assertTrue(claude.contains("com.example.core.IrNode"), "the surviving module must stay");
@@ -322,7 +322,7 @@ class ProjectLifecycleEndToEndTest {
             "the deleted module's sidecar must be pruned, or it keeps re-supplying the guardrails");
 
         String mentat = Files.readString(root.resolve(".mentatconfig.json"));
-        assertFalse(mentat.contains("com.example.cli.Cli"),
+        assertFalse(ProcessorTestHarness.mentions(mentat, "com.example.cli.Cli"),
             "the whole-file JSON is assembled from sidecars, so the removal has to reach it too");
         assertTrue(mentat.contains("com.example.core.IrNode"), "and must keep the surviving module");
     }
@@ -367,7 +367,7 @@ class ProjectLifecycleEndToEndTest {
             locked("com.example.core", "IrNode", "Core IR node"));
 
         String claude = Files.readString(root.resolve("CLAUDE.md"));
-        assertFalse(claude.contains("com.example.cli.Cli"),
+        assertFalse(ProcessorTestHarness.mentions(claude, "com.example.cli.Cli"),
             "a deleted module must leave the merged output on the next build even when that build "
                 + "has nothing of its own to report. Skipping the round on an unchanged fingerprint "
                 + "leaves the repository describing a module that is gone");
@@ -421,7 +421,7 @@ class ProjectLifecycleEndToEndTest {
         compileModule(root, "module-core", "com.example.core.IrNode",
             locked("com.example.core", "IrNode", "Core IR node, revised"));
 
-        assertFalse(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
+        assertFalse(ProcessorTestHarness.mentions(Files.readString(root.resolve("CLAUDE.md")), "com.example.cli.Cli"),
             "the aggregate must forget the deleted module");
         assertFalse(Files.exists(cliRule),
             "the departed module's rule file must go with its guardrails, on the same build. A "
@@ -509,7 +509,7 @@ class ProjectLifecycleEndToEndTest {
         String role = Files.readString(roleFile);
         assertTrue(role.contains("com.example.core.IrNode"),
             "the surviving module's guardrail must still be in it:\n" + role);
-        assertFalse(role.contains("com.example.cli.Cli"),
+        assertFalse(ProcessorTestHarness.mentions(role, "com.example.cli.Cli"),
             "and the departed module's share must be gone from it:\n" + role);
     }
 
@@ -663,7 +663,7 @@ class ProjectLifecycleEndToEndTest {
         String partial = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
         assertTrue(partial.contains("alpha-routing"),
             "the module that recompiled must state its guardrails inline again");
-        assertTrue(partial.contains("<element path=\"com.example.b.Beta\""),
+        assertTrue(partial.contains("<elements in=\"com.example.b\">Beta</elements>"),
             "measured limitation: the module that did not recompile keeps its collapsed body, so "
                 + "the aggregate still indexes an element whose rule file the opt-out deleted "
                 + "(the index note resolves that entry to .claude/rules/com-example-b-Beta.md). "

@@ -152,7 +152,7 @@ class AnnotationTransitionEndToEndTest {
             "the moved guardrail must appear once. Two copies means the losing module's sidecar "
                 + "still claims a class it no longer compiles:\n" + after);
         assertTrue(after.contains("com.example.b.Engine"), "the gaining module's FQN must be the live one");
-        assertFalse(after.contains("com.example.a.Engine"),
+        assertFalse(ProcessorTestHarness.mentions(after, "com.example.a.Engine"),
             "the old FQN must be gone from the merged root:\n" + after);
         assertTrue(after.contains("Stays put") && after.contains("CLI entry point"),
             "neither module's remaining guardrails may be disturbed by the move");

@@ -16,11 +16,9 @@ The following elements are security-critical — do not weaken their security pr
 - `com.example.indexed.app.DocumentSearchView` - Security-critical code [Query handling]. Do not weaken security properties. Flag any change for security review.
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .github/instructions/{path, every non-alphanumeric character replaced by '-'}.instructions.md. Consult the file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. A line `a.b`: `C`, `D` names a.b.C and a.b.D. Unless an entry carries an explicit path, its file is .github/instructions/{path, every non-alphanumeric character replaced by '-'}.instructions.md. Consult the file before modifying an element:
 
-- `com.example.indexed.app.DocumentImportJob`
-- `com.example.indexed.app.DocumentSearchView`
-- `com.example.indexed.app.DocumentService`
+- `com.example.indexed.app`: `DocumentImportJob`, `DocumentSearchView`, `DocumentService`
 <!-- VIBETAGS-MODULE-END: app -->
 <!-- VIBETAGS-MODULE: core -->
 # GitHub Copilot Instructions
@@ -48,10 +46,8 @@ The following elements are well-tested core components — change with extreme c
 - `com.example.indexed.core.DocumentIndexEntry` — sensitivity: high. Index entries are read by every module; a field change is a format change
 
 ## Scoped Rules Index
-Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. Unless an entry carries an explicit path, its file is .github/instructions/{path, every non-alphanumeric character replaced by '-'}.instructions.md. Consult the file before modifying an element:
+Detailed per-element guardrails live in scoped rule files that load automatically when you open the matching source file. A line `a.b`: `C`, `D` names a.b.C and a.b.D. Unless an entry carries an explicit path, its file is .github/instructions/{path, every non-alphanumeric character replaced by '-'}.instructions.md. Consult the file before modifying an element:
 
-- `com.example.indexed.core.DocumentIndexEntry`
-- `com.example.indexed.core.DocumentModel`
-- `com.example.indexed.core.DocumentRetention`
+- `com.example.indexed.core`: `DocumentIndexEntry`, `DocumentModel`, `DocumentRetention`
 <!-- VIBETAGS-MODULE-END: core -->
 <!-- VIBETAGS-END -->

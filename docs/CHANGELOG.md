@@ -15,8 +15,24 @@ into the matching section. No guardrail line is dropped: across this repository 
 44 files had 441 lines deleted and 50 re-inserted into merged sections, and no distinct line
 disappeared from any of them. A project without annotated test sources sees no change.
 
+A project that opts into a granular directory beside its aggregate (`.claude/rules/` with
+`CLAUDE.md`, and the four other pairs) sees every scoped-rules index line rewritten once (#839):
+elements are grouped one line per package instead of one line each. The same elements are named,
+and no rule file moves.
+
 ### Changed
 
+- **The scoped-rules index names each package once (#839).** A collapsed aggregate's index wrote one
+  line per element and repeated the element's whole package on every one. It now writes one line
+  per package, `<elements in="com.example.a">Alpha, Beta</elements>` in `CLAUDE.md` and
+  ``- `com.example.a`: `Alpha`, `Beta` `` in the Markdown aggregates; the prefix, a dot and a name
+  are the element again, so nothing is lost and every name stays greppable. On this repository
+  `CLAUDE.md` went from 13,444 to 12,873 bytes and `GEMINI.md` from 6,988 to 6,575. Hoisting one base
+  over the whole index, the alternative #847 named, would have saved about as much but differs per
+  source set, and the main and test rounds' index lines are merged into one section; a per-line
+  group merges as it stands. Tests that asserted an element was absent from an indexed file now
+  use `ProcessorTestHarness.mentions`, because a literal FQN no longer occurs in a grouped line and
+  those assertions could no longer fail.
 - **Markdown aggregates render one document per module, not one per source set (#841).** #839 did
   this for `CLAUDE.md`; every other prose aggregate still stacked the test round's body, header and
   all, under the main round's. On this repository that was 289 bytes of `AGENTS.md`, 562 of

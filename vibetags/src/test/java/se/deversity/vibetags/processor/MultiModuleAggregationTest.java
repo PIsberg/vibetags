@@ -568,8 +568,8 @@ class MultiModuleAggregationTest {
         String merged = ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true);
 
         // Full bodies are gone; pointers to each module's scoped dir are present.
-        assertFalse(merged.contains("com.example.graph.Node"), "graph body must NOT be embedded");
-        assertFalse(merged.contains("com.example.cli.KartaCli"), "cli body must NOT be embedded");
+        assertFalse(ProcessorTestHarness.mentions(merged, "com.example.graph.Node"), "graph body must NOT be embedded");
+        assertFalse(ProcessorTestHarness.mentions(merged, "com.example.cli.KartaCli"), "cli body must NOT be embedded");
         assertTrue(merged.contains("module-graph/.claude/rules/"), "must link graph's scoped rules");
         assertTrue(merged.contains("module-cli/.claude/rules/"), "must link cli's scoped rules");
         // Module sub-markers still frame each pointer for traceability.
@@ -587,7 +587,7 @@ class MultiModuleAggregationTest {
         String merged = ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true);
 
         assertTrue(merged.contains("module-graph/CLAUDE.md"), "pointer must name graph's own CLAUDE.md");
-        assertFalse(merged.contains("com.example.graph.Node"), "graph body must NOT be embedded");
+        assertFalse(ProcessorTestHarness.mentions(merged, "com.example.graph.Node"), "graph body must NOT be embedded");
         // module-cli has NO own output → its body stays embedded (nothing lost).
         assertTrue(merged.contains("com.example.cli.KartaCli"),
             "a module with no per-module output keeps its embedded body");
@@ -636,7 +636,7 @@ class MultiModuleAggregationTest {
         String merged = ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true);
 
         assertTrue(merged.contains("ROOT LEVEL RULE"), "the root module's own body must stay inline");
-        assertFalse(merged.contains("com.example.graph.Node"), "the child module is linked, not embedded");
+        assertFalse(ProcessorTestHarness.mentions(merged, "com.example.graph.Node"), "the child module is linked, not embedded");
         assertTrue(merged.contains("module-graph/.claude/rules/"), "child module linked to its scoped rules");
     }
 }
