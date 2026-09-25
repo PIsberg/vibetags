@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.7] - 2026-09-25
 
+**Upgrading from 1.3.6: what moves in your committed files.** If an element's scoped rule file
+holds only safety-tier stanzas (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`,
+`@AISecure`), its line leaves the `<scoped_rules>` index in `CLAUDE.md` and the Scoped Rules Index in
+`GEMINI.md` (#839). The rule file is still written and those guardrails stay inline in the
+aggregate, so no guardrail is lost. A reactor's committed `.vibetags-mod-*` sidecars change with it.
+A project whose test sources are annotated and that has no `TESTING.md` gets one `CLAUDE.md` block
+per module instead of two (#839), and a lean-indexed reactor root's `GEMINI.md` gets the safety
+digest plus a pointer (#763). The first build misses the fingerprint short-circuit once (#765)
+without rewriting any file on that account. Measured on the five downstream consumers before
+release: `blindbean`, `codekarta` and `common-license-lib` regenerate byte-for-byte against
+1.3.6; `skill3` drops 7 of its 20 index entries from both `CLAUDE.md` and `GEMINI.md`;
+`async-test-lib`, measured from its pinned 1.3.5, drops 4 entries across three module `CLAUDE.md`
+files and the root `GEMINI.md`, and its three sidecars move.
+
 ### Added
 
 - **`vibetags doctor --context` weighs the active guardrail files (#840).** Bytes per file, the
