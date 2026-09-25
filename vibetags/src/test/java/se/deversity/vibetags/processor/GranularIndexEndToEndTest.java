@@ -142,6 +142,54 @@ class GranularIndexEndToEndTest {
             "per-method contract detail lives in the scoped file");
     }
 
+    /**
+     * An owner whose scoped file holds only safety-tier stanzas is left out of the index
+     * (issue #839). Those stanzas are already inline in the aggregate, so the entry pointed an
+     * agent at a file with nothing it had not read. Vault is locked and carries a privacy field:
+     * both inline, nothing else in its file. The file is still written; only the pointer goes.
+     */
+    @Test
+    void ownerWithOnlySafetyGuardrails_isLeftOutOfTheIndex(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("CLAUDE.md");
+        h.touchOptIn(".claude/rules/.vibetags");
+        h.touchOptIn("GEMINI.md");
+        h.touchOptIn(".gemini/rules/.vibetags");
+        addMixedSources(h);
+        h.compile();
+
+        String claude = h.readFile("CLAUDE.md");
+        assertTrue(claude.contains("<element path=\"com.example.Gateway\"/>"), claude);
+        assertFalse(claude.contains("<element path=\"com.example.Vault\"/>"),
+            "Vault's file repeats what <locked_files> and <pii_guardrails> already say:\n" + claude);
+        assertTrue(claude.contains("crypto keys"), "Vault's guardrail itself stays inline:\n" + claude);
+        assertTrue(h.fileExists(".claude/rules/com-example-Vault.md"), "the scoped file is still written");
+
+        String gemini = h.readFile("GEMINI.md");
+        assertTrue(gemini.contains("- `com.example.Gateway`"), gemini);
+        assertFalse(gemini.contains("- `com.example.Vault`\n"), "an index line, not the inline locked entry:\n" + gemini);
+    }
+
+    /** With nothing beyond the safety tier anywhere, there is no index, and the file stays collapsed. */
+    @Test
+    void onlySafetyGuardrails_leaveNoIndexAndStayCollapsed(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("CLAUDE.md");
+        h.touchOptIn(".claude/rules/.vibetags");
+        h.addSource("com.example.Vault",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.*;\n"
+                + "@AILocked(reason = \"crypto keys\")\n"
+                + "public class Vault {\n"
+                + "}\n");
+        h.compile();
+
+        String claude = h.readFile("CLAUDE.md");
+        assertTrue(claude.contains("crypto keys"), claude);
+        assertFalse(claude.contains("<scoped_rules>"), "no entries, so no index section:\n" + claude);
+        assertFalse(claude.contains("<contextual_instructions>"),
+            "the aggregate stays in its collapsed form rather than falling back to the full render:\n" + claude);
+    }
     @Test
     void geminiSingleOptIn_staysFullyRendered(@TempDir Path dir) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);

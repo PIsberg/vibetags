@@ -18,6 +18,7 @@ public final class RenderingContext {
     private final Set<String> activeServices;
     private final int estimatedContentSize;
     private final Set<TaggedElement> granularOwners;
+    private final Set<TaggedElement> indexOwners;
     private final @Nullable RoleConfig roles;
     private final boolean safetyDigest;
     private final boolean testRound;
@@ -56,7 +57,8 @@ public final class RenderingContext {
     public RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
                             int estimatedContentSize, Set<TaggedElement> granularOwners,
                             @Nullable RoleConfig roles) {
-        this(projectName, generatedHeader, activeServices, estimatedContentSize, granularOwners, roles, false, false);
+        this(projectName, generatedHeader, activeServices, estimatedContentSize, granularOwners, granularOwners,
+            roles, false, false);
     }
 
     /**
@@ -66,7 +68,7 @@ public final class RenderingContext {
      */
     private RenderingContext(String projectName, String generatedHeader, Set<String> activeServices,
                              int estimatedContentSize, Set<TaggedElement> granularOwners,
-                             @Nullable RoleConfig roles,
+                             Set<TaggedElement> indexOwners, @Nullable RoleConfig roles,
                              boolean safetyDigest, boolean testRound) {
         this.projectName = projectName;
         this.generatedHeader = generatedHeader;
@@ -79,12 +81,8 @@ public final class RenderingContext {
         // builds of identical sources emit byte-different index lines (issue #325). Sorting here
         // rather than at each emit site means every current and future consumer of granularOwners()
         // is deterministic by construction.
-        Set<TaggedElement> sortedOwners = new LinkedHashSet<>();
-        granularOwners.stream()
-                .sorted(Comparator.comparing(TaggedElement::path)
-                                  .thenComparing(o -> String.valueOf(o.kind())))
-                .forEach(sortedOwners::add);
-        this.granularOwners = Collections.unmodifiableSet(sortedOwners);
+        this.granularOwners = Collections.unmodifiableSet(sorted(granularOwners));
+        this.indexOwners = Collections.unmodifiableSet(sorted(indexOwners));
         this.roles = roles;
         this.safetyDigest = safetyDigest;
         this.testRound = testRound;
@@ -102,7 +100,17 @@ public final class RenderingContext {
      */
     public RenderingContext asSafetyDigest() {
         return new RenderingContext(projectName, generatedHeader, activeServices, estimatedContentSize,
-            granularOwners, roles, true, testRound);
+            granularOwners, indexOwners, roles, true, testRound);
+    }
+
+    /**
+     * A copy of this context whose scoped-rules index lists only {@code owners}, a subset of
+     * {@link #granularOwners()}. Owners outside the subset keep their scoped files and keep the
+     * aggregate collapsed; they only lose their index line (issue #839).
+     */
+    public RenderingContext withIndexOwners(Set<TaggedElement> owners) {
+        return new RenderingContext(projectName, generatedHeader, activeServices, estimatedContentSize,
+            granularOwners, owners, roles, safetyDigest, testRound);
     }
 
     /**
@@ -114,7 +122,16 @@ public final class RenderingContext {
      */
     public RenderingContext asTestRound() {
         return new RenderingContext(projectName, generatedHeader, activeServices, estimatedContentSize,
-            granularOwners, roles, safetyDigest, true);
+            granularOwners, indexOwners, roles, safetyDigest, true);
+    }
+
+    private static Set<TaggedElement> sorted(Set<TaggedElement> owners) {
+        Set<TaggedElement> sortedOwners = new LinkedHashSet<>();
+        owners.stream()
+                .sorted(Comparator.comparing(TaggedElement::path)
+                                  .thenComparing(o -> String.valueOf(o.kind())))
+                .forEach(sortedOwners::add);
+        return sortedOwners;
     }
 
     /** True when this round compiled test code; see {@link #asTestRound()}. */
@@ -155,6 +172,14 @@ public final class RenderingContext {
      */
     public Set<TaggedElement> granularOwners() {
         return granularOwners;
+    }
+
+    /**
+     * The owners the scoped-rules index lists: the granular owners whose files say something the
+     * aggregate does not already carry inline. Same order as {@link #granularOwners()}.
+     */
+    public Set<TaggedElement> indexOwners() {
+        return indexOwners;
     }
 
     /** The role routing for this run (a {@code .vibetags-roles} config), or {@code null} when off. */
