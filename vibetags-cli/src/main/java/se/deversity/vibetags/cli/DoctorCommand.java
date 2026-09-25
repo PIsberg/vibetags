@@ -5,8 +5,11 @@ import se.deversity.vibetags.processor.internal.ServiceRegistry;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -286,22 +289,36 @@ final class DoctorCommand {
         return sources(".groovy");
     }
 
-    /** Developer-authored files with the given extension, outside build output directories. */
+    /**
+     * Developer-authored files with the given extension: outside build output directories, and
+     * outside any other checkout below {@code dir}. A directory holding {@code .git}, as a file (a
+     * worktree) or a directory (a nested clone), is a separate copy of some repository. Claude Code
+     * keeps full worktrees under {@code .claude/worktrees/}, and scanning them reported one Groovy
+     * example 36 times over (#842).
+     */
     private List<Path> sources(String extension) {
         List<Path> sources = new ArrayList<>();
         Set<String> buildDirs = Set.of("build", "target", ".gradle", ".git");
-        try (var walk = Files.walk(dir)) {
-            walk.filter(Files::isRegularFile)
-                .filter(p -> String.valueOf(p.getFileName()).endsWith(extension))
-                .filter(p -> {
-                    for (Path part : dir.relativize(p)) {
-                        if (buildDirs.contains(part.toString())) {
-                            return false;
-                        }
+        try {
+            Files.walkFileTree(dir, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path d, BasicFileAttributes attrs) {
+                    if (d.equals(dir)) {
+                        return FileVisitResult.CONTINUE;
                     }
-                    return true;
-                })
-                .forEach(sources::add);
+                    boolean skip = buildDirs.contains(String.valueOf(d.getFileName()))
+                        || Files.exists(d.resolve(".git"));
+                    return skip ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    if (attrs.isRegularFile() && String.valueOf(file.getFileName()).endsWith(extension)) {
+                        sources.add(file);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
         } catch (IOException e) {
             problems.add("could not walk " + dir + " for " + extension + " sources: " + e.getMessage());
         }

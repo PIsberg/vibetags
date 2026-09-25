@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Built 4 of 5 consumer(s): 1 failed, 1 errored before building, 0 skipped.`, and the exit status
   is still `1`. `git worktree add` also runs with `core.longpaths=true`, so a deep `TMPDIR` on
   Windows no longer fails the checkout with `Filename too long`.
+- **`vibetags doctor` no longer scans other checkouts below `--dir` (#842).** Its Groovy and Kotlin
+  source scans walked into `.claude/worktrees/`, where Claude Code keeps full checkouts of the
+  repository, and reported each copy of a source as a finding. On this repository that was 25
+  Groovy files where 1 is real. Any directory holding `.git`, as a file (a worktree) or a
+  directory (a nested clone), is now skipped.
 
 ## [1.3.7] - 2026-09-25
 

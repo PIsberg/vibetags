@@ -377,6 +377,34 @@ class DoctorCommandTest {
         assertFalse(out().contains("Generated.groovy"), out());
     }
 
+    @Test
+    void groovyInsideANestedCheckout_isNotScanned() throws Exception {
+        // Claude Code keeps agent worktrees under .claude/worktrees/, each a full checkout of the
+        // repository. On this repository 36 of doctor's 54 findings were one Groovy example
+        // repeated in 36 worktrees, burying the 18 real ones (#842). A directory holding a .git
+        // file (a worktree) or a .git directory (a nested clone) is another checkout, whatever it
+        // is called, so neither is scanned. The project's own source still is.
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        String fieldGuardrail = """
+            class %s {
+                @se.deversity.vibetags.annotations.AIPrivacy(dataType = "x")
+                String copied
+            }
+            """;
+        sourceFile(".claude/worktrees/agent-1/.git", "gitdir: ../../../.git/worktrees/agent-1\n");
+        sourceFile(".claude/worktrees/agent-1/src/main/groovy/InWorktree.groovy",
+            fieldGuardrail.formatted("InWorktree"));
+        Files.createDirectories(dir.resolve("vendor/other-repo/.git"));
+        sourceFile("vendor/other-repo/src/InClone.groovy", fieldGuardrail.formatted("InClone"));
+        sourceFile("src/main/groovy/Own.groovy", fieldGuardrail.formatted("Own"));
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("Own.groovy"), "the project's own source is still scanned: " + out());
+        assertFalse(out().contains("InWorktree.groovy"), out());
+        assertFalse(out().contains("InClone.groovy"), out());
+    }
+
     // ------------------------------------------------------------------ Kotlin value-class functions
     //
     // Each case states one kapt behaviour measured on Kotlin 2.4.10 in #681 / #689: a function whose
