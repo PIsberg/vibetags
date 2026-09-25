@@ -471,7 +471,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Grok Build** (`.grok/rules/*.md` - xAI's coding agent; reads every file in the directory, so no front matter)
 - **JetBrains AI Assistant** (`.aiassistant/rules/*.md`)
 - **Augment Code** (`.augment/rules/*.md`, plus `.augmentignore`)
-- **Zencoder** (`.zencoder/rules/*.md`)
+- **Zencoder** (`.zencoder/rules/*.md`) - deprecated, still written, removed in the next major version ([#720](https://github.com/PIsberg/vibetags/issues/720)): Zencoder removed custom rules in May 2026 and names `AGENTS.md` as the replacement; it also loads the skill VibeTags writes under `.agents/skills/`
 - **Antigravity AI** (`.agents/rules/*.md`)
 - **GitHub Copilot** (`.github/instructions/*.instructions.md` — YAML front-matter (`applyTo:`) + Markdown)
 - **PearAI** (`.pearai/rules/*.md` — YAML front-matter + Markdown) - deprecated, still written, removed in the next major version ([#645](https://github.com/PIsberg/vibetags/issues/645)): PearAI documents no rules directory

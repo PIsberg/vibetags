@@ -46,6 +46,17 @@ and no rule file moves.
   pull request. `LocksReportMerge` joins the source sets as a union of lines, and no lock can be
   lost to it: two locked elements always differ in `element`.
 
+### Deprecated
+
+- **`.zencoder/rules/` (#845).** Zencoder's changelog says custom rules were phased out from March
+  2026 and removed in May 2026, naming `AGENTS.md` as the replacement, and its old rules page now
+  redirects to Skills. The inference the 1.3.7 re-check could not close, whether "custom rules"
+  meant this directory, is closed by the July 2025 entry that calls the glob-scoped project
+  instructions "now evolved into Skills" and by a Context Management page that lists no rule files;
+  both were read in a browser, since the docs refuse other clients. An opted-in build now prints
+  the deprecation warning naming `AGENTS.md` and `.agents/skills/`, and the directory is still
+  written until the next major version (#720).
+
 ### Fixed
 
 - **Antigravity rule files are measured against its 24,000-byte cap, not 12,000 characters (#850).**

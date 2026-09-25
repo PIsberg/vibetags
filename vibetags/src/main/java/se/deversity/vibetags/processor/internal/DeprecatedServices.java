@@ -181,6 +181,17 @@ public final class DeprecatedServices {
             "VibeTags does not write that file, because declaring a review stage replaces Ellipsis's"
                 + " built-in reviewer, so put the guardrails in a reviewer prompt there by hand",
             ".ellipsis/code_review.yaml"));
+        // Zencoder: read in a browser on 2026-09-26, since its docs refuse other clients. The IDE
+        // changelog says custom rules were "being phased out" (March 2026) and "removed - use
+        // AGENTS.md instead" (May 2026), and July 2025 already called the glob-scoped project
+        // instructions "now evolved into Skills". The old rules-context/zen-rules page redirects
+        // to Skills, rules-context/repo-info is gone, and the Context Management page lists no
+        // rule files among its sources (#845).
+        m.put("zencoder_granular", new Notice(".zencoder/rules/",
+            "Zencoder's changelog says custom rules were removed in May 2026 in favour of AGENTS.md,"
+                + " and its rules page now redirects to Skills",
+            "use AGENTS.md, or the skill VibeTags writes under .agents/skills/, which Zencoder loads",
+            "AGENTS.md,.agents/skills/"));
         return Collections.unmodifiableMap(m);
     }
 

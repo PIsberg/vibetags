@@ -103,6 +103,9 @@ class DeprecatedServicesTest {
             "AGENTS.md"));
         // Ellipsis documents only .ellipsis/code_review.yaml, a pipeline of reviewer agents (#675)
         m.put("ellipsis", List.of("ellipsis.yaml", ".ellipsis/code_review.yaml"));
+        // Zencoder removed custom rules in May 2026 in favour of AGENTS.md, and its rules page now
+        // redirects to Skills, which it loads from .agents/skills/ (#845)
+        m.put("zencoder_granular", List.of(".zencoder/rules/", "AGENTS.md", ".agents/skills/"));
         return m;
     }
 
