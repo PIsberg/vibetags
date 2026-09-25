@@ -8,8 +8,11 @@
 # floor. evals/README.md explains the method and its limits; read it before trusting a
 # number from here.
 #
-# Requirements: the `claude` CLI on PATH and ANTHROPIC_API_KEY exported (runs are hermetic
-# via CLAUDE_CONFIG_DIR, so stored login credentials are deliberately not visible).
+# Requirements: the `claude` CLI on PATH, and either ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
+# exported (runs are hermetic via CLAUDE_CONFIG_DIR, so stored login credentials are deliberately
+# not visible). The OAuth token comes from `claude setup-token` and bills a Claude subscription
+# rather than an API account; it is passed as an environment variable, so the empty config dir
+# stays empty.
 #
 # Environment knobs:
 #   TRIALS=3            trials per task (10 for decisions; 3 is a smoke run)
@@ -20,7 +23,9 @@
 #                       shows as HARNESS-ERROR trials - visible skips, never false passes.
 #                       Copilot trials use the user's Copilot config (not hermetic) and a
 #                       GitHub-managed model; see the same-model note in evals/README.md.
-#   VARIANT=full        full (repo as committed) | baseline (instruction files removed)
+#   VARIANT=full        full (repo as committed) | baseline (instruction files removed) |
+#                       no-index (CLAUDE.md's <scoped_rules> list replaced by the one-sentence
+#                       pointer proposed in #839, everything else as committed)
 #   TASKS="t1 t2"       space-separated task dir names; empty means all
 #   MAX_TURNS=25        per-trial turn cap
 #   RESULTS_DIR=...     where trial logs land (default evals/results/<timestamp>/)
@@ -43,7 +48,7 @@ ENGINE="${ENGINE:-claude}"
 case "$ENGINE" in
   claude)
     command -v claude >/dev/null 2>&1 || { echo "error: claude CLI is not on PATH" >&2; exit 2; }
-    [ -n "${ANTHROPIC_API_KEY:-}" ] || { echo "error: ANTHROPIC_API_KEY is not set (hermetic runs cannot use stored logins)" >&2; exit 2; }
+    [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] || { echo "error: neither ANTHROPIC_API_KEY nor CLAUDE_CODE_OAUTH_TOKEN is set (hermetic runs cannot use stored logins; claude setup-token prints a token)" >&2; exit 2; }
     ;;
   copilot)
     command -v copilot >/dev/null 2>&1 || { echo "error: ENGINE=copilot but the Copilot CLI is not on PATH (npm install -g @github/copilot). A missing engine is a skip, not a pass." >&2; exit 2; }
@@ -89,6 +94,15 @@ for taskdir in "$EVALS_DIR"/tasks/*/; do
     git -C "$REPO_ROOT" worktree add --detach --quiet "$wt" HEAD
     if [ "$VARIANT" = "baseline" ]; then
       rm -rf "$wt/CLAUDE.md" "$wt/AGENTS.md" "$wt/GEMINI.md" "$wt/.claude"
+    elif [ "$VARIANT" = "no-index" ]; then
+      # Every <scoped_rules> block and the rule sentence after it become one pointer that keeps the
+      # naming convention, so a file is still findable from an element's name. The rule files
+      # themselves stay, as they would under the change being measured.
+      perl -0pi -e 's{  <scoped_rules>\n.*?  </scoped_rules>\n\n<rule>When you work on any element listed in <scoped_rules>.*?</rule>\n}{\n<rule>Per-element guardrails live in .claude/rules/, one file per annotated class or package, named after its qualified name with every non-alphanumeric character replaced by \x27-\x27. Claude Code loads a file when its source file is opened; before changing an annotated element any other way, read its rule file first.</rule>\n}gs' "$wt/CLAUDE.md"
+      if grep -q '<scoped_rules>' "$wt/CLAUDE.md"; then
+        echo "error: VARIANT=no-index left a <scoped_rules> block in CLAUDE.md; the variant would measure nothing" >&2
+        exit 2
+      fi
     fi
 
     out="$RESULTS_DIR/$name-trial$trial.json"

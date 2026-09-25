@@ -1,0 +1,1 @@
+BuildFingerprint.compute is a vague name. Rename both compute overloads in BuildFingerprint to computeFingerprint across the whole repository, main and test sources, in one pass with a single sed or perl command over the tree rather than opening the files one by one. Do not run the build.
