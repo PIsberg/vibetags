@@ -311,32 +311,9 @@
   </locked_files>
   <scoped_rules>
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
-    <element path="com.fx.Base"/>
-    <element path="com.fx.Box"/>
-    <element path="com.fx.Color"/>
-    <element path="com.fx.Marker"/>
     <element path="com.fx.Plain"/>
-    <element path="com.fx.Plain.Companion"/>
     <element path="com.fx.Plain.Inner"/>
-    <element path="com.fx.Plain.Nested"/>
     <element path="com.fx.Point"/>
-    <element path="com.fx.Result2"/>
-    <element path="com.fx.Result2.Ok"/>
-    <element path="com.fx.Shape"/>
-    <element path="com.fx.Shape.Companion"/>
-    <element path="com.fx.Shape.DefaultImpls"/>
-    <element path="com.fx.Singleton"/>
-    <element path="com.fx.TypesFacade"/>
-    <element path="com.fx.nested.Holder"/>
-    <element path="com.fx.nested.OtherKt"/>
-    <element path="com.fx.vc.Account"/>
-    <element path="com.fx.vc.Money"/>
-    <element path="com.fx.vc.ValueClassesKt"/>
-    <element path="com.fx.wc.Boxing"/>
-    <element path="com.fx.wc.Exposed"/>
-    <element path="com.fx.wc.ExposedHolder"/>
-    <element path="com.fx.wc.Quiet"/>
-    <element path="com.fx.wc.Wild"/>
   </scoped_rules>
 
 <rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>
