@@ -4,10 +4,12 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
+import se.deversity.vibetags.processor.internal.content.MarkdownSectionMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.internal.content.SectionCatalog;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 import static se.deversity.vibetags.processor.internal.content.platforms.AnnotationSections.section;
 
@@ -17,6 +19,10 @@ import static se.deversity.vibetags.processor.internal.content.platforms.Annotat
  * safety sections `.windsurfrules` keeps inline when its scoped rules are opted in.
  */
 public final class WindsurfRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return MarkdownSectionMerge::merge;
+    }
 
     private static final List<AnnotationSections.Section> SECTIONS = List.of(
         section(Platform.WINDSURF, SectionCatalog.Key.THREAD_SAFE, GuardrailModel::threadSafe, FormatterRegistry.threadSafe()),

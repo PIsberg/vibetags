@@ -4,14 +4,21 @@ import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.AnnotationDescriptor;
 import se.deversity.vibetags.processor.internal.content.AnnotationDescriptors;
+import se.deversity.vibetags.processor.internal.content.MarkdownSectionMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 /**
  * PlatformRenderer for generating `CONVENTIONS.md` for Aider.
  */
 public final class AiderConventionsRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return MarkdownSectionMerge::merge;
+    }
+
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         StringBuilder sb = new StringBuilder(context.estimatedContentSize());

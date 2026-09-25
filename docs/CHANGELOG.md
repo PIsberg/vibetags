@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Upgrading: what moves in your committed files.** A project whose test sources carry guardrails
+gets one generated block per Markdown aggregate instead of two stacked copies (#841): `AGENTS.md`,
+`GEMINI.md`, `llms.txt`, `.cursorrules`, `.github/copilot-instructions.md` and the other prose
+files lose their second header and repeated section headings, and the test round's entries move
+into the matching section. No guardrail line is dropped: across this repository and its examples,
+44 files had 441 lines deleted and 50 re-inserted into merged sections, and no distinct line
+disappeared from any of them. A project without annotated test sources sees no change.
+
+### Changed
+
+- **Markdown aggregates render one document per module, not one per source set (#841).** #839 did
+  this for `CLAUDE.md`; every other prose aggregate still stacked the test round's body, header and
+  all, under the main round's. On this repository that was 289 bytes of `AGENTS.md`, 562 of
+  `GEMINI.md` and 426 of `llms.txt`, all loaded on every session by the tools that read them.
+  `MarkdownSectionMerge` joins the bodies section by section and declines, keeping the old
+  concatenation, on any shape it does not know. Fourteen renderers declare it, and
+  `MarkdownSourceSetMergeEndToEndTest` fails for one that does not.
+
 ### Fixed
 
 - **`tools/release-notes.sh` pins every relative link to the tag, not just `changelog-assets/` (#849).**

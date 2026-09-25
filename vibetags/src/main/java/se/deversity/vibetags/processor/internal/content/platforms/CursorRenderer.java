@@ -3,10 +3,12 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 import java.util.List;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
+import se.deversity.vibetags.processor.internal.content.MarkdownSectionMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.internal.content.SectionCatalog;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 import static se.deversity.vibetags.processor.internal.content.platforms.AnnotationSections.section;
 
@@ -14,6 +16,10 @@ import static se.deversity.vibetags.processor.internal.content.platforms.Annotat
  * PlatformRenderer for generating `.cursorrules`.
  */
 public final class CursorRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return MarkdownSectionMerge::merge;
+    }
 
     private static final List<AnnotationSections.Section> SECTIONS = List.of(
         section(Platform.CURSOR, SectionCatalog.Key.AUDIT, GuardrailModel::audit, FormatterRegistry.audit()),

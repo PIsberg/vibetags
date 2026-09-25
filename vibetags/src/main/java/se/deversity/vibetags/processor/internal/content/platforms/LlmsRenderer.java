@@ -5,14 +5,21 @@ import java.util.Collection;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.FormatterRegistry;
+import se.deversity.vibetags.processor.internal.content.MarkdownSectionMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 /**
  * PlatformRenderer for generating `llms.txt` and `llms-full.txt` discovery formats.
  */
 public final class LlmsRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return MarkdownSectionMerge::merge;
+    }
+
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         boolean full = platform == Platform.LLMS_FULL;
