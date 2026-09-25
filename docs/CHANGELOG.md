@@ -59,6 +59,11 @@ and no rule file moves.
 
 ### Fixed
 
+- **`vibetags init` marks deprecated outputs (#854).** `init --list` showed the 22 deprecated
+  outputs exactly like current ones, and `--platforms gemini` created `gemini_instructions.md`
+  without a word, while the processor already leaves them out of its own suggestions. Each is now
+  listed with `[deprecated, use ...]`, naming the same replacement as the compiler warning, and
+  naming one in `--platforms` still creates it but prints a warning.
 - **Antigravity rule files are measured against its 24,000-byte cap, not 12,000 characters (#850).**
   Antigravity's rules page now says it "truncates any single rule file that exceeds 24,000 bytes";
   the 12,000-character figure #701 used is gone from it. An `.agents/rules/` file of 12,001 ASCII

@@ -503,7 +503,8 @@ with a `NoClassDefFoundError` on the processor classes. Run it through jbang, or
 that resolves the Maven coordinate.
 
 - **`init --list`** prints every opt-in platform key with the file it maps to, marking the
-  ones already active in the current directory.
+  ones already active in the current directory, and marking each deprecated one with what to use
+  instead. `--platforms` still creates a deprecated key when named, and warns (#854).
 - **`init --platforms <key,...>`** creates the named opt-in files empty (directories for
   `*_granular` keys), for the next compile to fill. It refuses unknown keys before creating
   anything, and never touches a file that already exists. This is the documented way to state

@@ -29,6 +29,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -266,6 +267,18 @@ class DeprecatedServicesTest {
                 "platform.deprecated key=supermaven_ignore file=.supermavenignore replacement=.cursorignore"),
             "resolveActiveServices has no logger parameter, so it has to find the root's own:\n"
                 + Files.readString(log));
+    }
+
+    @Test
+    @DisplayName("the replacement vibetags init shows is the one the warning names, and only for deprecated keys")
+    void replacementIsTheWarningsReplacement() {
+        for (Map.Entry<String, List<String>> e : EXPECTED.entrySet()) {
+            String replacement = DeprecatedServices.replacement(e.getKey());
+            assertTrue(replacement != null && !replacement.isBlank(), e.getKey() + " has no replacement");
+        }
+        assertEquals("AGENTS.md,.agents/skills/", DeprecatedServices.replacement("zencoder_granular"));
+        assertEquals("none", DeprecatedServices.replacement("mentat"));
+        assertNull(DeprecatedServices.replacement("claude"), "a current platform has no replacement");
     }
 
     @Test

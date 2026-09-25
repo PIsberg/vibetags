@@ -200,6 +200,16 @@ public final class DeprecatedServices {
         return NOTICES.keySet();
     }
 
+    /**
+     * The replacement the warning names for {@code key}, as the log event records it
+     * (comma-separated, {@code none} when there is none), or {@code null} when {@code key} is not
+     * deprecated. Public for {@code vibetags init}, which marks the same keys.
+     */
+    public static @Nullable String replacement(String key) {
+        Notice notice = NOTICES.get(key);
+        return notice == null ? null : notice.replacement();
+    }
+
     /** The user-facing path of each deprecated output, keyed by service key. */
     static Map<String, String> files() {
         Map<String, String> files = new LinkedHashMap<>();

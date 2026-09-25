@@ -125,6 +125,36 @@ class InitCommandTest {
             "a .clinerules/ directory does not activate the single-file service:\n" + out());
     }
 
+    /**
+     * A deprecated output is one the next major version stops writing, and the processor already
+     * leaves it out of the "no AI config files found" suggestions. The CLI listed the same keys
+     * as if they were current, so a new project could opt into one on the CLI's say-so.
+     */
+    @Test
+    void list_marksEveryDeprecatedKeyWithItsReplacement() {
+        run("init", "--list");
+
+        for (String key : se.deversity.vibetags.processor.internal.DeprecatedServices.keys()) {
+            String line = out().lines().filter(l -> l.startsWith("  " + key + " -> ")).findFirst()
+                .orElseThrow(() -> new AssertionError(key + " is not listed:\n" + out()));
+            assertTrue(line.contains("[deprecated"), "unmarked deprecated key: " + line);
+        }
+        assertTrue(out().lines().anyMatch(l -> l.startsWith("  zencoder_granular -> ")
+            && l.contains("AGENTS.md")), "the marker names the replacement:\n" + out());
+        assertTrue(out().lines().filter(l -> l.startsWith("  claude -> ")).noneMatch(l -> l.contains("deprecated")),
+            "a current platform is not marked:\n" + out());
+    }
+
+    @Test
+    void platforms_deprecatedKeyIsCreatedButWarnedAbout() {
+        int code = run("init", "--platforms", "gemini");
+
+        assertEquals(0, code, "the user asked for it by name, so it is still created:\n" + err());
+        assertTrue(Files.isRegularFile(dir.resolve("gemini_instructions.md")));
+        assertTrue(err().contains("gemini") && err().contains("deprecated") && err().contains("GEMINI.md"),
+            "the warning names the key and its replacement:\n" + err());
+    }
+
     @Test
     void unknownKey_failsBeforeCreatingAnything() {
         int code = run("init", "--platforms", "claude,notaplatform");
