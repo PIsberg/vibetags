@@ -4,9 +4,11 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.SourceLocation;
 import se.deversity.vibetags.processor.internal.content.Escape;
+import se.deversity.vibetags.processor.internal.content.LocksReportMerge;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.content.SourceSetMerge;
 
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -27,6 +29,10 @@ import se.deversity.vibetags.processor.model.TaggedElement;
  * should fall back to file-level matching on the element path.
  */
 public final class LocksReportRenderer implements PlatformRenderer {
+    @Override
+    public SourceSetMerge sourceSetMerge() {
+        return LocksReportMerge::merge;
+    }
 
     /**
      * Format version emitted as the first JSON record ({@code {"type":"format","version":N}}).

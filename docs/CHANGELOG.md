@@ -24,6 +24,11 @@ disappeared from any of them. A project without annotated test sources sees no c
   `MarkdownSectionMerge` joins the bodies section by section and declines, keeping the old
   concatenation, on any shape it does not know. Fourteen renderers declare it, and
   `MarkdownSourceSetMergeEndToEndTest` fails for one that does not.
+- **`.vibetags-locks` writes its header once per module, not once per source set (#851).** A module
+  with annotated test sources repeated the two header comments and the `{"type":"format"}` record;
+  readers skip both, so nothing was misread, but the CI Locked Files Guard parses this file on every
+  pull request. `LocksReportMerge` joins the source sets as a union of lines, and no lock can be
+  lost to it: two locked elements always differ in `element`.
 
 ### Fixed
 

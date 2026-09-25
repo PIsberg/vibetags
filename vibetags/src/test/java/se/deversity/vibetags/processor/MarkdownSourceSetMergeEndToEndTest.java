@@ -138,9 +138,6 @@ class MarkdownSourceSetMergeEndToEndTest {
                     || PlatformRendererRegistry.mergeShapeFor(key) != null
                     || PlatformRendererRegistry.wholeFileMergeFor(key) != null
                     || ("testing".equals(key) && !testingMd)
-                    // JSON Lines, not prose: its only repetition is two '#' comment lines, and the
-                    // CI lock guard reads this file, so its format is left to its own change.
-                    || "locks_report".equals(key)
                     || file.getFileName() == null) {
                 continue;
             }
