@@ -196,22 +196,21 @@ jobs:
       # present in CI — a false green exactly where it matters. Diffing the tree after both rounds
       # asks the question that is actually being asked: do the committed files match a full
       # regeneration? Same pattern as the enforcing example's gate below. See issue #794.
+      #
+      # The body lives in tools/self-check.sh so the pre-commit hook runs the identical check
+      # before the push rather than one CI round-trip after it. SelfCheckGateWiringTest pins both
+      # callers to the script.
       - name: Verify VibeTags' Own Guardrails Are Current (self-check)
         if: matrix.java == '21'
         run: |
-          cd vibetags
-          # test-compile, not compile: TESTING.md routing only happens in a test round, so a
-          # main-only regeneration would drop every test guardrail from the committed files.
-          mvn clean test-compile -B -Pself-annotate
-          cd ..
+          bash tools/self-check.sh
+          # The script compares against the tree it started from, so local uncommitted work is
+          # not reported as drift. Here nothing should be uncommitted at all.
           if [ -n "$(git status --porcelain)" ]; then
-            echo "::error::VibeTags' own guardrail files are out of date with its annotations."
-            echo "Run 'cd vibetags && mvn clean test-compile -Pself-annotate' and commit the result."
+            echo "::error::the working tree is dirty after the self-check."
             git --no-pager status --porcelain
-            git --no-pager diff
             exit 1
           fi
-          echo "Committed guardrail files match a full regeneration."
 
       - name: Reset AI Config Files (Maven)
         run: |

@@ -56,7 +56,8 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
 - Third-party corpus: `corpus/run-corpus.sh` (Java, javac) and `corpus/run-corpus-jvm.sh`
   (Kotlin, Groovy, Scala, each built by its own Gradle). Both run in CI on every PR;
   [corpus/README.md](corpus/README.md) says what each asserts and what they have found.
-- Run `pre-commit run --all-files` after `git add`, before committing.
+- Run `pre-commit run --all-files` after `git add`, before committing. It includes CI's
+  self-check (`tools/self-check.sh`, 30–45 s), which catches a moved `.vibetags-locks` range.
 
 ## Reference docs (read on demand)
 

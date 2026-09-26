@@ -20,6 +20,19 @@ A project that opts into a granular directory beside its aggregate (`.claude/rul
 elements are grouped one line per package instead of one line each. The same elements are named,
 and no rule file moves.
 
+### Added
+
+- **The self-check runs before the commit, not one CI round-trip after the push.** `build.yml`'s
+  "Verify VibeTags' Own Guardrails Are Current" step now calls `tools/self-check.sh`, and a
+  `vibetags-self-check` pre-commit hook runs the same script on any commit touching
+  `vibetags/src/`, `vibetags-annotations/src/`, `vibetags/pom.xml` or `README.md`. The drift it
+  catches had reached CI five times: a line added above a locked method moves its range in
+  `.vibetags-locks` (#687, #793, #797, #862), and a regeneration moved the `.claude/rules/` line
+  count README.md quotes (#861), so the script also runs `ProjectFactsConsistencyTest` after
+  regenerating. It deletes the gitignored `.vibetags-mod-*` sidecars and `.vibetags-cache` first,
+  as a clean clone has none (#794). 30–45 s here. `SelfCheckGateWiringTest` pins both callers to the
+  script.
+
 ### Changed
 
 - **A rebuild of unchanged sources decides before the collection walk (#834).** The fingerprint

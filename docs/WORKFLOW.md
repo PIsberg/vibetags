@@ -20,7 +20,7 @@ This document describes what happens during CI builds in `.github/workflows/`. T
 | Copilot Review | `copilot-review.yml` | PR opened/reopened/ready-for-review |
 | Nightly Perf Ring | `nightly-perf.yml` | Weekly cron (Mondays 03:17 UTC), manual |
 
-All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow is `contents: read`; jobs that need more (e.g. CodeQL writes `security-events`) escalate explicitly.
+All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow except Scorecard is `contents: read`; Scorecard declares `read-all`, as its action requires. Jobs that need more (e.g. CodeQL writes `security-events`, publish writes `contents` to attach release assets) escalate explicitly.
 
 All third-party actions are pinned by full commit SHA with the version as a trailing comment — required by the OpenSSF Scorecard `Pinned-Dependencies` check.
 
@@ -41,63 +41,71 @@ open runs nothing.
 ''A superseded run is cancelled.'' Every workflow except `publish.yml` and `dependency-review.yml`
 now declares a `concurrency` group keyed on the ref, cancelling in progress everywhere except
 `main` and `master` - a run there is the record of that branch's health and must finish.
+`inquisitor.yml` and `instruction-evals.yml` key theirs on the pull request number instead and
+always cancel, which is the same thing for workflows that never run on a push.
 `publish.yml` is excluded on purpose: cancelling a release mid-flight is worse than queueing
 behind it.
 
 ### Job: `build-maven`
 
-Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). JDK 21 is the minimum supported version; the rest are forward-compatibility checks. Steps:
+Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). JDK 21 is the minimum supported version; the rest are forward-compatibility checks. Steps, in `build.yml` order:
 
 1. **Harden runner** — egress audit.
 2. **Checkout**.
 3. **Set up JDK** — installs Temurin and primes the `~/.m2/repository` cache keyed on `pom.xml`.
 4. **Install VibeTags Annotations** — `cd vibetags-annotations && mvn install -B`. Installs the zero-dependency annotations jar into the local Maven repo first, because `vibetags/pom.xml` declares it as a regular `<dependency>`. Runs the same static-analysis stack as the library (Checkstyle, PMD, CPD, SpotBugs with Find Security Bugs, Error Prone with NullAway) under the same JDK-21-only split for the source and bytecode tools.
-5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs unit tests, and installs the artifact into the local Maven repo so the example project can resolve it. PMD, SpotBugs (with the Find Security Bugs detectors attached) and CPD are JDK-independent, so they run only on the JDK 21 leg (`-Dmaven.pmd.skip=true -Dspotbugs.skip=true` is passed on the other JDKs) to avoid repeating identical analysis ~4×. Error Prone still runs on every JDK because it is a compiler plugin and is JDK-sensitive, and it
+5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs the fast test tier, and installs the artifact into the local Maven repo so the examples can resolve it. PMD, SpotBugs (with the Find Security Bugs detectors attached) and CPD are JDK-independent, so they run only on the JDK 21 leg (`-Dmaven.pmd.skip=true -Dspotbugs.skip=true` is passed on the other JDKs) to avoid repeating identical analysis on every leg. Error Prone still runs on every JDK because it is a compiler plugin and is JDK-sensitive, and it
 carries NullAway with it — nullability is checked at `ERROR` on every matrix JDK, so a
 `@Nullable` that stops being honoured fails the build rather than producing a warning nobody reads.
+6. **Install VibeTags BOM** — `cd vibetags-bom && mvn install -B`. Installs `se.deversity.vibetags:vibetags-bom` (pom-only) into the local Maven repo. Required because `examples/basic/pom.xml` imports the BOM via `<dependencyManagement>` to resolve `vibetags-annotations` and `vibetags-processor` versions, and the BOM has to be resolvable before step 14 runs.
+7. **Build VibeTags CLI** — `cd vibetags-cli && mvn clean install -B`. Runs after the processor install because the CLI consumes `vibetags-processor` as a library (`ServiceRegistry`, marker constants); its `InitCommandTest`/`DoctorCommandTest` are the gate on `init`/`doctor` behaviour. The `cross-platform` job repeats this build, which is the only place the CLI's filesystem behaviour runs on Windows and macOS path separators.
+8. **Build VibeTags KSP Front End** — `cd vibetags-ksp && mvn clean install -B` (analysis on JDK 21 only, as for the library). Runs after the processor install because it drives `AIGuardrailProcessor` as a library. Its tests run real KSP2 in-process, including `StubParityTest`, which fails on any element path or generated byte that differs from a recorded kapt build.
+9. **Run vibetags doctor Against The Groovy Example** (JDK 21 only) — runs the freshly built CLI's `doctor --dir examples/groovy` and asserts it exits **1** and names `InventoryService.groovy` and `field 'contactEmail'`. `doctor` is the only thing that reports the groovyc field drop that `examples/groovy/` gates, and until #533 that detection was exercised by the CLI's own unit tests alone, never against a real checkout. It runs from the module's classpath rather than `java -jar`: the published jar declares a `Main-Class` but carries no dependencies (#557), so this is the shape jbang resolves for a consumer. An exit 0 fails the step — it would mean `doctor` stopped seeing the drop.
+10. **Run vibetags doctor Against The Kotlin Example** (JDK 21 only). The same shape as step 9, reusing its classpath file, against `examples/kotlin`. Asserts exit **1**, `kotlin sources:`, `AccountLedger.kt:26 @AILocked on fun balanceFor` and the `@JvmName("balanceFor")` remedy, and fails if the output names `fun settle` or `fun reconcile`: `balanceFor` takes a value class, so kapt drops its guardrail, while `settle` (takes `kotlin.Result`, not mangled) and `reconcile` (internal) keep theirs, so a finding for either is a false positive. Until #693 the value-class check (#688) ran only in `DoctorCommandTest`. The negative checks use `if grep ...; then exit 1; fi`, because a bare `! grep` does not fail a step under `bash -e` (#689).
+11. **Run vibetags init --list Against The Basic Example** (JDK 21 only) — asserts the opt-in platform keys are printed and that `git status` for `examples/basic/` is still clean afterwards. `--list` prints; it must create nothing.
+12. **Verify VibeTags' Own Guardrails Are Current (self-check)** — `bash tools/self-check.sh`, then a check
+that the tree is clean, JDK 21 only. The script deletes the gitignored `.vibetags-mod-*` sidecars
+and `.vibetags-cache`, runs `mvn clean test -Pself-annotate -Dtest=ProjectFactsConsistencyTest`
+from `vibetags/`, and fails if that changed the working tree. The repo dogfoods its own
+guardrails, and until this step nothing checked that the committed `CLAUDE.md` / `GEMINI.md` /
+`.claude/rules` / `.vibetags-locks` matched what the processor writes. They had drifted.
+Regenerating and diffing makes that a red build rather than something the next person to run the
+profile by hand discovers. `ProjectFactsConsistencyTest` runs after the regeneration because it
+pins README.md's line counts for the regenerated files. JDK 21 only because it compares file
+content, which is JDK-independent. The same script is the `vibetags-self-check` pre-commit hook,
+so this drift fails locally first; `SelfCheckGateWiringTest` pins both callers to it.
 
-6b. **Verify VibeTags' Own Guardrails Are Current** — `mvn clean test-compile -Pself-annotate`
-followed by `git status --porcelain`, JDK 21 only. The repo dogfoods its own guardrails, and until
-now nothing checked that the committed `CLAUDE.md` / `GEMINI.md` / `.claude/rules` matched what the
-processor writes. They had drifted. Regenerating and diffing makes that a red build rather than
-something the next person to run the profile by hand discovers. JDK 21 only because it compares
-file content, which is JDK-independent.
+    It regenerates and diffs rather than using `-Dvibetags.selfcheck=true`, and the reason is worth
+    keeping: check mode reports per compile round, and this project has two of them. Maven runs
+    `default-compile` before `default-testCompile`, so on a clean clone the main round compares
+    main-only output against committed files that also carry the test round's guardrails and fails
+    before the test round runs. It passes on a machine that has built before, because a gitignored
+    `.vibetags-mod-*` sidecar is still on disk — green everywhere except CI, which is the wrong way
+    round for a gate. Issue #794 tracks the check-mode behaviour itself.
 
-   It regenerates and diffs rather than using `-Dvibetags.selfcheck=true`, and the reason is worth
-   keeping: check mode reports per compile round, and this project has two of them. Maven runs
-   `default-compile` before `default-testCompile`, so on a clean clone the main round compares
-   main-only output against committed files that also carry the test round's guardrails and fails
-   before the test round runs. It passes on a machine that has built before, because a gitignored
-   `.vibetags-mod-*` sidecar is still on disk — green everywhere except CI, which is the wrong way
-   round for a gate. Issue #794 tracks the check-mode behaviour itself.
-
-   Running it **locally** can report `vibetags/CLAUDE.md` as out of date when CI does not. That file
-   is gitignored, so a fresh checkout has none and the file-existence opt-in means nothing creates
-   one — verified by deleting it and running the full suite, which leaves it absent. On a machine
-   that has run `-Pself-annotate` before, it exists, and a test run then rewrites it. Regenerate
-   (`mvn test-compile -Pself-annotate`) before checking, or delete the file.
-6. **Install VibeTags BOM** — `cd vibetags-bom && mvn install -B`. Installs `se.deversity.vibetags:vibetags-bom` (pom-only) into the local Maven repo. Required because `examples/basic/pom.xml` imports the BOM via `<dependencyManagement>` to resolve `vibetags-annotations` and `vibetags-processor` versions, and the BOM has to be resolvable before step 8 runs.
-6b. **Build VibeTags CLI** — `cd vibetags-cli && mvn clean install -B`. Runs after the processor install because the CLI consumes `vibetags-processor` as a library (`ServiceRegistry`, marker constants); its `InitCommandTest`/`DoctorCommandTest` are the gate on `init`/`doctor` behaviour. The `cross-platform` job repeats this build, which is the only place the CLI's filesystem behaviour runs on Windows and macOS path separators.
-6b2. **Build VibeTags KSP Front End** — `cd vibetags-ksp && mvn clean install -B` (analysis on JDK 21 only, as for the library). Runs after the processor install because it drives `AIGuardrailProcessor` as a library. Its tests run real KSP2 in-process, including `StubParityTest`, which fails on any element path or generated byte that differs from a recorded kapt build.
-6c. **Run vibetags doctor Against The Groovy Example** (JDK 21 only) — runs the freshly built CLI's `doctor --dir examples/groovy` and asserts it exits **1** and names `InventoryService.groovy` and `field 'contactEmail'`. `doctor` is the only thing that reports the groovyc field drop that `examples/groovy/` gates, and until #533 that detection was exercised by the CLI's own unit tests alone, never against a real checkout. It runs from the module's classpath rather than `java -jar`: the published jar declares a `Main-Class` but carries no dependencies (#557), so this is the shape jbang resolves for a consumer. An exit 0 fails the step — it would mean `doctor` stopped seeing the drop.
-
-6d. **Run vibetags doctor Against The Kotlin Example** (JDK 21 only). The same shape as 6c, reusing its classpath file, against `examples/kotlin`. Asserts exit **1**, `kotlin sources:`, `AccountLedger.kt:26 @AILocked on fun balanceFor` and the `@JvmName("balanceFor")` remedy, and fails if the output names `fun settle` or `fun reconcile`: `balanceFor` takes a value class, so kapt drops its guardrail, while `settle` (takes `kotlin.Result`, not mangled) and `reconcile` (internal) keep theirs, so a finding for either is a false positive. Until #693 the value-class check (#688) ran only in `DoctorCommandTest`. The negative checks use `if grep ...; then exit 1; fi`, because a bare `! grep` does not fail a step under `bash -e` (#689).
-
-6e. **Run vibetags init --list Against The Basic Example** (JDK 21 only) — asserts the opt-in platform keys are printed and that `git status` for `examples/basic/` is still clean afterwards. `--list` prints; it must create nothing.
-
-7. **Reset AI Config Files** — `cd examples/basic && bash reset-ai-files.sh`. Truncates every generated AI config file in `examples/basic/` to zero bytes and removes all granular rule files under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`. The files themselves are kept (their existence is the opt-in signal for the processor), but their content is cleared so the next compile must regenerate everything from scratch.
-8. **Build Example Project** — `cd examples/basic && mvn clean compile -B -Dvibetags.log.path=../vibetags.log`. This is the only step that triggers `AIGuardrailProcessor` — it runs during `javac` of the example, sees the existing (now-empty) AI config files, and writes generated content back into them. The processor log is redirected to the repo root.
-9. **Run Full Test Suite (VibeTags Library, incl. e2e)** — `cd vibetags && mvn test -B -Pe2e`. This is no longer the redundant second pass it used to be. Step 5's `mvn install` runs the fast tier only, because plain `mvn test` skips the 52 classes tagged `@Tag("e2e")`; `-Pe2e` adds them back, so this step is the only place the whole suite runs and the only one that can call the branch green. See `docs/TESTS.md` for what is tagged and why.
-10. **Verify Generated AI Config Files** — delegates to the local composite action `.github/actions/verify-generated-files` (`working-directory: example`), which checks that every expected file under `examples/basic/` exists and is non-empty. Failure means the processor either skipped a platform or wrote nothing. Covered files include `.cursorrules`, `CLAUDE.md`, `.aiexclude`, `AGENTS.md`, `QWEN.md`, `gemini_instructions.md`, `.github/copilot-instructions.md`, `llms.txt`, `llms-full.txt`, `.codex/config.toml`, `.codex/rules/vibetags.rules`, `CONVENTIONS.md`, `.aiderignore`, granular rule files for `PaymentProcessor` / `DatabaseConnector` under `.cursor/rules/`, `.trae/rules/`, `.roo/rules/`, the AI PR-reviewer configs `.coderabbit.yaml` / `.pr_agent.toml` / `ellipsis.yaml`, the context-packer ignore files `.repomixignore` / `.gitingestignore` / `.gptignore` / `.ghostcoderignore` / `.piecesignore`, and the `.void/rules.md` and `.roomodes` editor/mode files. The same composite action step also runs the `@AIAudit` content check described next — it is one step in the workflow YAML, not two.
-11. **Verify @AIAudit Content** — the second step inside the composite action greps each generated file for the platform-specific phrasing of the audit section (e.g. `MANDATORY SECURITY AUDITS` in `.cursorrules`, `audit_requirements` in `CLAUDE.md`, `CONTINUOUS AUDIT REQUIREMENTS` in `gemini_instructions.md`). This catches a class of regression where the file is non-empty but the `@AIAudit` rendering has silently broken for one platform.
-12. **Upload coverage to Codecov** — only on the JDK 21 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Passes `fail_ci_if_error: false`, so a Codecov outage doesn't fail the build.
-13. **Upload failure logs** — `if: failure()` only. Keeps `vibetags.log` (the processor's diagnostic channel) and the surefire reports as artifacts, because a CI-only failure whose log died with the runner has to be reproduced instead of read.
+    Locally the script compares against the tree it started from rather than against `HEAD`, so
+    uncommitted work is not reported as drift; under pre-commit the unstaged half is stashed, so it
+    judges exactly what is being committed. Gitignored files, `vibetags/CLAUDE.md` among them, never
+    show in that comparison.
+13. **Reset AI Config Files** — `cd examples/basic && bash reset-ai-files.sh`. Truncates every generated AI config file in `examples/basic/` to zero bytes, deletes the write cache and any `*.bak` files, and removes the generated `.md`/`.mdc` files from each granular rule directory. The files themselves are kept (their existence is the opt-in signal for the processor), but their content is cleared so the next compile must regenerate everything from scratch.
+14. **Build Example Project** — `cd examples/basic && mvn clean test-compile -B -Dvibetags.log.path=../../vibetags.log`. `test-compile`, not `compile`: the example's `src/test/java` is what gives VibeTags a test round and makes it write `TESTING.md`. The processor runs during `javac` of the example, sees the existing (now-empty) AI config files, and writes generated content back into them. The processor log goes to the repo root.
+15. **Verify The Example's Committed Guardrails Match Its Annotations** — fails if `git status --porcelain -- examples/basic/` is non-empty after the rebuild, so an annotation edited without committing the regenerated files is red.
+16. **Rebuild basic With The Write Cache Disabled** — `mvn clean test-compile -B -Dvibetags.cache=false` in `examples/basic`, then the same clean-tree check. The cache-off path otherwise ran only inside library tests.
+17. **Multi-module example (`examples/multimodule`, Maven reactor)** — `mvn clean verify -B`, then ten verification steps: the committed files match a regeneration; the transitive manifest lands at `core/target/classes/vibetags/manifests/` and `engine/` and `cli/` inherit it; every module appears in the merged `CLAUDE.md` and `.cursorrules`; all 44 annotation families survive the merge (element sections counted against the annotation sources); exactly **58** active services, with a spot check that each marker-based file carries a VibeTags block and that `SKILL.md` has its front matter once (#684); the committed files pass check mode (`-Dvibetags.check=true`); the six reactor YAML files parse with duplicate top-level keys forbidden and a witness from every module surviving; `cli/CLAUDE.md` carries only `cli`'s guardrails; `.vibetags-mirror` copies each module's scoped rules into `tests/` without giving it a root region of its own (#312); and the `.vibetags-roles` file `reactor-spine.md` merges all three modules in eight granular directories and survives a one-module `mvn -pl core` rebuild byte-identical (#365).
+18. **All-tiers example (`examples/all-tiers`)** — `mvn clean compile -B`, then asserts the tier split: the six safety buckets inline in the root `CLAUDE.md` and none of the verbose ones, a Tier-1 region and pointers per module, no cross-module leakage between `billing/CLAUDE.md` and `shipping/CLAUDE.md`, role-grouped Tier-3 files with `paths:` front matter, and a parameter-level guardrail. A second step runs check mode on it.
+19. **Indexed multi-module example (`examples/multimodule-indexed`, #295, #319, #332)** — builds it, runs check mode, then asserts the indexed root: one pointer per module with the safety tier still inline, no verbose buckets, `GEMINI.md` still carrying the full merged block, `.github/copilot-instructions.md` collapsed to a scoped-rules index with every module's `.github/instructions/` file intact, the `.clinerules/` directory's per-element files and its always-loaded `+vibetags-safety.md` (#642, #648), and one `## Locked Files` heading rather than one per module.
+20. **Enforcing-mode example (`examples/enforcing`, #284)** — builds with `-Avibetags.enforce=locked,contract,publicapi` against the committed `.vibetags-baseline`, checks the committed files match, then drifts the `@AILocked` method's parameter type and requires the build to fail with an `@AILocked violation` naming `computeTariff(java.lang.String,long)`. A green build there would mean enforcement never ran.
+21. **Run Full Test Suite (VibeTags Library, incl. e2e)** — `cd vibetags && mvn test -B -Pe2e`. This is not the redundant second pass it looks like. Step 5's `mvn install` runs the fast tier only, because plain `mvn test` skips the classes tagged `@Tag("e2e")` (111 of the 307 test classes on 2026-09-26); `-Pe2e` adds them back, so this step is the only place the whole suite runs and the only one that can call the branch green. See `docs/TESTS.md` for what is tagged and why.
+22. **Verify Generated AI Config Files** — the local composite action `.github/actions/verify-generated-files` (`working-directory: examples/basic`), two steps in one. The first checks that every expected file exists and is non-empty: the root aggregates (`.cursorrules`, `CLAUDE.md`, `GEMINI.md`, `QWEN.md`, `CONVENTIONS.md`, `TESTING.md`, `llms.txt`, `llms-full.txt`, `.github/copilot-instructions.md` and more), the ignore files, the PR-reviewer and context-packer configs, the skill files, and the granular `PaymentProcessor` rule file in each scoped-rules directory (plus `DatabaseConnector` under `.cursor/rules/` and the `+vibetags-safety.md` files for Devin and Windsurf). Failure means the processor skipped a platform or wrote nothing. The second greps for the platform-specific `@AIAudit` phrasing (e.g. `MANDATORY SECURITY AUDITS` in `.cursorrules`, `audit_requirements` in `CLAUDE.md`, `CONTINUOUS AUDIT REQUIREMENTS` in `gemini_instructions.md` and the collapsed `GEMINI.md`), which catches a file that is non-empty while its audit rendering has broken. It also asserts that the hand-authored root `AGENTS.md` was **not** generated into (the sole-file fallback, invariant 4), while `.junie/AGENTS.md` was.
+23. **Verify the Central deploy script reports failures** (JDK 21 only) — `bash .github/scripts/deploy-to-central.test.sh`, the regression test for `deploy-to-central.sh` reading Maven's exit status rather than `tee`'s.
+24. **Upload coverage to Codecov** — only on the JDK 21 matrix leg, to avoid duplicate uploads. Reads `vibetags/target/site/jacoco/jacoco.xml`. Passes `fail_ci_if_error: false`, so a Codecov outage doesn't fail the build.
+25. **Upload failure logs** — `if: failure()` only. Keeps `vibetags.log` (the processor's diagnostic channel) and the surefire reports of the library, CLI and KSP modules as artifacts, because a CI-only failure whose log died with the runner has to be reproduced instead of read.
 
 The generated-file and `@AIAudit` verification logic used to be duplicated inline in both `build-maven` and `build-gradle`; it now lives once in `.github/actions/verify-generated-files/action.yml` (a local composite action, `working-directory` input defaulting to `example`) and is invoked by both jobs — plus `cross-platform` (see below) — so the three call sites can never drift out of sync.
 
 ### Job: `cross-platform`
 
-Matrix over **`windows-latest`, `macos-latest`** (`fail-fast: false`), JDK 21, `shell: bash`. The main matrix only runs on Linux, but the processor's file handling is OS-sensitive — path separators, CRLF line endings, the marker-aware `GuardrailFileWriter`, and `root.relativize()`. This job installs `async-test-lib` and the annotations jar, builds the library, installs the BOM, resets and rebuilds the example project the same way `build-maven` does, and runs the library's self-contained unit tests (`cd vibetags && mvn test -B`) on Windows and macOS. It then calls the same `.github/actions/verify-generated-files` composite action used by `build-maven`/`build-gradle`, so a Windows- or macOS-only regression in the generated output is caught here too — previously this job only ran unit tests and did not build or verify the example project. It uses the default `JAVA_HOME` (the Linux-only `JAVA_HOME_21_X64` does not exist on Windows or arm64 macOS) and omits the `harden-runner` step, which only supports Linux runners. On failure it uploads `vibetags.log` and the surefire reports, same rationale as `build-maven` step 13 — the OS-specific file-handling paths are exactly why this job exists, so their evidence must survive it.
+Matrix over **`windows-latest`, `macos-latest`** (`fail-fast: false`), JDK 21, `shell: bash`. The main matrix only runs on Linux, but the processor's file handling is OS-sensitive — path separators, CRLF line endings, the marker-aware `GuardrailFileWriter`, and `root.relativize()`. This job installs the annotations jar, builds the library, installs the BOM, builds the CLI, resets and rebuilds the example project the same way `build-maven` does, builds the Maven multi-module example (`mvn clean verify -B`), and runs the whole library suite including e2e (`cd vibetags && mvn test -B -Pe2e`) on Windows and macOS. It then calls the same `.github/actions/verify-generated-files` composite action used by `build-maven`/`build-gradle`, so a Windows- or macOS-only regression in the generated output is caught here too — previously this job only ran unit tests and did not build or verify the example project. It uses the default `JAVA_HOME` (the Linux-only `JAVA_HOME_21_X64` does not exist on Windows or arm64 macOS) and omits the `harden-runner` step, which only supports Linux runners. On failure it uploads `vibetags.log` and the surefire reports, same rationale as `build-maven` step 25 — the OS-specific file-handling paths are exactly why this job exists, so their evidence must survive it.
 
 ### Job: `load-tests`
 
@@ -106,8 +114,8 @@ Single JDK 21 leg, `needs: build-maven`. Steps:
 1. **Harden runner**, **checkout**, **set up JDK 21** (Maven cache).
 2. **Install VibeTags annotations** — `cd vibetags-annotations && mvn install -B`.
 3. **Install VibeTags processor** — `cd vibetags && mvn install -DskipTests -B`.
-3. **Run the load-test regression gates** — `cd load-tests && mvn verify -B -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest,TestingMdRoutingStressTest,PlatformBreadthStressTest,IncrementalRebuildStressTest" -Dstress.max.classes=500`, against the processor this run built rather than the pom's `<processor.version>` pin. `verify`, not `test`, because PMD, CPD and SpotBugs bind to that phase. These are gates, not measurements: each asserts that the feature it covers engaged (routing routes, scoped rules collapse the aggregate, the fingerprint short-circuit fires, enforcement-off still saves), and nothing here compares a timing against a baseline. Measurement lives in `load-tests/results/`, captured by hand.
-4. **Upload stress-test results** — `if: always()`, so artifacts upload even on failure. Globs `load-tests/target/{stress-results,testing-md-routing,platform-breadth,incremental-rebuild}-*.txt`, retained as `stress-results-${{ github.run_id }}`.
+4. **Run the load-test regression gates** — resolves the version this run just built with `mvn help:evaluate`, fails loudly unless it looks like `N.N.N` (an empty value would silently fall back to the pom's pin), then `cd load-tests && mvn verify -B -Dprocessor.version="$VT_VERSION" -Dtest="AnnotationVolumeStressTest,ConcurrentBuildTest,SignatureCaptureStressTest,TestingMdRoutingStressTest,PlatformBreadthStressTest,IncrementalRebuildStressTest" -Dstress.max.classes=500`, against the processor this run built rather than the pom's `<processor.version>` pin. `verify`, not `test`, because PMD, CPD and SpotBugs bind to that phase. These are gates, not measurements: each asserts that the feature it covers engaged (routing routes, scoped rules collapse the aggregate, the fingerprint short-circuit fires, enforcement-off still saves), and nothing here compares a timing against a baseline. Measurement lives in `load-tests/results/`, captured by hand.
+5. **Upload stress-test results** — `if: always()`, so artifacts upload even on failure. Globs `load-tests/target/{stress-results,testing-md-routing,platform-breadth,incremental-rebuild}-*.txt`, retained as `stress-results-${{ github.run_id }}`.
 
 ### Job: `build-gradle`
 
@@ -143,7 +151,7 @@ Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differe
   verification steps to Gradle's one while the three most recent multi-module defects all came from
   Gradle repositories, so these port the Maven assertions across: transitive manifests published to
   Gradle's `build/classes/java/main/` and actually read by the consuming module, with the origin
-  coordinate asserted rather than just the key; all 51 services active, with Codex correctly
+  coordinate asserted rather than just the key; all 58 services active, with Codex correctly
   dropped because `AGENTS.md` is not the sole config; the six generated YAML documents parsed with
   duplicate top-level keys forbidden and a per-module witness required to survive the parse;
   per-module nested output in both shapes (indexed and plain) with no sibling leakage; cross-module
@@ -204,14 +212,15 @@ A second phase then opts **Claude, Gemini and Codex** in, aggregate and granular
 real elements plus a showcase covering every level a guardrail attaches to (package, type, nested
 type, field, method, parameter) in both tiers, and reads the output back. Ten more assertions,
 including the tier split (invariant 6 on somebody else's code) and a richness floor that fails if
-fewer than 15 distinct showcase guardrails reach a generated file.
+fewer than 17 distinct showcase guardrails reach a generated file (`SHOWCASE_FLOOR` in
+`corpus/run-corpus.sh`).
 
 A third phase opts in **every** service file the registry knows about, on one repo, and reads the
 result back: each written non-empty, and every YAML, TOML and JSON file parsed with a real parser.
 That last check is the one the fixture tests cannot make. They assert what a renderer *contains*;
 none asserts that a parser accepts it, and a renderer emitting an unquoted `@` or a trailing comma
-satisfies every `contains` assertion while being unloadable by the tool it targets. 48 of 62 files
-written, 10 parsed.
+satisfies every `contains` assertion while being unloadable by the tool it targets. On commons-cli,
+main run 36225192209 (2026-09-26) logged 63 of 84 files written, 12 parsed.
 
 The checkouts are cached on `corpus/repos.tsv`'s hash, so most runs do no network at all, and
 pins are SHAs so an upstream push cannot turn this repository red. Nothing is vendored.
@@ -310,7 +319,7 @@ Static-analysis security scanning over Java sources.
 
 - Triggers: push/PR to `main`, weekly cron `0 0 * * 1` (Mondays midnight UTC).
 - Job permissions: `actions: read`, `contents: read`, `security-events: write`.
-- Steps: harden runner → checkout → `codeql-action/init` (language `java`) → set up JDK 21 → `cd vibetags && mvn clean install -B -q` → `cd vibetags-bom && mvn install -B -q` (the example imports the BOM, so it must be resolvable before the next step) → `cd examples/basic && mvn clean compile -B -q` (so CodeQL traces both library and consumer code) → `codeql-action/analyze` with category `/language:java`.
+- Steps: harden runner → checkout → `codeql-action/init` (language `java`) → set up JDK 21 → `cd vibetags-annotations && mvn install -B -q` (the library declares it as a plain dependency) → `cd vibetags && mvn clean install -B -q` → `cd vibetags-bom && mvn install -B -q` (the example imports the BOM, so it must be resolvable before the next step) → `cd examples/basic && mvn clean compile -B -q` (so CodeQL traces both library and consumer code) → `codeql-action/analyze` with category `/language:java`.
 - Findings appear under the repository's Security → Code scanning tab.
 
 ---
@@ -334,16 +343,37 @@ OpenSSF Scorecard supply-chain analysis.
 
 ## 5. Publish to Maven Central (`publish.yml`)
 
-Triggered when a GitHub Release is created.
+Triggered when a GitHub Release is created, and by hand (`workflow_dispatch`) to resume a release
+that published some modules and not others. A deploy can fail after its bundle is already
+uploaded, because Central's validation is sometimes slow rather than stuck; before the manual
+trigger existed, the only way to finish such a release was to cut another tag. The dispatch
+takes `ref` (the tag being resumed) and `modules` (`all`, or a comma-separated subset of
+`annotations,processor,ksp,bom,cli`).
 
-- Job: `publish-maven-central`, JDK 21.
-- Sets up Maven with `server-id: central` and exports `CENTRAL_TOKEN_USERNAME` / `CENTRAL_TOKEN_PASSWORD` for the deploy step.
+- Job: `publish-maven-central`, JDK 21, `permissions: contents: write` (to attach release assets).
+- **Resolve which modules to deploy** — validates `modules` against `[a-z,]` and writes one
+  output per module. The input reaches the script through `env`, never through `${{ }}` inside
+  `run:`, because an interpolated expression becomes script text in the one job that holds the GPG
+  key and the Central token.
+- Sets up Maven with `server-id: central` and exports `CENTRAL_TOKEN_USERNAME` / `CENTRAL_TOKEN_PASSWORD` for the deploy steps.
 - **Import GPG key** — pipes `secrets.GPG_PRIVATE_KEY` into `gpg --batch --import`, then prints key fingerprints.
-- **Sign and deploy annotations** — `cd vibetags-annotations && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Runs first; the processor depends on `vibetags-annotations` so it must be in Central before the processor jar that references it is published.
-- **Build, sign, and deploy processor** — `cd vibetags && mvn clean deploy -P central-publish,sign-artifacts -B -DskipTests -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Tests are skipped here because they ran on every push that led to the tagged commit; this step only signs and uploads.
-- **Build, sign, and deploy KSP front end** — `deploy-to-central.sh vibetags-ksp vibetags-ksp -DskipTests`. After the processor, which it depends on; before the BOM, which manages it.
-- **Build, sign, and deploy CLI** — `cd vibetags-cli && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Runs after the processor because it consumes it as a library; its 15 tests run here as a last gate (fast, filesystem-only).
-- **Sign and deploy BOM** — `cd vibetags-bom && mvn clean deploy -P central-publish,sign-artifacts -B -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"`. Same Sonatype Central + GPG profiles as the processor pom; publishes `se.deversity.vibetags:vibetags-bom:<version>` (pom-only) so consumers can import it. Runs after annotations and processor have been deployed.
+- **Five deploy steps, each gated on its module being selected**, each calling
+  `.github/scripts/deploy-to-central.sh <module-dir> <artifact> [maven args]`. The script runs
+  `mvn clean deploy -P central-publish,sign-artifacts`, reads Maven's exit status from `PIPESTATUS`
+  rather than from the `tee` it pipes through, treats "already exists" on Central as success so a
+  resume can re-run modules that landed, and retries a transport failure up to 3 times with
+  backoff. `build-maven` step 23 tests the failure reporting. Order:
+  1. **annotations** — first; the processor depends on it.
+  2. **processor** (`-DskipTests`) — tests ran on every push that led to the tagged commit.
+  3. **KSP front end** (`-DskipTests`) — after the processor, which it depends on; before the BOM, which manages it.
+  4. **BOM** — before the CLI, deliberately. Every install snippet in the README resolves through
+     the BOM, and when it used to go last a CLI deploy that timed out took the BOM down with it,
+     leaving every documented way of depending on the published jars broken.
+  5. **CLI** — last; it consumes the processor as a library, nobody's build depends on it, and its
+     fast filesystem-only tests run here as a final gate.
+- **Attach signed artifacts to the GitHub release** — release events only; uploads each module's
+  jars and `.asc` signatures (the BOM's `.pom.asc`) so Scorecard's `Signed-Releases` check can
+  verify them. A manual resume has no release to attach to.
 
 Required repository secrets: `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, `CENTRAL_TOKEN_USERNAME`, `CENTRAL_TOKEN_PASSWORD`. CI also references `CODECOV_TOKEN` from `build.yml`.
 
@@ -370,8 +400,9 @@ PIT mutation coverage over `se.deversity.vibetags.*`. **On demand only** — the
 It was a job in `build.yml` until it was split out. A full PIT run costs more wall-clock than the rest of CI put together, its score moves slowly, and `continue-on-error: true` meant no result it produced could ever fail a build — so every push paid for a number nobody read. The split also drops `continue-on-error`: when the run is deliberate, a red run should read as red.
 
 - Single JDK 21 leg, `ubuntu-latest`, `contents: read`.
-- Steps: harden runner → checkout → set up JDK 21 (Maven cache) → install `async-test-lib` → `cd vibetags-annotations && mvn install -B` → `cd vibetags && mvn -B -Pmutation -Pe2e test-compile org.pitest:pitest-maven:mutationCoverage`.
-- **`-Pe2e` is load-bearing, not optional.** `pitest-maven` parses surefire's configuration, and surefire carries `<excludedGroups>${vibetags.test.excludedGroups}</excludedGroups>`, which defaults to `e2e`. Without `-Pe2e`, PIT runs the fast tier and scores the project as if 55 of its 132 test classes did not exist. Measured on `main` over the seven classes PIT reported as entirely uncovered: 19% line coverage and 16 of 211 mutants killed without it, 88% and 142 of 211 with it. The code was never untested, only unmeasured. Cost is roughly +57% wall-clock on that scope, which is affordable for a `workflow_dispatch`-only job.
+- Steps: harden runner → checkout → set up JDK 21 (Maven cache) → `cd vibetags-annotations && mvn install -B` → `cd vibetags && mvn -B -Pmutation -Pe2e test-compile org.pitest:pitest-maven:mutationCoverage`.
+- **`-Pe2e` is load-bearing, not optional.** `pitest-maven` parses surefire's configuration, and surefire carries `<excludedGroups>${vibetags.test.excludedGroups}</excludedGroups>`, which defaults to `e2e`. Without `-Pe2e`, PIT runs the fast tier and scores the project as if 55 test classes did not exist (the count when this was measured; 111
+classes carry the tag on 2026-09-26). Measured on `main` over the seven classes PIT reported as entirely uncovered: 19% line coverage and 16 of 211 mutants killed without it, 88% and 142 of 211 with it. The code was never untested, only unmeasured. Cost is roughly +57% wall-clock on that scope, which is affordable for a `workflow_dispatch`-only job.
 - The `mutation` Maven profile (in `vibetags/pom.xml`) pulls in `pitest-maven` and `pitest-junit5-plugin` and is otherwise inactive — it only applies when `-Pmutation` is passed explicitly, so normal `mvn install` / `mvn test` runs are unaffected.
 - **The score has a floor: `<mutationThreshold>80</mutationThreshold>` and `<coverageThreshold>90</coverageThreshold>`.** Until #558 there was neither, so the badge could say 86% while a change that dropped it to 70 stayed green. Run [33372147965](https://github.com/PIsberg/vibetags/actions/runs/33372147965) (2026-08-31) measured **86% mutation coverage, 3427/3992 mutants over 138 classes**, with 96% line coverage and 89% test strength; both thresholds sit six points under those. Deliberately a floor rather than a ratchet — PIT varies a little run to run, and a gate that fails on noise is one people learn to rerun rather than read. When the score rises, raise the floor and change the number here in the same commit; `MutationThresholdTest` fails if the thresholds disappear from the pom.
 - **Upload PIT mutation report** — `if: always()`. Uploads `vibetags/target/pit-reports/**` as `pitest-report-${{ github.run_id }}`, `if-no-files-found: warn`.
@@ -475,9 +506,9 @@ Sweep output uploads as an artifact either way.
 
 The non-obvious part of `build.yml` is that the example project is the test fixture for the processor:
 
-1. Some of the library's own tests are pure JUnit and never invoke `javac` — they assert classes, methods, and parsing logic in isolation. Most are not: 63 of the 131 test classes drive a compiler round-trip, which is why they dominate the suite's runtime and why the fast/e2e split (below) is drawn on cost.
+1. Some of the library's own tests are pure JUnit and never invoke `javac` — they assert classes, methods, and parsing logic in isolation. Most are not: 132 of the 307 test classes drive a compiler round-trip (counted 2026-09-26 as the classes using `ProcessorTestHarness` or a `JavaCompiler`), which is why they dominate the suite's runtime and why the fast/e2e split (below) is drawn on cost.
 2. The integration and end-to-end tests compile annotated fixture sources in-memory via `ProcessorTestHarness`; they do not read `examples/basic/` (the `-Drun.integration.tests=true` gate that once tied them to it was dropped in 2026-04). Most of them are tagged `@Tag("e2e")`, so they run under `mvn test -Pe2e` — which CI does on every leg — rather than under a plain local `mvn test`. See `docs/TESTS.md`.
-3. `reset-ai-files.sh` is what makes step 8 a meaningful test: without it, the verification steps would pass even if the processor wrote nothing, because the files would still hold content from a previous run.
+3. `reset-ai-files.sh` is what makes step 14 a meaningful test: without it, the verification steps would pass even if the processor wrote nothing, because the files would still hold content from a previous run.
 4. The `@AIAudit` grep step exists because "file is non-empty" is too weak — a partially broken processor can still emit headers and frontmatter.
 
 Maven, Gradle, and the Windows/macOS `cross-platform` job all call the same `.github/actions/verify-generated-files` composite action, so any platform-specific or OS-specific output difference (e.g. a Gradle-only file path bug, or a Windows CRLF regression) is caught.
