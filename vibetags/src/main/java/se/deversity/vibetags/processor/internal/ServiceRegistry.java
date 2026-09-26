@@ -262,8 +262,8 @@ public final class ServiceRegistry {
      * True when the service is an exclusion list: a {@code *_ignore} file or {@code .aiexclude}.
      * These are rewritten on every build, whether or not the round had annotations.
      *
-     * <p>{@code AIGuardrailProcessor.generateFiles()} carries the same predicate inline because its
-     * body is locked. A service added here has to be added there too.
+     * <p>Both writers reach it through {@link WritePlan}, the only place a per-file write decision
+     * is made (#766); there is no inline copy left to keep in step.
      */
     public static boolean isIgnoreService(String key) {
         return key.endsWith("_ignore") || "aiexclude".equals(key);

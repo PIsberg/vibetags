@@ -22,9 +22,8 @@ under `<locked_files>` for that reason.
 
 **Phase 1: Element Accumulation (every round)**
 ```java
-lockedElements.addAll(roundEnv.getElementsAnnotatedWith(AILocked.class));
-// ... repeat for every annotation type
-validateAnnotations(processingEnv.getMessager(), roundEnv);
+collector.collect(roundEnv, presentFqns);   // every @AI* annotation type present this round
+validateAnnotations(processingEnv.getMessager(), roundEnv, presentFqns, collector.roundIndex());
 return false; // do not claim annotations
 ```
 - Accumulates annotated elements into `LinkedHashSet`s across all rounds

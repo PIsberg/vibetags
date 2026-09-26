@@ -157,6 +157,48 @@ class DebugChannelEndToEndTest {
                 + "carries none of them:\n" + content);
     }
 
+    /**
+     * generateFiles() is @AILocked because its step order is load-bearing: this module's sidecar
+     * is saved before every sidecar is read, and all of them are read before anything is written;
+     * reordering silently drops a module from the merge. #766 lifted the lock to share the writers'
+     * per-file decisions, so the order is pinned here too, by what each compile records, rather
+     * than by the annotation alone. "Root:" is the first line generateFiles() logs.
+     */
+    @Test
+    @DisplayName("every compile saves its sidecar, then reads every sidecar, then writes")
+    void eachCompileRunsTheLockedStepsInOrder(@TempDir Path root) throws IOException {
+        buildReactor(root, "-Avibetags.log.level=DEBUG");
+
+        List<String> lines = Files.readAllLines(root.resolve("vibetags.log"), StandardCharsets.UTF_8);
+        List<List<String>> compiles = new ArrayList<>();
+        for (String line : lines) {
+            if (line.contains("Root: ")) {
+                compiles.add(new ArrayList<>());
+            }
+            if (!compiles.isEmpty()) {
+                compiles.get(compiles.size() - 1).add(line);
+            }
+        }
+        assertTrue(!compiles.isEmpty(), "no compile logged its start, so no order was checked");
+        for (List<String> compile : compiles) {
+            int save = firstIndexOf(compile, "sidecar.save");
+            int read = firstIndexOf(compile, "sidecar.read");
+            int write = firstIndexOf(compile, "round.write");
+            assertTrue(save >= 0 && save < read && read < write,
+                "expected sidecar.save, then sidecar.read, then round.write (save=" + save + " read=" + read
+                    + " write=" + write + ") in:\n" + String.join("\n", compile));
+        }
+    }
+
+    private static int firstIndexOf(List<String> lines, String event) {
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines.get(i).contains(event)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @Test
     @DisplayName("every logged event carries key=value pairs, not prose")
     void debugEventsAreStructured(@TempDir Path root) throws IOException {

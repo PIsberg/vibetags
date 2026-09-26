@@ -37,13 +37,15 @@ class ServiceRegistryKeyParityTest {
     }
 
     /**
-     * {@code generateFiles()} is locked and still spells the ignore-file predicate inline, with a
-     * third term, {@code "aider_ignore".equals(service)}, that {@code isIgnoreService} leaves out as
-     * redundant. This holds the two to the same answer for every key a build can see, so check mode
-     * and the module writer, which call the helper, cannot disagree with generation.
+     * Which services are ignore files, stated independently of {@code isIgnoreService}: every
+     * {@code *_ignore} key, {@code aider_ignore} named explicitly, and {@code aiexclude}.
+     * {@code generateFiles()} used to spell this inline as well, and this test held the two to one
+     * answer; since #766 both writers ask {@code WritePlan}, so what is left to pin is the
+     * definition, for every key a build can see. An ignore file is rewritten even by a round that
+     * contributed nothing, so a key wrongly left out stops its exclusion list updating.
      */
     @Test
-    void isIgnoreService_agreesWithThePredicateInlinedInGenerateFiles_forEveryServiceKey() {
+    void isIgnoreService_isExactlyTheIgnoreAndExcludeFiles_forEveryServiceKey() {
         Set<String> disagreeing = new TreeSet<>();
         Set<String> ignoreKeys = new TreeSet<>();
         for (String service : ServiceRegistry.buildServiceFileMap(Path.of(".")).keySet()) {
@@ -57,7 +59,7 @@ class ServiceRegistryKeyParityTest {
             }
         }
 
-        assertTrue(disagreeing.isEmpty(), "isIgnoreService disagrees with generateFiles() on: " + disagreeing);
+        assertTrue(disagreeing.isEmpty(), "isIgnoreService disagrees with the definition on: " + disagreeing);
         assertTrue(ignoreKeys.contains("aider_ignore") && ignoreKeys.contains("aiexclude"),
             "the comparison ran over no ignore keys, so it proved nothing: " + ignoreKeys);
     }
