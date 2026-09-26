@@ -97,30 +97,154 @@ class SourceDigestEarlyExitEndToEndTest {
         assertTrue(read("CLAUDE.md").contains("ledger maths is AUDITED"), read("CLAUDE.md"));
     }
 
-    @Test
-    void aBuildThatWarnedIsNeverSkippedSoItsWarningComesBack() throws IOException {
-        // Validation warnings come from the walk. A build that skipped it would drop them, and a
-        // clean rebuild would then look warning-free for a source that still has the problem.
-        String bare = """
-            package com.example;
+    /**
+     * Warns on every anchor shape validation uses: a type through its annotation mirror, a method,
+     * a field, a nested type, and a record's component field.
+     */
+    private static final String WARNS = """
+        package com.example;
 
-            import se.deversity.vibetags.annotations.AIContext;
-            import se.deversity.vibetags.annotations.AILocked;
+        import se.deversity.vibetags.annotations.AIContext;
+        import se.deversity.vibetags.annotations.AIImmutable;
+        import se.deversity.vibetags.annotations.AILocked;
+        import se.deversity.vibetags.annotations.AIPure;
 
-            @AILocked(reason = "ledger maths is audited")
-            @AIContext
-            public class Ledger {
+        @AILocked(reason = "ledger maths is audited")
+        @AIContext
+        public class Ledger {
+            @AIPure
+            public void tick() {
             }
-            """;
-        ProcessorTestHarness h = project(bare);
-        List<Diagnostic<? extends JavaFileObject>> first = h.compileReturningDiagnostics();
-        long warnings = warnings(first);
-        assertTrue(warnings > 0, "the fixture must warn, or this case proves nothing: " + first);
+
+            @AIImmutable
+            public static final class Snapshot {
+                private final int[] values = new int[0];
+            }
+
+            @AIContext
+            static final class Inner {
+            }
+
+            @AIImmutable
+            public record Frame(int[] data) {
+            }
+        }
+        """;
+
+    @Test
+    void aBuildThatWarnedIsSkippedAndRepeatsEveryWarningWhereItWas() throws IOException {
+        // Validation warnings come from the walk, so a skipped build has to repeat them from the
+        // record the warned build left (#856): same count, same text, same file, line and column.
+        // Before that, a build that warned was never skipped, and a project that keeps one warning
+        // around walked every element on every rebuild.
+        ProcessorTestHarness h = project(WARNS);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.size() >= 5, "the fixture must warn on every anchor shape, or this proves little: " + first);
+        assertTrue(first.stream().noneMatch(w -> w.contains(" -:-1:-1 ")),
+            "every validation warning of the cold build is anchored to its element: " + first);
 
         List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
 
-        assertFalse(notes(second).contains(EARLY_EXIT), notes(second));
-        assertEquals(warnings, warnings(second), "the rebuild must warn exactly as the first build did");
+        assertTrue(notes(second).contains(EARLY_EXIT), "the build that warned must now be skipped:\n" + notes(second));
+        assertEquals(first, vibeTagsWarnings(second), "the rebuild must warn exactly as the first build did");
+    }
+
+    @Test
+    void aWerrorBuildThatFailedOnAWarningFailsOnTheRebuildToo() throws IOException {
+        ProcessorTestHarness h = project(WARNS);
+        List<Diagnostic<? extends JavaFileObject>> first = h.compileReturningDiagnostics("-Werror");
+        assertTrue(first.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR),
+            "-Werror must fail the build that warns, or this proves nothing: " + notes(first));
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics("-Werror");
+
+        assertTrue(second.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR),
+            "a rebuild must not start passing -Werror because its warnings were skipped: " + notes(second));
+        assertEquals(vibeTagsWarnings(first), vibeTagsWarnings(second));
+    }
+
+    @Test
+    void aBuildThatPrintedMoreThanTheReplayCapWalksAgain() throws IOException {
+        // The record is repeated on every rebuild, so it is bounded; past the bound the build is not
+        // recorded as skippable, and the rebuild walks and warns for itself.
+        StringBuilder source = new StringBuilder(
+            "package com.example;\n\nimport se.deversity.vibetags.annotations.AIPure;\n\npublic class Ledger {\n");
+        for (int i = 0; i <= AIGuardrailProcessor.MAX_REPLAYED_DIAGNOSTICS; i++) {
+            source.append("    @AIPure public void tick").append(i).append("() {}\n");
+        }
+        ProcessorTestHarness h = project(source.append("}\n").toString());
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics("-Xmaxwarns", "5000"));
+        assertTrue(first.size() > AIGuardrailProcessor.MAX_REPLAYED_DIAGNOSTICS,
+            "the fixture must pass the cap, or this proves nothing: " + first.size());
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics("-Xmaxwarns", "5000");
+
+        assertFalse(notes(second).contains(EARLY_EXIT), "past the cap the rebuild must walk");
+        assertEquals(first, vibeTagsWarnings(second));
+    }
+
+    @Test
+    void theRecordIsReplacedByTheNextCleanBuild() throws IOException {
+        // Fixing the warning is an edit, so the next build walks and records no warning; the build
+        // after that is skipped and must not bring the old warning back.
+        ProcessorTestHarness h = project(WARNS);
+        h.compileReturningDiagnostics();
+        Files.writeString(root.resolve("src/main/java/com/example/Ledger.java"), LEDGER, StandardCharsets.UTF_8);
+        List<String> fixed = vibeTagsWarnings(h.compileReturningDiagnostics());
+
+        List<Diagnostic<? extends JavaFileObject>> after = h.compileReturningDiagnostics();
+
+        assertEquals(List.of(), fixed, "the fixed source warns about nothing");
+        assertTrue(notes(after).contains(EARLY_EXIT), notes(after));
+        assertEquals(List.of(), vibeTagsWarnings(after), "a replay of the warning that was fixed");
+    }
+
+    @Test
+    void aRebuildRepeatsTheDeprecatedOutputWarning() throws IOException {
+        // resolveActiveServices warns about a deprecated opt-in ahead of the fingerprint
+        // short-circuit, so every no-op rebuild printed it until the early exit skipped
+        // generateFiles() whole. A -Werror build then failed cold and passed on the rebuild.
+        Files.writeString(root.resolve("gemini_instructions.md"), "", StandardCharsets.UTF_8);
+        // Without it the orphan warning joins in, and that one is raised after the fingerprint
+        // short-circuit, so no rebuild has ever repeated it: a separate question (#860).
+        Files.writeString(root.resolve(".aiexclude"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = project(LEDGER);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.stream().anyMatch(w -> w.contains("deprecated")),
+            "the fixture must warn about the deprecated output, or this proves nothing: " + first);
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
+
+        assertTrue(notes(second).contains(EARLY_EXIT), "this case is about the early exit:\n" + notes(second));
+        assertEquals(first, vibeTagsWarnings(second), "the rebuild must warn exactly as the first build did");
+    }
+
+    @Test
+    void aRebuildRepeatsTheUnidentifiedModuleWarning() throws IOException {
+        // The same shape for warnIfModuleUnidentifiable: sources outside the VibeTags root beside
+        // another module's sidecar. It too ran ahead of the fingerprint short-circuit.
+        Path vibetagsRoot = Files.createDirectories(root.resolve("guardrails"));
+        Files.writeString(vibetagsRoot.resolve("CLAUDE.md"), "", StandardCharsets.UTF_8);
+        Files.createDirectories(vibetagsRoot.resolve("other"));
+        se.deversity.vibetags.processor.internal.ModuleSidecar sibling =
+            new se.deversity.vibetags.processor.internal.ModuleSidecar("other", "other");
+        sibling.putBody("claude", "the other module's guardrails");
+        sibling.save(vibetagsRoot);
+        Files.writeString(root.resolve("pom.xml"), "<project><artifactId>outside</artifactId></project>",
+            StandardCharsets.UTF_8);
+        ProcessorTestHarness h = new ProcessorTestHarness(vibetagsRoot, false);
+        Path source = root.resolve("src/main/java/com/example/Ledger.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, LEDGER, StandardCharsets.UTF_8);
+        h.addSourceFile(source);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.stream().anyMatch(w -> w.contains("could not identify the compiling module")),
+            "the fixture must warn about the module, or this proves nothing: " + first);
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
+
+        assertTrue(notes(second).contains(EARLY_EXIT), "this case is about the early exit:\n" + notes(second));
+        assertEquals(first, vibeTagsWarnings(second), "the rebuild must warn exactly as the first build did");
     }
 
     @Test
@@ -214,10 +338,13 @@ class SourceDigestEarlyExitEndToEndTest {
         return sb.toString();
     }
 
-    private static long warnings(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
+    /** Every VibeTags warning, in order, with the file and line javac anchored it to. */
+    private static List<String> vibeTagsWarnings(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
         return diagnostics.stream()
             .filter(d -> d.getKind() == Diagnostic.Kind.WARNING || d.getKind() == Diagnostic.Kind.MANDATORY_WARNING)
             .filter(d -> d.getMessage(Locale.ROOT).contains("VibeTags") || d.getMessage(Locale.ROOT).contains("@AI"))
-            .count();
+            .map(d -> d.getKind() + " " + (d.getSource() == null ? "-" : d.getSource().getName())
+                + ":" + d.getLineNumber() + ":" + d.getColumnNumber() + " " + d.getMessage(Locale.ROOT))
+            .toList();
     }
 }

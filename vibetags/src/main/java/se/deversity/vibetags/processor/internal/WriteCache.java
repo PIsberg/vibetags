@@ -12,7 +12,9 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -90,7 +92,16 @@ public final class WriteCache {
         @Nullable String sidecarStamp;
         /** The early exit's key (#834): what the last clean run of this module was given. */
         @Nullable String sourceDigest;
+        /**
+         * What that run's validation printed, encoded by {@code ReplayableDiagnostic}, in order: a
+         * build skipped on the digest repeats them (#856). Meaningless without the digest, so it is
+         * written only after one and read back only with one.
+         */
+        final List<String> sourceDiagnostics = new ArrayList<>();
     }
+
+    /** Header of one recorded diagnostic, after a module's {@code # source-digest:} line. */
+    private static final String SOURCE_DIAGNOSTIC = "# source-diagnostic: ";
 
     /** The whole-root section a version-2 cache carries, and an unbound instance still uses. */
     private static final String LEGACY_SECTION = "";
@@ -249,16 +260,41 @@ public final class WriteCache {
         return section == null ? null : section.sourceDigest;
     }
 
+    /**
+     * The diagnostics the run that recorded {@link #getSourceDigest()} printed, in order, for a
+     * skipped build to repeat (#856); empty when there is no digest. A cache written before these
+     * were recorded reads as none, which is true of it: it only ever recorded a digest for a run
+     * that raised no warning.
+     */
+    public synchronized List<String> getSourceDiagnostics() {
+        loadIfNeeded();
+        Section section = sections.get(currentModule);
+        return section == null || section.sourceDigest == null
+            ? List.of() : List.copyOf(section.sourceDiagnostics);
+    }
+
     /** Records, or with {@code null} clears, the bound module's source digest; persisted on the next {@link #flush()}. */
     public synchronized void setSourceDigest(@Nullable String digest) {
+        setSourceDigest(digest, List.of());
+    }
+
+    /**
+     * Records the bound module's source digest together with the diagnostics its run printed, or
+     * with a {@code null} digest clears both. The two are one record: a digest kept beside another
+     * run's diagnostics would replay warnings for a source that no longer has them.
+     */
+    public synchronized void setSourceDigest(@Nullable String digest, List<String> diagnostics) {
         loadIfNeeded();
         Section existing = sections.get(currentModule);
         if (digest == null && (existing == null || existing.sourceDigest == null)) {
             return; // nothing to clear, and no empty section to create
         }
         Section section = section();
-        if (!java.util.Objects.equals(section.sourceDigest, digest)) {
+        List<String> kept = digest == null ? List.of() : diagnostics;
+        if (!java.util.Objects.equals(section.sourceDigest, digest) || !section.sourceDiagnostics.equals(kept)) {
             section.sourceDigest = digest;
+            section.sourceDiagnostics.clear();
+            section.sourceDiagnostics.addAll(kept);
             this.dirty = true;
         }
     }
@@ -472,6 +508,9 @@ public final class WriteCache {
         }
         if (section.sourceDigest != null) {
             sb.append("# source-digest: ").append(section.sourceDigest).append('\n');
+            for (String diagnostic : section.sourceDiagnostics) {
+                sb.append(SOURCE_DIAGNOSTIC).append(diagnostic).append('\n');
+            }
         }
         String effectiveContext = moduleId.equals(currentModule) && currentContext != null
             ? currentContext : section.storedContext;
@@ -559,6 +598,11 @@ public final class WriteCache {
                         if (!dg.isEmpty()) {
                             loading.sourceDigest = dg;
                         }
+                    }
+                    // Kept verbatim, not trimmed: an encoded diagnostic may end in a separator.
+                    // Read into module sections only, like the digest it belongs to.
+                    if (line.startsWith(SOURCE_DIAGNOSTIC) && !readingLegacy) {
+                        loading.sourceDiagnostics.add(line.substring(SOURCE_DIAGNOSTIC.length()));
                     }
                     String contextPrefix = "# context: ";
                     if (line.startsWith(contextPrefix)) {

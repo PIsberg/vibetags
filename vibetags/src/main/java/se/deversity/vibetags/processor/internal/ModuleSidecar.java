@@ -718,6 +718,36 @@ public final class ModuleSidecar {
     }
 
     /**
+     * {@link #load} reduced to what {@link #onRecord} reads: the same verdict for the same file, but
+     * a sidecar it returns carries only its identity, its element ids and, per service, whether its
+     * unrouted body is blank ({@link #SUMMARIZED_BODY} when it is not, empty when it is).
+     *
+     * <p>No other value is kept, and none is decoded to a string: each is checked for decodability
+     * as it streams past, because a value {@code load} cannot decode makes the whole file
+     * {@code null} and that has to stay true here. A summary is never merged or rendered; it leaves
+     * this class only as an {@link OnRecord}.
+     *
+     * @param readUnrouted whether to judge the unrouted bodies at all. {@code false} checks them for
+     *     decodability only, for a root where {@code TESTING.md} is opted in and the answer is no.
+     */
+    static @Nullable ModuleSidecar loadSummary(Path path, boolean readUnrouted) {
+        SummaryScan scan = new SummaryScan(readUnrouted);
+        char[] buffer = new char[SCAN_BUFFER_CHARS];
+        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+            for (int read = reader.read(buffer); read >= 0; read = reader.read(buffer)) {
+                for (int i = 0; i < read; i++) {
+                    scan.accept(buffer[i]);
+                }
+            }
+        } catch (IOException unreadable) {
+            // load reads every line before it looks at any, so a file it cannot read to the end is
+            // UNREADABLE whatever its first lines said, a future-version header included.
+            return UNREADABLE;
+        }
+        return scan.finish();
+    }
+
+    /**
      * Stores one parsed granular contribution, dropping a value that is not in the serialized
      * shape. A malformed entry is skipped rather than guessed at: the compiling module then falls
      * back to its own rendering for that file, which is the behaviour before the merge existed.
@@ -811,6 +841,24 @@ public final class ModuleSidecar {
     }
 
     private static List<ModuleSidecar> readAll(Path root, boolean prune, @Nullable Logger log) {
+        List<ModuleSidecar> result = readAll(root, prune, log, ModuleSidecar::load);
+        applyRootIndexModeTo(root, result);
+        applyTestingOptInTo(root, result);
+        return result;
+    }
+
+    /** How {@link #readAll} turns one file into a sidecar: in full, or as a {@link #loadSummary}. */
+    @FunctionalInterface
+    private interface Loader {
+        @Nullable ModuleSidecar load(Path path);
+    }
+
+    /**
+     * The sidecars at {@code root} as {@code loader} reads them, less every one a merge would leave
+     * out: unreadable, malformed, future-version, stale module path, superseded region. Shared by
+     * the full read and the summary read so both leave out the same files.
+     */
+    private static List<ModuleSidecar> readAll(Path root, boolean prune, @Nullable Logger log, Loader loader) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
         List<ModuleSidecar> result = new ArrayList<>();
         // Kept index-aligned with result so a sidecar dropped below can also be deleted.
@@ -819,7 +867,7 @@ public final class ModuleSidecar {
         // same outcome as a root with none. Failing here would fail a compile over a directory
         // the build does not need.
         for (Path p : listPaths(root)) {
-            ModuleSidecar s = load(p);
+            ModuleSidecar s = loader.load(p);
             if (s == UNREADABLE) {
                 // Locked, vanished, or being renamed over by the module that owns it —
                 // a sibling save in a parallel reactor does exactly that on Windows.
@@ -854,8 +902,6 @@ public final class ModuleSidecar {
             resultFiles.add(p);
         }
         dropSupersededRegions(result, resultFiles, prune, log);
-        applyRootIndexModeTo(root, result);
-        applyTestingOptInTo(root, result);
         return result;
     }
 
@@ -1168,7 +1214,7 @@ public final class ModuleSidecar {
      * with no annotations, is unaffected.
      */
     public static boolean anyRecordsElements(Path root) {
-        return anyRecordsElements(peekAll(root, null));
+        return onRecord(root).recordsElements();
     }
 
     /** {@link #anyRecordsElements(Path)} over sidecars the caller has already read. */
@@ -1207,22 +1253,52 @@ public final class ModuleSidecar {
      * again. Peeks rather than reads, since a question asked before any round must not prune.
      */
     public static boolean holdsWithdrawnTestingFallback(Path root) {
-        return holdsWithdrawnTestingFallback(root, peekAll(root, null));
+        return onRecord(root).withdrawnTestingFallback();
     }
 
-    /**
-     * {@link #holdsWithdrawnTestingFallback(Path)} over sidecars the caller has already read, so
-     * {@code init()} parses the root's sidecars once for this and {@link #anyRecordsElements} (#834).
-     */
+    /** {@link #holdsWithdrawnTestingFallback(Path)} over sidecars the caller has already read. */
     public static boolean holdsWithdrawnTestingFallback(Path root, List<ModuleSidecar> sidecars) {
+        return !testingOptedIn(root) && anyUnroutedBody(sidecars);
+    }
+
+    private static boolean testingOptedIn(Path root) {
         Path testing = ServiceRegistry.buildServiceFileMap(root).get("testing");
-        if (testing != null && ServiceRegistry.isOptedIn("testing", testing)) return false;
+        return testing != null && ServiceRegistry.isOptedIn("testing", testing);
+    }
+
+    private static boolean anyUnroutedBody(List<ModuleSidecar> sidecars) {
         for (ModuleSidecar s : sidecars) {
             for (String unrouted : s.unroutedBodies.values()) {
                 if (!unrouted.isBlank()) return true;
             }
         }
         return false;
+    }
+
+    /**
+     * What {@code init()} needs from the sidecars on record before any round: whether one records
+     * annotated elements ({@link #anyRecordsElements(Path)}, #781), and whether one holds a routed
+     * test round's unrouted body while {@code TESTING.md} is gone
+     * ({@link #holdsWithdrawnTestingFallback(Path)}, #782).
+     */
+    public record OnRecord(boolean recordsElements, boolean withdrawnTestingFallback) { }
+
+    /**
+     * {@link OnRecord} for {@code root}, reached without keeping or decoding a rendered body (#858).
+     *
+     * <p>Both questions used to be asked of {@link #peekAll}, which decodes every rendered body of
+     * every module, and {@code init()} asks them on every compilation: after #834 that parse was
+     * most of what a no-op rebuild still allocated. Neither answer is in the bodies. Each sidecar
+     * is streamed past by {@link #loadSummary} instead, and the summaries go through the same
+     * filtering a peek applies, so a stale module path or a superseded region is left out here
+     * exactly as there. Like {@code peekAll} it never prunes: the question is asked before any
+     * round. {@code ModuleSidecarOnRecordAgreementTest} holds the answers to the full parse's, and
+     * {@code ModuleSidecarOnRecordCostTest} holds the cost flat in the size of the bodies.
+     */
+    public static OnRecord onRecord(Path root) {
+        boolean testingOptedIn = testingOptedIn(root);
+        List<ModuleSidecar> summaries = readAll(root, false, null, p -> loadSummary(p, !testingOptedIn));
+        return new OnRecord(anyRecordsElements(summaries), !testingOptedIn && anyUnroutedBody(summaries));
     }
 
     /**
@@ -1502,6 +1578,387 @@ public final class ModuleSidecar {
             firstNonBlank = -1;
             strippedLength = 0;
             capturing = false;
+        }
+    }
+
+    /** Stands in for a non-blank unrouted body in a {@link #loadSummary} result. */
+    private static final String SUMMARIZED_BODY = "(summarized)";
+
+    /**
+     * The state {@link #loadSummary} keeps while it streams a sidecar past, applying {@link #load}'s
+     * rules line by line in file order without holding a body.
+     *
+     * <p>A line is classified by its key as it arrives, and its value is then kept (the three
+     * headers and {@code ~elements}, all small), decoded for blankness only ({@code ~tfull~}),
+     * checked for decodability only (every other value {@code load} decodes), or ignored (a
+     * reserved key {@code load} does not recognise, which it never decodes either). The first
+     * refusal in file order decides the verdict, as the first {@code return} or exception does in
+     * {@code load}; the rest of the file is still read, so bytes that are not UTF-8 anywhere in it
+     * make it {@link #UNREADABLE} as {@code readAllLines} does.
+     */
+    private static final class SummaryScan {
+
+        /** What a line's value is for, decided by its key. */
+        private enum Kind { IGNORED, HEADER, ELEMENTS, UNROUTED, CHECKED }
+
+        private final boolean readUnrouted;
+
+        private @Nullable String moduleId;
+        private String modulePath = "";
+        private @Nullable String regionId;
+        private boolean sawVersion;
+        private int loadedVersion;
+        private final Set<String> elementIds = new LinkedHashSet<>();
+        private final Map<String, String> unrouted = new LinkedHashMap<>();
+        private boolean lastNonBlankIsTrailer;
+
+        /** Set by the first refusal; {@link #verdict} is then {@code null} or FUTURE_VERSION. */
+        private boolean refused;
+        private @Nullable ModuleSidecar verdict;
+
+        private boolean lineStarted;
+        private boolean comment;
+        private boolean inValue;
+        private Kind kind = Kind.IGNORED;
+        private final StringBuilder key = new StringBuilder();
+        private String keyName = "";
+        private final StringBuilder captured = new StringBuilder();
+        private final Base64Stream stream = new Base64Stream();
+
+        private int column;
+        private int firstNonBlank = -1;
+        private int strippedLength;
+        private final StringBuilder trailerProbe = new StringBuilder(TRAILER.length());
+
+        SummaryScan(boolean readUnrouted) {
+            this.readUnrouted = readUnrouted;
+        }
+
+        void accept(char c) {
+            if (c == '\n' || c == '\r') {
+                // readAllLines ends a line at LF, CR and CRLF alike; the empty line a CRLF leaves
+                // between its two halves holds nothing, so no rule below can see it.
+                endLine();
+                return;
+            }
+            if (refused) {
+                return;
+            }
+            probeTrailer(c);
+            if (!lineStarted) {
+                lineStarted = true;
+                comment = c == '#';
+            }
+            if (comment) {
+                // Only a version header is ever read back, so a comment stops being kept once it
+                // can no longer be one.
+                if (captured.length() <= KEY_FORMAT_VERSION.length()
+                        || captured.indexOf(KEY_FORMAT_VERSION + "=") == 0) {
+                    captured.append(c);
+                }
+                return;
+            }
+            if (!inValue) {
+                if (c == '=') {
+                    inValue = true;
+                    keyName = key.toString();
+                    kind = classify(keyName);
+                    stream.start(kind == Kind.UNROUTED);
+                } else {
+                    key.append(c);
+                }
+                return;
+            }
+            switch (kind) {
+                case HEADER, ELEMENTS -> captured.append(c);
+                case UNROUTED, CHECKED -> stream.accept(c);
+                case IGNORED -> { }
+            }
+        }
+
+        /** The same order of cases as {@code load}'s key chain, which is what makes them agree. */
+        private Kind classify(String k) {
+            if (KEY_MODULE_ID.equals(k) || KEY_MODULE_PATH.equals(k) || KEY_REGION_ID.equals(k)) {
+                return Kind.HEADER;
+            }
+            if (KEY_ELEMENT_IDS.equals(k)) {
+                return Kind.ELEMENTS;
+            }
+            if (KEY_GRANULAR_STEMS.equals(k)
+                    || k.startsWith(KEY_MODULE_GRANULAR_NAMING_PREFIX)
+                    || k.startsWith(KEY_GRANULAR_NAMING_PREFIX)
+                    || k.startsWith(KEY_MODULE_GRANULAR_UNIT_PREFIX)
+                    || k.startsWith(KEY_GRANULAR_UNIT_PREFIX)
+                    || k.startsWith(KEY_MODULE_BODY_PREFIX)
+                    || k.startsWith(KEY_INDEX_DIGEST_PREFIX)) {
+                return Kind.CHECKED;
+            }
+            if (k.startsWith(KEY_UNROUTED_BODY_PREFIX)) {
+                return readUnrouted ? Kind.UNROUTED : Kind.CHECKED;
+            }
+            return k.startsWith(RESERVED_PREFIX) ? Kind.IGNORED : Kind.CHECKED;
+        }
+
+        /** Tracks whether this line, stripped, is {@link #TRAILER}, the way {@code isWhole} asks. */
+        private void probeTrailer(char c) {
+            if (!Character.isWhitespace(c)) {
+                if (firstNonBlank < 0) {
+                    firstNonBlank = column;
+                }
+                strippedLength = column - firstNonBlank + 1;
+            }
+            if (firstNonBlank >= 0 && trailerProbe.length() < TRAILER.length()) {
+                trailerProbe.append(c);
+            }
+            column++;
+        }
+
+        private void endLine() {
+            if (!refused) {
+                if (firstNonBlank >= 0) {
+                    lastNonBlankIsTrailer = strippedLength == TRAILER.length()
+                        && TRAILER.contentEquals(trailerProbe);
+                }
+                if (comment) {
+                    readVersionHeader();
+                } else if (inValue) {
+                    finishValue();
+                }
+            }
+            lineStarted = false;
+            comment = false;
+            inValue = false;
+            kind = Kind.IGNORED;
+            key.setLength(0);
+            captured.setLength(0);
+            column = 0;
+            firstNonBlank = -1;
+            strippedLength = 0;
+            trailerProbe.setLength(0);
+        }
+
+        private void readVersionHeader() {
+            String prefix = KEY_FORMAT_VERSION + "=";
+            if (captured.indexOf(prefix) != 0) {
+                return;
+            }
+            try {
+                int version = Integer.parseInt(captured.substring(prefix.length()).trim());
+                if (version > FORMAT_VERSION) {
+                    refuse(FUTURE_VERSION);
+                } else if (version < MIN_READABLE_VERSION) {
+                    refuse(null);
+                } else {
+                    loadedVersion = version;
+                    sawVersion = true;
+                }
+            } catch (NumberFormatException malformed) {
+                refuse(null);
+            }
+        }
+
+        private void finishValue() {
+            switch (kind) {
+                case HEADER -> {
+                    String value = captured.toString();
+                    if (KEY_MODULE_ID.equals(keyName)) {
+                        moduleId = value;
+                    } else if (KEY_MODULE_PATH.equals(keyName)) {
+                        modulePath = value;
+                    } else {
+                        regionId = value;
+                    }
+                }
+                case ELEMENTS -> {
+                    try {
+                        for (String id : decode(captured.toString()).split("\n", -1)) {
+                            if (!id.isBlank()) elementIds.add(id);
+                        }
+                    } catch (IllegalArgumentException malformed) {
+                        refuse(null);
+                    }
+                }
+                case UNROUTED -> {
+                    if (stream.finish()) {
+                        unrouted.put(keyName.substring(KEY_UNROUTED_BODY_PREFIX.length()),
+                            stream.nonBlank() ? SUMMARIZED_BODY : "");
+                    } else {
+                        refuse(null);
+                    }
+                }
+                case CHECKED -> {
+                    if (!stream.finish()) refuse(null);
+                }
+                case IGNORED -> { }
+            }
+        }
+
+        private void refuse(@Nullable ModuleSidecar sentinel) {
+            refused = true;
+            verdict = sentinel;
+        }
+
+        @Nullable ModuleSidecar finish() {
+            endLine();
+            if (refused) {
+                return verdict;
+            }
+            if (loadedVersion >= FORMAT_VERSION && !lastNonBlankIsTrailer) return UNREADABLE;
+            if (moduleId == null || !sawVersion) return null;
+            ModuleSidecar s = new ModuleSidecar(moduleId, modulePath,
+                regionId != null && !regionId.isBlank() ? regionId : moduleId);
+            s.elementIds.addAll(elementIds);
+            s.unroutedBodies.putAll(unrouted);
+            return s;
+        }
+    }
+
+    /**
+     * A base64 value checked as it streams past: whether {@code Base64.getDecoder()} would decode it
+     * at all, and optionally whether the text it decodes to is blank, without building either the
+     * bytes or the string.
+     *
+     * <p>Decodability follows the basic decoder's rules exactly: the 64-character alphabet and
+     * nothing else, padding only as {@code xx==} or {@code xxx=} and only at the end, and no
+     * dangling single character in the last unit. Unpadded input is accepted, as the decoder
+     * accepts it.
+     *
+     * <p>Blankness follows {@code String.isBlank} over the UTF-8 decoding. The only whitespace
+     * outside ASCII is a handful of three-byte characters (U+1680, U+2000 to U+200A less U+2007,
+     * U+2028, U+2029, U+205F, U+3000), all with a lead byte of E1 to E3, so any other non-ASCII
+     * byte, and any sequence that does not complete, decodes to something that is not whitespace.
+     */
+    private static final class Base64Stream {
+
+        private static final int FIRST_SHIFT = 18;
+        private static final int SEXTET = 6;
+        private static final int ASCII = 128;
+        private static final int[] SEXTETS = new int[ASCII];
+
+        static {
+            java.util.Arrays.fill(SEXTETS, -1);
+            String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+            for (int i = 0; i < alphabet.length(); i++) {
+                SEXTETS[alphabet.charAt(i)] = i;
+            }
+        }
+
+        private boolean judgeBlank;
+        private boolean valid;
+        private int shift;
+        private int bits;
+        /** 0 before any padding, 1 after {@code xx=} (one more {@code =} is owed), 2 after the end. */
+        private int padding;
+        private boolean nonBlank;
+        private int codePoint;
+        private int continuationsOwed;
+
+        void start(boolean judge) {
+            judgeBlank = judge;
+            valid = true;
+            shift = FIRST_SHIFT;
+            bits = 0;
+            padding = 0;
+            nonBlank = false;
+            codePoint = 0;
+            continuationsOwed = 0;
+        }
+
+        void accept(char c) {
+            if (!valid) {
+                return;
+            }
+            if (padding == 2) {
+                valid = false; // anything after the padding
+                return;
+            }
+            if (padding == 1) {
+                if (c == '=') {
+                    padding = 2;
+                    emit(bits >> 16);
+                } else {
+                    valid = false;
+                }
+                return;
+            }
+            if (c == '=') {
+                if (shift == SEXTET) {
+                    padding = 1;
+                } else if (shift == 0) {
+                    padding = 2;
+                    emit(bits >> 16);
+                    emit(bits >> 8);
+                } else {
+                    valid = false; // "=" opening a unit, or "x=": the decoder refuses both
+                }
+                return;
+            }
+            int sextet = c < ASCII ? SEXTETS[c] : -1;
+            if (sextet < 0) {
+                valid = false;
+                return;
+            }
+            bits |= sextet << shift;
+            shift -= SEXTET;
+            if (shift < 0) {
+                emit(bits >> 16);
+                emit(bits >> 8);
+                emit(bits);
+                shift = FIRST_SHIFT;
+                bits = 0;
+            }
+        }
+
+        /** Closes the value; {@code false} when the decoder would have refused it. */
+        boolean finish() {
+            if (!valid || padding == 1) {
+                return false;
+            }
+            if (padding == 0) {
+                if (shift == FIRST_SHIFT - SEXTET) {
+                    return false; // a dangling single character
+                }
+                if (shift == SEXTET) {
+                    emit(bits >> 16);
+                } else if (shift == 0) {
+                    emit(bits >> 16);
+                    emit(bits >> 8);
+                }
+            }
+            if (continuationsOwed > 0) {
+                nonBlank = true; // a sequence cut short decodes to U+FFFD
+            }
+            return true;
+        }
+
+        boolean nonBlank() {
+            return nonBlank;
+        }
+
+        private void emit(int value) {
+            if (!judgeBlank || nonBlank) {
+                return;
+            }
+            int b = value & 0xFF;
+            if (continuationsOwed > 0) {
+                if ((b & 0xC0) != 0x80) {
+                    nonBlank = true;
+                    return;
+                }
+                codePoint = (codePoint << SEXTET) | (b & 0x3F);
+                if (--continuationsOwed == 0 && !Character.isWhitespace(codePoint)) {
+                    nonBlank = true;
+                }
+                return;
+            }
+            if (b < ASCII) {
+                nonBlank = !Character.isWhitespace(b);
+            } else if (b >= 0xE1 && b <= 0xE3) {
+                codePoint = b & 0x0F;
+                continuationsOwed = 2;
+            } else {
+                nonBlank = true;
+            }
         }
     }
 

@@ -8,6 +8,10 @@
 - **Focus**: A step added after the collection walk that reads the collected model must also turn the early exit off here
 - **Avoid**: Adding such a step without a clause here: a no-op rebuild then skips it with nothing reporting it (#834)
 
+### Rules for method finishUnchangedBuild
+- **Focus**: Every diagnostic generateFiles() raises before its fingerprint short-circuit must also be raised here
+- **Avoid**: Adding one there without a call here: a no-op rebuild that takes the early exit drops it in silence (#859)
+
 ## Core Functionality
 - **Sensitivity**: critical
 - **Note**: Runs inside every consumer's javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build

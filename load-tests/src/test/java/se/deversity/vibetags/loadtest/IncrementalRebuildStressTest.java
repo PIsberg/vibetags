@@ -221,7 +221,7 @@ class IncrementalRebuildStressTest {
         Path sourceDir = Files.createDirectories(tempDir.resolve("src/com/example/generated"));
         List<JavaFileObject> sources = new ArrayList<>();
         for (String[] pair : SyntheticClassGenerator.generate(n)) {
-            sources.add(source(sourceDir, pair[0], withoutDraft(pair[1])));
+            sources.add(source(sourceDir, pair[0], pair[1]));
         }
 
         // The first compile in a JVM carries a one-off class-loading tail bigger than the effect,
@@ -449,18 +449,6 @@ class IncrementalRebuildStressTest {
         return content;
     }
 
-    /**
-     * The generator puts {@code @AIDraft} on every 7th class and {@code @AILocked} on others, so
-     * every 14th class carries both and validation warns that they contradict. A build that warned
-     * is never recorded as skippable, because a skipped build could not repeat the warning (#834),
-     * so with the generator's output unchanged the early exit could not fire here at all. Only this
-     * test drops the draft annotation; the generator stays as the other load tests use it.
-     */
-    private static String withoutDraft(String code) {
-        return code.lines()
-            .filter(line -> !line.startsWith("@AIDraft("))
-            .collect(Collectors.joining("\n", "", "\n"));
-    }
 
     private static JavaFileObject source(Path sourceDir, String simpleName, String code) throws IOException {
         Path file = sourceDir.resolve(simpleName + ".java");

@@ -29,6 +29,8 @@ import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ElementExclusions;
 import se.deversity.vibetags.processor.internal.PartialRoundDetector;
+import se.deversity.vibetags.processor.internal.ReplayableDiagnostic;
+import se.deversity.vibetags.processor.internal.RoundSources;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
 import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.GuardrailModel;
@@ -51,6 +53,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import java.lang.annotation.Annotation;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.Elements;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -225,8 +228,21 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Rounds that had root elements. A recorded digest vouches for a compilation with exactly one. */
     private final java.util.concurrent.atomic.AtomicInteger roundsWithSources = new java.util.concurrent.atomic.AtomicInteger();
 
-    /** Validation warnings the live rounds raised. A build that warned is never recorded as skippable. */
-    private final java.util.concurrent.atomic.AtomicInteger liveWarnings = new java.util.concurrent.atomic.AtomicInteger();
+    /** Validation errors the live rounds raised. A build that erred is never recorded as skippable. */
+    private final java.util.concurrent.atomic.AtomicInteger liveErrors = new java.util.concurrent.atomic.AtomicInteger();
+
+    /**
+     * Every warning and note validation printed in the live rounds, in order. Recorded beside the
+     * source digest so a build skipped on it repeats them (#856); see {@link ReplayableDiagnostic}.
+     */
+    private final List<ReplayableDiagnostic> liveDiagnostics =
+        java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+
+    /**
+     * Past this many diagnostics a build is not recorded as skippable: the record is repeated on
+     * every rebuild, and a project raising more than this has a problem a skipped walk would not help.
+     */
+    static final int MAX_REPLAYED_DIAGNOSTICS = 1000;
 
     /** Explicit module name from {@code -Avibetags.module}; overrides the resolved identity. */
     private @Nullable String moduleIdOverride;
@@ -386,12 +402,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
             ? new TransitiveManifestReader(log) : null;
-        // One parse for both questions: each used to read every sidecar in full, and a sidecar
-        // holds every rendered body of its module, so on a large module that was most of what a
-        // no-op rebuild still allocated (#834).
-        List<ModuleSidecar> onRecord = ModuleSidecar.peekAll(this.root, null);
-        this.testingFallbackPending = ModuleSidecar.holdsWithdrawnTestingFallback(this.root, onRecord);
-        this.guardrailsOnRecord = ModuleSidecar.anyRecordsElements(onRecord);
+        // One streaming pass for both questions, keeping no rendered body: a sidecar holds every
+        // body of its module, and parsing them in full here was most of what a no-op rebuild
+        // still allocated (#834, #858).
+        ModuleSidecar.OnRecord onRecord = ModuleSidecar.onRecord(this.root);
+        this.testingFallbackPending = onRecord.withdrawnTestingFallback();
+        this.guardrailsOnRecord = onRecord.recordsElements();
         this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
         Path dirOption = pathOption(options, "vibetags.manifest.dir", messager);
         this.manifestDir = dirOption != null ? this.root.resolve(dirOption).normalize() : null;
@@ -409,7 +425,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.sourcesUnchanged.set(false);
         this.sourcesAppearedAfterSkip.set(false);
         this.roundsWithSources.set(0);
-        this.liveWarnings.set(0);
+        this.liveErrors.set(0);
+        this.liveDiagnostics.clear();
         collector.reset();
         collector.transitiveOptIn(this.transitiveReader != null);
         this.elementRules = new java.util.LinkedHashMap<>();
@@ -526,8 +543,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
             // Resolve the module root from this round's sources (first success wins). Must run
             // while rounds are live — the Tree API cannot map elements back to source afterwards.
+            // Each root element mapped to its file once, for all three readers below (#857).
+            RoundSources sources = RoundSources.of(processingEnv, roundEnv);
             if (moduleIdentity == null) {
-                moduleIdentity = ModuleRootResolver.fromRound(processingEnv, roundEnv);
+                moduleIdentity = ModuleRootResolver.fromRound(sources);
                 // Set on every attempt, not only a successful one, so a reused processor whose
                 // identity did not resolve this time cannot keep the last compilation's answer.
                 collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());
@@ -536,13 +555,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
             // The early exit (#834), decided on the first round that has sources, before the
             // collection walk: hashing the round's sources costs about 3 % of the walk it can skip.
-            if (skipThisRound(roundEnv)) {
+            if (skipThisRound(roundEnv, sources)) {
                 return false;
             }
 
             // Which sources this round was handed, for the same reason and under the same
             // constraint: an element can only be mapped back to its file while its round is live.
-            sourceLedger.observe(processingEnv, roundEnv);
+            sourceLedger.observe(sources);
 
             // The annotation types javac reports as present this round. Lets AnnotationCollector
             // skip getElementsAnnotatedWith() for the ~33 annotation types that are absent (each
@@ -658,7 +677,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * Whether this live round is skipped because the first round with sources matched the last
      * clean run (#834). Decides on that first round and remembers the answer for the rest.
      */
-    private boolean skipThisRound(RoundEnvironment roundEnv) {
+    private boolean skipThisRound(RoundEnvironment roundEnv, RoundSources sources) {
         if (roundEnv.getRootElements().isEmpty()) {
             return sourcesUnchanged.get();
         }
@@ -670,16 +689,45 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return true;
         }
         if (round == 1 && earlyExitAllowed()) {
-            String digest = digestOf(roundEnv);
+            String digest = digestOf(sources);
             sourceDigest = digest;
-            sourcesUnchanged.set(digest != null && inputsUnchangedSince(digest));
+            List<ReplayableDiagnostic> recorded = digest != null && inputsUnchangedSince(digest)
+                ? recordedDiagnostics() : null;
+            sourcesUnchanged.set(recorded != null);
+            if (recorded != null) {
+                // Here, in the live round the walk would have run in, so each anchor still resolves
+                // to its element and javac places the warning where the cold build placed it.
+                Messager messager = processingEnv.getMessager();
+                Elements elements = sources.elements();
+                recorded.forEach(d -> d.replay(messager, elements));
+            }
         }
         return sourcesUnchanged.get();
     }
 
+    /**
+     * What the last clean run's validation printed, decoded, or {@code null} when a line of the
+     * record cannot be read: a build that cannot repeat its warnings exactly must walk (#856).
+     */
+    private @Nullable List<ReplayableDiagnostic> recordedDiagnostics() {
+        WriteCache cache = writeCache;
+        if (cache == null) {
+            return null;
+        }
+        List<ReplayableDiagnostic> decoded = new java.util.ArrayList<>();
+        for (String line : cache.getSourceDiagnostics()) {
+            ReplayableDiagnostic d = ReplayableDiagnostic.decode(line);
+            if (d == null) {
+                return null;
+            }
+            decoded.add(d);
+        }
+        return decoded;
+    }
+
     /** This round's {@link SourceDigest}, or {@code null} when the round cannot be vouched for. */
-    private @Nullable String digestOf(RoundEnvironment roundEnv) {
-        List<Path> files = SourceDigest.sourceFilesOf(processingEnv, roundEnv);
+    private @Nullable String digestOf(RoundSources sources) {
+        List<Path> files = sources.filesIfComplete();
         if (files == null) {
             return null;
         }
@@ -713,7 +761,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * The end of a compilation whose first round matched the last clean run (#834). The warnings
      * that read files rather than the collected model still run, as they do after the fingerprint
      * short-circuit, because the file they warn about may still be on disk.
+     *
+     * <p>That includes the ones {@code generateFiles()} raises ahead of its own short-circuit:
+     * the deprecated-output warning from {@code resolveActiveServices} and the two module-identity
+     * warnings. Every no-op rebuild printed those before the early exit existed, and skipping them
+     * made a {@code -Werror} build fail cold and pass on the rebuild (#859).
      */
+    @AIContext(
+        focus = "Every diagnostic generateFiles() raises before its fingerprint short-circuit must also be raised here",
+        avoids = "Adding one there without a call here: a no-op rebuild that takes the early exit drops it in silence (#859)")
     private void finishUnchangedBuild() {
         Messager messager = processingEnv.getMessager();
         String digest = sourceDigest;
@@ -729,6 +785,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             VibeTagsLogger.shutdown(root);
             return;
         }
+        // In generateFiles()' order, ahead of the note that says the rest was skipped.
+        ServiceRegistry.resolveActiveServices(messager, ServiceRegistry.buildServiceFileMap(root));
+        warnIfModuleUnidentifiable(compilationRoot(), currentRegionId());
         messager.printMessage(Diagnostic.Kind.NOTE,
             "VibeTags: inputs unchanged since last run (source digest " + shortDigest
                 + "), skipping collection, content build and writes.");
@@ -755,8 +814,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /**
      * Records this compilation's source digest after a completed generation, when the next build
      * may be skipped on its strength: the round was digestible, it was the only round with sources,
-     * and it raised no warning a skipped build would fail to repeat. Otherwise the digest stays
-     * cleared, and the next build walks.
+     * and everything it printed during the walk can be printed again. Validation's warnings and
+     * notes are recorded with the digest and replayed (#856). The method-body scanner's are not: they
+     * are anchored to a local declaration that has no {@code Element} to name, so a build that
+     * raised one still walks next time. Otherwise the digest stays cleared, and the next build walks.
      */
     private void recordSourceDigest() {
         WriteCache cache = writeCache;
@@ -764,10 +825,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return;
         }
         String digest = sourceDigest;
+        List<String> diagnostics;
+        synchronized (liveDiagnostics) {
+            diagnostics = liveDiagnostics.stream().map(ReplayableDiagnostic::encode).toList();
+        }
         boolean vouched = digest != null && roundsWithSources.get() == 1
-            && liveWarnings.get() == 0 && bodyScanner.warningsReported() == 0;
+            && liveErrors.get() == 0 && bodyScanner.warningsReported() == 0
+            && diagnostics.size() <= MAX_REPLAYED_DIAGNOSTICS;
         cache.bindModule(currentModuleId());
-        cache.setSourceDigest(vouched ? digest : null);
+        cache.setSourceDigest(vouched ? digest : null, vouched ? diagnostics : List.of());
         cache.flush();
     }
 
@@ -2515,9 +2581,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * Counts the warnings validation raises while passing every message on unchanged. A build
-     * that warned may not be skipped next time: the warning comes from the walk, so a skipped
-     * build would drop it (#834).
+     * Records what validation prints while passing every message on unchanged. The messages come
+     * from the walk, so a build skipped next time has to print them from this record (#856). An
+     * error is counted instead: a build that erred is never recorded as skippable. An annotation
+     * value is not an anchor a later build can name, so such a message is replayed at its
+     * annotation, which is where javac would put it short of the value's own position.
      */
     private final class CountingMessager implements Messager {
         private final Messager delegate;
@@ -2526,30 +2594,33 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             this.delegate = delegate;
         }
 
-        private void count(Diagnostic.Kind kind) {
-            if (kind == Diagnostic.Kind.WARNING || kind == Diagnostic.Kind.MANDATORY_WARNING
-                    || kind == Diagnostic.Kind.ERROR) {
-                liveWarnings.incrementAndGet();
+        private void record(Diagnostic.Kind kind, CharSequence msg, @Nullable Element e,
+                            javax.lang.model.element.@Nullable AnnotationMirror a) {
+            if (kind == Diagnostic.Kind.ERROR) {
+                liveErrors.incrementAndGet();
+            } else if (kind == Diagnostic.Kind.WARNING || kind == Diagnostic.Kind.MANDATORY_WARNING
+                    || kind == Diagnostic.Kind.NOTE) {
+                liveDiagnostics.add(ReplayableDiagnostic.of(kind, msg, e, a));
             }
         }
 
         @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg) {
-            count(kind);
+            record(kind, msg, null, null);
             delegate.printMessage(kind, msg);
         }
         @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {
-            count(kind);
+            record(kind, msg, e, null);
             delegate.printMessage(kind, msg, e);
         }
         @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e,
                                            javax.lang.model.element.AnnotationMirror a) {
-            count(kind);
+            record(kind, msg, e, a);
             delegate.printMessage(kind, msg, e, a);
         }
         @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e,
                                            javax.lang.model.element.AnnotationMirror a,
                                            javax.lang.model.element.AnnotationValue v) {
-            count(kind);
+            record(kind, msg, e, a);
             delegate.printMessage(kind, msg, e, a, v);
         }
     }

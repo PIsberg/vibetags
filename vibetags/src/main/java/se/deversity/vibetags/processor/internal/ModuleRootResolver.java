@@ -1,18 +1,10 @@
 package se.deversity.vibetags.processor.internal;
 
-import com.sun.source.util.TreePath;
-import com.sun.source.util.Trees;
 import org.jspecify.annotations.Nullable;
 
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
-import javax.lang.model.util.Elements;
-import javax.tools.JavaFileObject;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,20 +27,16 @@ import java.util.TreeSet;
  * round to the nearest directory containing a build file ({@code pom.xml}, {@code build.gradle},
  * {@code build.gradle.kts}) — the module root — and reads the source set out of the same path.
  *
- * <p><strong>Two ways to reach the source file, on purpose.</strong> The javac Compiler Tree API
- * ({@link Trees#instance}) only accepts javac's own {@code ProcessingEnvironment} and throws for
- * anything else. Gradle wraps the environment for incremental annotation processing — VibeTags
- * declares itself {@code aggregating} in {@code META-INF/gradle/incremental.annotation.processors},
- * so under Gradle the Tree API is <em>always</em> unavailable and this resolver used to return
- * {@code null} for every module. The caller then fell back to the working directory, which under
- * Gradle is neither the module nor the reactor root, so every module collapsed onto one
- * content-hash identity and appended a duplicate region instead of replacing its own
- * (<a href="https://github.com/PIsberg/vibetags/issues/331">issue #331</a>). {@link
- * Elements#getFileObjectOf(Element)} (Java 18+) answers the same question through the standard
- * API, survives wrapping, and is therefore tried whenever the Tree API is absent or silent.
+ * <p>The source files come from {@link RoundSources}, which the early exit and the partial-round
+ * ledger read too (#857). It asks {@code Elements.getFileObjectOf} before the Tree API, and that
+ * order is what keeps a wrapped environment identifiable: Gradle wraps the environment for
+ * incremental annotation processing, the Tree API only accepts javac's own class, and when this
+ * resolver depended on it every module under Gradle collapsed onto one content-hash identity and
+ * appended a duplicate region instead of replacing its own
+ * (<a href="https://github.com/PIsberg/vibetags/issues/331">issue #331</a>).
  *
- * <p>Both paths degrade gracefully: under a compiler that offers neither (or with in-memory
- * sources), this returns {@code null} and callers fall back to the working directory as before.
+ * <p>Under a compiler that offers neither lookup (or with in-memory sources) this returns
+ * {@code null}, and callers fall back to the working directory as before.
  */
 public final class ModuleRootResolver {
 
@@ -71,22 +59,7 @@ public final class ModuleRootResolver {
      * in-memory sources, no build file in the source file's ancestry) — the caller should fall
      * back to the JVM working directory.
      */
-    public static @Nullable ModuleIdentity fromRound(ProcessingEnvironment env, RoundEnvironment roundEnv) {
-        Trees trees;
-        try {
-            trees = Trees.instance(env);
-        } catch (RuntimeException | Error e) {
-            // Not javac's own environment: ECJ, a mocked test environment, or — the common case —
-            // Gradle's incremental-processing wrapper. getFileObjectOf() below covers it.
-            trees = null;
-        }
-        Elements elements;
-        try {
-            elements = env.getElementUtils();
-        } catch (RuntimeException | Error e) {
-            elements = null;
-        }
-
+    public static @Nullable ModuleIdentity fromRound(RoundSources sources) {
         Path moduleRoot = null;
         // Sorted so a round that somehow mixes source sets picks the same one on every build.
         SortedSet<String> sourceSets = new TreeSet<>();
@@ -95,8 +68,9 @@ public final class ModuleRootResolver {
         // Local to this call: the build files it looks for are the consumer's, which no VibeTags
         // process writes, so the answer cannot change while one round is being read.
         Map<Path, Optional<Path>> rootBySourceDir = new HashMap<>();
-        for (Element element : roundEnv.getRootElements()) {
-            Path sourceDir = sourceDirOf(trees, elements, element);
+        for (Element element : sources.roots()) {
+            Path file = sources.fileOf(element);
+            Path sourceDir = file != null ? file.getParent() : null;
             if (sourceDir == null) continue;
             Path candidate = rootBySourceDir
                 .computeIfAbsent(sourceDir, dir -> Optional.ofNullable(nearestBuildFileAncestor(dir)))
@@ -116,60 +90,6 @@ public final class ModuleRootResolver {
         boolean mixed = sourceSets.contains(ModuleIdentity.MAIN)
             && sourceSets.stream().anyMatch(ModuleIdentity::isTestSourceSetName);
         return new ModuleIdentity(moduleRoot, pickSourceSet(sourceSets), mixed);
-    }
-
-    /**
-     * Directory holding {@code element}'s source file, or {@code null} when no available compiler
-     * API can say.
-     */
-    private static @Nullable Path sourceDirOf(@Nullable Trees trees, @Nullable Elements elements, Element element) {
-        Path file = sourceFileOf(trees, elements, element);
-        return file != null ? file.getParent() : null;
-    }
-
-    /**
-     * The source file {@code element} was declared in, or {@code null} when no available compiler
-     * API can say. Tries the Tree API first (it is the cheaper lookup when javac hands us its own
-     * environment), then the standard {@link Elements#getFileObjectOf}.
-     *
-     * <p>Package-private because {@link PartialRoundDetector} needs the file rather than its
-     * directory, and one resolution shared by both is the point: a round that resolved its module
-     * from a source file must agree with the ledger about which file that was, or the two disagree
-     * about what this compilation saw.
-     */
-    static @Nullable Path sourceFileOf(@Nullable Trees trees, @Nullable Elements elements, Element element) {
-        if (trees != null) {
-            try {
-                TreePath path = trees.getPath(element);
-                if (path != null) {
-                    Path file = fileOf(path.getCompilationUnit().getSourceFile().toUri());
-                    if (file != null) return file;
-                }
-            } catch (RuntimeException ignored) {
-                // Malformed URI or unexpected tree state — fall through to the Elements path.
-            }
-        }
-        if (elements != null) {
-            try {
-                JavaFileObject file = elements.getFileObjectOf(element);
-                if (file != null) {
-                    return fileOf(file.toUri());
-                }
-            } catch (RuntimeException | Error ignored) {
-                // Older/alternative compilers may not implement it — treat as unavailable.
-            }
-        }
-        return null;
-    }
-
-    /** A {@code file:} URI as an absolute path, or {@code null} for in-memory sources. */
-    private static @Nullable Path fileOf(URI uri) {
-        if (!"file".equals(uri.getScheme())) return null; // in-memory source (tests, JSR 199 strings)
-        try {
-            return Paths.get(uri).toAbsolutePath().normalize();
-        } catch (RuntimeException e) {
-            return null;
-        }
     }
 
     /**
