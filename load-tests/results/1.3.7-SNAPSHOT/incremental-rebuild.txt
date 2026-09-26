@@ -22,3 +22,33 @@ Classes    ColdAlloc(KB)    WarmAlloc(KB)    Cold(ms)     Warm(ms)     Saved(%) 
 100        23843            24189            534          393          -1.5           5670             6016             -6.1           -1069          7086
 500        115266           120221           1078         1060         -4.3           26827            31781            -18.5          708            31073
 1000       227078           239796           1874         1752         -5.6           51511            64228            -24.7          1619           62609
+
+After #856, #857 and #858 (branch fix/open-issues-2026-09-26, 089edd9c plus the #856 change), measured
+2026-09-26 back to back in one session against main at 65c4d20d, each jar installed under its own label
+(-Dprocessor.version=0.0.0-main / 0.0.0-branch). Same machine, JDK 26.
+
+The fixture above (@AIDraft dropped, no validation warning). #857 maps each source once instead of three
+times (cold) or twice (warm); #858 stops init() parsing sidecar bodies. The two are not separated here.
+  main:
+100        24756            19339            420          393          21.9           6816             1399             79.5           -858           2257
+500        117353           97380            2277         2253         17.0           28700            8727             69.6           729            7998
+1000       230240           194136           4066         1273         15.7           54589            18485            66.1           1563           16922
+  branch:
+100        24238            19692            587          423          18.8           6359             1813             71.5           -683           2496
+500        114573           96769            1603         1313         15.5           26160            8355             68.1           729            7626
+1000       225328           192956           1424         1290         14.4           49689            17317            65.1           1664           15653
+
+The generator's own fixture, @AIDraft kept, so every 14th class warns (#856). Main records no digest for a
+build that warned, so the rebuild walks and the test's early-exit assertion fails at every N; the branch
+records the warnings with the digest, replays them, and takes the exit.
+  main:
+100        25187            24204            269          208          3.9            6875             5893             14.3           -827           6721
+500        118711           118940           584          556          -0.2           29888            30117            -0.8           700            29417
+1000       232758           233394           916          877          -0.3           56261            56897            -1.1           1489           55407
+  branch:
+100        24615            19899            302          206          19.2           6545             1829             72.0           -868           2698
+500        116796           98629            597          502          15.6           27820            9654             65.3           715            8939
+1000       228617           195314           918          869          14.6           52128            18824            63.9           1763           17061
+
+One run per jar and fixture; the Own columns have reproduced to about 1 % between runs of this test before.
+The test now keeps the generator's @AIDraft; the first table's fixture is what it used until #856.

@@ -29,11 +29,19 @@ and no rule file moves.
   clean run and every output is still byte-stable. At 1000 annotated classes on files on disk, a
   no-op rebuild allocates 18.4 MB of VibeTags' own against 64.2 MB before, and a cold build 55.0 MB
   against 51.5 MB for the hashing. It stays off wherever something after the walk needs its
-  result (check mode, enforcement, inherited or published manifests) and for a build that raised a
-  validation warning, which a skipped build could not repeat. `init()` also reads the root's
+  result (check mode, enforcement, inherited or published manifests). `init()` also reads the root's
   sidecars once instead of twice, which is why a rebuild had cost more than a cold build. The note
   says "(source digest ...)" where it said "(fingerprint ...)", and `vibetags.log` records
   `round.skip reason=sources-unchanged`.
+- **A build that warns can take the early exit too, and repeats its warnings (#856).** Validation
+  warnings come from the walk, so #834 never skipped a build that raised one, and a project keeping
+  one warning around walked every element on every rebuild. The warnings and notes validation prints
+  are now recorded with the source digest (`# source-diagnostic:` lines in `.vibetags-cache`) and
+  printed again by a skipped build, in its first round, anchored to the same element: same text,
+  same file, line and column, and the same count, so `-Werror` fails the rebuild as it failed the cold
+  build. On the load tests' own fixture, where every 14th class warns, a no-op rebuild at 1000 classes
+  allocates 18.8 MB of VibeTags' own against 56.9 MB. A build that printed more than 1000 diagnostics,
+  or whose method-body scanner warned, still walks next time.
 - **The scoped-rules index names each package once (#839).** A collapsed aggregate's index wrote one
   line per element and repeated the element's whole package on every one. It now writes one line
   per package, `<elements in="com.example.a">Alpha, Beta</elements>` in `CLAUDE.md` and

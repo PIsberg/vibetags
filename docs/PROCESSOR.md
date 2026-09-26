@@ -310,8 +310,14 @@ It applies only where nothing after the walk needs what the walk collects, so it
 mode, with `-Avibetags.enforce` or `-Avibetags.baseline.update`, and when `.vibetags-transitive` (inherited
 rules) or `.vibetags-manifest` (publishing) is present; an in-memory source, or a compiler with no way to map an element
 to its file, also leaves it off. A digest is recorded only after a completed generation whose live
-rounds raised no validation warning and saw sources in exactly one round: a skipped build could not
-repeat a warning, so a build that warns is walked every time. The digest is cleared before every full
+rounds saw sources in exactly one round and raised no validation error. Validation's warnings and
+notes come from the walk, so they are recorded with the digest (`# source-diagnostic:` lines after
+the `# source-digest:` one, each a `ReplayableDiagnostic`) and a skipped build prints them again, in
+its first round, anchored to the same element: same text, same file, line and column, same count for
+`-Werror` (#856). A build that printed more than 1000 is not recorded, and neither is one whose
+method-body scanner warned: those warnings sit on a local declaration no later build can name. The
+warnings `generateFiles()` raises ahead of its own fingerprint short-circuit (a deprecated opt-in, an
+unidentified module) are raised again on the skipped path too (#859). The digest is cleared before every full
 generation, so one that fails part-way leaves nothing vouching for half-written files. If another
 processor generates sources after a skipped first round, the build leaves every file as it is, clears
 the digest, and the next build walks.

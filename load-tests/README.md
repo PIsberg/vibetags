@@ -109,6 +109,12 @@ implicit:
   (64.2 MB against 51.5 MB of VibeTags' own at N=1000: `init()` parsed every sidecar twice, and a
   cold build has none). With it, 18.4 MB, and the cold build 55.0 MB, the cost of hashing on every
   eligible build. The test now asserts the warm round took the exit, not just a short-circuit.
+
+  #856 made a build that warns skippable (its warnings are recorded with the digest and replayed), so
+  the test keeps the generator's `@AIDraft` again. On that fixture at N=1000, a no-op rebuild on main
+  walked and allocated 56.9 MB of VibeTags' own; with the replay, 18.8 MB. #857 and #858 together
+  took the draft-free fixture's cold build from 54.6 to 49.7 MB and its rebuild from 18.5 to 17.3 MB
+  (`results/1.3.7-SNAPSHOT/incremental-rebuild.txt`).
 - **Six annotations out of 44.** `SyntheticClassGenerator` rotates `@AIContext`, `@AILocked`,
   `@AIAudit`, `@AIIgnore`, `@AIPrivacy` and `@AIDraft`, so 38 formatters never ran in any sweep
   here. See `AnnotationBreadthStressTest`, which puts a second fixture beside that one rather than

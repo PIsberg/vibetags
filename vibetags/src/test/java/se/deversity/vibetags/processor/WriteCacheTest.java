@@ -635,4 +635,112 @@ class WriteCacheTest {
 
         assertNull(reread.getSourceDigest());
     }
+
+    /** The diagnostics a skipped build repeats (#856) are stored beside the digest, in order. */
+    @Test
+    void sourceDiagnostics_roundTripBesideTheDigest(@TempDir Path tmp) {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache cache = new WriteCache(cachePath);
+        cache.bindModule("core");
+        cache.setSourceDigest("abc123", java.util.List.of("second one", "first one", "third"));
+        cache.flush();
+
+        WriteCache reread = new WriteCache(cachePath);
+        reread.bindModule("core");
+
+        assertEquals("abc123", reread.getSourceDigest());
+        assertEquals(java.util.List.of("second one", "first one", "third"), reread.getSourceDiagnostics());
+    }
+
+    /** A clean build's record replaces a warned build's: the old warnings must not come back. */
+    @Test
+    void sourceDiagnostics_replacedByTheNextRecord(@TempDir Path tmp) {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache cache = new WriteCache(cachePath);
+        cache.bindModule("core");
+        cache.setSourceDigest("abc123", java.util.List.of("a warning"));
+        cache.flush();
+        WriteCache next = new WriteCache(cachePath);
+        next.bindModule("core");
+        next.setSourceDigest("def456");
+        next.flush();
+
+        WriteCache reread = new WriteCache(cachePath);
+        reread.bindModule("core");
+
+        assertEquals("def456", reread.getSourceDigest());
+        assertEquals(java.util.List.of(), reread.getSourceDiagnostics());
+    }
+
+    @Test
+    void sourceDiagnostics_clearedWithTheDigest(@TempDir Path tmp) {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache cache = new WriteCache(cachePath);
+        cache.bindModule("core");
+        cache.setSourceDigest("abc123", java.util.List.of("a warning"));
+        cache.flush();
+        WriteCache again = new WriteCache(cachePath);
+        again.bindModule("core");
+        again.setSourceDigest(null);
+        again.flush();
+
+        WriteCache reread = new WriteCache(cachePath);
+        reread.bindModule("core");
+
+        assertNull(reread.getSourceDigest());
+        assertEquals(java.util.List.of(), reread.getSourceDiagnostics());
+    }
+
+    @Test
+    void sourceDiagnostics_belongToTheirModule(@TempDir Path tmp) {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache cache = new WriteCache(cachePath);
+        cache.bindModule("core");
+        cache.setSourceDigest("abc123", java.util.List.of("core's warning"));
+        cache.flush();
+
+        WriteCache app = new WriteCache(cachePath);
+        app.bindModule("app");
+        app.setSourceDigest("fff000");
+        app.flush();
+        WriteCache core = new WriteCache(cachePath);
+        core.bindModule("core");
+        WriteCache appAgain = new WriteCache(cachePath);
+        appAgain.bindModule("app");
+
+        assertEquals(java.util.List.of("core's warning"), core.getSourceDiagnostics(),
+            "a sibling's flush must not lose this module's record");
+        assertEquals(java.util.List.of(), appAgain.getSourceDiagnostics());
+    }
+
+    /**
+     * A cache written before #856 has a digest and no diagnostic lines. Such a digest was only ever
+     * recorded by a build that raised no warning, so reading none is the truth, not a loss.
+     */
+    @Test
+    void sourceDiagnostics_aCacheFromBeforeTheRecordReadsAsNone(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Files.writeString(cachePath, "# VibeTags write cache. Auto-generated. Safe to delete.\n# format: 3\n"
+            + "# module: core\n# source-digest: abc123\n", StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        cache.bindModule("core");
+
+        assertEquals("abc123", cache.getSourceDigest());
+        assertEquals(java.util.List.of(), cache.getSourceDiagnostics());
+    }
+
+    /** A diagnostic line outside a module section, or with no digest to belong to, is not adopted. */
+    @Test
+    void sourceDiagnostics_neverAdoptedWithoutADigest(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Files.writeString(cachePath, "# format: 3\n# source-diagnostic: stray\n# module: core\n"
+            + "# source-diagnostic: orphan\n", StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(cachePath);
+        cache.bindModule("core");
+
+        assertNull(cache.getSourceDigest());
+        assertEquals(java.util.List.of(), cache.getSourceDiagnostics());
+    }
 }

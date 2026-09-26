@@ -189,9 +189,11 @@ to leave 96 % standing. Against a no-op *processor*, which takes javac's own ann
 subsystem out of the base, the same saving is 14.9 %, and 28 % at N=100. Quote `SavedOwn`. The
 `-proc:none` column is about three quarters javac's, and issue #834 was opened on the diluted
 reading of it. The remaining opportunity was the `WarmOwn` column, 48.9 MB at N=1000, and #834's
-early exit ahead of the collection walk took most of it: on the test's current fixture (files on
-disk, no validation warnings) `WarmOwn` fell from 64.2 MB to 18.4 MB at N=1000, and `ColdOwn` rose
-from 51.5 MB to 55.0 MB for the hashing. If the warm round stops reporting "(source digest", the
+early exit ahead of the collection walk took most of it: on the fixture the test used then (files on
+disk, `@AIDraft` dropped so no validation warning) `WarmOwn` fell from 64.2 MB to 18.4 MB at N=1000,
+and `ColdOwn` rose from 51.5 MB to 55.0 MB for the hashing. Since #856 a build that warns replays its
+warnings and is skipped too, so the test keeps the generator's `@AIDraft`: 56.9 MB before, 18.8 MB
+after, at N=1000. If the warm round stops reporting "(source digest", the
 exit stopped firing; the test fails on that rather than on a threshold.
 
 Both `Own` columns reproduce to 0.1 % across two runs, where `ProcessorTaxStressTest`'s
