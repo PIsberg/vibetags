@@ -1168,7 +1168,12 @@ public final class ModuleSidecar {
      * with no annotations, is unaffected.
      */
     public static boolean anyRecordsElements(Path root) {
-        for (ModuleSidecar s : peekAll(root, null)) {
+        return anyRecordsElements(peekAll(root, null));
+    }
+
+    /** {@link #anyRecordsElements(Path)} over sidecars the caller has already read. */
+    public static boolean anyRecordsElements(List<ModuleSidecar> sidecars) {
+        for (ModuleSidecar s : sidecars) {
             if (!s.elementIds.isEmpty()) return true;
         }
         return false;
@@ -1202,9 +1207,17 @@ public final class ModuleSidecar {
      * again. Peeks rather than reads, since a question asked before any round must not prune.
      */
     public static boolean holdsWithdrawnTestingFallback(Path root) {
+        return holdsWithdrawnTestingFallback(root, peekAll(root, null));
+    }
+
+    /**
+     * {@link #holdsWithdrawnTestingFallback(Path)} over sidecars the caller has already read, so
+     * {@code init()} parses the root's sidecars once for this and {@link #anyRecordsElements} (#834).
+     */
+    public static boolean holdsWithdrawnTestingFallback(Path root, List<ModuleSidecar> sidecars) {
         Path testing = ServiceRegistry.buildServiceFileMap(root).get("testing");
         if (testing != null && ServiceRegistry.isOptedIn("testing", testing)) return false;
-        for (ModuleSidecar s : peekAll(root, null)) {
+        for (ModuleSidecar s : sidecars) {
             for (String unrouted : s.unroutedBodies.values()) {
                 if (!unrouted.isBlank()) return true;
             }

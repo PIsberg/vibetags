@@ -287,6 +287,39 @@ previous version with nothing anywhere reporting a problem. `TransitiveFingerpri
 directly rather than through the end-to-end path, because that path also rewrites the module
 sidecar every run and would pass either way.
 
+### Early exit ahead of the collection walk
+
+The fingerprint above needs the collection walk's result, and on a no-op rebuild the walk is most of
+what the round allocates, so skipping only rendering and writes saved almost nothing (#834). The
+processor therefore also decides earlier: on the first round that has sources it hashes every source
+file the round was given, with everything else output depends on (`SourceDigest`: the processor
+version, every `-A` option, the module and source set, which opt-in files exist and as what kind at
+the root and the module root, and the content of every `.vibetags-*` configuration file there). When
+that key matches the one the last clean run of the module recorded (`# source-digest:` under the
+module's `# module:` line in `.vibetags-cache`), and the checks the fingerprint short-circuit makes
+still hold (sidecar stamp, no stale sidecar, every cached output byte-stable), the walk is skipped
+and so is everything after it. The build prints the same "inputs unchanged since last run" note, with
+the source digest in place of the fingerprint.
+
+The key is a content hash, not size and mtime: a build tool that preserves timestamps, or an edit in
+the same second, would read as unchanged. A round shown a subset of the module's sources hashes a
+different set of files, so it can never take the exit and reaches invariant 17's partial-round
+handling as before.
+
+It applies only where nothing after the walk needs what the walk collects, so it is off in check
+mode, with `-Avibetags.enforce` or `-Avibetags.baseline.update`, and when `.vibetags-transitive` (inherited
+rules) or `.vibetags-manifest` (publishing) is present; an in-memory source, or a compiler with no way to map an element
+to its file, also leaves it off. A digest is recorded only after a completed generation whose live
+rounds raised no validation warning and saw sources in exactly one round: a skipped build could not
+repeat a warning, so a build that warns is walked every time. The digest is cleared before every full
+generation, so one that fails part-way leaves nothing vouching for half-written files. If another
+processor generates sources after a skipped first round, the build leaves every file as it is, clears
+the digest, and the next build walks.
+
+Measured with `IncrementalRebuildStressTest` (files on disk, `results/1.3.7-SNAPSHOT/incremental-rebuild.txt`):
+at 1000 annotated classes a no-op rebuild allocates 18.4 MB of VibeTags' own, against 64.2 MB before,
+and a cold build 55.0 MB against 51.5 MB, the price of hashing on every eligible build.
+
 ### Watched inputs
 
 Config files VibeTags *reads* rather than writes can also gate the short-circuit. `.vibetags-mirror`

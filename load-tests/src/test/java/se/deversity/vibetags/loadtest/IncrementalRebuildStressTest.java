@@ -169,6 +169,9 @@ class IncrementalRebuildStressTest {
      */
     private static final String SHORT_CIRCUIT_NOTE = "inputs unchanged since last run";
 
+    /** What the same note carries when the early exit ahead of the collection walk fired (#834). */
+    private static final String EARLY_EXIT_NOTE = "(source digest ";
+
     private static ThreadMXBean threadBean;
 
     @BeforeAll
@@ -213,9 +216,13 @@ class IncrementalRebuildStressTest {
     void theSecondBuildOfUnchangedSourcesCostsMuchLess(int n, @TempDir Path tempDir) throws Exception {
         assumeTrue(n <= maxClasses(), "Skipping N=" + n + " (stress.max.classes)");
 
-        List<JavaFileObject> sources = SyntheticClassGenerator.generate(n).stream()
-            .map(pair -> source(pair[0], pair[1]))
-            .collect(Collectors.toList());
+        // On disk, as a build tool hands them to javac: the early exit (#834) reads every source
+        // file back to hash it, and an in-memory source has no file, so it could never fire here.
+        Path sourceDir = Files.createDirectories(tempDir.resolve("src/com/example/generated"));
+        List<JavaFileObject> sources = new ArrayList<>();
+        for (String[] pair : SyntheticClassGenerator.generate(n)) {
+            sources.add(source(sourceDir, pair[0], withoutDraft(pair[1])));
+        }
 
         // The first compile in a JVM carries a one-off class-loading tail bigger than the effect,
         // so it is spent in a project root nothing is read back out of.
@@ -259,6 +266,10 @@ class IncrementalRebuildStressTest {
 
         nothingMoved(afterCold, afterWarm, n);
         shortCircuitFired(cold, warm, n);
+        assertTrue(warm.notes.contains(EARLY_EXIT_NOTE),
+            "the rebuild of unchanged sources took the fingerprint short-circuit but not the early"
+                + " exit ahead of the collection walk (#834) at N=" + n + ", so it walked every"
+                + " element again. Processor said: " + warm.notes);
         assertEquals(n, hashedCount,
             "the source-hash control hashed " + hashedCount + " of " + n + " sources, so HashOwn"
                 + " is the price of hashing fewer files than an early exit would have to read");
@@ -438,8 +449,23 @@ class IncrementalRebuildStressTest {
         return content;
     }
 
-    private static JavaFileObject source(String simpleName, String code) {
-        URI uri = URI.create("string:///com/example/generated/" + simpleName + ".java");
+    /**
+     * The generator puts {@code @AIDraft} on every 7th class and {@code @AILocked} on others, so
+     * every 14th class carries both and validation warns that they contradict. A build that warned
+     * is never recorded as skippable, because a skipped build could not repeat the warning (#834),
+     * so with the generator's output unchanged the early exit could not fire here at all. Only this
+     * test drops the draft annotation; the generator stays as the other load tests use it.
+     */
+    private static String withoutDraft(String code) {
+        return code.lines()
+            .filter(line -> !line.startsWith("@AIDraft("))
+            .collect(Collectors.joining("\n", "", "\n"));
+    }
+
+    private static JavaFileObject source(Path sourceDir, String simpleName, String code) throws IOException {
+        Path file = sourceDir.resolve(simpleName + ".java");
+        Files.writeString(file, code, StandardCharsets.UTF_8);
+        URI uri = file.toUri();
         return new SimpleJavaFileObject(uri, JavaFileObject.Kind.SOURCE) {
             @Override
             public CharSequence getCharContent(boolean ignoreEncodingErrors) {

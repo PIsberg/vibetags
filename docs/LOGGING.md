@@ -41,7 +41,10 @@ Write events, not positions:
   `testing.skip reason=no-test-guardrails sourceSet=` (DEBUG), and
   `merge.testing.fallback service= module=` (DEBUG, the merge read a routed round's unrouted body
   because `TESTING.md` is gone). A project without `TESTING.md` logs none of them;
-  renaming one of those events is a breaking change, not a cleanup.
+  renaming one of those events is a breaking change, not a cleanup. `SourceDigestEarlyExitEndToEndTest`
+  pins `round.skip reason=sources-unchanged digest= rounds=` (DEBUG, the early exit ahead of the
+  collection walk fired, #834); its sibling `round.skip reason=sources-appeared-after-skip digest=`
+  is written when another processor generated sources after the first round was skipped.
 - When you fix a bug, add the DEBUG line that would have made it obvious in one read, and keep it.
 
 Rationale and the longer argument: *Vibe Architecture*, Chapter 6b, "The Log Is a Feedback Loop".

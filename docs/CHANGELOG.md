@@ -22,6 +22,18 @@ and no rule file moves.
 
 ### Changed
 
+- **A rebuild of unchanged sources decides before the collection walk (#834).** The fingerprint
+  short-circuit needed the walk's result, and the walk was most of what a no-op rebuild allocated.
+  The first round now hashes every source file it was given, with the version, options, module,
+  opt-ins and `.vibetags-*` configuration, and skips the walk when that matches the module's last
+  clean run and every output is still byte-stable. At 1000 annotated classes on files on disk, a
+  no-op rebuild allocates 18.4 MB of VibeTags' own against 64.2 MB before, and a cold build 55.0 MB
+  against 51.5 MB for the hashing. It stays off wherever something after the walk needs its
+  result (check mode, enforcement, inherited or published manifests) and for a build that raised a
+  validation warning, which a skipped build could not repeat. `init()` also reads the root's
+  sidecars once instead of twice, which is why a rebuild had cost more than a cold build. The note
+  says "(source digest ...)" where it said "(fingerprint ...)", and `vibetags.log` records
+  `round.skip reason=sources-unchanged`.
 - **The scoped-rules index names each package once (#839).** A collapsed aggregate's index wrote one
   line per element and repeated the element's whole package on every one. It now writes one line
   per package, `<elements in="com.example.a">Alpha, Beta</elements>` in `CLAUDE.md` and

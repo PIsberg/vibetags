@@ -188,8 +188,11 @@ changes the answer by 4x. Against `-proc:none` the short-circuit saves 3.7 % at 
 to leave 96 % standing. Against a no-op *processor*, which takes javac's own annotation-processing
 subsystem out of the base, the same saving is 14.9 %, and 28 % at N=100. Quote `SavedOwn`. The
 `-proc:none` column is about three quarters javac's, and issue #834 was opened on the diluted
-reading of it. The remaining opportunity is the `WarmOwn` column, 48.9 MB at N=1000, and that is
-what any proposal to decide earlier than `generateFiles()` is bidding for.
+reading of it. The remaining opportunity was the `WarmOwn` column, 48.9 MB at N=1000, and #834's
+early exit ahead of the collection walk took most of it: on the test's current fixture (files on
+disk, no validation warnings) `WarmOwn` fell from 64.2 MB to 18.4 MB at N=1000, and `ColdOwn` rose
+from 51.5 MB to 55.0 MB for the hashing. If the warm round stops reporting "(source digest", the
+exit stopped firing; the test fails on that rather than on a threshold.
 
 Both `Own` columns reproduce to 0.1 % across two runs, where `ProcessorTaxStressTest`'s
 `vibetagsShare` moved 34 %. The difference is that all three compiles happen back-to-back inside

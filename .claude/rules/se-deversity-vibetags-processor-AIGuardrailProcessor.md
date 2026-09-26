@@ -8,6 +8,10 @@ paths: ["**/AIGuardrailProcessor.java"]
 ### Rules for method generateFiles
 - **Reason**: Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output
 
+### Rules for method earlyExitAllowed
+- **Focus**: A step added after the collection walk that reads the collected model must also turn the early exit off here
+- **Avoid**: Adding such a step without a clause here: a no-op rebuild then skips it with nothing reporting it (#834)
+
 ## Core Functionality
 - **Sensitivity**: critical
 - **Note**: Runs inside every consumer's javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build

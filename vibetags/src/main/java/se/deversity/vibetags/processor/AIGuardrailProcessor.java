@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIContract;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AILocked;
@@ -38,6 +39,7 @@ import se.deversity.vibetags.processor.internal.MethodBodyGuardrailScanner;
 import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 import se.deversity.vibetags.processor.internal.TransitiveManifestReader;
 import se.deversity.vibetags.processor.internal.TransitiveManifestWriter;
+import se.deversity.vibetags.processor.internal.SourceDigest;
 import se.deversity.vibetags.processor.internal.WriteCache;
 import se.deversity.vibetags.processor.internal.WritePlan;
 import se.deversity.vibetags.processor.model.TransitiveRule;
@@ -208,6 +210,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private PartialRoundDetector sourceLedger = new PartialRoundDetector();
 
+    /**
+     * The early exit's key for this compilation (#834), taken on the first round that has sources,
+     * or {@code null} when this compilation may not be skipped. See {@link SourceDigest}.
+     */
+    private volatile @Nullable String sourceDigest;
+
+    /** Set when {@link #sourceDigest} matched the last clean run: the walk and every write are skipped. */
+    private final AtomicBoolean sourcesUnchanged = new AtomicBoolean();
+
+    /** Set when a round after the skipped one brought sources, so the skip no longer holds. */
+    private final AtomicBoolean sourcesAppearedAfterSkip = new AtomicBoolean();
+
+    /** Rounds that had root elements. A recorded digest vouches for a compilation with exactly one. */
+    private final java.util.concurrent.atomic.AtomicInteger roundsWithSources = new java.util.concurrent.atomic.AtomicInteger();
+
+    /** Validation warnings the live rounds raised. A build that warned is never recorded as skippable. */
+    private final java.util.concurrent.atomic.AtomicInteger liveWarnings = new java.util.concurrent.atomic.AtomicInteger();
+
     /** Explicit module name from {@code -Avibetags.module}; overrides the resolved identity. */
     private @Nullable String moduleIdOverride;
 
@@ -366,8 +386,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
             ? new TransitiveManifestReader(log) : null;
-        this.testingFallbackPending = ModuleSidecar.holdsWithdrawnTestingFallback(this.root);
-        this.guardrailsOnRecord = ModuleSidecar.anyRecordsElements(this.root);
+        // One parse for both questions: each used to read every sidecar in full, and a sidecar
+        // holds every rendered body of its module, so on a large module that was most of what a
+        // no-op rebuild still allocated (#834).
+        List<ModuleSidecar> onRecord = ModuleSidecar.peekAll(this.root, null);
+        this.testingFallbackPending = ModuleSidecar.holdsWithdrawnTestingFallback(this.root, onRecord);
+        this.guardrailsOnRecord = ModuleSidecar.anyRecordsElements(onRecord);
         this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
         Path dirOption = pathOption(options, "vibetags.manifest.dir", messager);
         this.manifestDir = dirOption != null ? this.root.resolve(dirOption).normalize() : null;
@@ -381,6 +405,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.processed.set(false);
         this.moduleIdentity = null;
         this.sourceLedger = new PartialRoundDetector();
+        this.sourceDigest = null;
+        this.sourcesUnchanged.set(false);
+        this.sourcesAppearedAfterSkip.set(false);
+        this.roundsWithSources.set(0);
+        this.liveWarnings.set(0);
         collector.reset();
         collector.transitiveOptIn(this.transitiveReader != null);
         this.elementRules = new java.util.LinkedHashMap<>();
@@ -416,6 +445,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 // compareAndSet guarantees exactly one thread enters generateFiles() even if
                 // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
                 if (processed.compareAndSet(false, true)) {
+                    // The first round matched the last clean run's source digest, so there is no
+                    // collected model to publish, enforce, check or render (#834).
+                    if (sourcesUnchanged.get()) {
+                        finishUnchangedBuild();
+                        return false;
+                    }
                     // Publishing this build's own package guardrails, and folding in the ones read
                     // off the classpath, both run here rather than inside generateFiles(): its step
                     // order is locked, and its fingerprint short-circuit returns before any of it.
@@ -473,7 +508,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (checkMode) {
                         checkFiles();
                     } else {
+                        // Cleared before, recorded after: a generation that fails part-way must not
+                        // leave the last run's digest vouching for files it may have half-written.
+                        forgetSourceDigest();
                         generateFiles();
+                        recordSourceDigest();
                     }
                     // After, not beside the checks above: a rule file's length is a property of
                     // what this build leaves on disk, and measuring before generation would miss
@@ -493,6 +532,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 // identity did not resolve this time cannot keep the last compilation's answer.
                 collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());
                 warnIfMixedRoundCannotRoute(moduleIdentity);
+            }
+
+            // The early exit (#834), decided on the first round that has sources, before the
+            // collection walk: hashing the round's sources costs about 3 % of the walk it can skip.
+            if (skipThisRound(roundEnv)) {
+                return false;
             }
 
             // Which sources this round was handed, for the same reason and under the same
@@ -539,7 +584,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     collector.recordLockedPosition(e, positionResolver.resolve(e));
                 }
             }
-            validateAnnotations(processingEnv.getMessager(), roundEnv, presentFqns, collector.roundIndex());
+            validateAnnotations(new CountingMessager(processingEnv.getMessager()), roundEnv, presentFqns,
+                collector.roundIndex());
             // Guardrails written where JSR 269 cannot see them (local/anonymous declarations)
             // are a silent no-op; the Tree API can still see them, so say so. Needs the live
             // round for the same reason the position resolver does.
@@ -592,6 +638,137 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         } finally {
             VibeTagsLogger.shutdown(root);
         }
+    }
+
+    /**
+     * Whether this compilation may skip the collection walk at all (#834): only when nothing after
+     * the walk needs what the walk collects. Check mode compares and enforcement checks the collected
+     * elements; a dependency manifest is published from them and inherited rules are merged into
+     * them. Without the write cache there is no record to compare against.
+     */
+    @AIContext(
+        focus = "A step added after the collection walk that reads the collected model must also turn the early exit off here",
+        avoids = "Adding such a step without a clause here: a no-op rebuild then skips it with nothing reporting it (#834)")
+    private boolean earlyExitAllowed() {
+        return writeCache != null && !checkMode && enforceFamilies.isEmpty() && !baselineUpdate
+            && transitiveReader == null && !manifestEmitEnabled;
+    }
+
+    /**
+     * Whether this live round is skipped because the first round with sources matched the last
+     * clean run (#834). Decides on that first round and remembers the answer for the rest.
+     */
+    private boolean skipThisRound(RoundEnvironment roundEnv) {
+        if (roundEnv.getRootElements().isEmpty()) {
+            return sourcesUnchanged.get();
+        }
+        int round = roundsWithSources.incrementAndGet();
+        if (sourcesUnchanged.get()) {
+            // Another processor generated sources after the first round was skipped. The recorded
+            // run never had them, so the skip can no longer be vouched for.
+            sourcesAppearedAfterSkip.set(true);
+            return true;
+        }
+        if (round == 1 && earlyExitAllowed()) {
+            String digest = digestOf(roundEnv);
+            sourceDigest = digest;
+            sourcesUnchanged.set(digest != null && inputsUnchangedSince(digest));
+        }
+        return sourcesUnchanged.get();
+    }
+
+    /** This round's {@link SourceDigest}, or {@code null} when the round cannot be vouched for. */
+    private @Nullable String digestOf(RoundEnvironment roundEnv) {
+        List<Path> files = SourceDigest.sourceFilesOf(processingEnv, roundEnv);
+        if (files == null) {
+            return null;
+        }
+        return SourceDigest.of(VERSION, processingEnv.getOptions(), currentModuleId(),
+            moduleIdentity != null && moduleIdentity.isTestSourceSet(), root, compilationRoot(), files);
+    }
+
+    /**
+     * Whether {@code digest} is what the last clean run of this module recorded, and nothing the
+     * digest cannot see has moved since: the same checks the fingerprint short-circuit in
+     * {@code generateFiles()} makes, taken here because a skipped walk leaves nothing to regenerate
+     * from if one of them fails later.
+     */
+    private boolean inputsUnchangedSince(String digest) {
+        WriteCache cache = writeCache;
+        if (cache == null) {
+            return false;
+        }
+        cache.bindModule(currentModuleId());
+        String recorded = cache.getSourceDigest();
+        // Not a secret, but isEqual says what is meant, byte for byte, with no special case.
+        return recorded != null
+            && java.security.MessageDigest.isEqual(digest.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                recorded.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+            && Long.toHexString(ModuleSidecar.computeSidecarStamp(root)).equals(cache.getSidecarStamp())
+            && !ModuleSidecar.anyStale(root)
+            && cache.allCachedFilesStable();
+    }
+
+    /**
+     * The end of a compilation whose first round matched the last clean run (#834). The warnings
+     * that read files rather than the collected model still run, as they do after the fingerprint
+     * short-circuit, because the file they warn about may still be on disk.
+     */
+    private void finishUnchangedBuild() {
+        Messager messager = processingEnv.getMessager();
+        String digest = sourceDigest;
+        String shortDigest = digest == null ? "" : digest.substring(0, 12);
+        if (sourcesAppearedAfterSkip.get()) {
+            forgetSourceDigest();
+            messager.printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: another processor generated sources after the first round was skipped as"
+                    + " unchanged; guardrail files are left as they are, and the next build regenerates them.");
+            if (log != null) {
+                log.debug("round.skip reason=sources-appeared-after-skip digest={}", shortDigest);
+            }
+            VibeTagsLogger.shutdown(root);
+            return;
+        }
+        messager.printMessage(Diagnostic.Kind.NOTE,
+            "VibeTags: inputs unchanged since last run (source digest " + shortDigest
+                + "), skipping collection, content build and writes.");
+        if (log != null) {
+            log.info("Inputs unchanged (source digest {}). Skipping the collection walk and generate phase.",
+                shortDigest);
+            log.debug("round.skip reason=sources-unchanged digest={} rounds={}", shortDigest, roundsWithSources.get());
+        }
+        warnAboutHandAuthoredYamlKeys();
+        VibeTagsLogger.shutdown(root);
+        warnAboutOversizedRuleFiles();
+    }
+
+    /** Clears this module's recorded source digest, so nothing vouches for the next build yet. */
+    private void forgetSourceDigest() {
+        WriteCache cache = writeCache;
+        if (cache != null) {
+            cache.bindModule(currentModuleId());
+            cache.setSourceDigest(null);
+            cache.flush();
+        }
+    }
+
+    /**
+     * Records this compilation's source digest after a completed generation, when the next build
+     * may be skipped on its strength: the round was digestible, it was the only round with sources,
+     * and it raised no warning a skipped build would fail to repeat. Otherwise the digest stays
+     * cleared, and the next build walks.
+     */
+    private void recordSourceDigest() {
+        WriteCache cache = writeCache;
+        if (cache == null) {
+            return;
+        }
+        String digest = sourceDigest;
+        boolean vouched = digest != null && roundsWithSources.get() == 1
+            && liveWarnings.get() == 0 && bodyScanner.warningsReported() == 0;
+        cache.bindModule(currentModuleId());
+        cache.setSourceDigest(vouched ? digest : null);
+        cache.flush();
     }
 
     /**
@@ -2335,6 +2512,46 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
         }
         return merged;
+    }
+
+    /**
+     * Counts the warnings validation raises while passing every message on unchanged. A build
+     * that warned may not be skipped next time: the warning comes from the walk, so a skipped
+     * build would drop it (#834).
+     */
+    private final class CountingMessager implements Messager {
+        private final Messager delegate;
+
+        CountingMessager(Messager delegate) {
+            this.delegate = delegate;
+        }
+
+        private void count(Diagnostic.Kind kind) {
+            if (kind == Diagnostic.Kind.WARNING || kind == Diagnostic.Kind.MANDATORY_WARNING
+                    || kind == Diagnostic.Kind.ERROR) {
+                liveWarnings.incrementAndGet();
+            }
+        }
+
+        @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg) {
+            count(kind);
+            delegate.printMessage(kind, msg);
+        }
+        @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e) {
+            count(kind);
+            delegate.printMessage(kind, msg, e);
+        }
+        @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e,
+                                           javax.lang.model.element.AnnotationMirror a) {
+            count(kind);
+            delegate.printMessage(kind, msg, e, a);
+        }
+        @Override public void printMessage(Diagnostic.Kind kind, CharSequence msg, Element e,
+                                           javax.lang.model.element.AnnotationMirror a,
+                                           javax.lang.model.element.AnnotationValue v) {
+            count(kind);
+            delegate.printMessage(kind, msg, e, a, v);
+        }
     }
 
     /**

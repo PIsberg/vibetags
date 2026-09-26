@@ -88,6 +88,8 @@ public final class WriteCache {
         @Nullable String fingerprint;
         @Nullable String storedContext;
         @Nullable String sidecarStamp;
+        /** The early exit's key (#834): what the last clean run of this module was given. */
+        @Nullable String sourceDigest;
     }
 
     /** The whole-root section a version-2 cache carries, and an unbound instance still uses. */
@@ -233,6 +235,32 @@ public final class WriteCache {
             return section.sidecarStamp;
         }
         return sidecarStamp;
+    }
+
+    /**
+     * The source digest the last clean, digestible run of the bound module recorded, or
+     * {@code null}. See {@code SourceDigest}: a match lets a round skip the collection walk, so a
+     * stale value here is a false "unchanged", the failure this class is guarded for. The caller
+     * clears it whenever a run may not be skipped.
+     */
+    public synchronized @Nullable String getSourceDigest() {
+        loadIfNeeded();
+        Section section = sections.get(currentModule);
+        return section == null ? null : section.sourceDigest;
+    }
+
+    /** Records, or with {@code null} clears, the bound module's source digest; persisted on the next {@link #flush()}. */
+    public synchronized void setSourceDigest(@Nullable String digest) {
+        loadIfNeeded();
+        Section existing = sections.get(currentModule);
+        if (digest == null && (existing == null || existing.sourceDigest == null)) {
+            return; // nothing to clear, and no empty section to create
+        }
+        Section section = section();
+        if (!java.util.Objects.equals(section.sourceDigest, digest)) {
+            section.sourceDigest = digest;
+            this.dirty = true;
+        }
     }
 
     /** Records the current sidecar stamp; persisted on the next {@link #flush()}. */
@@ -442,6 +470,9 @@ public final class WriteCache {
         if (!LEGACY_SECTION.equals(moduleId) && section.sidecarStamp != null) {
             sb.append("# sidecar-stamp: ").append(section.sidecarStamp).append('\n');
         }
+        if (section.sourceDigest != null) {
+            sb.append("# source-digest: ").append(section.sourceDigest).append('\n');
+        }
         String effectiveContext = moduleId.equals(currentModule) && currentContext != null
             ? currentContext : section.storedContext;
         if (effectiveContext != null) {
@@ -518,6 +549,15 @@ public final class WriteCache {
                             } else {
                                 loading.sidecarStamp = st;
                             }
+                        }
+                    }
+                    // Written only inside a module section, never before the first "# module:"
+                    // line, so a digest can never be adopted from the whole-root section.
+                    String digestPrefix = "# source-digest: ";
+                    if (line.startsWith(digestPrefix) && !readingLegacy) {
+                        String dg = line.substring(digestPrefix.length()).trim();
+                        if (!dg.isEmpty()) {
+                            loading.sourceDigest = dg;
                         }
                     }
                     String contextPrefix = "# context: ";

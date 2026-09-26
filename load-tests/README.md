@@ -101,6 +101,14 @@ implicit:
   spend to prove the sources unchanged: 1.5 to 1.7 MB at N=1000. The own-columns reproduce to
   about 1 % across two runs, which `ProcessorTaxStressTest`'s equivalent split does not, because
   every compile here happens back-to-back in one test method over one fixture.
+
+  #834 built that exit. The test now compiles files on disk, as a build tool does (the early exit
+  reads each source back to hash it, so an in-memory fixture could never take it), and drops the
+  fixture's `@AIDraft`, whose collisions with `@AILocked` made every build warn and so never
+  skippable. On that fixture, before the exit, a no-op rebuild allocated *more* than the cold build
+  (64.2 MB against 51.5 MB of VibeTags' own at N=1000: `init()` parsed every sidecar twice, and a
+  cold build has none). With it, 18.4 MB, and the cold build 55.0 MB, the cost of hashing on every
+  eligible build. The test now asserts the warm round took the exit, not just a short-circuit.
 - **Six annotations out of 44.** `SyntheticClassGenerator` rotates `@AIContext`, `@AILocked`,
   `@AIAudit`, `@AIIgnore`, `@AIPrivacy` and `@AIDraft`, so 38 formatters never ran in any sweep
   here. See `AnnotationBreadthStressTest`, which puts a second fixture beside that one rather than

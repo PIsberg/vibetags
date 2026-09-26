@@ -57,6 +57,9 @@ public final class MethodBodyGuardrailScanner {
 
     private final @Nullable Trees trees;
 
+    /** Warnings this scanner has reported; a build that warned may not be skipped next time (#834). */
+    private int reported;
+
     private MethodBodyGuardrailScanner(@Nullable Trees trees) {
         this.trees = trees;
     }
@@ -64,6 +67,11 @@ public final class MethodBodyGuardrailScanner {
     /** A scanner for {@code env}, or a no-op one when no compiler exposes the Tree API. */
     public static MethodBodyGuardrailScanner forEnv(ProcessingEnvironment env) {
         return new MethodBodyGuardrailScanner(SourcePositionResolver.treesFor(env));
+    }
+
+    /** How many warnings {@link #scanAndWarn} has reported so far. */
+    public int warningsReported() {
+        return reported;
     }
 
     /** A scanner that never reports — for tests and non-javac environments. */
@@ -158,6 +166,7 @@ public final class MethodBodyGuardrailScanner {
                     boolean ours = name.startsWith(ANNOTATIONS_PACKAGE + ".")
                         || (imported && SIMPLE_NAMES.contains(simple));
                     if (ours && trees != null) {
+                        reported++;
                         trees.printMessage(Diagnostic.Kind.WARNING,
                             "VibeTags: @" + simple + " on a local or anonymous declaration is"
                                 + " invisible to annotation processing (JSR 269 sees declarations,"

@@ -1,7 +1,24 @@
 VibeTags Incremental-Rebuild Stress Test Results
-================================================================================================
-Classes    ColdAlloc(KB)    WarmAlloc(KB)    Cold(ms)     Warm(ms)     Saved(%)      
-------------------------------------------------------------------------------------------------
-100        24968            23734            147          131          4.9           
-500        119220           115243           421          432          3.3           
-1000       234678           226343           761          699          3.6           
+==========================================================================================================================================================================
+ColdAlloc/WarmAlloc/Saved are against a -proc:none baseline, so they carry javac's whole annotation-processing
+subsystem as well as VibeTags'. ColdOwn/WarmOwn/SavedOwn are against a no-op processor, which is the only
+base a change to this codebase can move (#834). HashOwn is what hashing every source costs over the same no-op
+processor, the minimum an exit ahead of the collection walk would spend. Headroom is WarmOwn - HashOwn, an upper bound.
+
+Sources are files on disk, as a build tool hands them to javac, with the fixture's @AIDraft dropped so the
+build raises no validation warning (a build that warned is never skipped). i7-1260P, JDK 26, two runs each;
+the Own columns agreed to within 1 % between runs. Wall-clock varies far more and is not a result.
+
+With the early exit ahead of the collection walk (#834):
+Classes    ColdAlloc(KB)    WarmAlloc(KB)    Cold(ms)     Warm(ms)     Saved(%)       ColdOwn(KB)      WarmOwn(KB)      SavedOwn(%)    HashOwn(KB)    Headroom(KB)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+100        25036            19443            527          394          22.3           6905             1312             81.0           -844           2157
+500        117354           97314            1577         1182         17.1           28805            8765             69.6           711            8053
+1000       230703           194195           1996         2301         15.8           54953            18446            66.4           1679           16766
+
+Before it, the same fixture on the processor at 55b5e396:
+Classes    ColdAlloc(KB)    WarmAlloc(KB)    Cold(ms)     Warm(ms)     Saved(%)       ColdOwn(KB)      WarmOwn(KB)      SavedOwn(%)    HashOwn(KB)    Headroom(KB)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+100        23843            24189            534          393          -1.5           5670             6016             -6.1           -1069          7086
+500        115266           120221           1078         1060         -4.3           26827            31781            -18.5          708            31073
+1000       227078           239796           1874         1752         -5.6           51511            64228            -24.7          1619           62609

@@ -598,4 +598,41 @@ class WriteCacheTest {
         assertEquals(firstMtime, Files.getLastModifiedTime(cachePath).toMillis(),
             "re-binding the unchanged context must not rewrite the cache file");
     }
+
+    /** The early exit's key (#834) survives to the next compilation, per module. */
+    @Test
+    void sourceDigest_persistsPerModule(@TempDir Path tmp) {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache first = new WriteCache(cachePath);
+        first.bindModule("core");
+        first.setSourceDigest("abc123");
+        first.flush();
+
+        WriteCache core = new WriteCache(cachePath);
+        core.bindModule("core");
+        WriteCache app = new WriteCache(cachePath);
+        app.bindModule("app");
+
+        assertEquals("abc123", core.getSourceDigest());
+        assertNull(app.getSourceDigest(), "one module's digest must never answer for another");
+    }
+
+    /** A digest cleared by a build that may not be skipped must stay cleared on disk. */
+    @Test
+    void sourceDigest_clearedIsGoneAfterFlush(@TempDir Path tmp) {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache cache = new WriteCache(cachePath);
+        cache.bindModule("core");
+        cache.setSourceDigest("abc123");
+        cache.flush();
+        WriteCache again = new WriteCache(cachePath);
+        again.bindModule("core");
+        again.setSourceDigest(null);
+        again.flush();
+
+        WriteCache reread = new WriteCache(cachePath);
+        reread.bindModule("core");
+
+        assertNull(reread.getSourceDigest());
+    }
 }
