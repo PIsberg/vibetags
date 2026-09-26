@@ -205,8 +205,8 @@ class SourceDigestEarlyExitEndToEndTest {
         // short-circuit, so every no-op rebuild printed it until the early exit skipped
         // generateFiles() whole. A -Werror build then failed cold and passed on the rebuild.
         Files.writeString(root.resolve("gemini_instructions.md"), "", StandardCharsets.UTF_8);
-        // Without it the orphan warning joins in, and that one is raised after the fingerprint
-        // short-circuit, so no rebuild has ever repeated it: a separate question (#860).
+        // Without it the orphan warning joins in, and its replay changes the order (#860), which
+        // the exact comparison below would read as a failure; the orphan cases cover it.
         Files.writeString(root.resolve(".aiexclude"), "", StandardCharsets.UTF_8);
         ProcessorTestHarness h = project(LEDGER);
         List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
@@ -217,6 +217,75 @@ class SourceDigestEarlyExitEndToEndTest {
 
         assertTrue(notes(second).contains(EARLY_EXIT), "this case is about the early exit:\n" + notes(second));
         assertEquals(first, vibeTagsWarnings(second), "the rebuild must warn exactly as the first build did");
+    }
+
+    private static final String ORPHAN = "@AILocked used but .aiexclude (hard guardrail) is missing";
+
+    @Test
+    void aRebuildThatTakesTheEarlyExitRepeatsTheOrphanWarning() throws IOException {
+        // The orphan check runs after the fingerprint short-circuit in generateFiles(), and the
+        // early exit never reaches generateFiles() at all, so a -Werror build failed cold and
+        // passed every rebuild after it (#860). Compared as sets of lines: the replay prints the
+        // recorded warnings in the first round, ahead of the deprecated-output warning that the
+        // cold build printed first. The count and the text are what -Werror and a reader see.
+        Files.writeString(root.resolve("gemini_instructions.md"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = project(LEDGER);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.stream().anyMatch(w -> w.contains(ORPHAN)),
+            "the fixture must raise the orphan warning, or this proves nothing: " + first);
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
+
+        assertTrue(notes(second).contains(EARLY_EXIT), "this case is about the early exit:\n" + notes(second));
+        assertEquals(sorted(first), sorted(vibeTagsWarnings(second)),
+            "the rebuild must warn exactly as the first build did");
+    }
+
+    @Test
+    void aRebuildStoppedByTheFingerprintRepeatsTheOrphanWarning() throws IOException {
+        // A comment changes the source digest but no annotation, so the rebuild walks and then
+        // stops at the fingerprint short-circuit inside generateFiles(), ahead of the orphan check.
+        Files.writeString(root.resolve("gemini_instructions.md"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = project(LEDGER);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.stream().anyMatch(w -> w.contains(ORPHAN)),
+            "the fixture must raise the orphan warning, or this proves nothing: " + first);
+        Files.writeString(root.resolve("src/main/java/com/example/Ledger.java"), LEDGER + "// touched\n",
+            StandardCharsets.UTF_8);
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
+        List<Diagnostic<? extends JavaFileObject>> third = h.compileReturningDiagnostics();
+
+        assertTrue(notes(second).contains("(fingerprint "),
+            "this case is about the fingerprint short-circuit:\n" + notes(second));
+        assertEquals(sorted(first), sorted(vibeTagsWarnings(second)),
+            "the build stopped by the fingerprint must warn as the first build did");
+        assertTrue(notes(third).contains(EARLY_EXIT), "the build after it takes the early exit:\n" + notes(third));
+        assertEquals(sorted(first), sorted(vibeTagsWarnings(third)),
+            "and repeats what the fingerprint-stopped build recorded");
+    }
+
+    @Test
+    void creatingTheMissingFileSilencesTheOrphanWarningForGood() throws IOException {
+        // The replayed record must not outlive its cause: creating .aiexclude is an opt-in change,
+        // so the next build walks, and neither it nor the skipped build after it may warn.
+        Files.writeString(root.resolve("gemini_instructions.md"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = project(LEDGER);
+        assertTrue(vibeTagsWarnings(h.compileReturningDiagnostics()).stream().anyMatch(w -> w.contains(ORPHAN)),
+            "the fixture must raise the orphan warning, or this proves nothing");
+        Files.writeString(root.resolve(".aiexclude"), "", StandardCharsets.UTF_8);
+
+        List<String> fixed = vibeTagsWarnings(h.compileReturningDiagnostics());
+        List<Diagnostic<? extends JavaFileObject>> after = h.compileReturningDiagnostics();
+
+        assertTrue(fixed.stream().noneMatch(w -> w.contains(ORPHAN)), "the file exists now: " + fixed);
+        assertTrue(notes(after).contains(EARLY_EXIT), notes(after));
+        assertTrue(vibeTagsWarnings(after).stream().noneMatch(w -> w.contains(ORPHAN)),
+            "a replay of the warning whose cause is gone: " + vibeTagsWarnings(after));
+    }
+
+    private static List<String> sorted(List<String> lines) {
+        return lines.stream().sorted().toList();
     }
 
     @Test
