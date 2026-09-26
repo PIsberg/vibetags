@@ -124,6 +124,54 @@ class SourceDigestEarlyExitEndToEndTest {
     }
 
     @Test
+    void aRebuildRepeatsTheDeprecatedOutputWarning() throws IOException {
+        // resolveActiveServices warns about a deprecated opt-in ahead of the fingerprint
+        // short-circuit, so every no-op rebuild printed it until the early exit skipped
+        // generateFiles() whole. A -Werror build then failed cold and passed on the rebuild.
+        Files.writeString(root.resolve("gemini_instructions.md"), "", StandardCharsets.UTF_8);
+        // Without it the orphan warning joins in, and that one is raised after the fingerprint
+        // short-circuit, so no rebuild has ever repeated it: a separate question (#860).
+        Files.writeString(root.resolve(".aiexclude"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = project(LEDGER);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.stream().anyMatch(w -> w.contains("deprecated")),
+            "the fixture must warn about the deprecated output, or this proves nothing: " + first);
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
+
+        assertTrue(notes(second).contains(EARLY_EXIT), "this case is about the early exit:\n" + notes(second));
+        assertEquals(first, vibeTagsWarnings(second), "the rebuild must warn exactly as the first build did");
+    }
+
+    @Test
+    void aRebuildRepeatsTheUnidentifiedModuleWarning() throws IOException {
+        // The same shape for warnIfModuleUnidentifiable: sources outside the VibeTags root beside
+        // another module's sidecar. It too ran ahead of the fingerprint short-circuit.
+        Path vibetagsRoot = Files.createDirectories(root.resolve("guardrails"));
+        Files.writeString(vibetagsRoot.resolve("CLAUDE.md"), "", StandardCharsets.UTF_8);
+        Files.createDirectories(vibetagsRoot.resolve("other"));
+        se.deversity.vibetags.processor.internal.ModuleSidecar sibling =
+            new se.deversity.vibetags.processor.internal.ModuleSidecar("other", "other");
+        sibling.putBody("claude", "the other module's guardrails");
+        sibling.save(vibetagsRoot);
+        Files.writeString(root.resolve("pom.xml"), "<project><artifactId>outside</artifactId></project>",
+            StandardCharsets.UTF_8);
+        ProcessorTestHarness h = new ProcessorTestHarness(vibetagsRoot, false);
+        Path source = root.resolve("src/main/java/com/example/Ledger.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, LEDGER, StandardCharsets.UTF_8);
+        h.addSourceFile(source);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.stream().anyMatch(w -> w.contains("could not identify the compiling module")),
+            "the fixture must warn about the module, or this proves nothing: " + first);
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
+
+        assertTrue(notes(second).contains(EARLY_EXIT), "this case is about the early exit:\n" + notes(second));
+        assertEquals(first, vibeTagsWarnings(second), "the rebuild must warn exactly as the first build did");
+    }
+
+    @Test
     void aPlatformOptedInAfterTheLastBuildIsWritten() throws IOException {
         ProcessorTestHarness h = project(LEDGER);
         h.compileReturningDiagnostics();
@@ -212,6 +260,16 @@ class SourceDigestEarlyExitEndToEndTest {
             sb.append(d.getKind()).append(": ").append(d.getMessage(Locale.ROOT)).append('\n');
         }
         return sb.toString();
+    }
+
+    /** Every VibeTags warning, in order, with the file and line javac anchored it to. */
+    private static List<String> vibeTagsWarnings(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
+        return diagnostics.stream()
+            .filter(d -> d.getKind() == Diagnostic.Kind.WARNING || d.getKind() == Diagnostic.Kind.MANDATORY_WARNING)
+            .filter(d -> d.getMessage(Locale.ROOT).contains("VibeTags") || d.getMessage(Locale.ROOT).contains("@AI"))
+            .map(d -> d.getKind() + " " + (d.getSource() == null ? "-" : d.getSource().getName())
+                + ":" + d.getLineNumber() + ":" + d.getColumnNumber() + " " + d.getMessage(Locale.ROOT))
+            .toList();
     }
 
     private static long warnings(List<Diagnostic<? extends JavaFileObject>> diagnostics) {

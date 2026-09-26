@@ -716,7 +716,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * The end of a compilation whose first round matched the last clean run (#834). The warnings
      * that read files rather than the collected model still run, as they do after the fingerprint
      * short-circuit, because the file they warn about may still be on disk.
+     *
+     * <p>That includes the ones {@code generateFiles()} raises ahead of its own short-circuit:
+     * the deprecated-output warning from {@code resolveActiveServices} and the two module-identity
+     * warnings. Every no-op rebuild printed those before the early exit existed, and skipping them
+     * made a {@code -Werror} build fail cold and pass on the rebuild (#859).
      */
+    @AIContext(
+        focus = "Every diagnostic generateFiles() raises before its fingerprint short-circuit must also be raised here",
+        avoids = "Adding one there without a call here: a no-op rebuild that takes the early exit drops it in silence (#859)")
     private void finishUnchangedBuild() {
         Messager messager = processingEnv.getMessager();
         String digest = sourceDigest;
@@ -732,6 +740,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             VibeTagsLogger.shutdown(root);
             return;
         }
+        // In generateFiles()' order, ahead of the note that says the rest was skipped.
+        ServiceRegistry.resolveActiveServices(messager, ServiceRegistry.buildServiceFileMap(root));
+        warnIfModuleUnidentifiable(compilationRoot(), currentRegionId());
         messager.printMessage(Diagnostic.Kind.NOTE,
             "VibeTags: inputs unchanged since last run (source digest " + shortDigest
                 + "), skipping collection, content build and writes.");
