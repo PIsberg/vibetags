@@ -386,12 +386,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
             ? new TransitiveManifestReader(log) : null;
-        // One parse for both questions: each used to read every sidecar in full, and a sidecar
-        // holds every rendered body of its module, so on a large module that was most of what a
-        // no-op rebuild still allocated (#834).
-        List<ModuleSidecar> onRecord = ModuleSidecar.peekAll(this.root, null);
-        this.testingFallbackPending = ModuleSidecar.holdsWithdrawnTestingFallback(this.root, onRecord);
-        this.guardrailsOnRecord = ModuleSidecar.anyRecordsElements(onRecord);
+        // One streaming pass for both questions, keeping no rendered body: a sidecar holds every
+        // body of its module, and parsing them in full here was most of what a no-op rebuild
+        // still allocated (#834, #858).
+        ModuleSidecar.OnRecord onRecord = ModuleSidecar.onRecord(this.root);
+        this.testingFallbackPending = onRecord.withdrawnTestingFallback();
+        this.guardrailsOnRecord = onRecord.recordsElements();
         this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
         Path dirOption = pathOption(options, "vibetags.manifest.dir", messager);
         this.manifestDir = dirOption != null ? this.root.resolve(dirOption).normalize() : null;
