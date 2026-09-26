@@ -94,21 +94,6 @@
     <Bug pattern="DB_DUPLICATE_SWITCH_CLAUSES"/>
   </Match>
 
-  <!-- NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE: generateFiles() is @AILocked — step order
-       is load-bearing and must not be changed. serviceFiles.get(service) is guaranteed
-       non-null by construction: effectiveContent keys are a strict subset of serviceFiles
-       keys (activeServices is derived from serviceFiles by checking file existence).
-       The synthetic lambda$generateFiles$0 method is part of the same locked logic. -->
-  <Match>
-    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
-    <Method name="generateFiles"/>
-    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
-  </Match>
-  <Match>
-    <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
-    <Method name="lambda$generateFiles$0"/>
-    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
-  </Match>
 
   <!-- ==================================================================================
        Find Security Bugs (findsecbugs-plugin). Escaped interpolation is NOT excluded here:
