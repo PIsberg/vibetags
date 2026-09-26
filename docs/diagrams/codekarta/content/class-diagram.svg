@@ -1394,7 +1394,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="1256.0" y="666.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedDir(Platform): String</text>
   <text x="1256.0" y="681.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedSuffix(Platform): String</text>
   <text x="1256.0" y="696.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedPath(Platform, TaggedElem…</text>
-  <text x="1256.0" y="711.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+5 more)</text>
+  <text x="1256.0" y="711.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+7 more)</text>
 </g>
 <g id="GuardrailInstructionBlock">
   <title>GuardrailInstructionBlock [CLASS]</title>
