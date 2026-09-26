@@ -1,12 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
-import com.sun.source.util.Trees;
 import org.jspecify.annotations.Nullable;
 
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.Element;
-import javax.lang.model.util.Elements;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -14,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
@@ -47,70 +41,6 @@ public final class SourceDigest {
     }
 
     /**
-     * The files behind this round's root elements, or {@code null} when the round cannot be vouched
-     * for: no root elements, no compiler API that maps an element to its file, or any root whose
-     * source is not a file on disk (an in-memory source cannot be read back next time).
-     */
-    public static @Nullable List<Path> sourceFilesOf(ProcessingEnvironment env, RoundEnvironment roundEnv) {
-        Trees trees = SourcePositionResolver.treesFor(env);
-        Elements elements;
-        try {
-            elements = env.getElementUtils();
-        } catch (RuntimeException | Error unavailable) {
-            elements = null;
-        }
-        if (trees == null && elements == null) {
-            return null;
-        }
-        Set<? extends Element> roots = roundEnv.getRootElements();
-        if (roots.isEmpty()) {
-            return null;
-        }
-        Set<Path> files = new LinkedHashSet<>();
-        for (Element element : roots) {
-            Path file = fileOf(trees, elements, element);
-            if (file == null) {
-                return null;
-            }
-            files.add(file);
-        }
-        return new ArrayList<>(files);
-    }
-
-    /**
-     * The file {@code element} was declared in, asking {@link Elements#getFileObjectOf} first. That
-     * is the reverse of {@code ModuleRootResolver.sourceFileOf}'s order, on purpose: this runs on
-     * every root element of every eligible build, cold ones included, and javac answers it from the
-     * class symbol where the Tree API builds a path for each element. Measured, the Tree API lookup
-     * was most of what the digest allocated.
-     */
-    private static @Nullable Path fileOf(@Nullable Trees trees, @Nullable Elements elements, Element element) {
-        if (elements != null) {
-            try {
-                javax.tools.JavaFileObject object = elements.getFileObjectOf(element);
-                if (object != null) {
-                    return onDisk(object.toUri());
-                }
-            } catch (RuntimeException | Error unavailable) {
-                // An older or other compiler: fall back to the shared resolution below.
-            }
-        }
-        return ModuleRootResolver.sourceFileOf(trees, null, element);
-    }
-
-    /** A {@code file:} URI as a path, or {@code null} for an in-memory source. */
-    private static @Nullable Path onDisk(java.net.URI uri) {
-        if (!"file".equals(uri.getScheme())) {
-            return null;
-        }
-        try {
-            return Path.of(uri);
-        } catch (RuntimeException unusable) {
-            return null;
-        }
-    }
-
-    /**
      * The key, or {@code null} when an input could not be read, in which case the round must not
      * be skipped.
      *
@@ -120,7 +50,7 @@ public final class SourceDigest {
      * @param testRound       whether this round compiles test sources
      * @param root            the VibeTags root
      * @param compilationRoot the compiling module's root; the same as {@code root} for one module
-     * @param sourceFiles     the round's source files, in any order
+     * @param sourceFiles     the round's source files, in any order; {@link RoundSources#filesIfComplete}
      */
     public static @Nullable String of(String version, Map<String, String> options, String moduleId,
                                       boolean testRound, Path root, Path compilationRoot,
@@ -154,7 +84,7 @@ public final class SourceDigest {
         }
         Map<String, Path> sources = new TreeMap<>();
         for (Path file : sourceFiles) {
-            // Files from sourceFilesOf are already absolute and normalized.
+            // Files from RoundSources are already absolute and normalized.
             sources.put(name(base, file.isAbsolute() ? file : file.toAbsolutePath().normalize()), file);
         }
         for (Map.Entry<String, Path> source : sources.entrySet()) {

@@ -1,12 +1,9 @@
 package se.deversity.vibetags.processor.internal;
 
-import com.sun.source.util.Trees;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AILocked;
 
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.util.Elements;
@@ -104,16 +101,10 @@ public final class PartialRoundDetector {
      * processor must be: once processing is over an element can no longer be mapped back to its
      * compilation unit.
      */
-    public void observe(ProcessingEnvironment env, RoundEnvironment roundEnv) {
-        Trees trees = SourcePositionResolver.treesFor(env);
-        Elements elements;
-        try {
-            elements = env.getElementUtils();
-        } catch (RuntimeException | Error unavailable) {
-            elements = null;
-        }
-        for (Element element : roundEnv.getRootElements()) {
-            Path file = ModuleRootResolver.sourceFileOf(trees, elements, element);
+    public void observe(RoundSources sources) {
+        Elements elements = sources.elements();
+        for (Element element : sources.roots()) {
+            Path file = sources.fileOf(element);
             if (file == null) {
                 continue; // in-memory source, or a compiler that exposes neither API
             }

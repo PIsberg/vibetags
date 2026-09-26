@@ -29,6 +29,7 @@ import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ElementExclusions;
 import se.deversity.vibetags.processor.internal.PartialRoundDetector;
+import se.deversity.vibetags.processor.internal.RoundSources;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
 import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.GuardrailModel;
@@ -526,8 +527,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
             // Resolve the module root from this round's sources (first success wins). Must run
             // while rounds are live — the Tree API cannot map elements back to source afterwards.
+            // Each root element mapped to its file once, for all three readers below (#857).
+            RoundSources sources = RoundSources.of(processingEnv, roundEnv);
             if (moduleIdentity == null) {
-                moduleIdentity = ModuleRootResolver.fromRound(processingEnv, roundEnv);
+                moduleIdentity = ModuleRootResolver.fromRound(sources);
                 // Set on every attempt, not only a successful one, so a reused processor whose
                 // identity did not resolve this time cannot keep the last compilation's answer.
                 collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());
@@ -536,13 +539,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
             // The early exit (#834), decided on the first round that has sources, before the
             // collection walk: hashing the round's sources costs about 3 % of the walk it can skip.
-            if (skipThisRound(roundEnv)) {
+            if (skipThisRound(roundEnv, sources)) {
                 return false;
             }
 
             // Which sources this round was handed, for the same reason and under the same
             // constraint: an element can only be mapped back to its file while its round is live.
-            sourceLedger.observe(processingEnv, roundEnv);
+            sourceLedger.observe(sources);
 
             // The annotation types javac reports as present this round. Lets AnnotationCollector
             // skip getElementsAnnotatedWith() for the ~33 annotation types that are absent (each
@@ -658,7 +661,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * Whether this live round is skipped because the first round with sources matched the last
      * clean run (#834). Decides on that first round and remembers the answer for the rest.
      */
-    private boolean skipThisRound(RoundEnvironment roundEnv) {
+    private boolean skipThisRound(RoundEnvironment roundEnv, RoundSources sources) {
         if (roundEnv.getRootElements().isEmpty()) {
             return sourcesUnchanged.get();
         }
@@ -670,7 +673,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return true;
         }
         if (round == 1 && earlyExitAllowed()) {
-            String digest = digestOf(roundEnv);
+            String digest = digestOf(sources);
             sourceDigest = digest;
             sourcesUnchanged.set(digest != null && inputsUnchangedSince(digest));
         }
@@ -678,8 +681,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /** This round's {@link SourceDigest}, or {@code null} when the round cannot be vouched for. */
-    private @Nullable String digestOf(RoundEnvironment roundEnv) {
-        List<Path> files = SourceDigest.sourceFilesOf(processingEnv, roundEnv);
+    private @Nullable String digestOf(RoundSources sources) {
+        List<Path> files = sources.filesIfComplete();
         if (files == null) {
             return null;
         }
