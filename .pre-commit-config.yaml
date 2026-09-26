@@ -19,3 +19,15 @@ repos:
     exclude: ^(docs/diagrams/codekarta/|load-tests/results/)
   - id: trailing-whitespace
     exclude: ^(docs/diagrams/codekarta/|load-tests/results/)
+# The CI self-check, run before the commit instead of after the push. A line added above a
+# locked method moves its recorded range in .vibetags-locks, and a regeneration can move the
+# line counts README.md quotes; both used to surface only as a red build.yml job. 30-45 s,
+# so it runs only when a commit touches what feeds the generated files (and on --all-files).
+- repo: local
+  hooks:
+  - id: vibetags-self-check
+    name: VibeTags' own guardrails are current (tools/self-check.sh)
+    entry: tools/self-check.sh
+    language: script
+    pass_filenames: false
+    files: ^(vibetags/src/|vibetags-annotations/src/|vibetags/pom\.xml$|README\.md$)

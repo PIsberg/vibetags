@@ -15,6 +15,7 @@ apart. "manual" means nothing runs it automatically; it exists for a human (or t
 | `set-version.sh` | Rewrites every file that states the release version, in one pass | `release` skill | `ReleaseScriptCoverageTest`, `BuildVersionParityTest` |
 | `consumer-sweep.sh` | Builds every downstream consumer against a given VibeTags version | `release` and `consumer-regression-suite` skills | `ReleaseConsumerSweepGateTest` |
 | `bump-dependencies.sh` | Reports third-party pins that have a newer stable release (read-only) | `bump-dependencies` skill | manual |
+| `self-check.sh` | Regenerates this repo's own guardrail files from a clean-clone state and fails if anything moved, including the README line counts | self-check step in `build.yml`, `vibetags-self-check` pre-commit hook | `SelfCheckGateWiringTest` |
 | `ecj-degradation-check.sh` | Compiles `examples/basic` under javac and ECJ, compares the locks output | `ecj` job in `build.yml` | that CI job |
 
 ## Suite health
