@@ -42,6 +42,13 @@ and no rule file moves.
   build. On the load tests' own fixture, where every 14th class warns, a no-op rebuild at 1000 classes
   allocates 18.8 MB of VibeTags' own against 56.9 MB. A build that printed more than 1000 diagnostics,
   or whose method-body scanner warned, still walks next time.
+- **Each source file is resolved once per round, and `init()` no longer parses sidecar bodies
+  (#857, #858).** Module identity, the early exit's digest and the partial-round ledger each mapped
+  every root element to its source file themselves; they now share one mapping. `init()` asked
+  whether any sidecar records elements, or holds a withdrawn `TESTING.md` fallback, by parsing every
+  sidecar in full; it now streams each past and keeps no rendered body. At 1000 annotated classes on
+  files on disk, a cold build allocates 49.7 MB of VibeTags' own against 54.6 MB, and a no-op rebuild
+  17.3 MB against 18.5 MB (the two changes measured together).
 - **The scoped-rules index names each package once (#839).** A collapsed aggregate's index wrote one
   line per element and repeated the element's whole package on every one. It now writes one line
   per package, `<elements in="com.example.a">Alpha, Beta</elements>` in `CLAUDE.md` and
@@ -79,6 +86,12 @@ and no rule file moves.
 
 ### Fixed
 
+- **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
+  (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
+  rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build
+  with a deprecated opt-in failed cold and passed every rebuild after it. The orphan warnings
+  (`.aiexclude` and the other ignore files missing) are raised after that short-circuit and have
+  never been repeated by a rebuild; that is #860, and waits on the lock on `generateFiles()`.
 - **`vibetags init` marks deprecated outputs (#854).** `init --list` showed the 22 deprecated
   outputs exactly like current ones, and `--platforms gemini` created `gemini_instructions.md`
   without a word, while the processor already leaves them out of its own suggestions. Each is now
