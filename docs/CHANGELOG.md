@@ -90,8 +90,15 @@ and no rule file moves.
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build
   with a deprecated opt-in failed cold and passed every rebuild after it. The orphan warnings
-  (`.aiexclude` and the other ignore files missing) are raised after that short-circuit and have
-  never been repeated by a rebuild; that is #860, and waits on the lock on `generateFiles()`.
+  are raised after that short-circuit; see #860 below.
+- **Every rebuild repeats the orphan warnings (#860).** "@AILocked used but .aiexclude (hard
+  guardrail) is missing" and the `.cursorignore`, `.qwenignore` and `.aiexclude` variants for
+  `@AIIgnore` were printed by a cold build and by no rebuild: `generateFiles()` raises them after
+  its fingerprint short-circuit, and the early exit (#834) never reaches it. A `-Werror` build
+  failed cold and passed after. A build stopped by the fingerprint now runs the check once
+  generation returns, and the warnings are recorded with validation's, so an early-exited build
+  replays them (#856). The locked method is unchanged. The replay prints them in the first round,
+  ahead of the deprecated-output warning a cold build prints first; the count and text match.
 - **`vibetags init` marks deprecated outputs (#854).** `init --list` showed the 22 deprecated
   outputs exactly like current ones, and `--platforms gemini` created `gemini_instructions.md`
   without a word, while the processor already leaves them out of its own suggestions. Each is now

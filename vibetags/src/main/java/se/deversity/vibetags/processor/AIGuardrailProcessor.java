@@ -244,6 +244,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     static final int MAX_REPLAYED_DIAGNOSTICS = 1000;
 
+    /** Set once the orphan check ran this build, wherever it was called from (#860). */
+    private final AtomicBoolean orphansChecked = new AtomicBoolean();
+
     /** Explicit module name from {@code -Avibetags.module}; overrides the resolved identity. */
     private @Nullable String moduleIdOverride;
 
@@ -529,6 +532,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                         // leave the last run's digest vouching for files it may have half-written.
                         forgetSourceDigest();
                         generateFiles();
+                        // Before the record, so an early-exited rebuild replays what it printed.
+                        checkOrphansIfShortCircuited();
                         recordSourceDigest();
                     }
                     // After, not beside the checks above: a rule file's length is a property of
@@ -2291,8 +2296,28 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         AnnotationValidator.validate(messager, roundEnv, processingEnv, presentFqns, roundIndex);
     }
 
+    /**
+     * Warns about an annotation whose ignore file is missing, and records that it ran and what it
+     * printed (#860). The locked {@code generateFiles()} calls this after its fingerprint
+     * short-circuit, so {@code process()} calls it again when that call did not happen, and the
+     * warnings join validation's in the record an early-exited build replays. The replay is exact
+     * because the source digest covers every opt-in file, so the active services cannot have moved.
+     */
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
-        OrphanWarner.warnAboutOrphans(messager, log, active, hasLocked, hasIgnore, hasAudit);
+        orphansChecked.set(true);
+        OrphanWarner.warnAboutOrphans(new CountingMessager(messager), log, active, hasLocked, hasIgnore, hasAudit);
+    }
+
+    /** The orphan check for a generation that returned at its fingerprint short-circuit (#860). */
+    private void checkOrphansIfShortCircuited() {
+        if (orphansChecked.get()) {
+            return;
+        }
+        // The quiet overload: the loud one already printed its notes and deprecation warnings at
+        // the top of generateFiles(), and it returns the same set.
+        checkOrphanedAnnotations(processingEnv.getMessager(),
+            ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)),
+            !collector.locked().isEmpty(), !collector.ignore().isEmpty(), !collector.audit().isEmpty());
     }
 
     /**
