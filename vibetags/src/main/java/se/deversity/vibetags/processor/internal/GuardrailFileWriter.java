@@ -299,6 +299,18 @@ public final class GuardrailFileWriter {
         if (start >= 0) {
             int end = indexOfMarkerLine(existing, markerEnd, start + markerStart.length());
             if (end == -1) {
+                // The repair below throws away everything after START, which is right only when that
+                // text is a generated block that lost its END. A real block opens with the generated
+                // header; without it the START line is stray (an example the developer pasted, a
+                // leftover) and the text after it is theirs, so nothing is rewritten (#865).
+                if (!hasLegacyHeaderLine(existing.substring(start + markerStart.length()))) {
+                    messager.printMessage(Diagnostic.Kind.WARNING,
+                        "VibeTags: " + path + " has a " + markerStart + " line with no " + markerEnd
+                            + " after it, and the text after it is not a generated block, so the file was left"
+                            + " untouched. Remove the stray start line, or add the end line after the generated block.");
+                    debug("write.skip file={} reason=stray-start-marker", fileName);
+                    return false;
+                }
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
                 String before = withRenderedFrontMatter(
@@ -307,6 +319,11 @@ public final class GuardrailFileWriter {
                 if (contentMatches(existing, finalContent)) {
                     debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
                     noteCurrent(filePath, content);
+                    return false;
+                }
+                // As on every other path: a round with no annotations does not replace a block.
+                if (!hasNewRules) {
+                    skipUpdateMsg(fileName);
                     return false;
                 }
                 debug("write.update file={} reason=malformed-markers-repaired newBytes={}",

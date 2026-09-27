@@ -99,6 +99,13 @@ and no rule file moves.
 
 ### Fixed
 
+- **A stray START marker no longer costs the text after it (#865).** A marker file with a START
+  line and no END was repaired by deleting everything after START, on the assumption that it was a
+  generated block that lost its END. When the START line was an example the developer pasted, their
+  text after it went with it. The repair now runs only when the generated header follows START;
+  otherwise the file is left untouched with a WARNING saying how to fix it. The repair also no
+  longer runs for a round with no annotations, the one case every other path refuses.
+  `GuardrailFileRecoveryEndToEndTest` and `GuardrailFileWriterEdgeCaseTest` pin both.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region

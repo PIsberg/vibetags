@@ -51,6 +51,8 @@ Generated content is written between markers so a file can hold hand-authored co
 - **Hash comments** (.cursorrules, .aiexclude, ignore files): `# VIBETAGS-START` / `# VIBETAGS-END`
 - **No markers** (JSON/TOML config files): complete overwrite
 
+A START marker with no END is repaired only when the generated header follows it, so the text after it is a generated block that lost its END; otherwise the START line is stray, the text after it is hand-written, and the file is left untouched with a WARNING (`GuardrailFileRecoveryEndToEndTest`, #865). A round with no annotations does not repair it either.
+
 A UTF-8 byte order mark an editor saved at the start of a marker file is looked past when the
 markers are searched for and written back in place (`GuardrailFileRecoveryEndToEndTest`).
 - **Markers inside string values** (`greptile.json` only): the file is the user's, and VibeTags owns a delimited span inside its `instructions` and `ignorePatterns` strings. The span is spliced into the original text, so every byte outside it survives; a document that cannot be merged without guessing is left untouched with a warning (`JsonValueSpans`, `JsonValueSpansTest`, `GreptileEndToEndTest`)
