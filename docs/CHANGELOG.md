@@ -99,6 +99,68 @@ and no rule file moves.
 
 ### Fixed
 
+- **A stray START marker no longer costs the text after it (#865).** A marker file with a START
+  line and no END was repaired by deleting everything after START, on the assumption that it was a
+  generated block that lost its END. When the START line was an example the developer pasted, their
+  text after it went with it. The repair now runs only when the generated header follows START;
+  otherwise the file is left untouched with a WARNING saying how to fix it. The repair also no
+  longer runs for a round with no annotations, the one case every other path refuses.
+  `GuardrailFileRecoveryEndToEndTest` and `GuardrailFileWriterEdgeCaseTest` pin both.
+- **A rule file that could not be deleted is retried by the next build (#867).** An orphaned rule
+  file the sweep failed to remove (held open by an editor or indexer on Windows, a read-only
+  directory) kept its write-cache entry, so every later unchanged build short-circuited and the
+  stale guardrail stayed until a source changed; the failure was only a DEBUG line. It is now a
+  WARNING, and the failure is recorded as a cache row that matches no file, as a failed write is.
+  `GuardrailLifecycleEndToEndTest` and `GuardrailFileWriterEdgeCaseTest` pin it.
+- **A nested module's sidecar written on Windows is no longer pruned by a Linux build of the same
+  tree (#868).** `modulePath` was `Path.toString()`, so Windows wrote `services\api`, which Linux
+  resolves as one filename, reads as a departed module, and prunes with its rule-file stems. It is
+  now written with forward slashes and read that way whatever wrote it. Sidecars are gitignored:
+  a Windows build rewrites each nested module's sidecar once, which costs one full reactor round
+  and changes no committed file. `MultiModuleAggregationTest` pins both sides.
+- **Two modules that resolve to the same module id are reported (#869).** Ids are sanitised paths,
+  so `a/b` and `a_b` (or a module named `core__test` beside `core`'s test source set) shared one
+  sidecar and one region, and each one's build silently replaced the other's guardrails; the only
+  warning blamed the compilation's sources. A WARNING now names both modules and the
+  `-Avibetags.module` override that separates them. Ids are unchanged: renaming them would move
+  every committed region marker. `MultiModuleAggregationTest` pins it.
+- **Editing an annotation's array or moving text between two of its members is no longer skipped
+  as unchanged (#870).** The fingerprint extractors joined array members with a bare `,` and fields
+  with `|`, so `forbidden = {"a,b"}` hashed the same as `forbidden = {"a", "b"}`, and
+  `@AITemporary(expiresOn = "x|y", reason = "z")` the same as `("x", "y|z")`, while each pair
+  renders differently. Every member is now length-prefixed. Upgrading costs every consumer one
+  `.vibetags-cache` miss (one full generation, no committed file changes);
+  `BuildFingerprintPinnedValueTest`'s literals moved for this reason. `BuildFingerprintUnitTest`
+  pins both cases.
+- **An updated file keeps its POSIX permissions (#871).** Every write goes through a temp file moved
+  over the target, and `Files.createTempFile` creates it `rw-------`, so a `rw-r--r--` file (an
+  `llms.txt` a web server reads) became readable by its owner only on its first update, with
+  nothing in a diff; files VibeTags created were `rw-------` too. A rewrite now keeps the file's
+  own mode, and a new file gets what a default umask gives: owner read/write, read for group and
+  others where the directory grants it, never write for them. No change on Windows.
+  `GuardrailFileWriterCoverageTest` pins both on POSIX.
+- **A changed project name is not lost to a generation that fails (#872).** The processor flushes
+  the write cache before it generates, and that flush wrote the new run context (the
+  `-Avibetags.project` and module override) next to the fingerprint recorded under the old one. If
+  generation then failed, the next build found both matching and skipped, and `llms.txt` kept the
+  old title. A fingerprint recorded under another context is now dropped as soon as the new one is
+  bound. `WriteCacheTest` pins it.
+- **A stale file under Maven's `target/generated-sources` no longer blocks an annotation removal
+  (#866).** The partial-round guard leaves generated-source trees out of its walk, but matched only
+  Gradle's `generated` segment. Under Maven, a generated file an earlier run left on disk that names
+  the annotations made every round look partial once an annotation was genuinely removed, so the
+  removal was refused until a clean build. `generated-sources` and `generated-test-sources` are
+  now left out too. `PartialRoundGuardrailLossTest` pins both layouts.
+- **Stripping an orphaned rule file no longer deletes a hand note that contains `---` (#875).** The
+  sweep decided "only front matter is left" by searching for the next `---` anywhere, so a file
+  whose remaining hand-written text was `---` then `Owner: payments team ---` read as an empty
+  header and was deleted. It now uses the writer's front-matter parser, whose fences own their
+  lines, and rewrites a kept file atomically like every other write. `CleanupGranularDirectoryTest`
+  pins it.
+- **A module directory whose name ends in a space is no longer read as departed (#874).** The
+  staleness checks read a sidecar's module path trimmed, while the full read keeps it as written, so
+  on Linux a live `core ` module read as stale on every build (the short-circuit never fired) and
+  its rule-file stems were reported as departed. `MultiModuleAggregationTest` pins it on Linux.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region

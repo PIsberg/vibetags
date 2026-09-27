@@ -314,6 +314,76 @@ class GuardrailLifecycleEndToEndTest {
     // Helpers
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // A removal that fails
+    // -----------------------------------------------------------------------
+
+    /**
+     * A rule file whose annotation was removed is deleted by the orphan sweep. When that delete
+     * failed (a file an editor or indexer holds open on Windows, a read-only directory), the
+     * failure was swallowed and the file's cache entry still vouched for it, so every later
+     * unchanged build short-circuited and the stale rule file stayed for good (#867).
+     */
+    @Test
+    void aRuleFileThatCouldNotBeDeleted_isRemovedByTheNextBuild(@TempDir Path dir) throws Exception {
+        Files.createDirectories(dir.resolve(".claude/rules"));
+        Files.createFile(dir.resolve("CLAUDE.md"));
+        compileContexts(dir, true);
+        Path beta = dir.resolve(".claude/rules/com-example-Beta.md");
+        assertTrue(Files.exists(beta), "precondition: Beta's rule file was written");
+
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        try (AutoCloseable held = blockDeletion(beta)) {
+            compileContexts(dir, false);
+        }
+        assertTrue(Files.exists(beta), "precondition: the blocked delete failed");
+
+        compileContexts(dir, false);
+
+        assertFalse(Files.exists(beta),
+            "the removal failed once; the next build must retry it rather than trust the file");
+    }
+
+    private static void compileContexts(Path dir, boolean betaAnnotated) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.addSource("com.example.Alpha", "package com.example;\n"
+            + "import se.deversity.vibetags.annotations.AIContext;\n"
+            + "@AIContext(focus = \"alpha-focus\")\n"
+            + "public class Alpha {}\n");
+        h.addSource("com.example.Beta", betaAnnotated
+            ? "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AIContext;\n"
+                + "@AIContext(focus = \"beta-focus\")\n"
+                + "public class Beta {}\n"
+            : "package com.example;\npublic class Beta {}\n");
+        h.compile();
+        VibeTagsLogger.shutdown();
+    }
+
+    /**
+     * Makes deleting {@code file} fail until the result is closed: an open handle on Windows,
+     * where {@code FileInputStream} does not share delete access, and a read-only parent directory
+     * elsewhere. Skips the test where neither blocks it (a POSIX run as root).
+     */
+    static AutoCloseable blockDeletion(Path file) throws IOException {
+        if (System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win")) {
+            return new java.io.FileInputStream(file.toFile());
+        }
+        Path parent = file.getParent();
+        java.util.Set<java.nio.file.attribute.PosixFilePermission> before = Files.getPosixFilePermissions(parent);
+        Files.setPosixFilePermissions(parent, java.nio.file.attribute.PosixFilePermissions.fromString("r-xr-xr-x"));
+        AutoCloseable restore = () -> Files.setPosixFilePermissions(parent, before);
+        if (Files.isWritable(parent)) {
+            try {
+                restore.close();
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+            org.junit.jupiter.api.Assumptions.abort("a read-only directory does not block deletion here");
+        }
+        return restore;
+    }
+
     private static ProcessorTestHarness optedIn(Path dir, String... optIns) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
         for (String optIn : optIns) {

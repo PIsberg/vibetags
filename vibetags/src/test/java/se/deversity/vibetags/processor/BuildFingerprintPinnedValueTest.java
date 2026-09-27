@@ -42,6 +42,9 @@ import static org.mockito.Mockito.when;
  * <p>A red result is not always a defect. Adding annotation 45 appends a section to the hashed
  * string, which is a real one-off invalidation of every consumer's cache and changes these
  * literals. Update them then, knowingly. Any other cause is a fingerprint change nobody decided on.
+ *
+ * <p>They moved once deliberately since: #870 made the extractors length-prefix their members,
+ * because a bare separator let one array member containing a comma hash the same as two members.
  */
 @DisplayName("The fingerprint of a fixed model is pinned to a literal")
 class BuildFingerprintPinnedValueTest {
@@ -54,7 +57,7 @@ class BuildFingerprintPinnedValueTest {
     @Test
     @DisplayName("every annotation, every member populated")
     void populatedModelHashesToThePinnedValue() {
-        assertEquals("3f87a281",
+        assertEquals("2d8031f9",
             BuildFingerprint.compute(collectorOf(GuardrailModels::element), SERVICES, VERSION),
             "the hashed string changed for a build whose annotations did not. Every consumer's "
                 + "cached fingerprint is invalidated by whatever did this; see the class comment "
@@ -64,7 +67,7 @@ class BuildFingerprintPinnedValueTest {
     @Test
     @DisplayName("every annotation, optional members left at their defaults")
     void bareModelHashesToThePinnedValue() {
-        assertEquals("d5e1d517",
+        assertEquals("74603c6a",
             BuildFingerprint.compute(collectorOf(GuardrailModels::elementWithMembersUnset), SERVICES, VERSION),
             "the hashed string changed for a build of bare annotations. See the class comment");
     }

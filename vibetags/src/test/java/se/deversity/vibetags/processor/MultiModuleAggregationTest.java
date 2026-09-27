@@ -73,6 +73,105 @@ class MultiModuleAggregationTest {
         assertNotNull(loaded.get(0).getBodies().get("claude"));
     }
 
+    /**
+     * A sidecar is read by every other module's compile, possibly on another OS: a checkout built
+     * from Windows and from WSL, a Docker bind mount. {@code Path.toString()} on Windows wrote the
+     * nested module's path with backslashes, which a Linux read resolves as one filename, finds
+     * missing, and prunes (#868). The path is recorded with forward slashes, which both read.
+     */
+    @Test
+    void nestedModule_recordsItsPathWithForwardSlashes(@TempDir Path root) throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve("services/api"));
+        Files.writeString(root.resolve("services/api/pom.xml"), "<project><artifactId>api</artifactId></project>");
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        h.writeSourceFile("services/api/src/main/java/com/example/Api.java",
+            "package com.example;\nimport se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"api\")\npublic class Api {}\n");
+        h.compile();
+        VibeTagsLogger.shutdown();
+
+        String sidecar = Files.readString(root.resolve(".vibetags-mod-services_api"));
+        assertTrue(sidecar.lines().anyMatch("modulePath=services/api"::equals),
+            "the module path must be recorded with forward slashes:\n" + sidecar);
+    }
+
+    /**
+     * Module ids are sanitised paths, so {@code a/b} and {@code a_b} both become {@code a_b}: one
+     * sidecar file, one region, and each module's build replaced the other's guardrails in the
+     * shared files with nothing said (#869). Renaming ids would move every committed region marker
+     * for a collision few reactors have, so the collision is reported instead, with the override
+     * that resolves it.
+     */
+    @Test
+    void twoModulesWithTheSameId_areReported(@TempDir Path root) throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compileLockedModule(root, "a/b", "com.example.ab.Nested");
+        List<String> warnings = compileLockedModule(root, "a_b", "com.example.ab.Flat");
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("a/b") && w.contains("a_b")
+                && w.contains("vibetags.module")),
+            "two live modules sharing a sidecar must be named, with the fix; warnings were: " + warnings);
+    }
+
+    private static List<String> compileLockedModule(Path root, String module, String fqn) throws IOException {
+        Files.createDirectories(root.resolve(module));
+        Files.writeString(root.resolve(module).resolve("pom.xml"), "<project><artifactId>x</artifactId></project>");
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
+        String type = fqn.substring(fqn.lastIndexOf('.') + 1);
+        h.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java",
+            "package " + pkg + ";\nimport se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"" + type + "\")\npublic class " + type + " {}\n");
+        List<String> warnings = h.compileReturningDiagnostics().stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.WARNING)
+            .map(d -> d.getMessage(null))
+            .toList();
+        VibeTagsLogger.shutdown();
+        return warnings;
+    }
+
+    /** The read side of the same case, for sidecars already written with backslashes (#868). */
+    @Test
+    void sidecarWithABackslashedModulePath_isReadAsLive(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("services/api"));
+        ModuleSidecar api = new ModuleSidecar("services_api", "services/api");
+        api.putBody("claude", "api body");
+        api.save(root);
+        Path file = root.resolve(".vibetags-mod-services_api");
+        Files.writeString(file, Files.readString(file).replace("modulePath=services/api", "modulePath=services\\api"));
+
+        List<ModuleSidecar> loaded = ModuleSidecar.readAll(root);
+
+        assertEquals(1, loaded.size(), "a live module written from Windows must not be pruned as gone");
+        assertTrue(Files.exists(file));
+    }
+
+    /**
+     * The staleness checks read a sidecar's module path through a header reader that trimmed it,
+     * while the full load keeps it as written. For a module directory whose name ends in a space
+     * (legal on Linux) the full read found the module live and the header read found it gone:
+     * {@code anyStale} was true on every build, so the short-circuit never fired, and the live
+     * module's rule-file stems were reported as departed (#874). Linux only: Windows cannot name
+     * such a directory.
+     */
+    @Test
+    void aModuleDirectoryWhoseNameEndsInASpace_isNotStale(@TempDir Path root) throws IOException {
+        org.junit.jupiter.api.Assumptions.assumeFalse(
+            System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win"),
+            "Windows cannot create a directory whose name ends in a space");
+        Files.createDirectories(root.resolve("core "));
+        ModuleSidecar core = new ModuleSidecar("core_", "core ");
+        core.putBody("claude", "core body");
+        core.setGranularStems(java.util.Set.of("com-example-Foo"));
+        core.save(root);
+        assertEquals(1, ModuleSidecar.peekAll(root).size(), "precondition: the full read finds the module live");
+
+        assertFalse(ModuleSidecar.anyStale(root), "a live module must not read as stale");
+        assertTrue(ModuleSidecar.staleGranularStems(root).isEmpty(),
+            "a live module's rule files must not be reported as departed");
+    }
+
     @Test
     void sidecar_stalePruned_whenModuleDirMissing(@TempDir Path root) throws IOException {
         // Write a sidecar claiming to be from "ghost-module" (directory doesn't exist)

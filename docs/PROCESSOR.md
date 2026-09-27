@@ -348,7 +348,9 @@ A write that fails (a file locked by an editor, a full disk, an existing file th
 prints one WARNING and the build still counts as clean. `WriteCache.recordFailure` stores a row
 with the `failed--` sentinel and a size of `-1`, which matches no file, so the next build's
 `allCachedFilesStable()` fails and neither the early exit nor the fingerprint short-circuit skips
-the retry. A successful write replaces the row. Removing the row would not do: an absent entry
+the retry. A successful write replaces the row. A removal that fails (an orphaned rule file held
+open by an editor on Windows, a read-only directory) is recorded the same way and warned about, so
+the next build retries it instead of trusting the stale file (#867). Removing the row would not do: an absent entry
 counts as stable, and a file the writer never managed to write has none.
 
 ## Check mode (CI drift enforcement)

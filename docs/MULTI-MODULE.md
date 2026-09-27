@@ -23,6 +23,9 @@ on the same set. `.vibetags-mirror` on its own still creates no region — mirro
 files, and they never reach the aggregate.
 
 A sidecar is `key=value` lines with Base64 bodies, opened by `# version=3` and closed by `# end`.
+Its `modulePath` is written with forward slashes on every OS, and a backslashed one written by an
+older processor on Windows is read the same way, so a checkout built from both Windows and Linux
+(WSL, a bind mount) does not prune a live module as departed (#868).
 The trailer is what says the file is whole: `Base64.getDecoder()` accepts most cut-off input, so
 without it a sidecar truncated by a torn write still decoded — to a body that was never saved, which
 the merge rendered into every sibling's aggregate (issue #553). A sidecar with no trailer is treated
@@ -98,6 +101,14 @@ Module identity comes from `ModuleRootResolver` — it walks up from the compile
 nearest `pom.xml`/`build.gradle(.kts)` — **not** from the JVM working directory, which is the reactor
 root for every module of an in-process Maven/Gradle build (issue #278: last-writer-wins). Sidecars
 are format v2; v1 files carry the broken working-directory identity and are pruned on read.
+
+The id is the module's path with every character outside `[a-zA-Z0-9._-]` turned into `_`, so two
+directories can share one: `a/b` and `a_b`, or a module directory named `core__test` and module
+`core`'s test source set (`__` separates the source set). Two modules with one id share one sidecar
+and one region, and each one's build replaces the other's guardrails. The build names both modules
+in a WARNING when it sees the sidecar under its id was written by another module whose directory
+still exists (#869); `-Avibetags.module=<name>` on one of them gives it an id of its own. Ids are
+not renamed automatically, because every committed region marker would move with them.
 
 The resolver reaches the source file two ways, and needs both. javac's Tree API is the fast path but
 `Trees.instance` accepts only javac's own `ProcessingEnvironment`; Gradle wraps it for incremental

@@ -96,6 +96,28 @@ class CleanupGranularDirectoryTest {
             "File reduced to front-matter-only after marker stripping is treated as boilerplate and deleted");
     }
 
+    /**
+     * "Only front matter is left" was decided by finding the next {@code ---} anywhere after the
+     * first, so a {@code ---} inside the developer's prose read as the closing fence and their
+     * note counted as an empty header: the file was deleted (#875). A front matter block is fenced
+     * by lines of their own, which is what the writer's front-matter parser already requires.
+     */
+    @Test
+    void preservesFile_whenTheRemainderOnlyLooksLikeFrontMatterToASubstringSearch(@TempDir Path dir)
+            throws IOException {
+        Path file = dir.resolve("com-example-Quux.md");
+        Files.writeString(file,
+            "---\nOwner: payments team ---\n\n<!-- VIBETAGS-START -->\nold rule\n<!-- VIBETAGS-END -->\n",
+            StandardCharsets.UTF_8);
+
+        newFileWriter().cleanupGranularDirectory(dir, ".md");
+
+        assertTrue(Files.exists(file), "a hand-written note is not front matter and must not be deleted");
+        String result = Files.readString(file, StandardCharsets.UTF_8);
+        assertTrue(result.contains("Owner: payments team ---"), result);
+        assertFalse(result.contains("old rule"), "the generated block must still be stripped");
+    }
+
     @Test
     void respectsExcludeQNames_doesNotTouchListedFiles(@TempDir Path dir) throws IOException {
         Path keep = dir.resolve("com-example-Keep.md");

@@ -156,6 +156,49 @@ class PartialRoundGuardrailLossTest {
         VibeTagsLogger.shutdown();
     }
 
+    /**
+     * A generated-source tree is an output, and a file left in it by an earlier run is not evidence
+     * about what this round was shown. Walked as a source root, a stale generated file that names
+     * the annotations made every round partial once an annotation was genuinely removed, so the
+     * removal was refused until a clean build (#866). Gradle's {@code build/generated} was left out
+     * by its {@code generated} segment; Maven's {@code target/generated-sources} was not.
+     */
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+        "target/generated-sources/annotations", "build/generated/sources/annotationProcessor/java/main"})
+    void aStaleGeneratedSourceDoesNotMakeARoundPartial(String generatedRoot, @TempDir Path root) throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Path alpha = write(root, "Alpha", "alpha-routing");
+        Path gen = writeUnder(root, generatedRoot, "Gen", "@AIContext(focus = " + Q + "generated" + Q + ")");
+        compileAll(root, alpha, gen);
+        assertTrue(Files.exists(rule(root, "Alpha")), "precondition: Alpha's rule file was written");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        // The annotation is removed for real. The generator no longer emits Gen, but a build that
+        // does not clean leaves the old file on disk; it emits Gen2 instead.
+        Files.writeString(alpha, "package com.example;" + NL + "public class Alpha {}" + NL, StandardCharsets.UTF_8);
+        Path gen2 = writeUnder(root, generatedRoot, "Gen2", "");
+        compileAll(root, alpha, gen2);
+
+        assertFalse(Files.exists(rule(root, "Alpha")),
+            "Alpha's annotation was removed from a source this round compiled; a stale file under "
+                + generatedRoot + " must not make the round partial and keep the rule file");
+    }
+
+    private static Path writeUnder(Path root, String sourceRoot, String type, String annotation) throws IOException {
+        Path p = root.resolve(sourceRoot + "/com/example/" + type + ".java");
+        Files.createDirectories(p.getParent());
+        Files.writeString(p,
+            "package com.example;" + NL
+                + "import se.deversity.vibetags.annotations.AIContext;" + NL
+                + annotation + NL
+                + "public class " + type + " {}" + NL,
+            StandardCharsets.UTF_8);
+        return p;
+    }
+
     /** The aggregate is the other half of the loss: 27 lines and a whole block went with it. */
     @Test
     void aPartialRoundDoesNotStripTheAggregateBackToWhatItSaw(@TempDir Path root) throws Exception {

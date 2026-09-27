@@ -281,8 +281,19 @@ public final class ModuleSidecar {
      */
     public ModuleSidecar(String moduleId, String modulePath, String regionId) {
         this.moduleId = moduleId;
-        this.modulePath = modulePath;
+        this.modulePath = portable(modulePath);
         this.regionId = regionId;
+    }
+
+    /**
+     * {@code modulePath} with forward slashes. A sidecar is read by every module's compile, and
+     * one checkout can be built from Windows and from Linux (WSL, a bind mount): a path Windows
+     * wrote with backslashes resolves on Linux as a single filename, reads as a departed module,
+     * and is pruned with its stems (#868). Forward slashes resolve on both, so they are what is
+     * written, and a backslashed value already on disk is read the same way.
+     */
+    private static String portable(String modulePath) {
+        return modulePath.replace('\\', '/');
     }
 
     /** Stores the rendered body for {@code serviceKey} if non-blank. */
@@ -2757,6 +2768,29 @@ public final class ModuleSidecar {
         }
     }
 
+    /**
+     * The module path of another live module whose sidecar sits under {@code moduleId}, or
+     * {@code null} when there is none.
+     *
+     * <p>Module ids are sanitised paths, so {@code a/b} and {@code a_b} share one, and so do a
+     * module directory named {@code core__test} and module {@code core}'s test source set. Two
+     * modules with one id share one sidecar file and one region, and each build of one replaces
+     * the other's guardrails in the shared files (#869). The sidecar on disk names the module that
+     * last wrote it; a different path whose directory still exists is the other module. A path
+     * that is gone is a renamed or removed module, which is no collision.
+     */
+    public static @Nullable String collidingModulePath(Path root, String moduleId, String modulePath) {
+        ModuleSidecar existing = loadFor(root, moduleId);
+        if (existing == null) {
+            return null;
+        }
+        String theirs = normalizeModulePath(existing.modulePath);
+        if (theirs.isEmpty() || theirs.equals(normalizeModulePath(modulePath)) || !moduleDirExists(root, theirs)) {
+            return null;
+        }
+        return theirs;
+    }
+
     /** {@link #moduleDir} as the yes/no question the callers that do not log ask. */
     private static boolean moduleDirExists(Path root, String modulePath) {
         return moduleDir(root, modulePath) == ModuleDir.EXISTS;
@@ -2829,7 +2863,9 @@ public final class ModuleSidecar {
         try (java.io.BufferedReader reader = Files.newBufferedReader(sidecar, StandardCharsets.UTF_8)) {
             for (String line = reader.readLine(); line != null; line = reader.readLine()) {
                 if (line.startsWith(KEY_MODULE_PATH + "=")) {
-                    return line.substring(KEY_MODULE_PATH.length() + 1).trim();
+                    // As load() reads it: readLine already drops the line ending, and a trim here
+                    // turned a live module directory "core " into a missing "core" (#874).
+                    return portable(line.substring(KEY_MODULE_PATH.length() + 1));
                 }
                 // The headers are written first; once a body line appears there is no header left.
                 if (line.indexOf('=') > 0 && !line.startsWith("#") && !line.startsWith(KEY_MODULE_ID)

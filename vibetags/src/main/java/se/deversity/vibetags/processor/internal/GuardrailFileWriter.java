@@ -19,6 +19,8 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -299,6 +301,18 @@ public final class GuardrailFileWriter {
         if (start >= 0) {
             int end = indexOfMarkerLine(existing, markerEnd, start + markerStart.length());
             if (end == -1) {
+                // The repair below throws away everything after START, which is right only when that
+                // text is a generated block that lost its END. A real block opens with the generated
+                // header; without it the START line is stray (an example the developer pasted, a
+                // leftover) and the text after it is theirs, so nothing is rewritten (#865).
+                if (!hasLegacyHeaderLine(existing.substring(start + markerStart.length()))) {
+                    messager.printMessage(Diagnostic.Kind.WARNING,
+                        "VibeTags: " + path + " has a " + markerStart + " line with no " + markerEnd
+                            + " after it, and the text after it is not a generated block, so the file was left"
+                            + " untouched. Remove the stray start line, or add the end line after the generated block.");
+                    debug("write.skip file={} reason=stray-start-marker", fileName);
+                    return false;
+                }
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
                 String before = withRenderedFrontMatter(
@@ -307,6 +321,11 @@ public final class GuardrailFileWriter {
                 if (contentMatches(existing, finalContent)) {
                     debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
                     noteCurrent(filePath, content);
+                    return false;
+                }
+                // As on every other path: a round with no annotations does not replace a block.
+                if (!hasNewRules) {
+                    skipUpdateMsg(fileName);
                     return false;
                 }
                 debug("write.update file={} reason=malformed-markers-repaired newBytes={}",
@@ -840,10 +859,26 @@ public final class GuardrailFileWriter {
             }
             return true;
         } catch (IOException e) {
-            // A file we cannot delete stays; the next build tries again. Failing a compile over
-            // housekeeping would be the larger bug.
-            debug("delete.skip file={} reason=io-error detail={}", fileName(file), e.toString());
+            // A file we cannot delete stays; failing a compile over housekeeping would be the
+            // larger bug. The next build retries it, which is what recordFailedRemoval is for.
+            recordFailedRemoval(file, e);
             return false;
+        }
+    }
+
+    /**
+     * A file this writer set out to remove and could not (held open by an editor or indexer on
+     * Windows, a read-only directory). Its cache entry still described the file as the writer left
+     * it, so the next unchanged build found every cached file stable and short-circuited, and the
+     * stale file was never removed (#867). The entry is replaced by one that matches no file, so
+     * the next build regenerates and retries, and the failure is said once, as a failed write is.
+     */
+    private void recordFailedRemoval(Path file, IOException e) {
+        debug("delete.skip file={} reason=io-error detail={}", fileName(file), e.toString());
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: Failed to delete " + file + " - " + e.getMessage() + "; the next build retries it.");
+        if (writeCache != null) {
+            writeCache.recordFailure(file);
         }
     }
 
@@ -885,14 +920,12 @@ public final class GuardrailFileWriter {
 
             if (updated) {
                 content = content.trim();
-                boolean isEmptyOrBoilerplate = content.isEmpty();
-                if (!isEmptyOrBoilerplate && content.startsWith("---")) {
-                    int secondTriple = content.indexOf("---", 3);
-                    if (secondTriple != -1) {
-                        String afterFrontMatter = content.substring(secondTriple + 3).trim();
-                        isEmptyOrBoilerplate = afterFrontMatter.isEmpty();
-                    }
-                }
+                // Only a header fenced by lines of its own counts: a substring search for the next
+                // "---" read one inside the developer's prose as the closing fence, and deleted a
+                // file whose only content was their note (#875).
+                int headerEnd = frontMatterEnd(content);
+                boolean isEmptyOrBoilerplate = content.isEmpty()
+                    || (headerEnd != -1 && content.substring(headerEnd).isBlank());
 
                 if (dryRun) {
                     dryRunChanges.add(p.toString());
@@ -900,10 +933,17 @@ public final class GuardrailFileWriter {
                 }
 
                 if (isEmptyOrBoilerplate) {
-                    Files.delete(p);
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        recordFailedRemoval(p, e);
+                        return false;
+                    }
                     if (writeCache != null) writeCache.invalidate(p);
                 } else {
-                    Files.writeString(p, content + "\n", StandardCharsets.UTF_8);
+                    // Atomic, like every other write: an in-place write interrupted halfway left
+                    // the developer's remaining text truncated (#875).
+                    writeContentWithBackup(p, content + "\n");
                     if (writeCache != null) writeCache.invalidate(p);
                 }
                 return true;
@@ -949,6 +989,7 @@ public final class GuardrailFileWriter {
             : Files.createTempFile(".vibetags-", ".tmp");
         try {
             Files.writeString(tmp, finalContent, StandardCharsets.UTF_8);
+            applyPermissions(tmp, filePath);
             try {
                 Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (java.nio.file.AtomicMoveNotSupportedException e) {
@@ -958,6 +999,43 @@ public final class GuardrailFileWriter {
             // A successful move consumes tmp; clean it up only if a failure left it behind.
             Files.deleteIfExists(tmp);
         }
+    }
+
+    /**
+     * Gives the staging file the mode the target should end up with. {@code Files.createTempFile}
+     * creates it {@code rw-------} on POSIX and the move carries that over the target, so a file
+     * another user reads ({@code llms.txt} behind a web server) became unreadable to it on its first
+     * update, with nothing in a diff (#871). A rewrite keeps the file's own mode; a new file gets
+     * what a default umask gives it: owner read/write, and read for group and others where the
+     * directory grants it, never write. No-op where the file system has no POSIX permissions, and
+     * on any failure to read them.
+     */
+    private static void applyPermissions(Path tmp, Path target) {
+        try {
+            Set<PosixFilePermission> mode;
+            if (Files.exists(target)) {
+                mode = Files.getPosixFilePermissions(target);
+            } else {
+                Path parent = target.toAbsolutePath().getParent();
+                if (parent == null) {
+                    return;
+                }
+                // What a default umask (022) gives: owner read/write, read for group and others
+                // only where the directory grants it, never write or execute for them. Copying the
+                // directory's write bits made a file in a shared directory writable by other users,
+                // who could then put rules into a file every agent session loads.
+                String dir = PosixFilePermissions.toString(Files.getPosixFilePermissions(parent));
+                mode = PosixFilePermissions.fromString("rw-" + readOnly(dir.charAt(3)) + readOnly(dir.charAt(6)));
+            }
+            Files.setPosixFilePermissions(tmp, mode);
+        } catch (UnsupportedOperationException | IOException notPosix) {
+            // Not a POSIX file system, or the mode is unreadable: keep what createTempFile gave.
+        }
+    }
+
+    /** {@code r--} when a class's read bit is set in a mode string, {@code ---} otherwise. */
+    private static String readOnly(char read) {
+        return read == 'r' ? "r--" : "---";
     }
 
     private void skipUpdateMsg(String fileName) {
