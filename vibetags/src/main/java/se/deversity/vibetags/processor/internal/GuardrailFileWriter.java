@@ -678,7 +678,8 @@ public final class GuardrailFileWriter {
      */
     private static boolean insideFence(String content, int index) {
         String open = null;
-        for (int start = 0; start < index; ) {
+        int start = 0;
+        while (start < index) {
             int end = content.indexOf('\n', start);
             if (end < 0) {
                 end = content.length();
