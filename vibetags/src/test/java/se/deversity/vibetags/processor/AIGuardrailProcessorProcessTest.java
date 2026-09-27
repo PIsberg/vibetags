@@ -1005,6 +1005,21 @@ class AIGuardrailProcessorProcessTest {
         assertEquals(content, Files.readString(file), "File content should be unchanged");
     }
 
+    /**
+     * A processor instance is initialised once. {@code AbstractProcessor.init} throws on a second
+     * call, and this processor's {@code init} calls it first, so per-compilation state held in
+     * fields can never leak from one compilation into the next through a reused instance. #873
+     * suspected {@code orphansChecked} and {@code mixedRoundWarned} of exactly that; this is why
+     * they cannot, and the day a change stops delegating to {@code super.init} this goes red.
+     */
+    @Test
+    void aProcessorInstanceCannotBeInitialisedTwice() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(mockEnv(noopMessager()));
+
+        assertThrows(IllegalStateException.class, () -> processor.init(mockEnv(noopMessager())));
+    }
+
     // -----------------------------------------------------------------------
     // writeFileIfChanged — malformed markers and legacy-file paths
     // -----------------------------------------------------------------------

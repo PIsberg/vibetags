@@ -421,7 +421,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             : java.util.Arrays.stream(packagesOption.split(",")).map(String::strip)
                 .filter(s -> !s.isEmpty()).toList();
 
-        // Reset for potential reuse (tests reuse the processor instance via init).
+        // Defensive only: super.init above throws on a second call, so an instance is never
+        // re-initialised (AIGuardrailProcessorProcessTest pins it) and no field outlives it (#873).
         this.processed.set(false);
         this.moduleIdentity = null;
         this.sourceLedger = new PartialRoundDetector();
