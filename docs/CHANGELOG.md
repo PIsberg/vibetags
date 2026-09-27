@@ -144,6 +144,13 @@ and no rule file moves.
   question was always yes, and the excluded source (a `<excludes>` entry) answered the other half:
   every main round was refused as partial and an edited annotation was never generated. A sidecar
   of another source set is no longer consulted. `PartialRoundGuardrailLossTest` pins it.
+- **Check mode no longer reports drift on the compile that retires its own ancestor region.** A
+  build that files itself under the root identity (#621's fallback) saves a sidecar that the prune
+  retires at once, so generation changes nothing. Check mode simulated that save by adding the
+  in-memory sidecar after the on-disk ones had been pruned, merged every shared element twice, and
+  failed with "2 guardrail file(s) are out of date". It now prunes the same list generation does.
+  `FresherAncestorRegionDuplicateTest` pins it, and its `@AIContract` fixture, which named an
+  attribute the annotation does not have and so never compiled, now uses `reason`.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

@@ -349,7 +349,9 @@ counts as stable, and a file the writer never managed to write has none.
 
 With `-Avibetags.check=true`, `process()` routes to `checkFiles()` instead of `generateFiles()`. It
 runs the same service resolution, content build, and multi-module merge (the module's sidecar save is
-simulated in memory), but uses a dry-run `GuardrailFileWriter` (`dryRun=true` constructor flag) that
+simulated in memory: `ModuleSidecar.peekAllAfterSaving` puts the in-memory sidecar in place of its
+file, with the mtime the save would leave, before superseded regions are dropped, as generation's
+save-then-`readAll` does), but uses a dry-run `GuardrailFileWriter` (`dryRun=true` constructor flag) that
 records every would-be write/scrub/delete into `dryRunChanges()` instead of touching disk. Any
 recorded path fails the build via `Messager.ERROR`. The fingerprint short-circuit and write cache are
 bypassed so the verdict never depends on cache state; internal failures in check mode fail closed

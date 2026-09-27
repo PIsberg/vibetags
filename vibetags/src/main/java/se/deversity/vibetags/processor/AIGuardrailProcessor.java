@@ -1831,30 +1831,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // peekAll, not readAll: check mode writes nothing, and that includes the pruning of a
         // stale sidecar — which is the only record of a departed module's rule files, and belongs
         // to the real build that acts on it.
-        List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.peekAll(root));
         // Same two conditions as generateFiles() (#781): an emptied source set replaces its sidecar.
         final Set<String> retiredServices = servicesRetiredByAnEmptiedRound(moduleId);
-        if (collector.anyAnnotationsFound() || !retiredServices.isEmpty()) {
-            boolean replaced = false;
-            for (int i = 0; i < allSidecars.size(); i++) {
-                if (allSidecars.get(i).getModuleId().equals(moduleId)) {
-                    allSidecars.set(i, mySidecar);
-                    replaced = true;
-                    break;
-                }
-            }
-            if (!replaced) {
-                // readAll() returns sidecars sorted by filename (= moduleId); keep that ordering
-                // so the merged sub-marker sequence matches what generateFiles() would produce.
-                allSidecars.add(mySidecar);
-                allSidecars.sort(java.util.Comparator.comparing(ModuleSidecar::getModuleId));
-            }
-            // The substituted sidecar is fresh out of memory and carries none of the lean-index
-            // state readAll() derives from disk, so re-derive it for the whole list. Without this
-            // a lean indexed reactor embeds this module's body where generation would have linked
-            // it, and check mode reports drift that a real compile would never produce.
-            ModuleSidecar.applyRootIndexModeTo(root, allSidecars);
-        }
+        // When generation would save this module's sidecar, read the set as generation reads it
+        // after that save: the in-memory sidecar in place of its file, before superseded regions
+        // are dropped, so a region the save would retire is retired here too. It also re-derives
+        // the lean-index and TESTING.md state readAll() derives from disk, which the in-memory
+        // sidecar does not carry.
+        List<ModuleSidecar> allSidecars = collector.anyAnnotationsFound() || !retiredServices.isEmpty()
+            ? ModuleSidecar.peekAllAfterSaving(root, mySidecar, VibeTagsLogger.currentFor(root))
+            : new java.util.ArrayList<>(ModuleSidecar.peekAll(root));
         // A check verdict is only trustworthy if it reproduces generation exactly, which is why
         // this calls the same function generateFiles() calls rather than mirroring its body.
         final Map<String, String> effectiveContent =

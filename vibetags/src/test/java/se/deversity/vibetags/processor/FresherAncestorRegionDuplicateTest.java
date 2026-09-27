@@ -65,7 +65,7 @@ class FresherAncestorRegionDuplicateTest {
 
         import se.deversity.vibetags.annotations.AIContract;
 
-        @AIContract(invariants = "Ledger entries are append-only")
+        @AIContract(reason = "Ledger entries are append-only")
         public class LedgerWriter {
         }
         """;
@@ -141,6 +141,16 @@ class FresherAncestorRegionDuplicateTest {
         Files.setLastModifiedTime(nested, FileTime.fromMillis(now - 60_000L));
     }
 
+    private java.util.Map<String, String> generatedRuleFiles() throws IOException {
+        java.util.Map<String, String> files = new java.util.TreeMap<>();
+        try (java.util.stream.Stream<Path> list = Files.list(repoRoot.resolve(".gemini/rules"))) {
+            for (Path p : (Iterable<Path>) list::iterator) {
+                files.put(p.getFileName().toString(), Files.readString(p, StandardCharsets.UTF_8));
+            }
+        }
+        return files;
+    }
+
     private String ruleFile(String stem) throws IOException {
         Path p = repoRoot.resolve(".gemini/rules/" + stem + ".md");
         assertTrue(Files.exists(p), "expected generated rule file " + p);
@@ -193,6 +203,44 @@ class FresherAncestorRegionDuplicateTest {
         String validator = ruleFile("com-example-billing-InvoiceValidator");
         assertFalse(validator.contains("VIBETAGS-MODULE"),
             "one module leaves one region, so no sub-markers belong in the file:\n" + validator);
+    }
+
+    /**
+     * Check mode has to reach generation's verdict for the same compile (#766). Generation saves the
+     * ancestor sidecar and then prunes the fresh set, so the ancestor is retired and nothing moves.
+     * Check mode simulated that save in memory but pruned only the sidecars on disk, where the
+     * ancestor was already gone, and then appended the simulated one unpruned: every shared element
+     * merged twice, reported as drift on a tree generation would leave untouched.
+     */
+    @Test
+    @DisplayName("check mode on the fallback compile agrees with what generation leaves")
+    void checkModeOnTheFallbackCompileReportsNoDrift() throws IOException {
+        buildFresherAncestorOverNestedModule();
+        VibeTagsLogger.shutdown();
+        java.util.Map<String, String> before = generatedRuleFiles();
+        ProcessorTestHarness generation = new ProcessorTestHarness(repoRoot, false);
+        generation.writeSourceFile("app/src/main/java/com/example/billing/InvoiceValidator.java",
+            VALIDATOR_SOURCE);
+        generation.writeSourceFile("app/src/main/java/com/example/billing/LedgerWriter.java",
+            WRITER_SOURCE);
+        generation.compile();
+        VibeTagsLogger.shutdown();
+        assertEquals(before, generatedRuleFiles(),
+            "precondition: generation of this compile retires its ancestor sidecar and moves no file");
+
+        ProcessorTestHarness again = new ProcessorTestHarness(repoRoot, false);
+        again.writeSourceFile("app/src/main/java/com/example/billing/InvoiceValidator.java",
+            VALIDATOR_SOURCE);
+        again.writeSourceFile("app/src/main/java/com/example/billing/LedgerWriter.java",
+            WRITER_SOURCE);
+        java.util.List<String> errors = again.compileReturningDiagnostics("-Avibetags.check=true").stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.ERROR)
+            .map(d -> d.getMessage(null))
+            .toList();
+
+        assertTrue(errors.isEmpty(),
+            "generation of this same compile retires its own ancestor sidecar and changes no file; "
+                + "check mode must not report drift: " + errors);
     }
 
     /**
