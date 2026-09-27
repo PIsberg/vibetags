@@ -23,6 +23,9 @@ on the same set. `.vibetags-mirror` on its own still creates no region — mirro
 files, and they never reach the aggregate.
 
 A sidecar is `key=value` lines with Base64 bodies, opened by `# version=3` and closed by `# end`.
+Its `modulePath` is written with forward slashes on every OS, and a backslashed one written by an
+older processor on Windows is read the same way, so a checkout built from both Windows and Linux
+(WSL, a bind mount) does not prune a live module as departed (#868).
 The trailer is what says the file is whole: `Base64.getDecoder()` accepts most cut-off input, so
 without it a sidecar truncated by a torn write still decoded — to a body that was never saved, which
 the merge rendered into every sibling's aggregate (issue #553). A sidecar with no trailer is treated

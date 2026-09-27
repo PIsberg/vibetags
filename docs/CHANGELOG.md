@@ -112,6 +112,12 @@ and no rule file moves.
   stale guardrail stayed until a source changed; the failure was only a DEBUG line. It is now a
   WARNING, and the failure is recorded as a cache row that matches no file, as a failed write is.
   `GuardrailLifecycleEndToEndTest` and `GuardrailFileWriterEdgeCaseTest` pin it.
+- **A nested module's sidecar written on Windows is no longer pruned by a Linux build of the same
+  tree (#868).** `modulePath` was `Path.toString()`, so Windows wrote `services\api`, which Linux
+  resolves as one filename, reads as a departed module, and prunes with its rule-file stems. It is
+  now written with forward slashes and read that way whatever wrote it. Sidecars are gitignored:
+  a Windows build rewrites each nested module's sidecar once, which costs one full reactor round
+  and changes no committed file. `MultiModuleAggregationTest` pins both sides.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region

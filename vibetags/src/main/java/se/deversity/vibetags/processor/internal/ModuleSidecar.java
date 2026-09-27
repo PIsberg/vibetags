@@ -281,8 +281,19 @@ public final class ModuleSidecar {
      */
     public ModuleSidecar(String moduleId, String modulePath, String regionId) {
         this.moduleId = moduleId;
-        this.modulePath = modulePath;
+        this.modulePath = portable(modulePath);
         this.regionId = regionId;
+    }
+
+    /**
+     * {@code modulePath} with forward slashes. A sidecar is read by every module's compile, and
+     * one checkout can be built from Windows and from Linux (WSL, a bind mount): a path Windows
+     * wrote with backslashes resolves on Linux as a single filename, reads as a departed module,
+     * and is pruned with its stems (#868). Forward slashes resolve on both, so they are what is
+     * written, and a backslashed value already on disk is read the same way.
+     */
+    private static String portable(String modulePath) {
+        return modulePath.replace('\\', '/');
     }
 
     /** Stores the rendered body for {@code serviceKey} if non-blank. */
@@ -2829,7 +2840,7 @@ public final class ModuleSidecar {
         try (java.io.BufferedReader reader = Files.newBufferedReader(sidecar, StandardCharsets.UTF_8)) {
             for (String line = reader.readLine(); line != null; line = reader.readLine()) {
                 if (line.startsWith(KEY_MODULE_PATH + "=")) {
-                    return line.substring(KEY_MODULE_PATH.length() + 1).trim();
+                    return portable(line.substring(KEY_MODULE_PATH.length() + 1).trim());
                 }
                 // The headers are written first; once a body line appears there is no header left.
                 if (line.indexOf('=') > 0 && !line.startsWith("#") && !line.startsWith(KEY_MODULE_ID)
