@@ -144,6 +144,12 @@ and no rule file moves.
   generation then failed, the next build found both matching and skipped, and `llms.txt` kept the
   old title. A fingerprint recorded under another context is now dropped as soon as the new one is
   bound. `WriteCacheTest` pins it.
+- **A stale file under Maven's `target/generated-sources` no longer blocks an annotation removal
+  (#866).** The partial-round guard leaves generated-source trees out of its walk, but matched only
+  Gradle's `generated` segment. Under Maven, a generated file an earlier run left on disk that names
+  the annotations made every round look partial once an annotation was genuinely removed, so the
+  removal was refused until a clean build. `generated-sources` and `generated-test-sources` are
+  now left out too. `PartialRoundGuardrailLossTest` pins both layouts.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region

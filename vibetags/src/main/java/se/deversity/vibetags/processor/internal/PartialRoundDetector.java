@@ -84,10 +84,12 @@ public final class PartialRoundDetector {
     private static final int MAX_WALK_DEPTH = 32;
 
     /**
-     * Path segment naming a build's own generated-source trees ({@code target/generated-sources},
-     * {@code build/generated/sources/...}). Never walked: those files are outputs, they are not
-     * committed, and another processor's leftovers from an earlier run are not evidence about
-     * what this one was shown.
+     * Path segment naming a build's own generated-source trees: Gradle's {@code build/generated/...}
+     * is this exactly, Maven's {@code target/generated-sources} and {@code generated-test-sources}
+     * begin with it and a dash. Never walked: those files are outputs, they are not committed, and
+     * another processor's leftovers from an earlier run are not evidence about what this one was
+     * shown. Matching Gradle's name alone left Maven's walked, and a stale generated file there
+     * refused every round after a real annotation removal until a clean build (#866).
      */
     private static final String GENERATED_SEGMENT = "generated";
 
@@ -305,13 +307,14 @@ public final class PartialRoundDetector {
     private static boolean isGeneratedTree(Path root, Path sourceRoot) {
         Path base = root.toAbsolutePath().normalize();
         Path tree = sourceRoot.toAbsolutePath().normalize();
-        return containsSegment(tree.startsWith(base) ? base.relativize(tree) : tree, GENERATED_SEGMENT);
+        return containsGeneratedSegment(tree.startsWith(base) ? base.relativize(tree) : tree);
     }
 
-    /** True when any segment of {@code path} equals {@code segment}. */
-    private static boolean containsSegment(Path path, String segment) {
+    /** True when a segment of {@code path} is {@link #GENERATED_SEGMENT}, alone or before a dash. */
+    private static boolean containsGeneratedSegment(Path path) {
         for (Path name : path) {
-            if (segment.equals(name.toString())) {
+            String segment = name.toString();
+            if (segment.equals(GENERATED_SEGMENT) || segment.startsWith(GENERATED_SEGMENT + "-")) {
                 return true;
             }
         }
