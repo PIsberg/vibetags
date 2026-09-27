@@ -136,7 +136,8 @@ and no rule file moves.
   over the target, and `Files.createTempFile` creates it `rw-------`, so a `rw-r--r--` file (an
   `llms.txt` a web server reads) became readable by its owner only on its first update, with
   nothing in a diff; files VibeTags created were `rw-------` too. A rewrite now keeps the file's
-  own mode, and a new file gets its directory's without the execute bits. No change on Windows.
+  own mode, and a new file gets what a default umask gives: owner read/write, read for group and
+  others where the directory grants it, never write for them. No change on Windows.
   `GuardrailFileWriterCoverageTest` pins both on POSIX.
 - **A changed project name is not lost to a generation that fails (#872).** The processor flushes
   the write cache before it generates, and that flush wrote the new run context (the

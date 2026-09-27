@@ -54,7 +54,8 @@ Generated content is written between markers so a file can hold hand-authored co
 A START marker with no END is repaired only when the generated header follows it, so the text after it is a generated block that lost its END; otherwise the START line is stray, the text after it is hand-written, and the file is left untouched with a WARNING (`GuardrailFileRecoveryEndToEndTest`, #865). A round with no annotations does not repair it either.
 
 Every write replaces the file atomically through a temp file, and keeps the file's POSIX
-permissions (a new file gets its directory's without the execute bits, #871).
+permissions (a new file gets owner read/write and, where the directory grants it, read for group
+and others, never write for them, #871).
 
 A UTF-8 byte order mark an editor saved at the start of a marker file is looked past when the
 markers are searched for and written back in place (`GuardrailFileRecoveryEndToEndTest`).

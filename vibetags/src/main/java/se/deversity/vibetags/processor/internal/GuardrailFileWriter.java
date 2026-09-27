@@ -20,9 +20,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -1006,8 +1006,9 @@ public final class GuardrailFileWriter {
      * creates it {@code rw-------} on POSIX and the move carries that over the target, so a file
      * another user reads ({@code llms.txt} behind a web server) became unreadable to it on its first
      * update, with nothing in a diff (#871). A rewrite keeps the file's own mode; a new file gets
-     * its directory's without the execute bits, which is what a default umask gives it. No-op
-     * where the file system has no POSIX permissions, and on any failure to read them.
+     * what a default umask gives it: owner read/write, and read for group and others where the
+     * directory grants it, never write. No-op where the file system has no POSIX permissions, and
+     * on any failure to read them.
      */
     private static void applyPermissions(Path tmp, Path target) {
         try {
@@ -1019,17 +1020,22 @@ public final class GuardrailFileWriter {
                 if (parent == null) {
                     return;
                 }
-                mode = EnumSet.noneOf(PosixFilePermission.class);
-                mode.addAll(Files.getPosixFilePermissions(parent));
-                mode.removeAll(EnumSet.of(PosixFilePermission.OWNER_EXECUTE,
-                    PosixFilePermission.GROUP_EXECUTE, PosixFilePermission.OTHERS_EXECUTE));
-                mode.add(PosixFilePermission.OWNER_READ);
-                mode.add(PosixFilePermission.OWNER_WRITE);
+                // What a default umask (022) gives: owner read/write, read for group and others
+                // only where the directory grants it, never write or execute for them. Copying the
+                // directory's write bits made a file in a shared directory writable by other users,
+                // who could then put rules into a file every agent session loads.
+                String dir = PosixFilePermissions.toString(Files.getPosixFilePermissions(parent));
+                mode = PosixFilePermissions.fromString("rw-" + readOnly(dir.charAt(3)) + readOnly(dir.charAt(6)));
             }
             Files.setPosixFilePermissions(tmp, mode);
         } catch (UnsupportedOperationException | IOException notPosix) {
             // Not a POSIX file system, or the mode is unreadable: keep what createTempFile gave.
         }
+    }
+
+    /** {@code r--} when a class's read bit is set in a mode string, {@code ---} otherwise. */
+    private static String readOnly(char read) {
+        return read == 'r' ? "r--" : "---";
     }
 
     private void skipUpdateMsg(String fileName) {
