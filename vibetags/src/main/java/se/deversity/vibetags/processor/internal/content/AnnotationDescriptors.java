@@ -110,7 +110,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIContext.class, "C", FormatterRegistry.context(),
             e -> {
                 AIContext a = e.annotation(AIContext.class);
-                return a == null ? "" : a.focus() + "|" + a.avoids();
+                return a == null ? "" : members(a.focus(), a.avoids());
             },
             "Context & Focus",
             e -> {
@@ -135,8 +135,7 @@ public final class AnnotationDescriptors {
             e -> {
                 AIAudit a = e.annotation(AIAudit.class);
                 if (a == null) return "";
-                String[] checkFor = a.checkFor();
-                return String.join(",", checkFor);
+                return members((Object) a.checkFor());
             },
             "Security Audit Requirements",
             e -> {
@@ -175,7 +174,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AICore.class, "K", FormatterRegistry.core(),
             e -> {
                 AICore a = e.annotation(AICore.class);
-                return a == null ? "" : a.sensitivity() + "|" + a.note();
+                return a == null ? "" : members(a.sensitivity(), a.note());
             },
             "Core Functionality",
             e -> {
@@ -215,12 +214,9 @@ public final class AnnotationDescriptors {
             e -> {
                 AITestDriven a = e.annotation(AITestDriven.class);
                 if (a == null) return "";
-                StringBuilder attrs = new StringBuilder();
-                attrs.append(a.coverageGoal()).append('|')
-                    .append(a.testLocation()).append('|');
-                for (AITestDriven.Framework f : a.framework()) attrs.append(f.name()).append(',');
-                attrs.append('|').append(a.mockPolicy());
-                return attrs.toString();
+                StringBuilder frameworks = new StringBuilder();
+                for (AITestDriven.Framework f : a.framework()) frameworks.append(f.name()).append(',');
+                return members(a.coverageGoal(), a.testLocation(), frameworks, a.mockPolicy());
             },
             "Test-Driven Requirements",
             e -> {
@@ -241,7 +237,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIThreadSafe.class, "TS", FormatterRegistry.threadSafe(),
             e -> {
                 AIThreadSafe a = e.annotation(AIThreadSafe.class);
-                return a == null ? "" : a.strategy().name() + "|" + a.note();
+                return a == null ? "" : members(a.strategy().name(), a.note());
             },
             "Thread-Safety Guarantee",
             e -> {
@@ -267,7 +263,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIDeprecated.class, "DP", FormatterRegistry.deprecated(),
             e -> {
                 AIDeprecated a = e.annotation(AIDeprecated.class);
-                return a == null ? "" : a.replacedBy() + "|" + a.migrationGuide() + "|" + a.deadline();
+                return a == null ? "" : members(a.replacedBy(), a.migrationGuide(), a.deadline());
             },
             "Deprecated — Migrate Callers",
             e -> {
@@ -281,10 +277,7 @@ public final class AnnotationDescriptors {
             e -> {
                 AIObservability a = e.annotation(AIObservability.class);
                 if (a == null) return "";
-                return String.join(",", a.metrics()) + "|"
-                     + String.join(",", a.traces()) + "|"
-                     + String.join(",", a.logs()) + "|"
-                     + a.note();
+                return members(a.metrics(), a.traces(), a.logs(), a.note());
             },
             "Observability Instrumentation",
             e -> {
@@ -302,7 +295,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIRegulation.class, "RG", FormatterRegistry.regulation(),
             e -> {
                 AIRegulation a = e.annotation(AIRegulation.class);
-                return a == null ? "" : a.standard() + "|" + a.clause() + "|" + a.description();
+                return a == null ? "" : members(a.standard(), a.clause(), a.description());
             },
             "Regulatory Compliance",
             e -> {
@@ -338,7 +331,7 @@ public final class AnnotationDescriptors {
             e -> {
                 AIArchitecture a = e.annotation(AIArchitecture.class);
                 if (a == null) return "";
-                return a.belongsTo() + "|" + String.join(",", a.cannotReference());
+                return members(a.belongsTo(), a.cannotReference());
             },
             "Architectural Boundary Constraints",
             e -> {
@@ -431,7 +424,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIFeatureFlag.class, "FF", FormatterRegistry.featureFlag(),
             e -> {
                 AIFeatureFlag a = e.annotation(AIFeatureFlag.class);
-                return a == null ? "" : a.flag() + "|" + a.defaultValue();
+                return a == null ? "" : members(a.flag(), a.defaultValue());
             },
             "Feature Flag Gate",
             e -> {
@@ -458,7 +451,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AICallersOnly.class, "CO", FormatterRegistry.callersOnly(),
             e -> {
                 AICallersOnly a = e.annotation(AICallersOnly.class);
-                return a == null ? "" : String.join(",", a.value());
+                return a == null ? "" : members((Object) a.value());
             },
             "Access Restrictions",
             e -> {
@@ -506,7 +499,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIDomainModel.class, "DM", FormatterRegistry.domainModel(),
             e -> {
                 AIDomainModel a = e.annotation(AIDomainModel.class);
-                return a == null ? "" : String.join(",", a.allow());
+                return a == null ? "" : members((Object) a.allow());
             },
             "Domain Model Boundary",
             e -> {
@@ -593,7 +586,7 @@ public final class AnnotationDescriptors {
                 if (a == null) return "";
                 // replacement() is Class-valued, so it is unreadable here — the collector resolved it
                 // to a type name while the compiler was still in scope.
-                return a.jira() + "|" + e.typeMember("AISunset.replacement", "");
+                return members(a.jira(), e.typeMember("AISunset.replacement", ""));
             },
             "Sunset Element",
             e -> {
@@ -609,7 +602,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AITemporary.class, "TM", FormatterRegistry.temporary(),
             e -> {
                 AITemporary a = e.annotation(AITemporary.class);
-                return a == null ? "" : a.expiresOn() + "|" + a.reason();
+                return a == null ? "" : members(a.expiresOn(), a.reason());
             },
             "Temporary Workaround",
             e -> {
@@ -622,7 +615,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIGenerated.class, "GEN", FormatterRegistry.generated(),
             e -> {
                 AIGenerated a = e.annotation(AIGenerated.class);
-                return a == null ? "" : a.from() + "|" + a.regenerateWith() + "|" + a.editInstead();
+                return a == null ? "" : members(a.from(), a.regenerateWith(), a.editInstead());
             },
             "Generated — Edit The Source",
             e -> {
@@ -639,7 +632,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AILoadBearing.class, "LDB", FormatterRegistry.loadBearing(),
             e -> {
                 AILoadBearing a = e.annotation(AILoadBearing.class);
-                return a == null ? "" : a.invariant() + "|" + a.breaksIf() + "|" + a.suppressAudit();
+                return a == null ? "" : members(a.invariant(), a.breaksIf(), a.suppressAudit());
             },
             "Load-Bearing Oddity",
             e -> {
@@ -655,7 +648,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIBannedApi.class, "BA", FormatterRegistry.bannedApi(),
             e -> {
                 AIBannedApi a = e.annotation(AIBannedApi.class);
-                return a == null ? "" : String.join(",", a.forbidden()) + "|" + a.useInstead() + "|" + a.reason();
+                return a == null ? "" : members(a.forbidden(), a.useInstead(), a.reason());
             },
             "Banned APIs",
             e -> {
@@ -671,8 +664,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIThreadAffinity.class, "TA", FormatterRegistry.threadAffinity(),
             e -> {
                 AIThreadAffinity a = e.annotation(AIThreadAffinity.class);
-                return a == null ? "" : a.value().name() + "|" + a.thread() + "|" + a.marshalVia()
-                    + "|" + a.symptomIfViolated();
+                return a == null ? "" : members(a.value().name(), a.thread(), a.marshalVia(), a.symptomIfViolated());
             },
             "Thread Affinity",
             e -> {
@@ -688,7 +680,7 @@ public final class AnnotationDescriptors {
         new AnnotationDescriptor(AIKeepInSync.class, "KIS", FormatterRegistry.keepInSync(),
             e -> {
                 AIKeepInSync a = e.annotation(AIKeepInSync.class);
-                return a == null ? "" : String.join(",", a.mirrors()) + "|" + a.reason() + "|" + a.enforcedBy();
+                return a == null ? "" : members(a.mirrors(), a.reason(), a.enforcedBy());
             },
             "Mirrored — Keep In Sync",
             e -> {
@@ -705,6 +697,32 @@ public final class AnnotationDescriptors {
     );
 
     private AnnotationDescriptors() {}
+
+    /**
+     * An annotation's members as its fingerprint extractor hashes them: every value, and every
+     * member of an array value, prefixed with its length, and each array with its size. Joined with
+     * a bare separator instead, one member containing the separator hashed the same as two members,
+     * and text moved from one field to the next hashed the same as before, while both render
+     * differently; the edit was skipped as unchanged (#870).
+     */
+    static String members(Object... values) {
+        StringBuilder sb = new StringBuilder();
+        for (Object value : values) {
+            if (value instanceof String[] array) {
+                sb.append('[').append(array.length).append(']');
+                for (String member : array) {
+                    appendMember(sb, member);
+                }
+            } else {
+                appendMember(sb, String.valueOf(value));
+            }
+        }
+        return sb.toString();
+    }
+
+    private static void appendMember(StringBuilder sb, String member) {
+        sb.append(member.length()).append(':').append(member);
+    }
 
     /**
      * The {@code - **Reason**:} line for an annotation's {@code reason()} member, or nothing at all

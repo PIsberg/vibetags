@@ -124,6 +124,14 @@ and no rule file moves.
   warning blamed the compilation's sources. A WARNING now names both modules and the
   `-Avibetags.module` override that separates them. Ids are unchanged: renaming them would move
   every committed region marker. `MultiModuleAggregationTest` pins it.
+- **Editing an annotation's array or moving text between two of its members is no longer skipped
+  as unchanged (#870).** The fingerprint extractors joined array members with a bare `,` and fields
+  with `|`, so `forbidden = {"a,b"}` hashed the same as `forbidden = {"a", "b"}`, and
+  `@AITemporary(expiresOn = "x|y", reason = "z")` the same as `("x", "y|z")`, while each pair
+  renders differently. Every member is now length-prefixed. Upgrading costs every consumer one
+  `.vibetags-cache` miss (one full generation, no committed file changes);
+  `BuildFingerprintPinnedValueTest`'s literals moved for this reason. `BuildFingerprintUnitTest`
+  pins both cases.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region

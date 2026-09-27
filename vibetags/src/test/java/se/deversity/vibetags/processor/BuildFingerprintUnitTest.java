@@ -292,6 +292,44 @@ class BuildFingerprintUnitTest {
         }
     }
 
+    /**
+     * Array members were joined with a bare comma, so one member containing a comma hashed the same
+     * as two members, while the two render differently ({@code - java.util.Date,java.util.Calendar}
+     * against a list of two). The edit from one to the other was skipped as unchanged (#870).
+     */
+    @Test
+    void compute_arrayMembersAreNotConfusedWithOneMemberContainingTheSeparator() {
+        String one = fingerprintWithBannedApi(new String[]{"java.util.Date,java.util.Calendar"});
+        String two = fingerprintWithBannedApi(new String[]{"java.util.Date", "java.util.Calendar"});
+
+        assertNotEquals(one, two, "one member and two members render differently, so they must hash differently");
+    }
+
+    /** The same for text that moves across a field boundary: {@code a|b} + {@code c} against {@code a} + {@code b|c}. */
+    @Test
+    void compute_textMovingBetweenFieldsChangesTheFingerprint() {
+        assertNotEquals(fingerprintWithTemporary("2026-01-01|hotfix", "A"),
+            fingerprintWithTemporary("2026-01-01", "hotfix|A"),
+            "expiresOn and reason render in different places, so moving text between them must count");
+    }
+
+    private static String fingerprintWithBannedApi(String[] forbidden) {
+        se.deversity.vibetags.annotations.AIBannedApi ann = mock(se.deversity.vibetags.annotations.AIBannedApi.class);
+        when(ann.forbidden()).thenReturn(forbidden);
+        when(ann.useInstead()).thenReturn("java.time");
+        when(ann.reason()).thenReturn("legacy date API");
+
+        Element elem = namedElement("com.example.Clock");
+        when(elem.getAnnotation(se.deversity.vibetags.annotations.AIBannedApi.class)).thenReturn(ann);
+
+        RoundEnvironment re = mock(RoundEnvironment.class);
+        doReturn(Set.of(elem)).when(re).getElementsAnnotatedWith(se.deversity.vibetags.annotations.AIBannedApi.class);
+
+        AnnotationCollector collector = new AnnotationCollector();
+        collector.collect(re);
+        return BuildFingerprint.compute(collector, Set.of("cursor"), "1.0.0");
+    }
+
     private static String fingerprintWithTemporary(String expiresOn, String reason) {
         se.deversity.vibetags.annotations.AITemporary ann =
             mock(se.deversity.vibetags.annotations.AITemporary.class);
