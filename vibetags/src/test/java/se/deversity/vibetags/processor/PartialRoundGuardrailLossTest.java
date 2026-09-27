@@ -135,6 +135,34 @@ class PartialRoundGuardrailLossTest {
                 + "set's elements are not missing from it, they were never its to produce");
     }
 
+    /**
+     * Condition (1) consults every sidecar whose module directory contains this round's source
+     * root, and the reactor root's sidecar has the whole tree as its directory. A root that compiles
+     * sources of its own records elements no module round produces, so while that sidecar existed
+     * (1) held for every module, and a module keeping one annotated source out of its build was
+     * refused as partial on every compile, its first included. The root is an ancestor module, not
+     * a record of this one.
+     */
+    @Test
+    void theRootsOwnSidecarDoesNotMakeAModuleRoundPartial(@TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.writeString(root.resolve("pom.xml"), "<project><artifactId>parent</artifactId></project>",
+            StandardCharsets.UTF_8);
+        Path rootSource = lockedSource(root, "src/main/java/com/example/Bootstrap.java", "Bootstrap", "bootstrap");
+        compileSources(root, rootSource);
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-_root_")), "precondition: the root recorded its sidecar");
+
+        Files.createDirectories(root.resolve("core"));
+        Files.writeString(root.resolve("core/pom.xml"), "<project><artifactId>core</artifactId></project>",
+            StandardCharsets.UTF_8);
+        Path alpha = lockedSource(root, "core/src/main/java/com/example/Alpha.java", "Alpha", "alpha-lock");
+        lockedSource(root, "core/src/main/java/com/example/Excluded.java", "Excluded", "excluded"); // never compiled
+        compileSources(root, alpha);
+
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("alpha-lock"),
+            "core's round compiled every source core has on record; the root's elements are not core's");
+    }
+
     private static Path lockedSource(Path root, String relative, String type, String reason) throws IOException {
         Path p = root.resolve(relative);
         Files.createDirectories(p.getParent());

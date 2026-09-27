@@ -518,8 +518,9 @@ from that view deleted 22 committed rule files and cut a whole block out of `CLA
 
 `PartialRoundDetector` refuses that round. It calls a compilation partial only when two
 independent facts hold: a sidecar describing this compilation's own source tree and source set
-(a main round never consults the test source set's sidecar, whose elements it never produces) names
-an element the round did not produce, **and** a `.java` file under a source root the round did compile from
+(a main round never consults the test source set's sidecar, whose elements it never produces, and a
+module round never consults a parent module's, such as a reactor root that compiles sources of its
+own) names an element the round did not produce, **and** a `.java` file under a source root the round did compile from
 was not compiled and names `se.deversity.vibetags.annotations`. Either fact alone is ambiguous —
 the first is also what deleting an annotation looks like, the second is also what a source
 excluded from compilation looks like — and together they are not. When both hold, nothing is

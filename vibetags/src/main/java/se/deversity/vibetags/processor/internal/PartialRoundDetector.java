@@ -126,13 +126,15 @@ public final class PartialRoundDetector {
      * @param root             the VibeTags root, where the sidecars live
      * @param elementIdsSeen   the element ids this compilation produced
      * @param sourceSet        the source set this compilation compiles ({@code main}, {@code test}, ...)
+     * @param moduleRoot       the compiling module's root directory; the VibeTags root for one module
      */
-    public List<Path> unreadAnnotatedSources(Path root, Set<String> elementIdsSeen, String sourceSet) {
+    public List<Path> unreadAnnotatedSources(Path root, Set<String> elementIdsSeen, String sourceSet,
+                                             Path moduleRoot) {
         sourceRoots.removeIf(sourceRoot -> isGeneratedTree(root, sourceRoot));
         if (sourceRoots.isEmpty()) {
             return List.of();
         }
-        if (!anyRecordedElementMissing(root, elementIdsSeen, sourceSet)) {
+        if (!anyRecordedElementMissing(root, elementIdsSeen, sourceSet, moduleRoot)) {
             return List.of(); // condition (1): nothing went missing, so nothing needs explaining
         }
         return unreadSourcesNamingTheAnnotations();
@@ -156,9 +158,11 @@ public final class PartialRoundDetector {
      * sidecar of another source set is skipped; the source set is read off the sidecar's own ids,
      * which do not drift the way the module id can.
      */
-    private boolean anyRecordedElementMissing(Path root, Set<String> elementIdsSeen, String sourceSet) {
+    private boolean anyRecordedElementMissing(Path root, Set<String> elementIdsSeen, String sourceSet,
+                                              Path moduleRoot) {
         for (ModuleSidecar sidecar : ModuleSidecar.peekAll(root)) {
-            if (!describesThisCompilation(root, sidecar) || !ModuleSidecar.sanitizeId(sourceSet).equals(sourceSetOf(sidecar))) {
+            if (!describesThisCompilation(root, sidecar, moduleRoot)
+                    || !ModuleSidecar.sanitizeId(sourceSet).equals(sourceSetOf(sidecar))) {
                 continue;
             }
             for (String recorded : sidecar.getElementIds()) {
@@ -180,8 +184,17 @@ public final class PartialRoundDetector {
         return id.startsWith(prefix) ? id.substring(prefix.length()) : ModuleIdentity.MAIN;
     }
 
-    /** True when {@code sidecar}'s module directory contains one of this round's source roots. */
-    private boolean describesThisCompilation(Path root, ModuleSidecar sidecar) {
+    /**
+     * True when {@code sidecar}'s module directory contains one of this round's source roots and is
+     * not a module above this one. The reactor root's directory contains every module's sources, so
+     * a root that compiles sources of its own recorded elements no module round produces, and
+     * containment alone made (1) hold for every module while that sidecar existed: one annotated
+     * source kept out of any module's build then refused all of that module's rounds. A directory
+     * strictly above the compiling module's own root is a parent module, not a record of this one.
+     * The module's own directory, and any below it, still count, which is what keeps the drifted
+     * identity case in the class comment covered.
+     */
+    private boolean describesThisCompilation(Path root, ModuleSidecar sidecar, Path moduleRoot) {
         String modulePath = sidecar.getModulePath();
         Path moduleDir;
         try {
@@ -189,6 +202,10 @@ public final class PartialRoundDetector {
                 ? root.toAbsolutePath().normalize()
                 : root.resolve(modulePath).toAbsolutePath().normalize();
         } catch (RuntimeException notAPath) {
+            return false;
+        }
+        Path module = moduleRoot.toAbsolutePath().normalize();
+        if (module.startsWith(moduleDir) && !module.equals(moduleDir)) {
             return false;
         }
         for (Path sourceRoot : sourceRoots) {

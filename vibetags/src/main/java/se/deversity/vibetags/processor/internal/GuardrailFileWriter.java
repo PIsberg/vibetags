@@ -297,7 +297,7 @@ public final class GuardrailFileWriter {
 
         String wrappedBody = markerStart + "\n" + neutraliseMarkers(body.trim(), markers) + "\n" + markerEnd;
 
-        int start = indexOfMarkerLine(existing, markerStart, 0);
+        int start = indexOfBlockStart(existing, markerStart);
         if (start >= 0) {
             int end = indexOfMarkerLine(existing, markerEnd, start + markerStart.length());
             if (end == -1) {
@@ -655,6 +655,48 @@ public final class GuardrailFileWriter {
         return -1;
     }
 
+    /**
+     * {@link #indexOfMarkerLine} for the marker that opens a block, skipping any occurrence inside
+     * a fenced code block. A file that documents VibeTags can show the marker pair as an example in
+     * a {@code ```} or {@code ~~~} fence, where each marker owns its line: taken for the block, the
+     * example's contents were replaced by the generated rules on every build, rendered as code no
+     * agent reads as guardrails, and a real block below it was never refreshed.
+     */
+    static int indexOfBlockStart(String content, String marker) {
+        for (int i = indexOfMarkerLine(content, marker, 0); i >= 0; i = indexOfMarkerLine(content, marker, i + 1)) {
+            if (!insideFence(content, i)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Whether {@code index} lies inside a fenced code block: an odd number of fence lines above it.
+     * A fence opens with a line starting {@code ```} or {@code ~~~} (an info string may follow) and
+     * closes with a line of the same fence characters and nothing else, as CommonMark has it.
+     */
+    private static boolean insideFence(String content, int index) {
+        String open = null;
+        int start = 0;
+        while (start < index) {
+            int end = content.indexOf('\n', start);
+            if (end < 0) {
+                end = content.length();
+            }
+            String line = content.substring(start, end).strip();
+            if (open == null) {
+                if (line.startsWith("```") || line.startsWith("~~~")) {
+                    open = line.substring(0, 3);
+                }
+            } else if (line.startsWith(open) && line.replace(open.charAt(0), ' ').isBlank()) {
+                open = null;
+            }
+            start = end + 1;
+        }
+        return open != null;
+    }
+
     /** True when only whitespace separates the match from the start and end of its line. */
     private static boolean ownsItsLine(String content, int start, int length) {
         for (int i = start - 1; i >= 0 && content.charAt(i) != '\n'; i--) {
@@ -896,7 +938,7 @@ public final class GuardrailFileWriter {
             String content = Files.readString(p, StandardCharsets.UTF_8);
             boolean updated = false;
 
-            int mdStart = indexOfMarkerLine(content, MARKER_START_MD, 0);
+            int mdStart = indexOfBlockStart(content, MARKER_START_MD);
             if (mdStart >= 0) {
                 int end = indexOfMarkerLine(content, MARKER_END_MD, mdStart + MARKER_START_MD.length());
                 if (end != -1) {
@@ -906,7 +948,7 @@ public final class GuardrailFileWriter {
                     updated = true;
                 }
             } else {
-                int hashStart = indexOfMarkerLine(content, MARKER_START_HASH, 0);
+                int hashStart = indexOfBlockStart(content, MARKER_START_HASH);
                 if (hashStart >= 0) {
                     int end = indexOfMarkerLine(content, MARKER_END_HASH, hashStart + MARKER_START_HASH.length());
                     if (end != -1) {

@@ -51,6 +51,10 @@ Generated content is written between markers so a file can hold hand-authored co
 - **Hash comments** (.cursorrules, .aiexclude, ignore files): `# VIBETAGS-START` / `# VIBETAGS-END`
 - **No markers** (JSON/TOML config files): complete overwrite
 
+A marker inside a fenced code block (```` ``` ```` or `~~~`) is an example, not a delimiter: a
+file that documents VibeTags can show the pair in a fence, and the block is looked for outside it
+(`MarkerInProseTest`).
+
 A START marker with no END is repaired only when the generated header follows it, so the text after it is a generated block that lost its END; otherwise the START line is stray, the text after it is hand-written, and the file is left untouched with a WARNING (`GuardrailFileRecoveryEndToEndTest`, #865). A round with no annotations does not repair it either.
 
 Every write replaces the file atomically through a temp file, and keeps the file's POSIX

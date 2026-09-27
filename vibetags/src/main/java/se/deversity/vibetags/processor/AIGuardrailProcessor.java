@@ -507,7 +507,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // ones. Reading the set before they arrive makes every transitive build look
                     // like it lost them.
                     List<Path> unread =
-                        sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds(), currentSourceSet());
+                        sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds(), currentSourceSet(), compilationRoot());
                     if (!unread.isEmpty()) {
                         reportPartialRound(unread);
                         VibeTagsLogger.shutdown(root);
