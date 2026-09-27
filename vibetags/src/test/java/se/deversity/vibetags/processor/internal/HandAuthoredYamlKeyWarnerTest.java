@@ -136,21 +136,18 @@ class HandAuthoredYamlKeyWarnerTest {
     @Test
     void warn_unreadableFile_logsDebug(@TempDir Path root) throws IOException {
         Path aiderConf = root.resolve(".aider.conf.yml");
-        Files.createFile(aiderConf);
+        // Bytes that are not UTF-8 make readString throw on every OS. A FileLock does not: it is
+        // mandatory on Windows but advisory on Linux, where the read succeeds.
+        Files.write(aiderConf, new byte[] {(byte) 0xC3, (byte) 0x28});
 
-        try (java.nio.channels.FileChannel channel = java.nio.channels.FileChannel.open(
-                aiderConf, java.nio.file.StandardOpenOption.WRITE);
-             java.nio.channels.FileLock lock = channel.lock()) {
+        HandAuthoredYamlKeyWarner.warn(messager, logger, root, Map.of("aider_conf", aiderConf));
 
-            HandAuthoredYamlKeyWarner.warn(messager, logger, root, Map.of("aider_conf", aiderConf));
-
-            assertTrue(warnings.isEmpty(), "unreadable file must emit no warning");
-            List<ILoggingEvent> debugLogs = appender.list.stream()
-                .filter(e -> e.getLevel() == Level.DEBUG)
-                .toList();
-            assertTrue(debugLogs.stream().anyMatch(e -> e.getMessage().contains("validation.skip check=duplicate-yaml-key")),
-                "unreadable file must log validation.skip debug message");
-        }
+        assertTrue(warnings.isEmpty(), "unreadable file must emit no warning");
+        List<ILoggingEvent> debugLogs = appender.list.stream()
+            .filter(e -> e.getLevel() == Level.DEBUG)
+            .toList();
+        assertTrue(debugLogs.stream().anyMatch(e -> e.getMessage().contains("validation.skip check=duplicate-yaml-key")),
+            "unreadable file must log validation.skip debug message");
     }
 
     @Test
