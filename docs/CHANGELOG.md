@@ -99,6 +99,11 @@ and no rule file moves.
 
 ### Fixed
 
+- **A marker pair shown as an example in a fenced code block is left alone.** Each marker owns its
+  line inside the fence, so the writer took the example for the managed block: its contents were
+  replaced by the generated rules on every build, rendered as code no agent reads as guardrails,
+  and a real block below it was never refreshed. The block is now looked for outside fences.
+  `MarkerInProseTest` pins it.
 - **A stray START marker no longer costs the text after it (#865).** A marker file with a START
   line and no END was repaired by deleting everything after START, on the assumption that it was a
   generated block that lost its END. When the START line was an example the developer pasted, their

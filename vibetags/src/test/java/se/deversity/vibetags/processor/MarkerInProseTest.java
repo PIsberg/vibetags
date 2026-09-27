@@ -57,6 +57,50 @@ class MarkerInProseTest {
         assertTrue(after.contains("GENERATED RULES"), "generated content must still be written:\n" + after);
     }
 
+    /**
+     * A marker pair shown as an example inside a fenced code block owns its lines, so it passed the
+     * line check above and was taken for the block: the example's contents were replaced by the
+     * generated rules on every build, rendered as a code block no agent reads as guardrails, and the
+     * real block below it was never refreshed. Markers inside a fence are text, not delimiters.
+     */
+    @Test
+    void aMarkerPairInsideAFencedExampleIsNotTheBlock(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, null, null);
+        Path file = tmp.resolve("CLAUDE.md");
+        String example = """
+            ```
+            <!-- VIBETAGS-START -->
+            your generated rules land here
+            <!-- VIBETAGS-END -->
+            ```
+            """;
+        Files.writeString(file, "# Docs\n\nVibeTags manages a block like this:\n\n" + example + "\n"
+            + "<!-- VIBETAGS-START -->\nOLD RULES\n<!-- VIBETAGS-END -->\n");
+
+        writer.writeFileIfChanged(file.toString(), "NEW RULES", true);
+
+        String after = Files.readString(file);
+        assertTrue(after.contains(example), "the fenced example must be left exactly as written:\n" + after);
+        assertTrue(after.contains("NEW RULES"), "the real block must be refreshed:\n" + after);
+        assertFalse(after.contains("OLD RULES"), "the real block must not keep its stale rules:\n" + after);
+    }
+
+    /** Without a real block, the fenced example is still not the block: a new one is appended. */
+    @Test
+    void aFencedExampleAloneGetsARealBlockAppended(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, null, null);
+        Path file = tmp.resolve("CLAUDE.md");
+        String human = "# Docs\n\n~~~\n<!-- VIBETAGS-START -->\nexample\n<!-- VIBETAGS-END -->\n~~~\n";
+        Files.writeString(file, human);
+
+        writer.writeFileIfChanged(file.toString(), "NEW RULES", true);
+
+        String after = Files.readString(file);
+        assertTrue(after.startsWith(human.stripTrailing()), "the example must be left as written:\n" + after);
+        assertTrue(after.indexOf("NEW RULES") > after.lastIndexOf("~~~"),
+            "the generated block belongs after the fence, not inside it:\n" + after);
+    }
+
     /** A real block must still be found and replaced, even when prose above it mentions the markers. */
     @Test
     void realBlockIsStillReplacedWhenProseMentionsMarkers(@TempDir Path tmp) throws IOException {
