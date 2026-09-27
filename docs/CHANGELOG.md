@@ -138,6 +138,12 @@ and no rule file moves.
   nothing in a diff; files VibeTags created were `rw-------` too. A rewrite now keeps the file's
   own mode, and a new file gets its directory's without the execute bits. No change on Windows.
   `GuardrailFileWriterCoverageTest` pins both on POSIX.
+- **A changed project name is not lost to a generation that fails (#872).** The processor flushes
+  the write cache before it generates, and that flush wrote the new run context (the
+  `-Avibetags.project` and module override) next to the fingerprint recorded under the old one. If
+  generation then failed, the next build found both matching and skipped, and `llms.txt` kept the
+  old title. A fingerprint recorded under another context is now dropped as soon as the new one is
+  bound. `WriteCacheTest` pins it.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region

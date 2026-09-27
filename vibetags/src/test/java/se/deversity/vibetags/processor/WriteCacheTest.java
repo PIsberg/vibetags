@@ -545,6 +545,37 @@ class WriteCacheTest {
             "a changed run context (e.g. -Avibetags.project) must hide the stored fingerprint");
     }
 
+    /**
+     * The processor clears the source digest and flushes before it generates, and that flush wrote
+     * the new run context next to the fingerprint recorded under the old one. When generation then
+     * failed (a RuntimeException is downgraded to a WARNING), the next build found context and
+     * fingerprint matching and skipped, so a changed {@code -Avibetags.project} never reached the
+     * files (#872). The calls below are the ones the processor makes, in its order.
+     */
+    @Test
+    void contextChangeFlushedBeforeAFailedGeneration_doesNotVouchForTheOldFingerprint(@TempDir Path tmp)
+            throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        WriteCache first = new WriteCache(cachePath);
+        first.bindContext("aaaa1111");
+        first.bindModule("core");
+        first.setBuildFingerprint("deadbeef");
+        first.flush();
+
+        WriteCache failed = new WriteCache(cachePath);
+        failed.bindContext("bbbb2222");
+        failed.bindModule("core");
+        failed.setSourceDigest(null);
+        failed.flush();
+
+        WriteCache next = new WriteCache(cachePath);
+        next.bindContext("bbbb2222");
+        next.bindModule("core");
+        assertNull(next.getBuildFingerprint(),
+            "a fingerprint recorded under another context must not be vouched for by a flush that "
+                + "only rewrote the context header");
+    }
+
     @Test
     void unboundInstance_preservesTheStoredContextOnFlush(@TempDir Path tmp) throws IOException {
         // Tests patch the persisted cache through a fresh instance that never binds a context

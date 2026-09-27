@@ -88,6 +88,8 @@ public final class WriteCache {
      */
     private static final class Section {
         @Nullable String fingerprint;
+        /** Whether {@link #fingerprint} was recorded by this run, under the bound context. */
+        boolean fingerprintRecordedNow;
         @Nullable String storedContext;
         @Nullable String sidecarStamp;
         /** The early exit's key (#834): what the last clean run of this module was given. */
@@ -201,6 +203,7 @@ public final class WriteCache {
         if (currentContext != null && (section == null || !currentContext.equals(section.storedContext))) {
             dirty = true; // the header must converge on this run's context; see bindContext
         }
+        dropFingerprintOfAnotherContext(section);
     }
 
     private Section section() {
@@ -216,6 +219,7 @@ public final class WriteCache {
         Section section = section();
         if (!java.util.Objects.equals(section.fingerprint, fingerprint)) {
             section.fingerprint = fingerprint;
+            section.fingerprintRecordedNow = true;
             this.dirty = true;
         }
     }
@@ -330,6 +334,24 @@ public final class WriteCache {
             // The persisted header must converge on the new context even when nothing else
             // changes this run — otherwise the same mismatch re-fires on every later compile.
             this.dirty = true;
+        }
+        dropFingerprintOfAnotherContext(section);
+    }
+
+    /**
+     * Forgets a fingerprint recorded under a run context other than the bound one. It could never
+     * be vouched for under this context, and keeping it was not harmless: the processor flushes
+     * before it generates, that flush writes the bound context into the header, and if generation
+     * then failed the next build found context and fingerprint matching and skipped, so a changed
+     * {@code -Avibetags.project} never reached the files (#872). Only a completed generation
+     * records a fingerprint under the new context, and one it recorded is kept: the section's
+     * stored context is the one read from disk until the next load.
+     */
+    private void dropFingerprintOfAnotherContext(@Nullable Section section) {
+        if (currentContext != null && section != null && section.fingerprint != null
+                && !section.fingerprintRecordedNow && !currentContext.equals(section.storedContext)) {
+            section.fingerprint = null;
+            dirty = true;
         }
     }
 
