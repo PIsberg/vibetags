@@ -323,15 +323,21 @@ public final class ServiceRegistry {
     }
 
     /**
-     * True when {@code path} already contains a VibeTags-generated markdown block. Unreadable
-     * files fall back to {@code false}, i.e. to the conservative sole-file rule.
+     * True when {@code path} already contains a VibeTags-generated markdown block: a START/END
+     * pair, each owning its line, which is exactly what the writer will refresh in place. The
+     * marker merely quoted in prose, or a START with no END, is not a block; opting in on either
+     * would append a generated block to a hand-written pointer. Unreadable files fall back to
+     * {@code false}, i.e. to the conservative sole-file rule.
      */
     private static boolean carriesGeneratedBlock(@Nullable Path path) {
         if (path == null) {
             return false;
         }
         try {
-            return Files.readString(path).contains(GuardrailFileWriter.MARKER_START_MD);
+            String content = Files.readString(path);
+            int start = GuardrailFileWriter.indexOfMarkerLine(content, GuardrailFileWriter.MARKER_START_MD, 0);
+            return start >= 0 && GuardrailFileWriter.indexOfMarkerLine(content, GuardrailFileWriter.MARKER_END_MD,
+                start + GuardrailFileWriter.MARKER_START_MD.length()) >= 0;
         } catch (IOException | RuntimeException e) {
             return false;
         }

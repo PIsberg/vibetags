@@ -99,6 +99,13 @@ and no rule file moves.
 
 ### Fixed
 
+- **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
+  AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
+  looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region
+  after `<!-- VIBETAGS-START -->`" next to `CLAUDE.md` got a whole generated block appended and a
+  `.codex/config.toml` created; a pointer with a START line and no END had its text after START
+  replaced. The check now requires the line-owned START/END pair the writer refreshes.
+  `AgentsMdSoleFallbackTest` pins both pointers.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build
