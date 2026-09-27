@@ -125,6 +125,12 @@ and no rule file moves.
   no source root left, every round counted as complete, and an incremental round of one source
   deleted the rule files of the two it was never shown. Only the part below the VibeTags root is
   judged now. `PartialRoundGuardrailLossTest` pins it.
+- **A sidecar cut off inside a value is kept, not deleted.** A torn write is skipped and never
+  deleted (#553), judged by the missing `# end` trailer. But both sidecar loaders decoded each value
+  before they looked for the trailer, and a cut that leaves a dangling Base64 character (one cut
+  point in four) made the file read as corrupt, so `readAll` deleted it and the module dropped out
+  of every sibling's output until it recompiled. The trailer is now judged first.
+  `ModuleSidecarUnreadableScanAgreementTest` and `ModuleSidecarOnRecordAgreementTest` pin it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

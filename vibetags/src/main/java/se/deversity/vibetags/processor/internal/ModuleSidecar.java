@@ -601,13 +601,15 @@ public final class ModuleSidecar {
      * (skipped, and likewise never deleted).
      */
     static @Nullable ModuleSidecar load(Path path) {
+        // Outside the try: the catch for an undecodable value below still has to judge the trailer.
+        List<String> lines = List.of();
+        int loadedVersion = 0;
         try {
-            List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+            lines = Files.readAllLines(path, StandardCharsets.UTF_8);
             String moduleId = null;
             String modulePath = "";
             String regionId = null;
             boolean sawCurrentVersion = false;
-            int loadedVersion = 0;
             Map<String, String> bodies = new LinkedHashMap<>();
             Map<String, String> moduleBodies = new LinkedHashMap<>();
             Map<String, String> indexDigests = new LinkedHashMap<>();
@@ -712,8 +714,10 @@ public final class ModuleSidecar {
             // Could not read it — that says nothing about the content. See UNREADABLE.
             return UNREADABLE;
         } catch (IllegalArgumentException malformed) {
-            // Read it fine, but a value is not decodable: genuinely corrupt, so the caller prunes.
-            return null;
+            // Read it fine, but a value is not decodable. With no trailer that is a write cut off
+            // inside the value, the same torn write the trailer check above reports, and must not
+            // be pruned for it. With the trailer it is genuinely corrupt, so the caller prunes.
+            return loadedVersion >= FORMAT_VERSION && !isWhole(lines) ? UNREADABLE : null;
         }
     }
 
@@ -1614,6 +1618,14 @@ public final class ModuleSidecar {
 
         /** Set by the first refusal; {@link #verdict} is then {@code null} or FUTURE_VERSION. */
         private boolean refused;
+
+        /**
+         * Set by the first value that will not decode. Unlike a refusal it is judged after the
+         * trailer, as {@code load} judges it: a file with no trailer was cut off, possibly inside
+         * that very value, and is UNREADABLE rather than corrupt. Only the trailer is tracked from
+         * here on, since {@code load} stops reading content at the same value.
+         */
+        private boolean undecodable;
         private @Nullable ModuleSidecar verdict;
 
         private boolean lineStarted;
@@ -1645,6 +1657,9 @@ public final class ModuleSidecar {
                 return;
             }
             probeTrailer(c);
+            if (undecodable) {
+                return;
+            }
             if (!lineStarted) {
                 lineStarted = true;
                 comment = c == '#';
@@ -1775,7 +1790,7 @@ public final class ModuleSidecar {
                             if (!id.isBlank()) elementIds.add(id);
                         }
                     } catch (IllegalArgumentException malformed) {
-                        refuse(null);
+                        undecodable = true;
                     }
                 }
                 case UNROUTED -> {
@@ -1783,11 +1798,11 @@ public final class ModuleSidecar {
                         unrouted.put(keyName.substring(KEY_UNROUTED_BODY_PREFIX.length()),
                             stream.nonBlank() ? SUMMARIZED_BODY : "");
                     } else {
-                        refuse(null);
+                        undecodable = true;
                     }
                 }
                 case CHECKED -> {
-                    if (!stream.finish()) refuse(null);
+                    if (!stream.finish()) undecodable = true;
                 }
                 case IGNORED -> { }
             }
@@ -1804,7 +1819,7 @@ public final class ModuleSidecar {
                 return verdict;
             }
             if (loadedVersion >= FORMAT_VERSION && !lastNonBlankIsTrailer) return UNREADABLE;
-            if (moduleId == null || !sawVersion) return null;
+            if (undecodable || moduleId == null || !sawVersion) return null;
             ModuleSidecar s = new ModuleSidecar(moduleId, modulePath,
                 regionId != null && !regionId.isBlank() ? regionId : moduleId);
             s.elementIds.addAll(elementIds);

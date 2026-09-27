@@ -244,6 +244,21 @@ class ModuleSidecarOnRecordAgreementTest {
         agreesOnRoot();
     }
 
+    /**
+     * A write cut off inside a value, for every key shape: what is left of the value does not
+     * decode, and with no trailer the file is a torn write, not a corrupt one. Both loaders judged
+     * the value first and answered {@code null}, which prunes the sidecar.
+     */
+    @Test
+    @DisplayName("a write torn inside any value is UNREADABLE to both loaders")
+    void tornInsideAValue() throws IOException {
+        for (String key : everyKeyShape()) {
+            Path sidecar = write("cut", "# version=3\nmoduleId=cut\nmodulePath=cut\n" + key + "=eHh4e");
+            assertSame(ModuleSidecar.UNREADABLE, agreesPerFile(sidecar), key);
+            agreesOnRoot();
+        }
+    }
+
     @Test
     @DisplayName("bytes that are not UTF-8 make the file unreadable, even behind a future version")
     void invalidUtf8() throws IOException {
