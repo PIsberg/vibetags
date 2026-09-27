@@ -294,7 +294,8 @@ what the round allocates, so skipping only rendering and writes saved almost not
 processor therefore also decides earlier: on the first round that has sources it hashes every source
 file the round was given, with everything else output depends on (`SourceDigest`: the processor
 version, every `-A` option, the module and source set, which opt-in files exist and as what kind at
-the root and the module root, and the content of every `.vibetags-*` configuration file there). When
+the root and the module root, whether `AGENTS.md` carries a marker pair, which decides whether it is
+written beside another AI file, and the content of every `.vibetags-*` configuration file there). When
 that key matches the one the last clean run of the module recorded (`# source-digest:` under the
 module's `# module:` line in `.vibetags-cache`), and the checks the fingerprint short-circuit makes
 still hold (sidecar stamp, no stale sidecar, every cached output byte-stable), the walk is skipped

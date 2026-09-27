@@ -328,6 +328,29 @@ class SourceDigestEarlyExitEndToEndTest {
         assertTrue(read(".cursorrules").contains("ledger maths is audited"), read(".cursorrules"));
     }
 
+    /**
+     * Beside CLAUDE.md, AGENTS.md is active only once it carries a marker pair (invariant 4), and
+     * the first build's NOTE tells the user to paste one. That is a change to the file's content,
+     * not its presence, so an early exit that hashes only presence skipped the very build the NOTE
+     * asked for and left the pasted pair empty until some source changed.
+     */
+    @Test
+    void pastingAMarkerPairIntoAgentsMdBesideClaudeMdIsWritten() throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve("AGENTS.md"), "# Pointer\n\nRead CLAUDE.md.\n", StandardCharsets.UTF_8);
+        h.compileReturningDiagnostics();
+        assertFalse(read("AGENTS.md").contains("ledger maths is audited"),
+            "precondition: an unmarked AGENTS.md beside CLAUDE.md is left alone");
+        Files.writeString(root.resolve("AGENTS.md"),
+            "# Pointer\n\nRead CLAUDE.md.\n\n<!-- VIBETAGS-START -->\n<!-- VIBETAGS-END -->\n",
+            StandardCharsets.UTF_8);
+
+        String second = notes(h.compileReturningDiagnostics());
+
+        assertFalse(second.contains(EARLY_EXIT), second);
+        assertTrue(read("AGENTS.md").contains("ledger maths is audited"), read("AGENTS.md"));
+    }
+
     @Test
     void aHandEditedGeneratedBlockIsRegenerated() throws IOException {
         ProcessorTestHarness h = project(LEDGER);

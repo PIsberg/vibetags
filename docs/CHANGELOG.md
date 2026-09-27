@@ -106,6 +106,12 @@ and no rule file moves.
   `.codex/config.toml` created; a pointer with a START line and no END had its text after START
   replaced. The check now requires the line-owned START/END pair the writer refreshes.
   `AgentsMdSoleFallbackTest` pins both pointers.
+- **Pasting a marker pair into `AGENTS.md` beside `CLAUDE.md` is picked up by the next build.** The
+  build that skips such a file prints a NOTE telling the user to paste a VIBETAGS-START/END pair,
+  but the early exit (#834) hashed only which opt-in files exist, not that content, so the next
+  build with unchanged sources took the exit and left the pasted pair empty until a source
+  changed. The source digest now includes whether `AGENTS.md` carries a marker pair.
+  `SourceDigestEarlyExitEndToEndTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

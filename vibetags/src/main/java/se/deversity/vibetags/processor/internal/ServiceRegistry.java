@@ -329,7 +329,7 @@ public final class ServiceRegistry {
      * would append a generated block to a hand-written pointer. Unreadable files fall back to
      * {@code false}, i.e. to the conservative sole-file rule.
      */
-    private static boolean carriesGeneratedBlock(@Nullable Path path) {
+    static boolean carriesGeneratedBlock(@Nullable Path path) {
         if (path == null) {
             return false;
         }

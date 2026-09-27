@@ -2301,7 +2301,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * printed (#860). The locked {@code generateFiles()} calls this after its fingerprint
      * short-circuit, so {@code process()} calls it again when that call did not happen, and the
      * warnings join validation's in the record an early-exited build replays. The replay is exact
-     * because the source digest covers every opt-in file, so the active services cannot have moved.
+     * because the source digest covers every opt-in file, and whether {@code AGENTS.md} carries a
+     * marker pair, so the active services cannot have moved.
      */
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
         orphansChecked.set(true);
