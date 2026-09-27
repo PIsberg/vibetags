@@ -147,6 +147,31 @@ class MultiModuleAggregationTest {
         assertTrue(Files.exists(file));
     }
 
+    /**
+     * The staleness checks read a sidecar's module path through a header reader that trimmed it,
+     * while the full load keeps it as written. For a module directory whose name ends in a space
+     * (legal on Linux) the full read found the module live and the header read found it gone:
+     * {@code anyStale} was true on every build, so the short-circuit never fired, and the live
+     * module's rule-file stems were reported as departed (#874). Linux only: Windows cannot name
+     * such a directory.
+     */
+    @Test
+    void aModuleDirectoryWhoseNameEndsInASpace_isNotStale(@TempDir Path root) throws IOException {
+        org.junit.jupiter.api.Assumptions.assumeFalse(
+            System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win"),
+            "Windows cannot create a directory whose name ends in a space");
+        Files.createDirectories(root.resolve("core "));
+        ModuleSidecar core = new ModuleSidecar("core_", "core ");
+        core.putBody("claude", "core body");
+        core.setGranularStems(java.util.Set.of("com-example-Foo"));
+        core.save(root);
+        assertEquals(1, ModuleSidecar.peekAll(root).size(), "precondition: the full read finds the module live");
+
+        assertFalse(ModuleSidecar.anyStale(root), "a live module must not read as stale");
+        assertTrue(ModuleSidecar.staleGranularStems(root).isEmpty(),
+            "a live module's rule files must not be reported as departed");
+    }
+
     @Test
     void sidecar_stalePruned_whenModuleDirMissing(@TempDir Path root) throws IOException {
         // Write a sidecar claiming to be from "ghost-module" (directory doesn't exist)

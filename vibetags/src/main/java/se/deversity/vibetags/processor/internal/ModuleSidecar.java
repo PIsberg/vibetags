@@ -2863,7 +2863,9 @@ public final class ModuleSidecar {
         try (java.io.BufferedReader reader = Files.newBufferedReader(sidecar, StandardCharsets.UTF_8)) {
             for (String line = reader.readLine(); line != null; line = reader.readLine()) {
                 if (line.startsWith(KEY_MODULE_PATH + "=")) {
-                    return portable(line.substring(KEY_MODULE_PATH.length() + 1).trim());
+                    // As load() reads it: readLine already drops the line ending, and a trim here
+                    // turned a live module directory "core " into a missing "core" (#874).
+                    return portable(line.substring(KEY_MODULE_PATH.length() + 1));
                 }
                 // The headers are written first; once a body line appears there is no header left.
                 if (line.indexOf('=') > 0 && !line.startsWith("#") && !line.startsWith(KEY_MODULE_ID)

@@ -156,6 +156,10 @@ and no rule file moves.
   header and was deleted. It now uses the writer's front-matter parser, whose fences own their
   lines, and rewrites a kept file atomically like every other write. `CleanupGranularDirectoryTest`
   pins it.
+- **A module directory whose name ends in a space is no longer read as departed (#874).** The
+  staleness checks read a sidecar's module path trimmed, while the full read keeps it as written, so
+  on Linux a live `core ` module read as stale on every build (the short-circuit never fired) and
+  its rule-file stems were reported as departed. `MultiModuleAggregationTest` pins it on Linux.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region
