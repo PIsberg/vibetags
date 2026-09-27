@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -102,6 +103,34 @@ class ModuleSidecarUnreadableScanAgreementTest {
 
         assertSame(ModuleSidecar.UNREADABLE, ModuleSidecar.load(sidecar));
         assertTrue(agrees(root, sidecar));
+    }
+
+    /**
+     * A write cut off partway through a value, not just before the trailer. The value that is left
+     * is not valid base64, and both loaders judged it before they judged the trailer, so the file
+     * read as corrupt: {@code null}, which {@code readAll} deletes. It is the same torn write as
+     * above, and deleting it takes the module out of every sibling's output until it recompiles.
+     */
+    @Test
+    @DisplayName("a write torn inside a value is named, and readAll keeps the file")
+    void writeTornInsideAValueIsNamedAndKept(@TempDir Path root) throws IOException {
+        Path sidecar = healthy(root, "cut");
+        String whole = Files.readString(sidecar, StandardCharsets.UTF_8);
+        int value = whole.indexOf("\nclaude=") + "\nclaude=".length();
+        // Five base64 characters: a dangling single character in the last unit, which the basic
+        // decoder rejects. The line keeps no newline, as a write interrupted mid-line leaves it.
+        String cut = whole.substring(0, value + 5);
+        assertThrows(IllegalArgumentException.class,
+            () -> java.util.Base64.getDecoder().decode(cut.substring(value)),
+            "fixture assumption: what is left of the value must be undecodable");
+        Files.writeString(sidecar, cut, StandardCharsets.UTF_8);
+
+        assertSame(ModuleSidecar.UNREADABLE, ModuleSidecar.load(sidecar),
+            "no trailer, so the write never finished; that is UNREADABLE whatever the last value says");
+        assertTrue(agrees(root, sidecar));
+
+        ModuleSidecar.readAll(root);
+        assertTrue(Files.exists(sidecar), "a torn sidecar is skipped, never deleted (#553)");
     }
 
     @Test

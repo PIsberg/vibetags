@@ -129,6 +129,42 @@ public final class AnnotationCollector {
     }
 
     /**
+     * Whether this compilation's source set had annotations last time and, shown all of its
+     * sources, has none now (#781). The evidence is the source set's previous sidecar, which the
+     * save overwrites, so the processor records the verdict here before saving and the writers that
+     * run after the save read it back: the module-scoped files as much as the shared root.
+     */
+    private boolean emptiedSourceSet;
+
+    /** Records that this compilation's source set was emptied; see the field. */
+    public void markEmptiedSourceSet() {
+        emptiedSourceSet = true;
+    }
+
+    /** Whether this compilation's source set was emptied; see the field. */
+    public boolean emptiedSourceSet() {
+        return emptiedSourceSet;
+    }
+
+    /**
+     * The reactor's mirror targets as {@link MirrorConfig#state} describes them, empty when there
+     * are none. An input to the mirrored rule files that no annotation carries, held here for the
+     * same reason the transitive rules are: {@link BuildFingerprint} hashes what the collector
+     * holds (invariant 12).
+     */
+    private String mirrorState = "";
+
+    /** Records the reactor's mirror targets; see the field. */
+    public void setMirrorState(String state) {
+        this.mirrorState = state;
+    }
+
+    /** The reactor's mirror targets; see the field. */
+    public String mirrorState() {
+        return mirrorState;
+    }
+
+    /**
      * Whether this project opted into inheriting guardrails from its dependencies
      * ({@code .vibetags-transitive}).
      *
@@ -334,6 +370,8 @@ public final class AnnotationCollector {
         transitiveRules.clear();
         anyAnnotationsFound = false;
         sawSourceRoots = false;
+        emptiedSourceSet = false;
+        mirrorState = "";
         memo = null;
         publishedMemo = null;
         granularMemo = null;

@@ -99,6 +99,74 @@ and no rule file moves.
 
 ### Fixed
 
+- **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
+  AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
+  looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region
+  after `<!-- VIBETAGS-START -->`" next to `CLAUDE.md` got a whole generated block appended and a
+  `.codex/config.toml` created; a pointer with a START line and no END had its text after START
+  replaced. The check now requires the line-owned START/END pair the writer refreshes.
+  `AgentsMdSoleFallbackTest` pins both pointers.
+- **Pasting a marker pair into `AGENTS.md` beside `CLAUDE.md` is picked up by the next build.** The
+  build that skips such a file prints a NOTE telling the user to paste a VIBETAGS-START/END pair,
+  but the early exit (#834) hashed only which opt-in files exist, not that content, so the next
+  build with unchanged sources took the exit and left the pasted pair empty until a source
+  changed. The source digest now includes whether `AGENTS.md` carries a marker pair.
+  `SourceDigestEarlyExitEndToEndTest` pins it.
+- **A file that failed to write is retried by the next build.** The write warned once and the
+  build was still recorded as clean; a file the writer never managed to write had no write-cache
+  entry, and an absent entry counts as stable, so every later build with unchanged sources took the
+  early exit or the fingerprint short-circuit. A `CLAUDE.md` saved in Latin-1 and re-saved as
+  UTF-8, or one locked by an editor on Windows, never received its guardrails until a source
+  changed. The failure is now recorded as a cache row that matches no file.
+  `SourceDigestEarlyExitEndToEndTest` pins it.
+- **The partial-round guard (invariant 17) no longer switches off for a checkout under a directory
+  named `generated`.** Generated-source trees are left out of the guard by their `generated` path
+  segment, which was looked for in the whole absolute path. A project at `/ci/generated/proj` had
+  no source root left, every round counted as complete, and an incremental round of one source
+  deleted the rule files of the two it was never shown. Only the part below the VibeTags root is
+  judged now. `PartialRoundGuardrailLossTest` pins it.
+- **A sidecar cut off inside a value is kept, not deleted.** A torn write is skipped and never
+  deleted (#553), judged by the missing `# end` trailer. But both sidecar loaders decoded each value
+  before they looked for the trailer, and a cut that leaves a dangling Base64 character (one cut
+  point in four) made the file read as corrupt, so `readAll` deleted it and the module dropped out
+  of every sibling's output until it recompiled. The trailer is now judged first.
+  `ModuleSidecarUnreadableScanAgreementTest` and `ModuleSidecarOnRecordAgreementTest` pin it.
+- **A module whose last annotation is removed drops it from its own module-scoped file too.** Since
+  #781 an emptied source set rewrites the shared root files it withdrew from, but a module that opts
+  into its own file (`module-core/CLAUDE.md`) decided whether an empty round may rewrite it by
+  whether the round found annotations, so the removed `@AILocked` stayed there while the root
+  dropped it, and check mode agreed with the stale file. The same #781 verdict now reaches the
+  module-scoped writer. `PerModuleOutputEndToEndTest` pins it.
+- **A module with annotated tests and one annotated main source excluded from the build writes
+  again.** The partial-round guard (invariant 17) asks whether a sidecar describing the round's
+  source tree names an element the round did not produce, and the module's test sidecar describes
+  the same directory. A main round never produces test elements, so once the tests had compiled the
+  question was always yes, and the excluded source (a `<excludes>` entry) answered the other half:
+  every main round was refused as partial and an edited annotation was never generated. A sidecar
+  of another source set is no longer consulted. `PartialRoundGuardrailLossTest` pins it.
+- **Check mode no longer reports drift on the compile that retires its own ancestor region.** A
+  build that files itself under the root identity (#621's fallback) saves a sidecar that the prune
+  retires at once, so generation changes nothing. Check mode simulated that save by adding the
+  in-memory sidecar after the on-disk ones had been pruned, merged every shared element twice, and
+  failed with "2 guardrail file(s) are out of date". It now prunes the same list generation does.
+  `FresherAncestorRegionDuplicateTest` pins it, and its `@AIContract` fixture, which named an
+  attribute the annotation does not have and so never compiled, now uses `reason`.
+- **A generated file saved with a UTF-8 byte order mark keeps one block.** A block that opens the
+  file (the usual shape of a file opted in empty) was no longer found once an editor added a BOM:
+  U+FEFF is not whitespace, so the START marker did not own its line, the file was treated as a
+  pre-marker legacy file, and the old block's markers stayed as text above a second, new block.
+  The BOM is now looked past and written back. `GuardrailFileRecoveryEndToEndTest` pins it.
+- **A `.vibetags-mirror` target created after a module's last build is mirrored into on the next
+  one.** The config lives in a sibling module, outside what the fingerprint and the source digest
+  hash, and only a config that already existed was watched. Creating one, or a granular directory
+  in an existing target, left the next unchanged build of every source module on a short-circuit,
+  and nothing was mirrored until a source changed. The mirror targets' state now reaches both keys
+  (invariant 12), only when a target exists. `MirrorEndToEndTest` pins it.
+- **A rebuild stopped by the fingerprint logs its orphan warning to `vibetags.log` again.** Since
+  #860 the orphan check runs after `generateFiles()` returns from its fingerprint short-circuit, but
+  that return releases the log, so the warning reached the console and never the log (invariant
+  15). The check now reopens the log with the same options, as the rule-file length check does.
+  `SourceDigestEarlyExitEndToEndTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

@@ -152,6 +152,43 @@ public final class MirrorConfig {
      * on build-output and source directories so an unconfigured reactor pays only a shallow listing.
      */
     public static List<MirrorConfig> discover(Path root) {
+        return discoverUnder(root);
+    }
+
+    /**
+     * Everything about the reactor's mirror targets that decides what a module mirrors: each
+     * target's directory, the content of its config, and which granular directories it has opted
+     * into. Empty when there is no target, which keeps every build key of a project that does not
+     * mirror exactly what it was.
+     *
+     * <p>The configs live in sibling modules, where neither the build fingerprint nor the source
+     * digest looks. An edit to one that already existed was caught by its watched cache entry; a
+     * target created after a module's last build, or a granular directory created in a target, had
+     * no entry to go unstable, and the next unchanged build of every source module skipped the
+     * mirror it now asked for. Folding this into both keys is what makes those count as changes.
+     */
+    public static String state(Path root) {
+        List<MirrorConfig> targets = discover(root);
+        if (targets.isEmpty()) {
+            return "";
+        }
+        Path base = root.toAbsolutePath().normalize();
+        List<String> lines = new ArrayList<>(targets.size());
+        for (MirrorConfig target : targets) {
+            Set<String> granular = new java.util.TreeSet<>();
+            ServiceRegistry.buildServiceFileMap(target.targetDir()).forEach((key, path) -> {
+                if (ServiceRegistry.writesDirectory(key) && ServiceRegistry.isOptedIn(key, path)) {
+                    granular.add(key);
+                }
+            });
+            String dir = base.relativize(target.targetDir().toAbsolutePath().normalize()).toString().replace('\\', '/');
+            lines.add(dir + " " + target.contentHash() + " " + String.join(",", granular));
+        }
+        Collections.sort(lines);
+        return String.join(";", lines);
+    }
+
+    private static List<MirrorConfig> discoverUnder(Path root) {
         if (root == null || !Files.isDirectory(root)) {
             return List.of();
         }

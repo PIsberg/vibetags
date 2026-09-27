@@ -58,6 +58,9 @@ public final class GuardrailFileWriter {
 
     public static final String MARKER_START_MD = "<!-- VIBETAGS-START -->";
     public static final String MARKER_END_MD = "<!-- VIBETAGS-END -->";
+
+    /** U+FEFF, which some editors save at the start of a UTF-8 file. */
+    private static final String BYTE_ORDER_MARK = "﻿";
     public static final String MARKER_START_HASH = "# VIBETAGS-START";
     public static final String MARKER_END_HASH = "# VIBETAGS-END";
 
@@ -202,12 +205,21 @@ public final class GuardrailFileWriter {
             debug("write.compare file={} exists={} markers={} oldBytes={} newBytes={} hasNewRules={}",
                 fileName, fileExists, supportsMarkers, existingSize, contentByteLen, hasNewRules);
             if (markers != null) {
-                return writeWithMarkers(filePath, fileName, path, content, existing, hasNewRules, markers);
+                // A byte order mark an editor saved in front of the file is encoding, not content.
+                // Left in place it hid a first-line START marker (U+FEFF is not whitespace, so the
+                // marker no longer owned its line) and the old block was kept as hand-written text
+                // beside a new one. The markers are looked for behind it, and it is written back.
+                String bom = existing.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
+                return writeWithMarkers(filePath, fileName, path, content, existing.substring(bom.length()), bom,
+                    hasNewRules, markers);
             }
             return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules);
         } catch (IOException e) {
             messager.printMessage(Diagnostic.Kind.WARNING,
                 "VibeTags: Failed to write AI rules file: " + path + " - " + e.getMessage());
+            if (!dryRun && writeCache != null) {
+                writeCache.recordFailure(Paths.get(path));
+            }
             return false;
         }
     }
@@ -267,7 +279,8 @@ public final class GuardrailFileWriter {
     }
 
     private boolean writeWithMarkers(Path filePath, String fileName, String path, String content,
-                                     String existing, boolean hasNewRules, String[] markers) throws IOException {
+                                     String existing, String bom, boolean hasNewRules, String[] markers)
+            throws IOException {
         String markerStart = markers[0];
         String markerEnd = markers[1];
 
@@ -298,7 +311,7 @@ public final class GuardrailFileWriter {
                 }
                 debug("write.update file={} reason=malformed-markers-repaired newBytes={}",
                     fileName, finalContent.length());
-                writeAndCache(filePath, finalContent, content);
+                writeAndCache(filePath, bom + finalContent, content);
                 return true;
             }
             end += markerEnd.length();
@@ -326,7 +339,7 @@ public final class GuardrailFileWriter {
 
             debug("write.update file={} reason=marker-block-differs oldBytes={} newBytes={} markers=true",
                 fileName, existing.length(), finalContent.length());
-            writeAndCache(filePath, finalContent, content);
+            writeAndCache(filePath, bom + finalContent, content);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
             return true;
         } else if (!existing.isEmpty() && hasLegacyHeaderLine(existing)) {
@@ -350,7 +363,7 @@ public final class GuardrailFileWriter {
             debug("write.update file={} reason=legacy-upgrade oldBytes={} newBytes={} markers=legacy",
                 fileName, existing.length(), finalContent.length());
 
-            writeAndCache(filePath, finalContent, content);
+            writeAndCache(filePath, bom + finalContent, content);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
             return true;
         } else {
@@ -368,7 +381,7 @@ public final class GuardrailFileWriter {
                 return false;
             }
 
-            writeAndCache(filePath, updated, content);
+            writeAndCache(filePath, bom + updated, content);
             String action = existing.isEmpty() ? "wrote" : "appended";
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + action + " " + fileName);
             return true;

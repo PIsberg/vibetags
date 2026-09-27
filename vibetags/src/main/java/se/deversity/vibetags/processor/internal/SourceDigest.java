@@ -30,7 +30,9 @@ import java.util.stream.Stream;
  *
  * <p>Everything else that shapes output is in the key too: the processor version, every
  * {@code -A} option, the module and source set, which opt-in files exist and as what kind, at the
- * root and the module root, and the content of every {@code .vibetags-*} configuration file there.
+ * root and the module root, whether {@code AGENTS.md} carries a marker pair (its activation beside
+ * another AI file turns on that, not on presence), and the content of every {@code .vibetags-*}
+ * configuration file there.
  * Taking in more than output depends on only costs a missed exit; taking in less is a false
  * "unchanged". Sidecars, the write cache and the locks report are outputs or run records with
  * checks of their own, and are left out because they change on every build.
@@ -65,11 +67,16 @@ public final class SourceDigest {
         new TreeMap<>(options).forEach((key, value) -> line(sha, "option " + key + "=" + value));
         line(sha, "module " + moduleId);
         line(sha, "test " + testRound);
+        // Mirror targets live in sibling modules, outside both directories hashed below.
+        String mirrors = MirrorConfig.state(base);
+        if (!mirrors.isEmpty()) {
+            line(sha, "mirrors " + mirrors);
+        }
         Set<Path> dirs = new LinkedHashSet<>(List.of(base, compilationRoot.toAbsolutePath().normalize()));
         for (Path dir : dirs) {
             line(sha, "dir " + name(base, dir));
             new TreeMap<>(ServiceRegistry.buildServiceFileMap(dir))
-                .forEach((key, path) -> line(sha, "opt-in " + key + " " + kindOf(path)));
+                .forEach((key, path) -> line(sha, "opt-in " + key + " " + kindOf(path) + marked(key, path)));
             List<Path> config = configFiles(dir);
             if (config == null) {
                 return null;
@@ -123,6 +130,16 @@ public final class SourceDigest {
             && !name.startsWith(".vibetags-mod-")
             && !name.startsWith(".vibetags-cache")
             && !name.startsWith(ServiceRegistry.LOCKS_REPORT_FILE);
+    }
+
+    /**
+     * The one opt-in whose activation turns on content rather than presence: {@code AGENTS.md}
+     * beside another AI file is active only once it carries a marker pair (invariant 4), and the
+     * NOTE printed when it is skipped tells the user to paste one. Empty for every other key, so
+     * the key of a project without a marked {@code AGENTS.md} is unchanged.
+     */
+    private static String marked(String key, Path path) {
+        return "codex".equals(key) && ServiceRegistry.carriesGeneratedBlock(path) ? " marked" : "";
     }
 
     /**

@@ -22,11 +22,13 @@ per module: a module inherits what *its* sources import, and two modules of a re
 on the same set. `.vibetags-mirror` on its own still creates no region — mirrored rules are scoped
 files, and they never reach the aggregate.
 
-A sidecar is `key=value` lines with Base64 bodies, opened by `# version=2` and closed by `# end`.
-The trailer is what says the file is whole: `Base64.getDecoder()` accepts cut-off input, so without
-it a sidecar truncated by a torn write still decoded — to a body that was never saved, which the
-merge rendered into every sibling's aggregate (issue #553). A sidecar with no trailer is treated
-like one that could not be opened at all: skipped, never deleted. That also covers the file a
+A sidecar is `key=value` lines with Base64 bodies, opened by `# version=3` and closed by `# end`.
+The trailer is what says the file is whole: `Base64.getDecoder()` accepts most cut-off input, so
+without it a sidecar truncated by a torn write still decoded — to a body that was never saved, which
+the merge rendered into every sibling's aggregate (issue #553). A sidecar with no trailer is treated
+like one that could not be opened at all: skipped, never deleted. That holds when the cut left a
+value the decoder rejects, too: the trailer is judged first, and only a file that has one is
+deleted as `malformed` for a value that will not decode. That also covers the file a
 processor older than the trailer wrote, which is skipped until its module recompiles; older readers
 in the other direction skip the `# end` line as an unrecognised comment, which is why this is an
 appended line rather than a format-version bump.
@@ -217,7 +219,7 @@ sidecar is only saved when annotations were found, and shared-file writes with n
 preserve the existing file content. Both have one exception since #781: a round that found nothing,
 **was handed sources of its own**, and whose sidecar on disk records elements has had its
 annotations removed, not hidden. It saves its empty sidecar and rewrites the files it withdrew
-from, so removing *all* annotations from a module or a source set retires its contribution on the
+from, the module's own module-scoped files included, so removing *all* annotations from a module or a source set retires its contribution on the
 next compile of it. What makes the empty result safe to believe is that a partial round is refused
 before generation (invariant 17). The case still out of reach is a module or source set with no
 sources left at all, which no build compiles: its contribution stays until its `.vibetags-mod-*`

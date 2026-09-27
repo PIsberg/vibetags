@@ -22,6 +22,7 @@ import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.HandAuthoredYamlKeyWarner;
 import se.deversity.vibetags.processor.internal.RuleFileLengthWarner;
+import se.deversity.vibetags.processor.internal.MirrorConfig;
 import se.deversity.vibetags.processor.internal.ModuleIdentity;
 import se.deversity.vibetags.processor.internal.ModuleRootResolver;
 import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
@@ -477,6 +478,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // The inherited rules must reach the collector BEFORE that fingerprint is
                     // computed, or a dependency upgrade would be short-circuited past in silence.
                     applyTransitiveRules();
+                    collector.setMirrorState(MirrorConfig.state(root));
                     // Publishing runs in check mode too, and must. In a reactor that both
                     // publishes and consumes, a module's manifest is what the next module reads
                     // off the classpath — so a check-mode run that skipped publishing would have
@@ -504,7 +506,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // ones. Reading the set before they arrive makes every transitive build look
                     // like it lost them.
                     List<Path> unread =
-                        sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds());
+                        sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds(), currentSourceSet());
                     if (!unread.isEmpty()) {
                         reportPartialRound(unread);
                         VibeTagsLogger.shutdown(root);
@@ -1831,30 +1833,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // peekAll, not readAll: check mode writes nothing, and that includes the pruning of a
         // stale sidecar — which is the only record of a departed module's rule files, and belongs
         // to the real build that acts on it.
-        List<ModuleSidecar> allSidecars = new java.util.ArrayList<>(ModuleSidecar.peekAll(root));
         // Same two conditions as generateFiles() (#781): an emptied source set replaces its sidecar.
         final Set<String> retiredServices = servicesRetiredByAnEmptiedRound(moduleId);
-        if (collector.anyAnnotationsFound() || !retiredServices.isEmpty()) {
-            boolean replaced = false;
-            for (int i = 0; i < allSidecars.size(); i++) {
-                if (allSidecars.get(i).getModuleId().equals(moduleId)) {
-                    allSidecars.set(i, mySidecar);
-                    replaced = true;
-                    break;
-                }
-            }
-            if (!replaced) {
-                // readAll() returns sidecars sorted by filename (= moduleId); keep that ordering
-                // so the merged sub-marker sequence matches what generateFiles() would produce.
-                allSidecars.add(mySidecar);
-                allSidecars.sort(java.util.Comparator.comparing(ModuleSidecar::getModuleId));
-            }
-            // The substituted sidecar is fresh out of memory and carries none of the lean-index
-            // state readAll() derives from disk, so re-derive it for the whole list. Without this
-            // a lean indexed reactor embeds this module's body where generation would have linked
-            // it, and check mode reports drift that a real compile would never produce.
-            ModuleSidecar.applyRootIndexModeTo(root, allSidecars);
-        }
+        // When generation would save this module's sidecar, read the set as generation reads it
+        // after that save: the in-memory sidecar in place of its file, before superseded regions
+        // are dropped, so a region the save would retire is retired here too. It also re-derives
+        // the lean-index and TESTING.md state readAll() derives from disk, which the in-memory
+        // sidecar does not carry.
+        List<ModuleSidecar> allSidecars = collector.anyAnnotationsFound() || !retiredServices.isEmpty()
+            ? ModuleSidecar.peekAllAfterSaving(root, mySidecar, VibeTagsLogger.currentFor(root))
+            : new java.util.ArrayList<>(ModuleSidecar.peekAll(root));
         // A check verdict is only trustworthy if it reproduces generation exactly, which is why
         // this calls the same function generateFiles() calls rather than mirroring its body.
         final Map<String, String> effectiveContent =
@@ -2010,9 +1998,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (previous == null || previous.getElementIds().isEmpty()) {
             return Set.of();
         }
+        // Recorded for the module-scoped writer, which runs after the save has overwritten `previous`.
+        collector.markEmptiedSourceSet();
         Set<String> services = new java.util.LinkedHashSet<>(previous.getBodies().keySet());
         services.addAll(previous.getUnroutedBodies().keySet());
         return services;
+    }
+
+    /** The source set this compilation compiles; {@code main} until a round has resolved it. */
+    private String currentSourceSet() {
+        return moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
     }
 
     /**
@@ -2301,23 +2296,39 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * printed (#860). The locked {@code generateFiles()} calls this after its fingerprint
      * short-circuit, so {@code process()} calls it again when that call did not happen, and the
      * warnings join validation's in the record an early-exited build replays. The replay is exact
-     * because the source digest covers every opt-in file, so the active services cannot have moved.
+     * because the source digest covers every opt-in file, and whether {@code AGENTS.md} carries a
+     * marker pair, so the active services cannot have moved.
      */
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
-        orphansChecked.set(true);
-        OrphanWarner.warnAboutOrphans(new CountingMessager(messager), log, active, hasLocked, hasIgnore, hasAudit);
+        checkOrphanedAnnotations(messager, log, active, hasLocked, hasIgnore, hasAudit);
     }
 
-    /** The orphan check for a generation that returned at its fingerprint short-circuit (#860). */
+    private void checkOrphanedAnnotations(Messager messager, @Nullable Logger logger, Set<String> active,
+                                          boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
+        orphansChecked.set(true);
+        OrphanWarner.warnAboutOrphans(new CountingMessager(messager), logger, active, hasLocked, hasIgnore, hasAudit);
+    }
+
+    /**
+     * The orphan check for a generation that returned at its fingerprint short-circuit (#860). That
+     * return releases the log, so it is reopened with the same options for the check and released
+     * again, as {@link #warnAboutOversizedRuleFiles} does; written to the released logger, the
+     * warning reached the console and never {@code vibetags.log}.
+     */
     private void checkOrphansIfShortCircuited() {
         if (orphansChecked.get()) {
             return;
         }
-        // The quiet overload: the loud one already printed its notes and deprecation warnings at
-        // the top of generateFiles(), and it returns the same set.
-        checkOrphanedAnnotations(processingEnv.getMessager(),
-            ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)),
-            !collector.locked().isEmpty(), !collector.ignore().isEmpty(), !collector.audit().isEmpty());
+        Logger reopened = VibeTagsLogger.forRoot(root, logPath, logLevel);
+        try {
+            // The quiet overload: the loud one already printed its notes and deprecation warnings at
+            // the top of generateFiles(), and it returns the same set.
+            checkOrphanedAnnotations(processingEnv.getMessager(), reopened,
+                ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)),
+                !collector.locked().isEmpty(), !collector.ignore().isEmpty(), !collector.audit().isEmpty());
+        } finally {
+            VibeTagsLogger.shutdown(root);
+        }
     }
 
     /**

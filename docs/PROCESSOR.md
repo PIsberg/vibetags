@@ -294,7 +294,8 @@ what the round allocates, so skipping only rendering and writes saved almost not
 processor therefore also decides earlier: on the first round that has sources it hashes every source
 file the round was given, with everything else output depends on (`SourceDigest`: the processor
 version, every `-A` option, the module and source set, which opt-in files exist and as what kind at
-the root and the module root, and the content of every `.vibetags-*` configuration file there). When
+the root and the module root, whether `AGENTS.md` carries a marker pair, which decides whether it is
+written beside another AI file, the reactor's `.vibetags-mirror` targets, and the content of every `.vibetags-*` configuration file there). When
 that key matches the one the last clean run of the module recorded (`# source-digest:` under the
 module's `# module:` line in `.vibetags-cache`), and the checks the fingerprint short-circuit makes
 still hold (sidecar stamp, no stale sidecar, every cached output byte-stable), the walk is skipped
@@ -335,11 +336,28 @@ sentinel in the hash column. Such an entry can never satisfy a write-skip compar
 `allCachedFilesStable()` prunes it when the file disappears — otherwise a removed opt-in would
 suppress the short-circuit forever, since nothing would ever re-record it.
 
+A watched entry only exists for a config that existed at the last build, so creating one, or a
+granular directory in a target, left nothing to go unstable. `MirrorConfig.state` (each target's
+directory, config hash and opted-in granular directories) is therefore also folded into both the
+fingerprint and the source digest, and only when a target exists, so a project that does not
+mirror keeps the keys it had.
+
+### Failed writes
+
+A write that fails (a file locked by an editor, a full disk, an existing file that is not UTF-8)
+prints one WARNING and the build still counts as clean. `WriteCache.recordFailure` stores a row
+with the `failed--` sentinel and a size of `-1`, which matches no file, so the next build's
+`allCachedFilesStable()` fails and neither the early exit nor the fingerprint short-circuit skips
+the retry. A successful write replaces the row. Removing the row would not do: an absent entry
+counts as stable, and a file the writer never managed to write has none.
+
 ## Check mode (CI drift enforcement)
 
 With `-Avibetags.check=true`, `process()` routes to `checkFiles()` instead of `generateFiles()`. It
 runs the same service resolution, content build, and multi-module merge (the module's sidecar save is
-simulated in memory), but uses a dry-run `GuardrailFileWriter` (`dryRun=true` constructor flag) that
+simulated in memory: `ModuleSidecar.peekAllAfterSaving` puts the in-memory sidecar in place of its
+file, with the mtime the save would leave, before superseded regions are dropped, as generation's
+save-then-`readAll` does), but uses a dry-run `GuardrailFileWriter` (`dryRun=true` constructor flag) that
 records every would-be write/scrub/delete into `dryRunChanges()` instead of touching disk. Any
 recorded path fails the build via `Messager.ERROR`. The fingerprint short-circuit and write cache are
 bypassed so the verdict never depends on cache state; internal failures in check mode fail closed
@@ -497,8 +515,9 @@ from that view deleted 22 committed rule files and cut a whole block out of `CLA
 0, nothing on the console.
 
 `PartialRoundDetector` refuses that round. It calls a compilation partial only when two
-independent facts hold: a sidecar describing this compilation's own source tree names an element
-the round did not produce, **and** a `.java` file under a source root the round did compile from
+independent facts hold: a sidecar describing this compilation's own source tree and source set
+(a main round never consults the test source set's sidecar, whose elements it never produces) names
+an element the round did not produce, **and** a `.java` file under a source root the round did compile from
 was not compiled and names `se.deversity.vibetags.annotations`. Either fact alone is ambiguous —
 the first is also what deleting an annotation looks like, the second is also what a source
 excluded from compilation looks like — and together they are not. When both hold, nothing is

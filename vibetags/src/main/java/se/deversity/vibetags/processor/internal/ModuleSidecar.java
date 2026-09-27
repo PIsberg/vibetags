@@ -371,7 +371,24 @@ public final class ModuleSidecar {
     /** Persists this sidecar atomically to {@code <root>/<SIDECAR_PREFIX><moduleId>}. */
     public void save(Path root) throws IOException {
         Path target = root.resolve(SIDECAR_PREFIX + moduleId);
+        String sb = serialized();
+        if (sameAsOnDisk(target, sb)) {
+            // Rewriting identical bytes moved the file's mtime, and the mtime is part of the
+            // stamp every sibling recorded, so each module's full round guaranteed the next
+            // module's and a no-op reactor rebuild never converged (issue #556). Unchanged
+            // content leaves the file, and the stamp, exactly as the siblings last saw it.
+            return;
+        }
 
+        // Unique rather than `<sidecar>.tmp`: two javac invocations for one module id (a build and
+        // an IDE compiling the same module at once) otherwise truncate each other's temp file.
+        Path tmp = uniqueTempFile(root, SIDECAR_PREFIX + moduleId);
+        Files.writeString(tmp, sb, StandardCharsets.UTF_8);
+        moveIntoPlace(tmp, target, ATOMIC_REPLACE);
+    }
+
+    /** The bytes {@link #save} writes, trailer included. */
+    private String serialized() {
         StringBuilder sb = new StringBuilder();
         sb.append(KEY_FORMAT_VERSION).append('=').append(FORMAT_VERSION).append('\n')
             .append(KEY_MODULE_ID).append('=').append(moduleId).append('\n')
@@ -410,20 +427,8 @@ public final class ModuleSidecar {
             appendEncoded(sb, KEY_ELEMENT_IDS, String.join("\n", elementIds));
         }
 
-        // Unique rather than `<sidecar>.tmp`: two javac invocations for one module id (a build and
-        // an IDE compiling the same module at once) otherwise truncate each other's temp file.
         sb.append(TRAILER).append('\n');
-        if (sameAsOnDisk(target, sb)) {
-            // Rewriting identical bytes moved the file's mtime, and the mtime is part of the
-            // stamp every sibling recorded, so each module's full round guaranteed the next
-            // module's and a no-op reactor rebuild never converged (issue #556). Unchanged
-            // content leaves the file, and the stamp, exactly as the siblings last saw it.
-            return;
-        }
-
-        Path tmp = uniqueTempFile(root, SIDECAR_PREFIX + moduleId);
-        Files.writeString(tmp, sb, StandardCharsets.UTF_8);
-        moveIntoPlace(tmp, target, ATOMIC_REPLACE);
+        return sb.toString();
     }
 
     /** Whether {@code target} already holds exactly {@code content}; false when unreadable. */
@@ -601,13 +606,15 @@ public final class ModuleSidecar {
      * (skipped, and likewise never deleted).
      */
     static @Nullable ModuleSidecar load(Path path) {
+        // Outside the try: the catch for an undecodable value below still has to judge the trailer.
+        List<String> lines = List.of();
+        int loadedVersion = 0;
         try {
-            List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+            lines = Files.readAllLines(path, StandardCharsets.UTF_8);
             String moduleId = null;
             String modulePath = "";
             String regionId = null;
             boolean sawCurrentVersion = false;
-            int loadedVersion = 0;
             Map<String, String> bodies = new LinkedHashMap<>();
             Map<String, String> moduleBodies = new LinkedHashMap<>();
             Map<String, String> indexDigests = new LinkedHashMap<>();
@@ -712,8 +719,10 @@ public final class ModuleSidecar {
             // Could not read it — that says nothing about the content. See UNREADABLE.
             return UNREADABLE;
         } catch (IllegalArgumentException malformed) {
-            // Read it fine, but a value is not decodable: genuinely corrupt, so the caller prunes.
-            return null;
+            // Read it fine, but a value is not decodable. With no trailer that is a write cut off
+            // inside the value, the same torn write the trailer check above reports, and must not
+            // be pruned for it. With the trailer it is genuinely corrupt, so the caller prunes.
+            return loadedVersion >= FORMAT_VERSION && !isWhole(lines) ? UNREADABLE : null;
         }
     }
 
@@ -859,6 +868,28 @@ public final class ModuleSidecar {
      * the full read and the summary read so both leave out the same files.
      */
     private static List<ModuleSidecar> readAll(Path root, boolean prune, @Nullable Logger log, Loader loader) {
+        return readAll(root, prune, log, loader, null);
+    }
+
+    /**
+     * {@link #peekAll(Path, Logger)} as generation reads it right after saving {@code saved}: the
+     * sidecars on disk with {@code saved} in place of its own file, stamped with the time that
+     * save would leave on it, and only then superseded regions dropped. Deletes nothing.
+     *
+     * <p>Check mode's stand-in for generation's save-then-{@code readAll}. Substituting after
+     * {@code peekAll} pruned the files on disk judged the regions without this module's fresh
+     * sidecar, and a region the save would have retired, this module's own included, was merged
+     * anyway: check mode reported drift on a tree generation leaves untouched (#766).
+     */
+    public static List<ModuleSidecar> peekAllAfterSaving(Path root, ModuleSidecar saved, @Nullable Logger log) {
+        List<ModuleSidecar> result = readAll(root, false, log, ModuleSidecar::load, saved);
+        applyRootIndexModeTo(root, result);
+        applyTestingOptInTo(root, result);
+        return result;
+    }
+
+    private static List<ModuleSidecar> readAll(Path root, boolean prune, @Nullable Logger log, Loader loader,
+                                               @Nullable ModuleSidecar saved) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
         List<ModuleSidecar> result = new ArrayList<>();
         // Kept index-aligned with result so a sidecar dropped below can also be deleted.
@@ -901,8 +932,39 @@ public final class ModuleSidecar {
             result.add(s);
             resultFiles.add(p);
         }
-        dropSupersededRegions(result, resultFiles, prune, log);
+        List<Long> writtenAt = new ArrayList<>(resultFiles.size());
+        resultFiles.forEach(f -> writtenAt.add(lastModified(f)));
+        if (saved != null) {
+            substituteSaved(root, saved, result, resultFiles, writtenAt);
+        }
+        dropSupersededRegions(result, resultFiles, writtenAt, prune, log);
         return result;
+    }
+
+    /**
+     * Puts {@code saved} where {@link #save} would put it, index-aligned with the files and their
+     * times: in place of its own entry, or at its place in filename order when it has none. The
+     * time is what the save leaves: unchanged content is not rewritten (#556), so the file keeps
+     * its mtime; anything else is written now.
+     */
+    private static void substituteSaved(Path root, ModuleSidecar saved, List<ModuleSidecar> sidecars,
+                                        List<Path> files, List<Long> writtenAt) {
+        Path target = root.resolve(SIDECAR_PREFIX + saved.moduleId);
+        long stamp = sameAsOnDisk(target, saved.serialized()) ? lastModified(target) : System.currentTimeMillis();
+        for (int i = 0; i < sidecars.size(); i++) {
+            if (sidecars.get(i).moduleId.equals(saved.moduleId)) {
+                sidecars.set(i, saved);
+                writtenAt.set(i, stamp);
+                return;
+            }
+        }
+        int at = 0;
+        while (at < sidecars.size() && sidecars.get(at).moduleId.compareTo(saved.moduleId) < 0) {
+            at++;
+        }
+        sidecars.add(at, saved);
+        files.add(at, target);
+        writtenAt.add(at, stamp);
     }
 
     /**
@@ -967,8 +1029,8 @@ public final class ModuleSidecar {
      * and is left alone, as is one whose timestamp cannot be read.
      */
     private static void dropSupersededRegions(List<ModuleSidecar> sidecars,
-                                              List<Path> files, boolean prune,
-                                              @Nullable Logger log) {
+                                              List<Path> files, List<Long> writtenAtByFile,
+                                              boolean prune, @Nullable Logger log) {
         if (sidecars.size() < MULTI_MODULE_THRESHOLD) return;
         Map<String, String> pathByRegion = new LinkedHashMap<>();
         Map<String, Set<String>> elementsByRegion = new LinkedHashMap<>();
@@ -979,7 +1041,7 @@ public final class ModuleSidecar {
             elementsByRegion.computeIfAbsent(s.regionId, k -> new LinkedHashSet<>())
                             .addAll(s.elementIds);
             // A region spans one sidecar per source set; the region is as fresh as its freshest.
-            long written = lastModified(files.get(i));
+            long written = writtenAtByFile.get(i);
             writtenAtByRegion.merge(s.regionId, written, Math::max);
         }
 
@@ -1062,6 +1124,7 @@ public final class ModuleSidecar {
             if (prune) tryDelete(files.get(i));
             sidecars.remove(i);
             files.remove(i);
+            writtenAtByFile.remove(i);
         }
     }
 
@@ -1614,6 +1677,14 @@ public final class ModuleSidecar {
 
         /** Set by the first refusal; {@link #verdict} is then {@code null} or FUTURE_VERSION. */
         private boolean refused;
+
+        /**
+         * Set by the first value that will not decode. Unlike a refusal it is judged after the
+         * trailer, as {@code load} judges it: a file with no trailer was cut off, possibly inside
+         * that very value, and is UNREADABLE rather than corrupt. Only the trailer is tracked from
+         * here on, since {@code load} stops reading content at the same value.
+         */
+        private boolean undecodable;
         private @Nullable ModuleSidecar verdict;
 
         private boolean lineStarted;
@@ -1645,6 +1716,9 @@ public final class ModuleSidecar {
                 return;
             }
             probeTrailer(c);
+            if (undecodable) {
+                return;
+            }
             if (!lineStarted) {
                 lineStarted = true;
                 comment = c == '#';
@@ -1775,7 +1849,7 @@ public final class ModuleSidecar {
                             if (!id.isBlank()) elementIds.add(id);
                         }
                     } catch (IllegalArgumentException malformed) {
-                        refuse(null);
+                        undecodable = true;
                     }
                 }
                 case UNROUTED -> {
@@ -1783,11 +1857,11 @@ public final class ModuleSidecar {
                         unrouted.put(keyName.substring(KEY_UNROUTED_BODY_PREFIX.length()),
                             stream.nonBlank() ? SUMMARIZED_BODY : "");
                     } else {
-                        refuse(null);
+                        undecodable = true;
                     }
                 }
                 case CHECKED -> {
-                    if (!stream.finish()) refuse(null);
+                    if (!stream.finish()) undecodable = true;
                 }
                 case IGNORED -> { }
             }
@@ -1804,7 +1878,7 @@ public final class ModuleSidecar {
                 return verdict;
             }
             if (loadedVersion >= FORMAT_VERSION && !lastNonBlankIsTrailer) return UNREADABLE;
-            if (moduleId == null || !sawVersion) return null;
+            if (undecodable || moduleId == null || !sawVersion) return null;
             ModuleSidecar s = new ModuleSidecar(moduleId, modulePath,
                 regionId != null && !regionId.isBlank() ? regionId : moduleId);
             s.elementIds.addAll(elementIds);

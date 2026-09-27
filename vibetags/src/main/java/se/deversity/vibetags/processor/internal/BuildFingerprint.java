@@ -128,6 +128,13 @@ public final class BuildFingerprint {
             }
         }
         sb.append('}');
+        // Mirror targets in sibling modules (MirrorConfig.state). Appended only when there is one,
+        // so the fingerprint of every project that does not mirror, and the pinned value, stay
+        // what they were.
+        String mirrors = collector.mirrorState();
+        if (!mirrors.isEmpty()) {
+            sb.append("M{").append(mirrors).append('}');
+        }
 
         return fingerprint(sb.toString());
     }

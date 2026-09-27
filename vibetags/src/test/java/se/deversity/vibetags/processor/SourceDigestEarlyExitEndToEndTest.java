@@ -241,6 +241,41 @@ class SourceDigestEarlyExitEndToEndTest {
             "the rebuild must warn exactly as the first build did");
     }
 
+    /**
+     * The console is not the only record: invariant 15 makes {@code vibetags.log} one too. The
+     * fingerprint short-circuit shuts the log down before it returns, and the orphan check that
+     * runs after it wrote to the detached logger, so the rebuild's warning reached the console and
+     * never the log.
+     */
+    @Test
+    void aRebuildStoppedByTheFingerprintLogsTheOrphanWarning() throws IOException {
+        Files.writeString(root.resolve("gemini_instructions.md"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = project(LEDGER);
+        h.compileReturningDiagnostics();
+        VibeTagsLogger.shutdown();
+        long before = logLinesContaining(ORPHAN);
+        assertTrue(before > 0, "the fixture must log the orphan warning, or this proves nothing");
+        Files.writeString(root.resolve("src/main/java/com/example/Ledger.java"), LEDGER + "// touched\n",
+            StandardCharsets.UTF_8);
+
+        String second = notes(h.compileReturningDiagnostics());
+        VibeTagsLogger.shutdown();
+
+        assertTrue(second.contains("(fingerprint "), "this case is about the fingerprint short-circuit:\n" + second);
+        assertTrue(logLinesContaining(ORPHAN) > before,
+            "the fingerprint-stopped build printed the orphan warning but did not log it");
+    }
+
+    private long logLinesContaining(String text) throws IOException {
+        Path log = root.resolve("vibetags.log");
+        if (!Files.exists(log)) {
+            return 0;
+        }
+        try (java.util.stream.Stream<String> lines = Files.lines(log, StandardCharsets.UTF_8)) {
+            return lines.filter(l -> l.contains(text)).count();
+        }
+    }
+
     @Test
     void aRebuildStoppedByTheFingerprintRepeatsTheOrphanWarning() throws IOException {
         // A comment changes the source digest but no annotation, so the rebuild walks and then
@@ -326,6 +361,52 @@ class SourceDigestEarlyExitEndToEndTest {
 
         assertFalse(second.contains(EARLY_EXIT), second);
         assertTrue(read(".cursorrules").contains("ledger maths is audited"), read(".cursorrules"));
+    }
+
+    /**
+     * Beside CLAUDE.md, AGENTS.md is active only once it carries a marker pair (invariant 4), and
+     * the first build's NOTE tells the user to paste one. That is a change to the file's content,
+     * not its presence, so an early exit that hashes only presence skipped the very build the NOTE
+     * asked for and left the pasted pair empty until some source changed.
+     */
+    @Test
+    void pastingAMarkerPairIntoAgentsMdBesideClaudeMdIsWritten() throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve("AGENTS.md"), "# Pointer\n\nRead CLAUDE.md.\n", StandardCharsets.UTF_8);
+        h.compileReturningDiagnostics();
+        assertFalse(read("AGENTS.md").contains("ledger maths is audited"),
+            "precondition: an unmarked AGENTS.md beside CLAUDE.md is left alone");
+        Files.writeString(root.resolve("AGENTS.md"),
+            "# Pointer\n\nRead CLAUDE.md.\n\n<!-- VIBETAGS-START -->\n<!-- VIBETAGS-END -->\n",
+            StandardCharsets.UTF_8);
+
+        String second = notes(h.compileReturningDiagnostics());
+
+        assertFalse(second.contains(EARLY_EXIT), second);
+        assertTrue(read("AGENTS.md").contains("ledger maths is audited"), read("AGENTS.md"));
+    }
+
+    /**
+     * A write that fails warns once and returns; the build is still recorded as clean. A file
+     * the writer never managed to write had no cache entry, and an absent entry counts as stable,
+     * so once the cause was fixed (here: a CLAUDE.md saved in Latin-1, re-saved as UTF-8; equally
+     * a file locked by an editor on Windows, or a full disk) every later build with unchanged
+     * sources took the exit and the file never received its guardrails.
+     */
+    @Test
+    void aFileThatFailedToWriteIsRetriedByTheNextBuild() throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve("CLAUDE.md"), "# Notes\n\nCafé rules.\n", StandardCharsets.ISO_8859_1);
+        String first = notes(h.compileReturningDiagnostics());
+        assertTrue(first.contains("Failed to write AI rules file"),
+            "precondition: a file that is not valid UTF-8 cannot be merged into, so it is not written\n" + first);
+        Files.writeString(root.resolve("CLAUDE.md"), "# Notes\n\nCafé rules.\n", StandardCharsets.UTF_8);
+
+        String second = notes(h.compileReturningDiagnostics());
+
+        assertFalse(second.contains(EARLY_EXIT), first + "\n---\n" + second);
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), read("CLAUDE.md"));
+        assertTrue(read("CLAUDE.md").contains("Café rules."), "hand-authored text must survive");
     }
 
     @Test

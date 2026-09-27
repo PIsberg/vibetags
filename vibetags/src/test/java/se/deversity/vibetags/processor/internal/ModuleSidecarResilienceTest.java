@@ -170,8 +170,11 @@ class ModuleSidecarResilienceTest {
         assertSame(ModuleSidecar.UNREADABLE, ModuleSidecar.load(missing),
             "a file that cannot be read says nothing about its content");
 
+        // With the trailer: the write finished, so a value that will not decode is corrupt. Without
+        // it the same file is a write cut short, which is UNREADABLE (see the next test).
         Path corrupt = Files.writeString(dir.resolve(".vibetags-mod-corrupt"),
-            "# version=" + ModuleSidecar.FORMAT_VERSION + "\nmoduleId=corrupt\nclaude=not~valid~base64!\n");
+            "# version=" + ModuleSidecar.FORMAT_VERSION + "\nmoduleId=corrupt\nclaude=not~valid~base64!\n"
+                + ModuleSidecar.TRAILER + "\n");
         assertNull(ModuleSidecar.load(corrupt), "content that will not decode is malformed");
     }
 

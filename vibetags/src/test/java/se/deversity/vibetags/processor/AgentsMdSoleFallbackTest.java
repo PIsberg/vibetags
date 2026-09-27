@@ -204,6 +204,42 @@ class AgentsMdSoleFallbackTest {
         assertFalse(h.readFile("CLAUDE.md").isBlank(), "CLAUDE.md must still be generated");
     }
 
+    /**
+     * The escape hatch is a marker <em>pair</em> the writer would recognise, not the marker text
+     * anywhere in the file. A pointer that merely mentions the marker in prose, or carries a
+     * START line with no END, has no block the writer can refresh: opting it in appended a whole
+     * generated block (and created {@code .codex/config.toml}) next to CLAUDE.md, the exact
+     * clobbering the sole-file rule exists to prevent.
+     */
+    @Test
+    void pointerMentioningTheMarkerInProseIsStillProtected(@TempDir Path tempDir) throws IOException {
+        String pointer = "# AGENTS.md\n\n"
+            + "Read CLAUDE.md. VibeTags only edits the region after `<!-- VIBETAGS-START -->` there.\n";
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
+        Files.writeString(h.root().resolve("AGENTS.md"), pointer);
+        h.touchOptIn("CLAUDE.md");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        h.compile();
+
+        assertEquals(pointer, h.readFile("AGENTS.md"),
+            "A marker quoted in prose is not a generated block; the pointer must be left untouched");
+        assertFalse(h.fileExists(".codex/config.toml"),
+            "Codex must stay inactive, so its sidecar config must not be created");
+    }
+
+    @Test
+    void pointerWithAnUnpairedStartMarkerIsStillProtected(@TempDir Path tempDir) throws IOException {
+        String pointer = "# AGENTS.md\n\n<!-- VIBETAGS-START -->\nRead CLAUDE.md instead.\n";
+        ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
+        Files.writeString(h.root().resolve("AGENTS.md"), pointer);
+        h.touchOptIn("CLAUDE.md");
+        h.addSource("com.example.payment.PaymentProcessor", LOCKED_SOURCE);
+        h.compile();
+
+        assertEquals(pointer, h.readFile("AGENTS.md"),
+            "A START line with no END is not a marker pair; the pointer must be left untouched");
+    }
+
     // -----------------------------------------------------------------------
     // Marker escape hatch → a marked AGENTS.md is managed even alongside CLAUDE.md
     // -----------------------------------------------------------------------
