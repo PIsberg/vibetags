@@ -336,6 +336,15 @@ sentinel in the hash column. Such an entry can never satisfy a write-skip compar
 `allCachedFilesStable()` prunes it when the file disappears — otherwise a removed opt-in would
 suppress the short-circuit forever, since nothing would ever re-record it.
 
+### Failed writes
+
+A write that fails (a file locked by an editor, a full disk, an existing file that is not UTF-8)
+prints one WARNING and the build still counts as clean. `WriteCache.recordFailure` stores a row
+with the `failed--` sentinel and a size of `-1`, which matches no file, so the next build's
+`allCachedFilesStable()` fails and neither the early exit nor the fingerprint short-circuit skips
+the retry. A successful write replaces the row. Removing the row would not do: an absent entry
+counts as stable, and a file the writer never managed to write has none.
+
 ## Check mode (CI drift enforcement)
 
 With `-Avibetags.check=true`, `process()` routes to `checkFiles()` instead of `generateFiles()`. It

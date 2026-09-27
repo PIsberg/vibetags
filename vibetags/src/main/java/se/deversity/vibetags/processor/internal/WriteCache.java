@@ -438,6 +438,29 @@ public final class WriteCache {
         }
     }
 
+    /**
+     * Records that writing {@code file} failed, so the next build regenerates it instead of trusting
+     * it as it stands.
+     *
+     * <p>Removing the entry is not enough: an absent entry counts as stable in
+     * {@link #allCachedFilesStable()}, and a file the writer never managed to write has none. The
+     * failed build is still recorded as clean, so without this every later build with unchanged
+     * inputs took a short-circuit and the file never received its guardrails, even after the cause
+     * (a file locked by an editor, a full disk, a file not in UTF-8) was gone. A size of {@code -1}
+     * matches no file, so the entry is unstable until {@link #recordWrite} replaces it.
+     */
+    public synchronized void recordFailure(Path file) {
+        loadIfNeeded();
+        entries.put(cacheKey(file), new Entry(FAILED_HASH, -1, -1));
+        dirty = true;
+    }
+
+    /**
+     * Sentinel in the hash column of a {@link #recordFailure} entry. Like {@link #INPUT_HASH}, not
+     * 8 hex digits, so it can never collide with a {@link #fingerprint} value.
+     */
+    static final String FAILED_HASH = "failed--";
+
     /** Removes a cache entry (e.g. when the writer skipped the file or the path is no longer ours). */
     public synchronized void invalidate(Path file) {
         loadIfNeeded();

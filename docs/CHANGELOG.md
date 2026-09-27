@@ -112,6 +112,13 @@ and no rule file moves.
   build with unchanged sources took the exit and left the pasted pair empty until a source
   changed. The source digest now includes whether `AGENTS.md` carries a marker pair.
   `SourceDigestEarlyExitEndToEndTest` pins it.
+- **A file that failed to write is retried by the next build.** The write warned once and the
+  build was still recorded as clean; a file the writer never managed to write had no write-cache
+  entry, and an absent entry counts as stable, so every later build with unchanged sources took the
+  early exit or the fingerprint short-circuit. A `CLAUDE.md` saved in Latin-1 and re-saved as
+  UTF-8, or one locked by an editor on Windows, never received its guardrails until a source
+  changed. The failure is now recorded as a cache row that matches no file.
+  `SourceDigestEarlyExitEndToEndTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

@@ -351,6 +351,29 @@ class SourceDigestEarlyExitEndToEndTest {
         assertTrue(read("AGENTS.md").contains("ledger maths is audited"), read("AGENTS.md"));
     }
 
+    /**
+     * A write that fails warns once and returns; the build is still recorded as clean. A file
+     * the writer never managed to write had no cache entry, and an absent entry counts as stable,
+     * so once the cause was fixed (here: a CLAUDE.md saved in Latin-1, re-saved as UTF-8; equally
+     * a file locked by an editor on Windows, or a full disk) every later build with unchanged
+     * sources took the exit and the file never received its guardrails.
+     */
+    @Test
+    void aFileThatFailedToWriteIsRetriedByTheNextBuild() throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve("CLAUDE.md"), "# Notes\n\nCafé rules.\n", StandardCharsets.ISO_8859_1);
+        String first = notes(h.compileReturningDiagnostics());
+        assertTrue(first.contains("Failed to write AI rules file"),
+            "precondition: a file that is not valid UTF-8 cannot be merged into, so it is not written\n" + first);
+        Files.writeString(root.resolve("CLAUDE.md"), "# Notes\n\nCafé rules.\n", StandardCharsets.UTF_8);
+
+        String second = notes(h.compileReturningDiagnostics());
+
+        assertFalse(second.contains(EARLY_EXIT), first + "\n---\n" + second);
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), read("CLAUDE.md"));
+        assertTrue(read("CLAUDE.md").contains("Café rules."), "hand-authored text must survive");
+    }
+
     @Test
     void aHandEditedGeneratedBlockIsRegenerated() throws IOException {
         ProcessorTestHarness h = project(LEDGER);

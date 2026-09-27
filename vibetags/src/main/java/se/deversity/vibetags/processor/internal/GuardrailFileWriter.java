@@ -208,6 +208,9 @@ public final class GuardrailFileWriter {
         } catch (IOException e) {
             messager.printMessage(Diagnostic.Kind.WARNING,
                 "VibeTags: Failed to write AI rules file: " + path + " - " + e.getMessage());
+            if (!dryRun && writeCache != null) {
+                writeCache.recordFailure(Paths.get(path));
+            }
             return false;
         }
     }
