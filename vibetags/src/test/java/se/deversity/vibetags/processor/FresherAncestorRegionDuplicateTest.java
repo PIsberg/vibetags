@@ -206,6 +206,52 @@ class FresherAncestorRegionDuplicateTest {
     }
 
     /**
+     * The equal-element-set half, and the order the sweep of 2026-09-27 suspected: a fallback
+     * compile writes the ancestor region with the same elements as the nested module, then the
+     * nested module recompiles with nothing changed. The suspicion was that the unchanged save
+     * leaves the nested sidecar older than the ancestor's, so the fresher ancestor retires the live
+     * module. It cannot: the fallback compile's own save-then-prune already retires the older
+     * nested sidecar, so the nested module's next save is a new file, the freshest, and it wins.
+     * Pinned so a change to either the prune or the save's no-rewrite rule (#556) cannot open it.
+     */
+    @Test
+    @DisplayName("a nested module recompiled after an equal fallback compile keeps its region")
+    void theNestedModuleWinsBackAfterAnEqualFallbackCompile() throws Exception {
+        Files.writeString(repoRoot.resolve("settings.gradle"), "rootProject.name = 'app'\ninclude 'app'\n",
+            StandardCharsets.UTF_8);
+        Files.writeString(repoRoot.resolve("build.gradle"), "plugins { id 'java' }\n", StandardCharsets.UTF_8);
+        Files.createDirectories(repoRoot.resolve(".gemini/rules"));
+        Files.createDirectories(repoRoot.resolve("app"));
+        Files.writeString(repoRoot.resolve("app/build.gradle"), "plugins { id 'java' }\n", StandardCharsets.UTF_8);
+        compileBoth();
+        ProcessorTestHarness.awaitFilesystemTick(repoRoot);
+
+        Files.delete(repoRoot.resolve("app/build.gradle")); // the fallback: identity resolves to the root
+        compileBoth();
+        assertTrue(Files.exists(repoRoot.resolve(".vibetags-mod-_root_")),
+            "precondition: the fallback compile filed itself under the root identity");
+        assertFalse(Files.exists(repoRoot.resolve(".vibetags-mod-app")),
+            "precondition: its own save-then-prune retired the older, equal nested sidecar");
+        ProcessorTestHarness.awaitFilesystemTick(repoRoot);
+        Files.writeString(repoRoot.resolve("app/build.gradle"), "plugins { id 'java' }\n", StandardCharsets.UTF_8);
+        compileBoth();
+
+        assertTrue(Files.exists(repoRoot.resolve(".vibetags-mod-app")), "the live nested module keeps its sidecar");
+        assertFalse(Files.exists(repoRoot.resolve(".vibetags-mod-_root_")),
+            "the ancestor holding the same elements is the leftover once the module is back");
+        assertEquals(1, countOf(ruleFile("com-example-billing-InvoiceValidator"), "## Security-Critical Code"),
+            "one region, so the guardrail is stated once");
+    }
+
+    private void compileBoth() throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(repoRoot, false);
+        h.writeSourceFile("app/src/main/java/com/example/billing/InvoiceValidator.java", VALIDATOR_SOURCE);
+        h.writeSourceFile("app/src/main/java/com/example/billing/LedgerWriter.java", WRITER_SOURCE);
+        h.compile();
+        VibeTagsLogger.shutdown();
+    }
+
+    /**
      * Check mode has to reach generation's verdict for the same compile (#766). Generation saves the
      * ancestor sidecar and then prunes the fresh set, so the ancestor is retired and nothing moves.
      * Check mode simulated that save in memory but pruned only the sidecars on disk, where the
