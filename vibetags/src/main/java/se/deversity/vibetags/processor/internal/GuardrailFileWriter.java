@@ -19,8 +19,10 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -987,6 +989,7 @@ public final class GuardrailFileWriter {
             : Files.createTempFile(".vibetags-", ".tmp");
         try {
             Files.writeString(tmp, finalContent, StandardCharsets.UTF_8);
+            applyPermissions(tmp, filePath);
             try {
                 Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (java.nio.file.AtomicMoveNotSupportedException e) {
@@ -995,6 +998,37 @@ public final class GuardrailFileWriter {
         } finally {
             // A successful move consumes tmp; clean it up only if a failure left it behind.
             Files.deleteIfExists(tmp);
+        }
+    }
+
+    /**
+     * Gives the staging file the mode the target should end up with. {@code Files.createTempFile}
+     * creates it {@code rw-------} on POSIX and the move carries that over the target, so a file
+     * another user reads ({@code llms.txt} behind a web server) became unreadable to it on its first
+     * update, with nothing in a diff (#871). A rewrite keeps the file's own mode; a new file gets
+     * its directory's without the execute bits, which is what a default umask gives it. No-op
+     * where the file system has no POSIX permissions, and on any failure to read them.
+     */
+    private static void applyPermissions(Path tmp, Path target) {
+        try {
+            Set<PosixFilePermission> mode;
+            if (Files.exists(target)) {
+                mode = Files.getPosixFilePermissions(target);
+            } else {
+                Path parent = target.toAbsolutePath().getParent();
+                if (parent == null) {
+                    return;
+                }
+                mode = EnumSet.noneOf(PosixFilePermission.class);
+                mode.addAll(Files.getPosixFilePermissions(parent));
+                mode.removeAll(EnumSet.of(PosixFilePermission.OWNER_EXECUTE,
+                    PosixFilePermission.GROUP_EXECUTE, PosixFilePermission.OTHERS_EXECUTE));
+                mode.add(PosixFilePermission.OWNER_READ);
+                mode.add(PosixFilePermission.OWNER_WRITE);
+            }
+            Files.setPosixFilePermissions(tmp, mode);
+        } catch (UnsupportedOperationException | IOException notPosix) {
+            // Not a POSIX file system, or the mode is unreadable: keep what createTempFile gave.
         }
     }
 

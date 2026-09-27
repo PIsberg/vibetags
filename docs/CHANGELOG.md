@@ -132,6 +132,12 @@ and no rule file moves.
   `.vibetags-cache` miss (one full generation, no committed file changes);
   `BuildFingerprintPinnedValueTest`'s literals moved for this reason. `BuildFingerprintUnitTest`
   pins both cases.
+- **An updated file keeps its POSIX permissions (#871).** Every write goes through a temp file moved
+  over the target, and `Files.createTempFile` creates it `rw-------`, so a `rw-r--r--` file (an
+  `llms.txt` a web server reads) became readable by its owner only on its first update, with
+  nothing in a diff; files VibeTags created were `rw-------` too. A rewrite now keeps the file's
+  own mode, and a new file gets its directory's without the execute bits. No change on Windows.
+  `GuardrailFileWriterCoverageTest` pins both on POSIX.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region
