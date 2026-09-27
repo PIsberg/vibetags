@@ -2010,6 +2010,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (previous == null || previous.getElementIds().isEmpty()) {
             return Set.of();
         }
+        // Recorded for the module-scoped writer, which runs after the save has overwritten `previous`.
+        collector.markEmptiedSourceSet();
         Set<String> services = new java.util.LinkedHashSet<>(previous.getBodies().keySet());
         services.addAll(previous.getUnroutedBodies().keySet());
         return services;

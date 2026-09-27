@@ -100,6 +100,31 @@ class PerModuleOutputEndToEndTest {
             "a module that did not opt in gets no per-module file");
     }
 
+    /**
+     * A module whose last annotation is removed has to withdraw it from its own file as well as
+     * from the root's. The root learned this in #781 (an emptied source set rewrites what it
+     * contributed to); the module-scoped file decided "may this empty round rewrite me" by whether
+     * the round found annotations, so it kept the removed lock while the root dropped it.
+     */
+    @Test
+    void moduleWhoseLastAnnotationIsRemoved_dropsItFromItsOwnFileToo() throws Exception {
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        touch(reactorRoot.resolve("module-core/CLAUDE.md"));
+        compileModule("module-core", "com.example.core.IrNode", CORE_SOURCE);
+        assertTrue(Files.readString(reactorRoot.resolve("module-core/CLAUDE.md")).contains("Core IR node"),
+            "precondition: the module file carries the lock");
+
+        ProcessorTestHarness.awaitFilesystemTick(reactorRoot);
+        VibeTagsLogger.shutdown();
+        compileModule("module-core", "com.example.core.IrNode",
+            "package com.example.core;\npublic class IrNode {}\n");
+
+        assertFalse(Files.readString(reactorRoot.resolve("CLAUDE.md")).contains("Core IR node"),
+            "precondition: the root file dropped the removed lock (#781)");
+        assertFalse(Files.readString(reactorRoot.resolve("module-core/CLAUDE.md")).contains("Core IR node"),
+            "the module's own file still carries a lock whose annotation was removed");
+    }
+
     @Test
     void moduleWithGranularSibling_collapsesToScopedIndex() throws IOException {
         touch(reactorRoot.resolve("module-core/CLAUDE.md"));

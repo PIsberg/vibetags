@@ -116,7 +116,9 @@ public final class ModuleOutputWriter {
         GuardrailContentBuilder.Result built = prebuilt != null ? prebuilt
             : new GuardrailContentBuilder(collector, moduleActive, projectName, generatedHeader, roles).build();
 
-        boolean hasAnnotations = collector.anyAnnotationsFound();
+        // An emptied source set rewrites its own file for the same reason it rewrites the root's
+        // (#781): nothing else ever withdraws the guardrails it contributed last time.
+        boolean hasAnnotations = collector.anyAnnotationsFound() || collector.emptiedSourceSet();
         int written = 0;
         for (Map.Entry<String, String> entry : built.contentByService.entrySet()) {
             String service = entry.getKey();
@@ -134,7 +136,7 @@ public final class ModuleOutputWriter {
                 }
             }
             // Ignore-files always overwrite; other files only carry the "hasNewRules" flag when this
-            // module actually had annotations (mirrors the single-module guard in generateFiles()).
+            // module actually had annotations, or has just lost its last ones (mirrors WritePlan).
             boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
             writer.writeFileIfChanged(filePath.toString(), content, hasAnnotations || isIgnoreFile);
             written++;

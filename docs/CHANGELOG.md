@@ -131,6 +131,12 @@ and no rule file moves.
   point in four) made the file read as corrupt, so `readAll` deleted it and the module dropped out
   of every sibling's output until it recompiled. The trailer is now judged first.
   `ModuleSidecarUnreadableScanAgreementTest` and `ModuleSidecarOnRecordAgreementTest` pin it.
+- **A module whose last annotation is removed drops it from its own module-scoped file too.** Since
+  #781 an emptied source set rewrites the shared root files it withdrew from, but a module that opts
+  into its own file (`module-core/CLAUDE.md`) decided whether an empty round may rewrite it by
+  whether the round found annotations, so the removed `@AILocked` stayed there while the root
+  dropped it, and check mode agreed with the stale file. The same #781 verdict now reaches the
+  module-scoped writer. `PerModuleOutputEndToEndTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

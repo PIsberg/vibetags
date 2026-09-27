@@ -129,6 +129,24 @@ public final class AnnotationCollector {
     }
 
     /**
+     * Whether this compilation's source set had annotations last time and, shown all of its
+     * sources, has none now (#781). The evidence is the source set's previous sidecar, which the
+     * save overwrites, so the processor records the verdict here before saving and the writers that
+     * run after the save read it back: the module-scoped files as much as the shared root.
+     */
+    private boolean emptiedSourceSet;
+
+    /** Records that this compilation's source set was emptied; see the field. */
+    public void markEmptiedSourceSet() {
+        emptiedSourceSet = true;
+    }
+
+    /** Whether this compilation's source set was emptied; see the field. */
+    public boolean emptiedSourceSet() {
+        return emptiedSourceSet;
+    }
+
+    /**
      * Whether this project opted into inheriting guardrails from its dependencies
      * ({@code .vibetags-transitive}).
      *
@@ -334,6 +352,7 @@ public final class AnnotationCollector {
         transitiveRules.clear();
         anyAnnotationsFound = false;
         sawSourceRoots = false;
+        emptiedSourceSet = false;
         memo = null;
         publishedMemo = null;
         granularMemo = null;
