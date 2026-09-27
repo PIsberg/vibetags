@@ -147,6 +147,24 @@ public final class AnnotationCollector {
     }
 
     /**
+     * The reactor's mirror targets as {@link MirrorConfig#state} describes them, empty when there
+     * are none. An input to the mirrored rule files that no annotation carries, held here for the
+     * same reason the transitive rules are: {@link BuildFingerprint} hashes what the collector
+     * holds (invariant 12).
+     */
+    private String mirrorState = "";
+
+    /** Records the reactor's mirror targets; see the field. */
+    public void setMirrorState(String state) {
+        this.mirrorState = state;
+    }
+
+    /** The reactor's mirror targets; see the field. */
+    public String mirrorState() {
+        return mirrorState;
+    }
+
+    /**
      * Whether this project opted into inheriting guardrails from its dependencies
      * ({@code .vibetags-transitive}).
      *
@@ -353,6 +371,7 @@ public final class AnnotationCollector {
         anyAnnotationsFound = false;
         sawSourceRoots = false;
         emptiedSourceSet = false;
+        mirrorState = "";
         memo = null;
         publishedMemo = null;
         granularMemo = null;

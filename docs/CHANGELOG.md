@@ -156,6 +156,12 @@ and no rule file moves.
   U+FEFF is not whitespace, so the START marker did not own its line, the file was treated as a
   pre-marker legacy file, and the old block's markers stayed as text above a second, new block.
   The BOM is now looked past and written back. `GuardrailFileRecoveryEndToEndTest` pins it.
+- **A `.vibetags-mirror` target created after a module's last build is mirrored into on the next
+  one.** The config lives in a sibling module, outside what the fingerprint and the source digest
+  hash, and only a config that already existed was watched. Creating one, or a granular directory
+  in an existing target, left the next unchanged build of every source module on a short-circuit,
+  and nothing was mirrored until a source changed. The mirror targets' state now reaches both keys
+  (invariant 12), only when a target exists. `MirrorEndToEndTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

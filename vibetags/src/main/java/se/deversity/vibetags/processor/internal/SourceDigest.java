@@ -67,6 +67,11 @@ public final class SourceDigest {
         new TreeMap<>(options).forEach((key, value) -> line(sha, "option " + key + "=" + value));
         line(sha, "module " + moduleId);
         line(sha, "test " + testRound);
+        // Mirror targets live in sibling modules, outside both directories hashed below.
+        String mirrors = MirrorConfig.state(base);
+        if (!mirrors.isEmpty()) {
+            line(sha, "mirrors " + mirrors);
+        }
         Set<Path> dirs = new LinkedHashSet<>(List.of(base, compilationRoot.toAbsolutePath().normalize()));
         for (Path dir : dirs) {
             line(sha, "dir " + name(base, dir));

@@ -295,7 +295,7 @@ processor therefore also decides earlier: on the first round that has sources it
 file the round was given, with everything else output depends on (`SourceDigest`: the processor
 version, every `-A` option, the module and source set, which opt-in files exist and as what kind at
 the root and the module root, whether `AGENTS.md` carries a marker pair, which decides whether it is
-written beside another AI file, and the content of every `.vibetags-*` configuration file there). When
+written beside another AI file, the reactor's `.vibetags-mirror` targets, and the content of every `.vibetags-*` configuration file there). When
 that key matches the one the last clean run of the module recorded (`# source-digest:` under the
 module's `# module:` line in `.vibetags-cache`), and the checks the fingerprint short-circuit makes
 still hold (sidecar stamp, no stale sidecar, every cached output byte-stable), the walk is skipped
@@ -335,6 +335,12 @@ registered with `WriteCache.recordInput` instead, which stores size+mtime under 
 sentinel in the hash column. Such an entry can never satisfy a write-skip comparison, and
 `allCachedFilesStable()` prunes it when the file disappears — otherwise a removed opt-in would
 suppress the short-circuit forever, since nothing would ever re-record it.
+
+A watched entry only exists for a config that existed at the last build, so creating one, or a
+granular directory in a target, left nothing to go unstable. `MirrorConfig.state` (each target's
+directory, config hash and opted-in granular directories) is therefore also folded into both the
+fingerprint and the source digest, and only when a target exists, so a project that does not
+mirror keeps the keys it had.
 
 ### Failed writes
 

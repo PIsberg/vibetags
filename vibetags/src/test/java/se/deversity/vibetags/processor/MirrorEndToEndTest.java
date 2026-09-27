@@ -292,6 +292,25 @@ class MirrorEndToEndTest {
             "editing .vibetags-mirror must invalidate the fingerprint short-circuit");
     }
 
+    /**
+     * The config above already existed at the first build, so it was watched. A target that opts
+     * in after the source module's last build had no watched entry to go unstable, and the
+     * config lives in a sibling module, where neither the fingerprint nor the source digest looks:
+     * the unchanged rebuild took a short-circuit and never mirrored anything into it.
+     */
+    @Test
+    void creatingAMirrorTargetAfterTheLastBuild_mirrorsOnTheNextBuild() throws IOException {
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        compileModule("app-fhe", "com.example.fhe.NativeBridge", FHE_SOURCE);
+        VibeTagsLogger.shutdown();
+
+        mirrorTarget("app-tests", "");
+        compileModule("app-fhe", "com.example.fhe.NativeBridge", FHE_SOURCE);
+
+        assertTrue(Files.exists(mirrored("app-tests", "app-fhe", "com-example-fhe-NativeBridge")),
+            "a mirror target created since the last build must be written on the next one");
+    }
+
     @Test
     void checkMode_reportsMissingMirroredFilesAsDrift_andWritesNothing() throws IOException {
         mirrorTarget("app-tests", "");

@@ -22,6 +22,7 @@ import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.HandAuthoredYamlKeyWarner;
 import se.deversity.vibetags.processor.internal.RuleFileLengthWarner;
+import se.deversity.vibetags.processor.internal.MirrorConfig;
 import se.deversity.vibetags.processor.internal.ModuleIdentity;
 import se.deversity.vibetags.processor.internal.ModuleRootResolver;
 import se.deversity.vibetags.processor.internal.ModuleOutputWriter;
@@ -477,6 +478,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // The inherited rules must reach the collector BEFORE that fingerprint is
                     // computed, or a dependency upgrade would be short-circuited past in silence.
                     applyTransitiveRules();
+                    collector.setMirrorState(MirrorConfig.state(root));
                     // Publishing runs in check mode too, and must. In a reactor that both
                     // publishes and consumes, a module's manifest is what the next module reads
                     // off the classpath — so a check-mode run that skipped publishing would have
