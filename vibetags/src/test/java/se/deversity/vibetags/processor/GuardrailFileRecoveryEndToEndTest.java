@@ -154,6 +154,36 @@ class GuardrailFileRecoveryEndToEndTest {
     }
 
     /**
+     * A generated file whose block opens on line 1, saved again by an editor that writes a UTF-8
+     * byte order mark. The START marker must still be found: U+FEFF is not whitespace to
+     * {@code Character.isWhitespace}, so the marker no longer owned its line, the file was taken for
+     * a legacy one, and the old block, END marker included, was kept as hand-written text above a
+     * second, new block. Every guardrail the old block stated stayed outside the markers for good.
+     */
+    @Test
+    void aByteOrderMarkBeforeTheStartMarker_stillFindsTheBlock(@TempDir Path dir) throws Exception {
+        compileOnce(dir);
+        Path claude = dir.resolve("CLAUDE.md");
+        String generated = Files.readString(claude, StandardCharsets.UTF_8);
+        assertTrue(generated.startsWith("<!-- VIBETAGS-START -->"),
+            "precondition: the block opens the file:\n" + generated);
+        Files.writeString(claude, "﻿" + generated.replace(REASON, "TAMPERED BY HAND")
+            + "\nNotes kept by hand.\n", StandardCharsets.UTF_8);
+        settle(dir);
+
+        compileOnce(dir);
+
+        String after = Files.readString(claude, StandardCharsets.UTF_8);
+        assertEquals(1, count(after, "<!-- VIBETAGS-START -->"), "one block, not two:\n" + after);
+        assertEquals(1, count(after, "<!-- VIBETAGS-END -->"), "one block, not two:\n" + after);
+        assertFalse(after.contains("TAMPERED BY HAND"), "the old block must be replaced:\n" + after);
+        assertTrue(after.contains(REASON), after);
+        assertTrue(after.contains("Notes kept by hand."), "hand-written text must survive:\n" + after);
+        assertTrue(after.startsWith("﻿<!-- VIBETAGS-START -->"),
+            "the byte order mark is the editor's encoding choice and stays where it was");
+    }
+
+    /**
      * {@code .vibetags-cache} is a build artifact — {@code git clean}, a CI cold clone or a
      * {@code target/} wipe removes it routinely. Losing it must cost a rebuild, not a diff: if the
      * cache is what makes output stable, then every cold CI run rewrites files and every developer

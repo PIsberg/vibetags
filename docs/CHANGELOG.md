@@ -151,6 +151,11 @@ and no rule file moves.
   failed with "2 guardrail file(s) are out of date". It now prunes the same list generation does.
   `FresherAncestorRegionDuplicateTest` pins it, and its `@AIContract` fixture, which named an
   attribute the annotation does not have and so never compiled, now uses `reason`.
+- **A generated file saved with a UTF-8 byte order mark keeps one block.** A block that opens the
+  file (the usual shape of a file opted in empty) was no longer found once an editor added a BOM:
+  U+FEFF is not whitespace, so the START marker did not own its line, the file was treated as a
+  pre-marker legacy file, and the old block's markers stayed as text above a second, new block.
+  The BOM is now looked past and written back. `GuardrailFileRecoveryEndToEndTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build
