@@ -410,14 +410,17 @@ options.compilerArgs << "-Avibetags.module=${project.name}"
 
 ### Out-of-tree modules
 
-A module that is not under the VibeTags root has no meaningful relative path, so
-`computeModulePath` returns `""` and `computeModuleId` falls back to a hash of the compilation
-root's **absolute** path. That costs three things: the region marker becomes an opaque hex id
-rather than a name; the id changes with the checkout location, so committed output does not
-reproduce across machines and check mode reports drift on CI; and the empty module path makes the
-staleness check skip its directory test, so the sidecar is never pruned when the module goes away.
+A module that is not under the VibeTags root has no module path under it, so `computeModulePath`
+returns `""`, and `computeModuleId` builds the id from the module directory's name and a hash of
+its path *relative* to the root (`../sibling/api` gives `api_<hex>`). Since #436 that id is the same
+from any checkout location, so committed output reproduces across machines; before, it hashed the
+absolute path and check mode reported drift on CI. Two costs remain: the region marker carries a
+hash suffix rather than a plain name, and the empty module path makes the staleness check skip its
+directory test, so the sidecar is never pruned when the module goes away. A module on a different
+drive from the root (Windows), where no relative path exists, still falls back to a hash of the
+absolute path, which does move with the checkout.
 
-Pointing `-Avibetags.root` at a directory that contains every module avoids all three.
+Pointing `-Avibetags.root` at a directory that contains every module avoids all of these.
 
 ## Cross-module mirroring (`.vibetags-mirror`)
 

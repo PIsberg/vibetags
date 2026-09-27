@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -224,6 +225,23 @@ class MultiModuleProcessorTest {
             "module id must never embed '..' path segments (filename-length risk), got: " + id);
         assertTrue(id.equals(ModuleSidecar.computeModuleId(compilationRoot, vibetagsRoot)),
             "id must be stable across calls");
+    }
+
+    /**
+     * What docs/MULTI-MODULE.md "Out-of-tree modules" states: the same layout checked out in two
+     * places gives an out-of-tree module the same id, and the id keeps the directory's name. The
+     * test above only held the id stable across calls on one path.
+     */
+    @Test
+    void computeModuleId_outOfTreeModule_isTheSameFromAnyCheckoutLocation(@TempDir Path tmp) {
+        Path first = tmp.resolve("checkout-one");
+        Path second = tmp.resolve("elsewhere").resolve("checkout-two");
+
+        String here = ModuleSidecar.computeModuleId(first.resolve("sibling/api"), first.resolve("project"));
+        String there = ModuleSidecar.computeModuleId(second.resolve("sibling/api"), second.resolve("project"));
+
+        assertEquals(here, there, "the id must depend on the layout, not on where it is checked out");
+        assertTrue(here.startsWith("api_"), "the id keeps the module directory's name, got: " + here);
     }
 
     @Test
