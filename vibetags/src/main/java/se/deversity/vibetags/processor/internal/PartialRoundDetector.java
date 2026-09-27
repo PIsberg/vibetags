@@ -110,7 +110,7 @@ public final class PartialRoundDetector {
             }
             compiledFiles.add(file);
             Path sourceRoot = sourceRootOf(file, packageNameOf(elements, element));
-            if (sourceRoot != null && !containsSegment(sourceRoot, GENERATED_SEGMENT)) {
+            if (sourceRoot != null) {
                 sourceRoots.add(sourceRoot);
             }
         }
@@ -125,6 +125,7 @@ public final class PartialRoundDetector {
      * @param elementIdsSeen   the element ids this compilation produced
      */
     public List<Path> unreadAnnotatedSources(Path root, Set<String> elementIdsSeen) {
+        sourceRoots.removeIf(sourceRoot -> isGeneratedTree(root, sourceRoot));
         if (sourceRoots.isEmpty()) {
             return List.of();
         }
@@ -274,6 +275,19 @@ public final class PartialRoundDetector {
         } catch (RuntimeException | Error unavailable) {
             return null;
         }
+    }
+
+    /**
+     * True when {@code sourceRoot} is a generated-source tree. Only the part below the VibeTags root
+     * is looked at: the directories a checkout happens to sit in ({@code /ci/generated/proj}) say
+     * nothing about the tree, and matching them left a whole project with no source root, which
+     * reads as a complete round and let an incremental one delete the rule files it was never
+     * shown. A root outside the VibeTags root has no such part and is judged on its whole path.
+     */
+    private static boolean isGeneratedTree(Path root, Path sourceRoot) {
+        Path base = root.toAbsolutePath().normalize();
+        Path tree = sourceRoot.toAbsolutePath().normalize();
+        return containsSegment(tree.startsWith(base) ? base.relativize(tree) : tree, GENERATED_SEGMENT);
     }
 
     /** True when any segment of {@code path} equals {@code segment}. */

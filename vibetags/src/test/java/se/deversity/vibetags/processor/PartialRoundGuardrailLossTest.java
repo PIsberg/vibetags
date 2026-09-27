@@ -73,6 +73,33 @@ class PartialRoundGuardrailLossTest {
             "Gamma's rule file went the same way as Beta's");
     }
 
+    /**
+     * Generated-source trees are left out of the walk by their {@code generated} path segment, but
+     * the segment was looked for in the whole absolute path, including the directories the
+     * checkout sits in. A project under {@code /ci/generated/} (or any workspace so named) had no
+     * source root left to measure against, the guard concluded every round was complete, and an
+     * incremental round deleted the rule files it was never shown.
+     */
+    @Test
+    void theGuardStillFiresWhenTheCheckoutSitsUnderADirectoryNamedGenerated(@TempDir Path dir)
+            throws Exception {
+        Path root = dir.resolve("generated").resolve("proj");
+        Files.createDirectories(root);
+        Path[] sources = writeThreeAnnotatedSources(root);
+
+        compileAll(root, sources);
+        assertTrue(Files.exists(rule(root, "Beta")), "precondition: Beta's rule file was written");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        compileSubset(root, sources[0]);
+
+        assertTrue(Files.exists(rule(root, "Beta")),
+            "the directory the checkout sits in is not a generated-source tree; the round was "
+                + "partial and must not delete Beta's rule file");
+        assertTrue(Files.exists(rule(root, "Gamma")), "Gamma's rule file went the same way");
+    }
+
     /** The aggregate is the other half of the loss: 27 lines and a whole block went with it. */
     @Test
     void aPartialRoundDoesNotStripTheAggregateBackToWhatItSaw(@TempDir Path root) throws Exception {

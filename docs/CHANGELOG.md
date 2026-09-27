@@ -119,6 +119,12 @@ and no rule file moves.
   UTF-8, or one locked by an editor on Windows, never received its guardrails until a source
   changed. The failure is now recorded as a cache row that matches no file.
   `SourceDigestEarlyExitEndToEndTest` pins it.
+- **The partial-round guard (invariant 17) no longer switches off for a checkout under a directory
+  named `generated`.** Generated-source trees are left out of the guard by their `generated` path
+  segment, which was looked for in the whole absolute path. A project at `/ci/generated/proj` had
+  no source root left, every round counted as complete, and an incremental round of one source
+  deleted the rule files of the two it was never shown. Only the part below the VibeTags root is
+  judged now. `PartialRoundGuardrailLossTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build
