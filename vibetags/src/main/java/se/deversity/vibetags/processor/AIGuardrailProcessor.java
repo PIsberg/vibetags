@@ -2300,20 +2300,35 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * marker pair, so the active services cannot have moved.
      */
     void checkOrphanedAnnotations(Messager messager, Set<String> active, boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
-        orphansChecked.set(true);
-        OrphanWarner.warnAboutOrphans(new CountingMessager(messager), log, active, hasLocked, hasIgnore, hasAudit);
+        checkOrphanedAnnotations(messager, log, active, hasLocked, hasIgnore, hasAudit);
     }
 
-    /** The orphan check for a generation that returned at its fingerprint short-circuit (#860). */
+    private void checkOrphanedAnnotations(Messager messager, @Nullable Logger logger, Set<String> active,
+                                          boolean hasLocked, boolean hasIgnore, boolean hasAudit) {
+        orphansChecked.set(true);
+        OrphanWarner.warnAboutOrphans(new CountingMessager(messager), logger, active, hasLocked, hasIgnore, hasAudit);
+    }
+
+    /**
+     * The orphan check for a generation that returned at its fingerprint short-circuit (#860). That
+     * return releases the log, so it is reopened with the same options for the check and released
+     * again, as {@link #warnAboutOversizedRuleFiles} does; written to the released logger, the
+     * warning reached the console and never {@code vibetags.log}.
+     */
     private void checkOrphansIfShortCircuited() {
         if (orphansChecked.get()) {
             return;
         }
-        // The quiet overload: the loud one already printed its notes and deprecation warnings at
-        // the top of generateFiles(), and it returns the same set.
-        checkOrphanedAnnotations(processingEnv.getMessager(),
-            ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)),
-            !collector.locked().isEmpty(), !collector.ignore().isEmpty(), !collector.audit().isEmpty());
+        Logger reopened = VibeTagsLogger.forRoot(root, logPath, logLevel);
+        try {
+            // The quiet overload: the loud one already printed its notes and deprecation warnings at
+            // the top of generateFiles(), and it returns the same set.
+            checkOrphanedAnnotations(processingEnv.getMessager(), reopened,
+                ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)),
+                !collector.locked().isEmpty(), !collector.ignore().isEmpty(), !collector.audit().isEmpty());
+        } finally {
+            VibeTagsLogger.shutdown(root);
+        }
     }
 
     /**

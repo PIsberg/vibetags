@@ -162,6 +162,11 @@ and no rule file moves.
   in an existing target, left the next unchanged build of every source module on a short-circuit,
   and nothing was mirrored until a source changed. The mirror targets' state now reaches both keys
   (invariant 12), only when a target exists. `MirrorEndToEndTest` pins it.
+- **A rebuild stopped by the fingerprint logs its orphan warning to `vibetags.log` again.** Since
+  #860 the orphan check runs after `generateFiles()` returns from its fingerprint short-circuit, but
+  that return releases the log, so the warning reached the console and never the log (invariant
+  15). The check now reopens the log with the same options, as the rule-file length check does.
+  `SourceDigestEarlyExitEndToEndTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

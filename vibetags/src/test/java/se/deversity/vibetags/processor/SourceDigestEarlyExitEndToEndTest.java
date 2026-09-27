@@ -241,6 +241,41 @@ class SourceDigestEarlyExitEndToEndTest {
             "the rebuild must warn exactly as the first build did");
     }
 
+    /**
+     * The console is not the only record: invariant 15 makes {@code vibetags.log} one too. The
+     * fingerprint short-circuit shuts the log down before it returns, and the orphan check that
+     * runs after it wrote to the detached logger, so the rebuild's warning reached the console and
+     * never the log.
+     */
+    @Test
+    void aRebuildStoppedByTheFingerprintLogsTheOrphanWarning() throws IOException {
+        Files.writeString(root.resolve("gemini_instructions.md"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = project(LEDGER);
+        h.compileReturningDiagnostics();
+        VibeTagsLogger.shutdown();
+        long before = logLinesContaining(ORPHAN);
+        assertTrue(before > 0, "the fixture must log the orphan warning, or this proves nothing");
+        Files.writeString(root.resolve("src/main/java/com/example/Ledger.java"), LEDGER + "// touched\n",
+            StandardCharsets.UTF_8);
+
+        String second = notes(h.compileReturningDiagnostics());
+        VibeTagsLogger.shutdown();
+
+        assertTrue(second.contains("(fingerprint "), "this case is about the fingerprint short-circuit:\n" + second);
+        assertTrue(logLinesContaining(ORPHAN) > before,
+            "the fingerprint-stopped build printed the orphan warning but did not log it");
+    }
+
+    private long logLinesContaining(String text) throws IOException {
+        Path log = root.resolve("vibetags.log");
+        if (!Files.exists(log)) {
+            return 0;
+        }
+        try (java.util.stream.Stream<String> lines = Files.lines(log, StandardCharsets.UTF_8)) {
+            return lines.filter(l -> l.contains(text)).count();
+        }
+    }
+
     @Test
     void aRebuildStoppedByTheFingerprintRepeatsTheOrphanWarning() throws IOException {
         // A comment changes the source digest but no annotation, so the rebuild walks and then
