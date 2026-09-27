@@ -102,6 +102,11 @@ class ElementExclusionsTest {
         assertFalse(dot.excludes(element("comXexampleXFoo")),
             "dots in patterns must be quoted literally, not act as any-character");
 
+        // A literal ahead of a wildcard is quoted too, not only the tail after the last one
+        ElementExclusions dotBeforeStar = ElementExclusions.parse("com.example.*");
+        assertFalse(dotBeforeStar.excludes(element("comXexampleXFoo")),
+            "dots before a wildcard must be quoted literally, not act as any-character");
+
         // Inner class '$' is literal
         ElementExclusions inner = ElementExclusions.parse("com.example.Foo$Bar");
         assertTrue(inner.excludes(element("com.example.Foo$Bar")), "dollar sign must match inner class");

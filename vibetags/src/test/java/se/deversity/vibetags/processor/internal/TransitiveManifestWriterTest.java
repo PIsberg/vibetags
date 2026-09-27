@@ -130,8 +130,8 @@ class TransitiveManifestWriterTest {
 
         Files.writeString(marker, """
             # Header comment
-            
-               com.example:library-core:1.2.3   
+
+               com.example:library-core:1.2.3
             # Second line is ignored
             com.example:library-extra:4.5.6
             """, StandardCharsets.UTF_8);
@@ -240,7 +240,7 @@ class TransitiveManifestWriterTest {
             eq(TransitiveManifest.RESOURCE_PACKAGE),
             eq(TransitiveManifest.resourceNameFor("com.example.b")))).thenReturn(foB);
 
-        List<String> written = TransitiveManifestWriter.emit(filer, model, "com.example:lib:1.0", "1.3.7", logger);
+        List<String> written = TransitiveManifestWriter.emit(filer, model, "com.example:lib:1.0", "9.9.9", logger);
 
         assertEquals(List.of("com.example.a", "com.example.b"), written,
             "written packages must be returned in sorted order");
@@ -271,7 +271,7 @@ class TransitiveManifestWriterTest {
         when(fo.toUri()).thenReturn(URI.create("file:///out/pkg.json"));
         when(filer.createResource(any(), any(), any())).thenReturn(fo);
 
-        TransitiveManifestWriter.emit(filer, model, "", "1.3.7", logger);
+        TransitiveManifestWriter.emit(filer, model, "", "9.9.9", logger);
 
         assertTrue(appender.list.stream().anyMatch(e -> e.getFormattedMessage().contains("origin=<unset>")),
             "empty origin must be logged as <unset>");
@@ -282,7 +282,7 @@ class TransitiveManifestWriterTest {
         GuardrailModel model = GuardrailModel.builder().build();
         Filer filer = mock(Filer.class);
 
-        List<String> written = TransitiveManifestWriter.emit(filer, model, "com.example:lib:1.0", "1.3.7", null);
+        List<String> written = TransitiveManifestWriter.emit(filer, model, "com.example:lib:1.0", "9.9.9", null);
         assertTrue(written.isEmpty(), "model with no package guardrails must write nothing");
         verify(filer, never()).createResource(any(), any(), any());
     }
@@ -299,7 +299,7 @@ class TransitiveManifestWriterTest {
         when(fo.toUri()).thenReturn(URI.create("file:///out/pkg.json"));
         when(filer.createResource(any(), any(), any())).thenReturn(fo);
 
-        List<String> written = TransitiveManifestWriter.emit(filer, model, "origin", "1.3.7", null);
+        List<String> written = TransitiveManifestWriter.emit(filer, model, "origin", "9.9.9", null);
         assertEquals(List.of("com.example.pkg"), written, "null logger must not prevent emission");
     }
 
@@ -313,7 +313,7 @@ class TransitiveManifestWriterTest {
         when(filer.createResource(any(), any(), any())).thenThrow(new IOException("disk full"));
 
         assertThrows(IOException.class, () ->
-            TransitiveManifestWriter.emit(filer, model, "origin", "1.3.7", null),
+            TransitiveManifestWriter.emit(filer, model, "origin", "9.9.9", null),
             "Filer IOException must propagate to caller");
     }
 }

@@ -188,6 +188,19 @@ class DestructiveRewriteWarnerUnitTest {
     }
 
     @Test
+    void orphanSweep_removedEqualToWritten_isStillANote() {
+        DestructiveRewriteWarner warner = new DestructiveRewriteWarner(messager, logger);
+
+        warner.orphanSweep(".cursor/rules", List.of("oldA", "oldB"), Set.of("newA", "newB"));
+
+        assertEquals(1, recordedDiagnostics.size(), "a one-for-one sweep must emit one diagnostic");
+        assertEquals(Diagnostic.Kind.NOTE, recordedDiagnostics.get(0).kind(),
+            "removing exactly as many files as were written is an ordinary sweep, not a destructive one");
+        assertTrue(appender.list.stream().noneMatch(e -> e.getLevel() == Level.WARN),
+            "no WARN log when removed == written");
+    }
+
+    @Test
     void orphanSweep_removedMoreThanWritten_warns() {
         DestructiveRewriteWarner warner = new DestructiveRewriteWarner(messager, logger);
 
