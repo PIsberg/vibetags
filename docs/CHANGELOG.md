@@ -104,6 +104,12 @@ and no rule file moves.
   replaced by the generated rules on every build, rendered as code no agent reads as guardrails,
   and a real block below it was never refreshed. The block is now looked for outside fences.
   `MarkerInProseTest` pins it.
+- **A reactor root that compiles sources of its own no longer blocks its modules' writes.** The
+  partial-round guard consulted every sidecar whose directory contains the round's sources, and the
+  root's contains every module's. Its elements are never produced by a module round, so while that
+  sidecar existed, a module that keeps one annotated source out of its build was refused as partial
+  on every compile, its first included. A parent module's sidecar is no longer consulted.
+  `PartialRoundGuardrailLossTest` pins it.
 - **A stray START marker no longer costs the text after it (#865).** A marker file with a START
   line and no END was repaired by deleting everything after START, on the assumption that it was a
   generated block that lost its END. When the START line was an example the developer pasted, their
