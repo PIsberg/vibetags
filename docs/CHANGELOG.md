@@ -137,6 +137,13 @@ and no rule file moves.
   whether the round found annotations, so the removed `@AILocked` stayed there while the root
   dropped it, and check mode agreed with the stale file. The same #781 verdict now reaches the
   module-scoped writer. `PerModuleOutputEndToEndTest` pins it.
+- **A module with annotated tests and one annotated main source excluded from the build writes
+  again.** The partial-round guard (invariant 17) asks whether a sidecar describing the round's
+  source tree names an element the round did not produce, and the module's test sidecar describes
+  the same directory. A main round never produces test elements, so once the tests had compiled the
+  question was always yes, and the excluded source (a `<excludes>` entry) answered the other half:
+  every main round was refused as partial and an edited annotation was never generated. A sidecar
+  of another source set is no longer consulted. `PartialRoundGuardrailLossTest` pins it.
 - **A rebuild that takes the early exit repeats the deprecated-output and module-identity warnings
   (#859).** `generateFiles()` raises them before its fingerprint short-circuit, so every no-op
   rebuild printed them until #834's early exit skipped `generateFiles()` whole. A `-Werror` build

@@ -123,13 +123,14 @@ public final class PartialRoundDetector {
      *
      * @param root             the VibeTags root, where the sidecars live
      * @param elementIdsSeen   the element ids this compilation produced
+     * @param sourceSet        the source set this compilation compiles ({@code main}, {@code test}, ...)
      */
-    public List<Path> unreadAnnotatedSources(Path root, Set<String> elementIdsSeen) {
+    public List<Path> unreadAnnotatedSources(Path root, Set<String> elementIdsSeen, String sourceSet) {
         sourceRoots.removeIf(sourceRoot -> isGeneratedTree(root, sourceRoot));
         if (sourceRoots.isEmpty()) {
             return List.of();
         }
-        if (!anyRecordedElementMissing(root, elementIdsSeen)) {
+        if (!anyRecordedElementMissing(root, elementIdsSeen, sourceSet)) {
             return List.of(); // condition (1): nothing went missing, so nothing needs explaining
         }
         return unreadSourcesNamingTheAnnotations();
@@ -145,10 +146,17 @@ public final class PartialRoundDetector {
      * compared against its own id would be stepped around by exactly the builds that need it. Any
      * sidecar whose module directory contains one of this round's source roots is describing this
      * code; a reactor sibling's directory contains none of them and is therefore never consulted.
+     *
+     * <p>Containment says nothing about the source set, though: the test sidecar of a module has
+     * the same module directory as its main one, and a main round never produces test elements.
+     * Counting them as missing made (1) hold on every main round once the tests had compiled, and
+     * an annotated main source excluded from the build then stopped main writing for good. A
+     * sidecar of another source set is skipped; the source set is read off the sidecar's own ids,
+     * which do not drift the way the module id can.
      */
-    private boolean anyRecordedElementMissing(Path root, Set<String> elementIdsSeen) {
+    private boolean anyRecordedElementMissing(Path root, Set<String> elementIdsSeen, String sourceSet) {
         for (ModuleSidecar sidecar : ModuleSidecar.peekAll(root)) {
-            if (!describesThisCompilation(root, sidecar)) {
+            if (!describesThisCompilation(root, sidecar) || !ModuleSidecar.sanitizeId(sourceSet).equals(sourceSetOf(sidecar))) {
                 continue;
             }
             for (String recorded : sidecar.getElementIds()) {
@@ -158,6 +166,16 @@ public final class PartialRoundDetector {
             }
         }
         return false;
+    }
+
+    /**
+     * The source set {@code sidecar} records: {@code main} when its id is its region's, otherwise
+     * what follows the separator ({@code core__test} in region {@code core} is {@code test}).
+     */
+    private static String sourceSetOf(ModuleSidecar sidecar) {
+        String prefix = sidecar.getRegionId() + ModuleSidecar.SOURCE_SET_SEPARATOR;
+        String id = sidecar.getModuleId();
+        return id.startsWith(prefix) ? id.substring(prefix.length()) : ModuleIdentity.MAIN;
     }
 
     /** True when {@code sidecar}'s module directory contains one of this round's source roots. */

@@ -504,7 +504,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // ones. Reading the set before they arrive makes every transitive build look
                     // like it lost them.
                     List<Path> unread =
-                        sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds());
+                        sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds(), currentSourceSet());
                     if (!unread.isEmpty()) {
                         reportPartialRound(unread);
                         VibeTagsLogger.shutdown(root);
@@ -2015,6 +2015,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Set<String> services = new java.util.LinkedHashSet<>(previous.getBodies().keySet());
         services.addAll(previous.getUnroutedBodies().keySet());
         return services;
+    }
+
+    /** The source set this compilation compiles; {@code main} until a round has resolved it. */
+    private String currentSourceSet() {
+        return moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
     }
 
     /**

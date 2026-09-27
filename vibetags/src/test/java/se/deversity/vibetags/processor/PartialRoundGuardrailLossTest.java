@@ -100,6 +100,62 @@ class PartialRoundGuardrailLossTest {
         assertTrue(Files.exists(rule(root, "Gamma")), "Gamma's rule file went the same way");
     }
 
+    /**
+     * Condition (1) asks whether a sidecar describing this compilation's source tree names an
+     * element the round did not produce. The test source set's sidecar describes the same module
+     * directory, and a main round never produces test elements, so once the tests had compiled,
+     * (1) held on every main round. An annotated main source excluded from the build (a
+     * {@code <excludes>} entry, a file kept for reference) then made every main round "partial",
+     * and main never wrote again: the edit below was never generated, with a warning on each build.
+     */
+    @Test
+    void aMainRoundIsNotPartialBecauseTheTestSourceSetRecordsElementsOfItsOwn(@TempDir Path root)
+            throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve("core"));
+        Files.writeString(root.resolve("core/pom.xml"), "<project><artifactId>core</artifactId></project>",
+            StandardCharsets.UTF_8);
+        Path alpha = lockedSource(root, "core/src/main/java/com/example/Alpha.java", "Alpha", "alpha-v1");
+        lockedSource(root, "core/src/main/java/com/example/Excluded.java", "Excluded", "excluded");
+        Path alphaTest = lockedSource(root, "core/src/test/java/com/example/AlphaTest.java", "AlphaTest", "fixture");
+        compileSources(root, alpha);
+        compileSources(root, alphaTest);
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-core__test")),
+            "precondition: the test source set recorded its own sidecar");
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("alpha-v1"),
+            "precondition: the main round wrote Alpha's lock");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        lockedSource(root, "core/src/main/java/com/example/Alpha.java", "Alpha", "alpha-v2");
+        compileSources(root, alpha);
+
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("alpha-v2"),
+            "the main round compiled every main source its own sidecar recorded; the test source "
+                + "set's elements are not missing from it, they were never its to produce");
+    }
+
+    private static Path lockedSource(Path root, String relative, String type, String reason) throws IOException {
+        Path p = root.resolve(relative);
+        Files.createDirectories(p.getParent());
+        Files.writeString(p,
+            "package com.example;" + NL
+                + "import se.deversity.vibetags.annotations.AILocked;" + NL
+                + "@AILocked(reason = " + Q + reason + Q + ")" + NL
+                + "public class " + type + " {}" + NL,
+            StandardCharsets.UTF_8);
+        return p;
+    }
+
+    private static void compileSources(Path root, Path... sources) throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        for (Path s : sources) {
+            harness.addSourceFile(s);
+        }
+        harness.compile();
+        VibeTagsLogger.shutdown();
+    }
+
     /** The aggregate is the other half of the loss: 27 lines and a whole block went with it. */
     @Test
     void aPartialRoundDoesNotStripTheAggregateBackToWhatItSaw(@TempDir Path root) throws Exception {
