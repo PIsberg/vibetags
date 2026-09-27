@@ -2768,6 +2768,29 @@ public final class ModuleSidecar {
         }
     }
 
+    /**
+     * The module path of another live module whose sidecar sits under {@code moduleId}, or
+     * {@code null} when there is none.
+     *
+     * <p>Module ids are sanitised paths, so {@code a/b} and {@code a_b} share one, and so do a
+     * module directory named {@code core__test} and module {@code core}'s test source set. Two
+     * modules with one id share one sidecar file and one region, and each build of one replaces
+     * the other's guardrails in the shared files (#869). The sidecar on disk names the module that
+     * last wrote it; a different path whose directory still exists is the other module. A path
+     * that is gone is a renamed or removed module, which is no collision.
+     */
+    public static @Nullable String collidingModulePath(Path root, String moduleId, String modulePath) {
+        ModuleSidecar existing = loadFor(root, moduleId);
+        if (existing == null) {
+            return null;
+        }
+        String theirs = normalizeModulePath(existing.modulePath);
+        if (theirs.isEmpty() || theirs.equals(normalizeModulePath(modulePath)) || !moduleDirExists(root, theirs)) {
+            return null;
+        }
+        return theirs;
+    }
+
     /** {@link #moduleDir} as the yes/no question the callers that do not log ask. */
     private static boolean moduleDirExists(Path root, String modulePath) {
         return moduleDir(root, modulePath) == ModuleDir.EXISTS;

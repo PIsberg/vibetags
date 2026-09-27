@@ -96,6 +96,41 @@ class MultiModuleAggregationTest {
             "the module path must be recorded with forward slashes:\n" + sidecar);
     }
 
+    /**
+     * Module ids are sanitised paths, so {@code a/b} and {@code a_b} both become {@code a_b}: one
+     * sidecar file, one region, and each module's build replaced the other's guardrails in the
+     * shared files with nothing said (#869). Renaming ids would move every committed region marker
+     * for a collision few reactors have, so the collision is reported instead, with the override
+     * that resolves it.
+     */
+    @Test
+    void twoModulesWithTheSameId_areReported(@TempDir Path root) throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compileLockedModule(root, "a/b", "com.example.ab.Nested");
+        List<String> warnings = compileLockedModule(root, "a_b", "com.example.ab.Flat");
+
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("a/b") && w.contains("a_b")
+                && w.contains("vibetags.module")),
+            "two live modules sharing a sidecar must be named, with the fix; warnings were: " + warnings);
+    }
+
+    private static List<String> compileLockedModule(Path root, String module, String fqn) throws IOException {
+        Files.createDirectories(root.resolve(module));
+        Files.writeString(root.resolve(module).resolve("pom.xml"), "<project><artifactId>x</artifactId></project>");
+        ProcessorTestHarness h = new ProcessorTestHarness(root, false);
+        String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
+        String type = fqn.substring(fqn.lastIndexOf('.') + 1);
+        h.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java",
+            "package " + pkg + ";\nimport se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"" + type + "\")\npublic class " + type + " {}\n");
+        List<String> warnings = h.compileReturningDiagnostics().stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.WARNING)
+            .map(d -> d.getMessage(null))
+            .toList();
+        VibeTagsLogger.shutdown();
+        return warnings;
+    }
+
     /** The read side of the same case, for sidecars already written with backslashes (#868). */
     @Test
     void sidecarWithABackslashedModulePath_isReadAsLive(@TempDir Path root) throws IOException {

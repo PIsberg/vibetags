@@ -118,6 +118,12 @@ and no rule file moves.
   now written with forward slashes and read that way whatever wrote it. Sidecars are gitignored:
   a Windows build rewrites each nested module's sidecar once, which costs one full reactor round
   and changes no committed file. `MultiModuleAggregationTest` pins both sides.
+- **Two modules that resolve to the same module id are reported (#869).** Ids are sanitised paths,
+  so `a/b` and `a_b` (or a module named `core__test` beside `core`'s test source set) shared one
+  sidecar and one region, and each one's build silently replaced the other's guardrails; the only
+  warning blamed the compilation's sources. A WARNING now names both modules and the
+  `-Avibetags.module` override that separates them. Ids are unchanged: renaming them would move
+  every committed region marker. `MultiModuleAggregationTest` pins it.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region

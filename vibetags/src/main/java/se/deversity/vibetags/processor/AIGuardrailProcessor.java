@@ -520,6 +520,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // collides with a generated YAML block persists across unchanged builds, which
                     // the short-circuit would silence (issue #635).
                     warnAboutHandAuthoredYamlKeys();
+                    warnAboutModuleIdCollision();
                     // The cache keeps one set of run headers per module (issue #556). Bound here
                     // rather than in init(), where the cache is built: the module is known only
                     // once a round has shown the processor its sources. Same id the sidecar
@@ -804,6 +805,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             log.debug("round.skip reason=sources-unchanged digest={} rounds={}", shortDigest, roundsWithSources.get());
         }
         warnAboutHandAuthoredYamlKeys();
+        warnAboutModuleIdCollision();
         VibeTagsLogger.shutdown(root);
         warnAboutOversizedRuleFiles();
     }
@@ -2003,6 +2005,32 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         Set<String> services = new java.util.LinkedHashSet<>(previous.getBodies().keySet());
         services.addAll(previous.getUnroutedBodies().keySet());
         return services;
+    }
+
+    /**
+     * Warns when another live module files its sidecar under this compilation's id (#869): the two
+     * share one region, so each one's build replaces the other's guardrails in the shared files,
+     * and the only other thing said about it is the replaced-region warning, which blames the
+     * compilation's sources. Renaming ids would move every committed region marker, so the fix is
+     * named instead: {@code -Avibetags.module} gives one of them an id of its own. Raised on the
+     * early exit too, like every warning a no-op rebuild must repeat (#859).
+     */
+    private void warnAboutModuleIdCollision() {
+        String moduleId = currentModuleId();
+        String mine = ModuleSidecar.computeModulePath(compilationRoot(), root);
+        String theirs = ModuleSidecar.collidingModulePath(root, moduleId, mine);
+        if (theirs == null) {
+            return;
+        }
+        String here = mine.isEmpty() ? "(root)" : mine.replace('\\', '/');
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: modules '" + here + "' and '" + theirs + "' both resolve to the module id '" + moduleId
+                + "', so they share one sidecar and one region, and each build of one replaces the other's"
+                + " guardrails in the shared files. Give one of them an id of its own with -Avibetags.module=<name>.");
+        Logger current = VibeTagsLogger.currentFor(root);
+        if (current != null) {
+            current.warn("sidecar.collision moduleId={} path={} other={}", moduleId, here, theirs);
+        }
     }
 
     /** The source set this compilation compiles; {@code main} until a round has resolved it. */
