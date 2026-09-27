@@ -106,6 +106,12 @@ and no rule file moves.
   otherwise the file is left untouched with a WARNING saying how to fix it. The repair also no
   longer runs for a round with no annotations, the one case every other path refuses.
   `GuardrailFileRecoveryEndToEndTest` and `GuardrailFileWriterEdgeCaseTest` pin both.
+- **A rule file that could not be deleted is retried by the next build (#867).** An orphaned rule
+  file the sweep failed to remove (held open by an editor or indexer on Windows, a read-only
+  directory) kept its write-cache entry, so every later unchanged build short-circuited and the
+  stale guardrail stayed until a source changed; the failure was only a DEBUG line. It is now a
+  WARNING, and the failure is recorded as a cache row that matches no file, as a failed write is.
+  `GuardrailLifecycleEndToEndTest` and `GuardrailFileWriterEdgeCaseTest` pin it.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region

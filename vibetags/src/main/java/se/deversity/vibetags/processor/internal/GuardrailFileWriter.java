@@ -857,10 +857,26 @@ public final class GuardrailFileWriter {
             }
             return true;
         } catch (IOException e) {
-            // A file we cannot delete stays; the next build tries again. Failing a compile over
-            // housekeeping would be the larger bug.
-            debug("delete.skip file={} reason=io-error detail={}", fileName(file), e.toString());
+            // A file we cannot delete stays; failing a compile over housekeeping would be the
+            // larger bug. The next build retries it, which is what recordFailedRemoval is for.
+            recordFailedRemoval(file, e);
             return false;
+        }
+    }
+
+    /**
+     * A file this writer set out to remove and could not (held open by an editor or indexer on
+     * Windows, a read-only directory). Its cache entry still described the file as the writer left
+     * it, so the next unchanged build found every cached file stable and short-circuited, and the
+     * stale file was never removed (#867). The entry is replaced by one that matches no file, so
+     * the next build regenerates and retries, and the failure is said once, as a failed write is.
+     */
+    private void recordFailedRemoval(Path file, IOException e) {
+        debug("delete.skip file={} reason=io-error detail={}", fileName(file), e.toString());
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: Failed to delete " + file + " - " + e.getMessage() + "; the next build retries it.");
+        if (writeCache != null) {
+            writeCache.recordFailure(file);
         }
     }
 
@@ -917,7 +933,12 @@ public final class GuardrailFileWriter {
                 }
 
                 if (isEmptyOrBoilerplate) {
-                    Files.delete(p);
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        recordFailedRemoval(p, e);
+                        return false;
+                    }
                     if (writeCache != null) writeCache.invalidate(p);
                 } else {
                     Files.writeString(p, content + "\n", StandardCharsets.UTF_8);
