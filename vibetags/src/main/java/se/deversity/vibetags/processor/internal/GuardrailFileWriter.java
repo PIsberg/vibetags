@@ -920,14 +920,12 @@ public final class GuardrailFileWriter {
 
             if (updated) {
                 content = content.trim();
-                boolean isEmptyOrBoilerplate = content.isEmpty();
-                if (!isEmptyOrBoilerplate && content.startsWith("---")) {
-                    int secondTriple = content.indexOf("---", 3);
-                    if (secondTriple != -1) {
-                        String afterFrontMatter = content.substring(secondTriple + 3).trim();
-                        isEmptyOrBoilerplate = afterFrontMatter.isEmpty();
-                    }
-                }
+                // Only a header fenced by lines of its own counts: a substring search for the next
+                // "---" read one inside the developer's prose as the closing fence, and deleted a
+                // file whose only content was their note (#875).
+                int headerEnd = frontMatterEnd(content);
+                boolean isEmptyOrBoilerplate = content.isEmpty()
+                    || (headerEnd != -1 && content.substring(headerEnd).isBlank());
 
                 if (dryRun) {
                     dryRunChanges.add(p.toString());
@@ -943,7 +941,9 @@ public final class GuardrailFileWriter {
                     }
                     if (writeCache != null) writeCache.invalidate(p);
                 } else {
-                    Files.writeString(p, content + "\n", StandardCharsets.UTF_8);
+                    // Atomic, like every other write: an in-place write interrupted halfway left
+                    // the developer's remaining text truncated (#875).
+                    writeContentWithBackup(p, content + "\n");
                     if (writeCache != null) writeCache.invalidate(p);
                 }
                 return true;

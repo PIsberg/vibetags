@@ -150,6 +150,12 @@ and no rule file moves.
   the annotations made every round look partial once an annotation was genuinely removed, so the
   removal was refused until a clean build. `generated-sources` and `generated-test-sources` are
   now left out too. `PartialRoundGuardrailLossTest` pins both layouts.
+- **Stripping an orphaned rule file no longer deletes a hand note that contains `---` (#875).** The
+  sweep decided "only front matter is left" by searching for the next `---` anywhere, so a file
+  whose remaining hand-written text was `---` then `Owner: payments team ---` read as an empty
+  header and was deleted. It now uses the writer's front-matter parser, whose fences own their
+  lines, and rewrites a kept file atomically like every other write. `CleanupGranularDirectoryTest`
+  pins it.
 - **A hand-written `AGENTS.md` that only mentions the marker is no longer opted in beside another
   AI file.** The escape hatch from the sole-file rule (invariant 4) is a marker pair, but the check
   looked for the START text anywhere in the file. A pointer saying "VibeTags edits the region
