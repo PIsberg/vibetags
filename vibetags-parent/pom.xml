@@ -86,7 +86,7 @@
              load-tests/pom.xml; BuildVersionParityTest enforces it. -->
         <junit.version>6.1.3</junit.version>
         <junit.platform.version>6.1.3</junit.platform.version>
-        <mockito.version>5.23.0</mockito.version>
+        <mockito.version>5.24.0</mockito.version>
         <archunit.version>1.5.0</archunit.version>
         <async-test-lib.version>1.12.2</async-test-lib.version>
         <snakeyaml.version>2.7</snakeyaml.version>
