@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.8] - 2026-09-28
+
 **Upgrading: what moves in your committed files.** A project whose test sources carry guardrails
 gets one generated block per Markdown aggregate instead of two stacked copies (#841): `AGENTS.md`,
 `GEMINI.md`, `llms.txt`, `.cursorrules`, `.github/copilot-instructions.md` and the other prose
@@ -5948,7 +5950,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.7...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.8...HEAD
+[1.3.8]: https://github.com/PIsberg/vibetags/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/PIsberg/vibetags/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/PIsberg/vibetags/compare/v1.3.5...v1.3.6
 [1.3.5]: https://github.com/PIsberg/vibetags/compare/v1.3.4...v1.3.5
