@@ -659,8 +659,8 @@ Create one or more of the following files in your project root to opt in:
 
 ### Troubleshooting: Nothing Was Generated
 
-The build says `BUILD SUCCESS`, an opted-in file exists, and it is still empty. Both known
-causes are silent, and both turned up in real consumer projects, so check these two first.
+The build says `BUILD SUCCESS`, an opted-in file exists, and it is still empty. The first two
+known causes are silent, and both turned up in real consumer projects, so check them first.
 
 **1. JDK 23+ only runs annotation processors that are explicitly configured.**
 
@@ -694,6 +694,15 @@ Force one real compile after changing the opt-in set:
 ```bash
 mvn clean compile      # or touch any source file, then compile
 ```
+
+**3. The file was created as UTF-16.**
+
+Windows PowerShell 5.1's `echo "" > CLAUDE.md` writes UTF-16 with a byte order mark, and VibeTags
+reads and writes UTF-8. The file is left exactly as it is, and every build warns
+`Failed to write AI rules file: ... - it is saved as UTF-16LE, and VibeTags reads and writes
+UTF-8. Re-save it as UTF-8 and rebuild`. Re-save it as UTF-8 in your editor, or create opt-in
+files with `New-Item CLAUDE.md` or PowerShell 7, which write UTF-8. A file in another legacy
+encoding gets the same warning with `it is not valid UTF-8`.
 
 **Still empty?** Read `vibetags.log`. Every skipped write is a `write.skip` event carrying a
 `reason=`, and compiling with `-Avibetags.log.level=DEBUG` records the full decision path

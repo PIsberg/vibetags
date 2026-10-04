@@ -22,6 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (#895). #890's red Gradle jobs were Maven Central answering 403 to the new ArchUnit POM, not
   the bump.
 
+### Fixed
+
+- **A guardrail file saved as UTF-16 now says so instead of `Input length = 1` (#878).** Windows
+  PowerShell 5.1's `echo "" > CLAUDE.md` writes UTF-16 LE with a byte order mark (checked: the
+  file starts `FF FE`). VibeTags reads and writes UTF-8, so every build warned
+  `Failed to write AI rules file: ... - Input length = 1` and the file never got its guardrails,
+  with nothing saying why. The warning now names the encoding (`it is saved as UTF-16LE`, or
+  `it is not valid UTF-8` for a legacy single-byte file) and says to re-save the file as UTF-8,
+  and the log records `write.skip reason=not-utf8 encoding=`. The file is still left
+  byte-for-byte unchanged: transcoding it would change its encoding under the user. A coding
+  failure that does not come from the file keeps the plain message.
+
 ## [1.3.8] - 2026-09-28
 
 **Upgrading: what moves in your committed files.** A project whose test sources carry guardrails
