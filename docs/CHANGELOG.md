@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **PMD 7.27.0 -> 7.28.0 (#889).** 7.28 adds `OnDemandImport` to the best-practices category,
+  which `pmd-ruleset.xml` imports whole, and it fired 5 times: three wildcard imports in the
+  processor (`AIGuardrailProcessor`, `FormatterRegistry`, `PlatformDescriptors`) and the JMH
+  wildcard in both `load-tests` benchmarks. They are explicit imports now and the rule stays live,
+  since the rest of `src/main` already follows it. A new formatter or renderer therefore needs its
+  import in the registry that lists it; the compiler says so if it is missing. The dependabot PR
+  failed 10 jobs on the processor's 3 findings and never reached the 2 in `load-tests`.
+
 ## [1.3.8] - 2026-09-28
 
 **Upgrading: what moves in your committed files.** A project whose test sources carry guardrails
