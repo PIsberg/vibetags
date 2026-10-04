@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the log records `write.skip reason=not-utf8 encoding=`. The file is still left
   byte-for-byte unchanged: transcoding it would change its encoding under the user. A coding
   failure that does not come from the file keeps the plain message.
+- **Instruction Evals and the Inquisitor run on a Claude subscription token as well as an API key
+  (#632).** Both workflows looked only for `ANTHROPIC_API_KEY`, so a repository holding a
+  `CLAUDE_CODE_OAUTH_TOKEN` secret (from `claude setup-token`) skipped both gates for good. The
+  preflights now accept either secret and the model steps receive both; an unset one is dropped
+  before the eval harness starts. `ModelCredentialGateTest` pins the two halves together. The
+  workflow header and `evals/README.md` also quoted a default run of 15 and 12 sessions; with 6
+  tasks it is 18.
 
 ## [1.3.8] - 2026-09-28
 

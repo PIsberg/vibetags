@@ -77,15 +77,18 @@ variable under measurement is the committed instruction stack of this repository
   claude-engine numbers (different model, GitHub-managed routing, non-hermetic user config).
   A missing CLI or exhausted quota exits 2 or surfaces as HARNESS-ERROR trials: a visible
   skip, never a false pass.
-- **Cost.** A default run is 12 headless sessions (4 tasks x 3 trials); each trial's
+- **Cost.** A default run is 18 headless sessions (6 tasks x 3 trials); each trial's
   `total_cost_usd` is in its `results/<ts>/<task>-trialN.json`.
 
 ## CI
 
 `.github/workflows/instruction-evals.yml` runs the bank when a PR touches `CLAUDE.md`,
 `AGENTS.md`, `GEMINI.md`, or `.claude/**` - the merge gate for instruction edits - and on
-manual dispatch. It requires the `ANTHROPIC_API_KEY` secret; without it the evals job is
-**skipped**, not passed. Results upload as an artifact.
+manual dispatch. It requires either the `ANTHROPIC_API_KEY` secret or `CLAUDE_CODE_OAUTH_TOKEN`
+(`claude setup-token` prints one; runs then draw on that Claude subscription's usage allowance
+instead of API billing, and a long run can exhaust it, which shows up as HARNESS-ERROR trials).
+Without either the evals job is **skipped**, not passed. Fork PRs receive no secrets, so they
+always skip. Results upload as an artifact.
 
 That is a deliberate change (#632). It used to print "Skipped is not passed" and then exit 0, so
 the check went green having run nothing — and it had done exactly that on every run in recent
