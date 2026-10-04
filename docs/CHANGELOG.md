@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   since the rest of `src/main` already follows it. A new formatter or renderer therefore needs its
   import in the registry that lists it; the compiler says so if it is missing. The dependabot PR
   failed 10 jobs on the processor's 3 findings and never reached the 2 in `load-tests`.
+- **Dependencies:** ArchUnit 1.5.0 -> 1.5.1 (#890), async-test-lib 1.12.2 -> 1.12.4 (#894, #897),
+  `gradle/actions/wrapper-validation` 6.3.0 -> 6.4.0 (#893), `anthropics/claude-code-action`
+  1.0.235 -> 1.0.237 (#896), and the evals' pinned `@anthropic-ai/claude-code` 2.1.283 -> 2.1.284
+  (#895). #890's red Gradle jobs were Maven Central answering 403 to the new ArchUnit POM, not
+  the bump.
 
 ## [1.3.8] - 2026-09-28
 
