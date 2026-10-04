@@ -1,6 +1,49 @@
 package se.deversity.vibetags.processor.internal.content;
 
-import se.deversity.vibetags.processor.internal.content.annotations.*;
+import se.deversity.vibetags.processor.internal.content.annotations.AIArchitectureFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIAuditFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIBannedApiFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AICallersOnlyFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIContextFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIContractFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AICoreFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIDeprecatedFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIDomainModelFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIDraftFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIExplainFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIExtensibleFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIFeatureFlagFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIGeneratedFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIIdempotentFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIIgnoreFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIImmutableFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIInputSanitizedFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIInternationalizedFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIKeepInSyncFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AILegacyBridgeFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AILoadBearingFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AILockedFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIMemoryBudgetFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIObservabilityFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIParallelTestsFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIPerformanceFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIPrivacyFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIPrototypeFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIPublicAPIFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIPureFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIRegulationFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AISandboxOnlyFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AISchemaSafeFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AISecureFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AISecureLoggingFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIStrictClasspathFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIStrictExceptionsFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIStrictTypesFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AISunsetFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AITemporaryFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AITestDrivenFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIThreadAffinityFormatter;
+import se.deversity.vibetags.processor.internal.content.annotations.AIThreadSafeFormatter;
 
 /**
  * A central registry providing access to stateless, thread-safe annotation formatters.

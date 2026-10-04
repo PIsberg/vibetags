@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **PMD 7.27.0 -> 7.28.0 (#889).** 7.28 adds `OnDemandImport` to the best-practices category,
+  which `pmd-ruleset.xml` imports whole, and it fired 5 times: three wildcard imports in the
+  processor (`AIGuardrailProcessor`, `FormatterRegistry`, `PlatformDescriptors`) and the JMH
+  wildcard in both `load-tests` benchmarks. They are explicit imports now and the rule stays live,
+  since the rest of `src/main` already follows it. A new formatter or renderer therefore needs its
+  import in the registry that lists it; the compiler says so if it is missing. The dependabot PR
+  failed 10 jobs on the processor's 3 findings and never reached the 2 in `load-tests`.
+- **Dependencies:** ArchUnit 1.5.0 -> 1.5.1 (#890), async-test-lib 1.12.2 -> 1.12.4 (#894, #897),
+  `gradle/actions/wrapper-validation` 6.3.0 -> 6.4.0 (#893), `anthropics/claude-code-action`
+  1.0.235 -> 1.0.237 (#896), and the evals' pinned `@anthropic-ai/claude-code` 2.1.283 -> 2.1.284
+  (#895). #890's red Gradle jobs were Maven Central answering 403 to the new ArchUnit POM, not
+  the bump.
+
+### Fixed
+
+- **A guardrail file saved as UTF-16 now says so instead of `Input length = 1` (#878).** Windows
+  PowerShell 5.1's `echo "" > CLAUDE.md` writes UTF-16 LE with a byte order mark (checked: the
+  file starts `FF FE`). VibeTags reads and writes UTF-8, so every build warned
+  `Failed to write AI rules file: ... - Input length = 1` and the file never got its guardrails,
+  with nothing saying why. The warning now names the encoding (`it is saved as UTF-16LE`, or
+  `it is not valid UTF-8` for a legacy single-byte file) and says to re-save the file as UTF-8,
+  and the log records `write.skip reason=not-utf8 encoding=`. The file is still left
+  byte-for-byte unchanged: transcoding it would change its encoding under the user. A coding
+  failure that does not come from the file keeps the plain message.
+- **Instruction Evals and the Inquisitor run on a Claude subscription token as well as an API key
+  (#632).** Both workflows looked only for `ANTHROPIC_API_KEY`, so a repository holding a
+  `CLAUDE_CODE_OAUTH_TOKEN` secret (from `claude setup-token`) skipped both gates for good. The
+  preflights now accept either secret and the model steps receive both; an unset one is dropped
+  before the eval harness starts. `ModelCredentialGateTest` pins the two halves together. The
+  workflow header and `evals/README.md` also quoted a default run of 15 and 12 sessions; with 6
+  tasks it is 18.
+
 ## [1.3.8] - 2026-09-28
 
 **Upgrading: what moves in your committed files.** A project whose test sources carry guardrails

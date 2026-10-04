@@ -129,6 +129,19 @@ class GuardrailFileWriterLogContractTest {
     }
 
     @Test
+    @DisplayName("a file that is not UTF-8 skips with reason=not-utf8 and names the encoding")
+    void unreadableEncodingSkipsWithItsOwnReason(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("CLAUDE.md");
+        Files.write(file, "\uFEFFnotes\n".getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        assertFalse(writer.writeFileIfChanged(file.toString(), HEADER + "\nrule one\n", true),
+            "a file that cannot be decoded is not written");
+        assertTrue(logged("write.skip file=CLAUDE.md reason=not-utf8 encoding=UTF-16LE"),
+            "an encoding skip is distinguishable from a failed write: " + events());
+    }
+
+    @Test
     @DisplayName("nothing is logged at INFO or above during ordinary writes")
     void theNarrativeStaysAtDebug(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("CLAUDE.md");

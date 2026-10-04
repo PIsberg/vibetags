@@ -15,7 +15,7 @@ This document describes what happens during CI builds in `.github/workflows/`. T
 | Mutation Testing (PIT) | `mutation.yml` | Manual only (`workflow_dispatch`) |
 | Demo GIF | `demo.yml` | Push to `main` touching the processor or the demo, manual |
 | Gradle Wrapper Validation | `gradle-wrapper-validation.yml` | Push to `main`; PRs touching a wrapper |
-| Inquisitor (adversarial AI review) | `inquisitor.yml` | Pull requests; needs `ANTHROPIC_API_KEY` |
+| Inquisitor (adversarial AI review) | `inquisitor.yml` | Pull requests; needs `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` |
 | Instruction Evals | `instruction-evals.yml` | PRs touching `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`/`.claude/**`/`evals/**`, manual |
 | Copilot Review | `copilot-review.yml` | PR opened/reopened/ready-for-review |
 | Nightly Perf Ring | `nightly-perf.yml` | Weekly cron (Mondays 03:17 UTC), manual |
@@ -442,8 +442,10 @@ committed artifacts (`CLAUDE.md` guardrails, `.claude/rules/`, `docs/LOAD-BEARIN
 stated conventions), and its output contract is a structured gripe — target, violated rule,
 file:line evidence, explanation, executable remediation — or a one-line ALL CLEAR. The verdict
 gate is deliberately dumb bash over files the reviewer writes: the model never decides its own
-exit code. Runs only when the `ANTHROPIC_API_KEY` secret exists. A small preflight job ("Check
-for the review key") turns the secret's presence into a job output, because a job-level `if:`
+exit code. Runs only when the `ANTHROPIC_API_KEY` or the `CLAUDE_CODE_OAUTH_TOKEN` secret exists
+(the second is a Claude subscription token from `claude setup-token`, passed to the action as
+`claude_code_oauth_token`). A small preflight job ("Check for the review key") turns the secrets'
+presence into a job output, because a job-level `if:`
 cannot read `secrets`; without the key the `Adversarial Review` job is skipped, so the check reads
 Skipped in the PR and the preflight summary says SKIPPED. Until #697 the job gated each step
 instead, which skipped every step and still reported the job as a green pass. Branch protection
@@ -461,8 +463,8 @@ The merge gate for the instruction layer: when a PR edits the files agents obey 
 trials in disposable worktrees, deterministic detectors, per-task pass-rate floors — and the
 job fails if a measured rule drops below its floor. The same idea as running the test suite
 when a PR edits code, applied to the one load-bearing artifact that otherwise cannot go red.
-Method, floors, and honest limits: `evals/README.md`. Requires `ANTHROPIC_API_KEY`; skips
-loudly without it. Trial logs upload as the `instruction-eval-results` artifact.
+Method, floors, and honest limits: `evals/README.md`. Requires `ANTHROPIC_API_KEY` or
+`CLAUDE_CODE_OAUTH_TOKEN`; skips loudly without both. Trial logs upload as the `instruction-eval-results` artifact.
 
 ---
 

@@ -3,12 +3,14 @@
 # evals/ and fails if any measured rule drops below its floor - the same idea as running
 # the test suite when a PR edits code. evals/README.md documents the method and its limits.
 #
-# Cost: a default run is 15 headless model sessions (5 tasks x 3 trials). That is why this
+# Cost: a default run is 18 headless model sessions (6 tasks x 3 trials). That is why this
 # triggers on the instruction-file paths and manual dispatch, never on every commit.
 #
-# Requires the ANTHROPIC_API_KEY secret; without it the evals job is SKIPPED rather than
-# reporting a green check it did not earn (#632) - see the preflight job below for why that needs
-# two jobs. The claude CLI is pinned by evals/package-lock.json and installed with `npm ci`,
+# Requires either the ANTHROPIC_API_KEY secret (billed to the API) or CLAUDE_CODE_OAUTH_TOKEN
+# (from `claude setup-token`, drawn from a Claude subscription's usage allowance); without
+# either the evals job is SKIPPED rather than reporting a green check it did not earn (#632) -
+# see the preflight job below for why that needs two jobs. Fork PRs receive neither secret, so
+# they always skip. The claude CLI is pinned by evals/package-lock.json and installed with `npm ci`,
 # so a run resolves the same integrity-checked tarballs every time instead of whatever npm
 # serves that day, and actions/setup-node pins the node/npm doing that install rather than
 # taking whatever the runner image ships. The CLI's flag surface still has to track the live
@@ -59,20 +61,21 @@ jobs:
           egress-policy: audit
       - id: check
         env:
-          HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         run: |
           echo "has_key=$HAVE_KEY" >> "$GITHUB_OUTPUT"
           if [ "$HAVE_KEY" != "true" ]; then
             {
               echo "## Instruction evals were SKIPPED"
               echo
-              echo "The \`ANTHROPIC_API_KEY\` repository secret is not configured, so the task bank"
-              echo "did not run. The evals job is skipped rather than green: a skipped gate is not a"
-              echo "passed gate, and a green tick here would be indistinguishable from a measurement."
+              echo "Neither the \`ANTHROPIC_API_KEY\` nor the \`CLAUDE_CODE_OAUTH_TOKEN\` repository"
+              echo "secret is configured, so the task bank did not run. The evals job is skipped rather"
+              echo "than green: a skipped gate is not a passed gate, and a green tick here would be"
+              echo "indistinguishable from a measurement."
               echo
-              echo "Set the secret to turn this into a real check."
+              echo "Set either secret to turn this into a real check."
             } >> "$GITHUB_STEP_SUMMARY"
-            echo "::warning::Instruction evals skipped: ANTHROPIC_API_KEY is not configured. Skipped is not passed (#632)."
+            echo "::warning::Instruction evals skipped: neither ANTHROPIC_API_KEY nor CLAUDE_CODE_OAUTH_TOKEN is configured. Skipped is not passed (#632)."
           fi
 
   evals:
@@ -81,7 +84,7 @@ jobs:
     needs: preflight
     if: needs.preflight.outputs.has_key == 'true'
     steps:
-      # The agent lane runs sandboxed: ephemeral runner, the API key as its only secret,
+      # The agent lane runs sandboxed: ephemeral runner, the model credential as its only secret,
       # egress BLOCKED except what the job demonstrably needs (Anthropic API, GitHub, npm
       # for the CLI install). Extend the list in a reviewed commit if a legitimate endpoint
       # gets blocked; never flip back to audit.
@@ -133,9 +136,14 @@ jobs:
       - name: Run the task bank
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           TRIALS: ${{ github.event.inputs.trials || '3' }}
           RESULTS_DIR: ${{ github.workspace }}/eval-results
         run: |
+          # A secret that is not configured arrives as an empty variable, not an absent one.
+          # Unset it so the CLI sees only the credential that exists.
+          [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
+          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || unset CLAUDE_CODE_OAUTH_TOKEN
           bash evals/run-instruction-evals.sh && status=0 || status=$?
           echo "## Instruction evals" >> "$GITHUB_STEP_SUMMARY"
           if [ -f "$RESULTS_DIR/summary.csv" ]; then

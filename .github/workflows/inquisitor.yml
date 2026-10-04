@@ -4,7 +4,8 @@
 # committed rule is violated. The gating is deliberately dumb bash over files the reviewer
 # writes; the model never decides its own exit code.
 #
-# Runs only when the ANTHROPIC_API_KEY secret exists. Without it the review job is SKIPPED,
+# Runs only when the ANTHROPIC_API_KEY or the CLAUDE_CODE_OAUTH_TOKEN secret (from
+# `claude setup-token`, a Claude subscription) exists. Without either the review job is SKIPPED,
 # so the check reads "Skipped" in the PR instead of a green tick it did not earn (#697); the
 # preflight job below says why that takes two jobs. The job is intentionally not in the
 # required-checks set while it earns trust; promote it once its verdict record justifies
@@ -48,12 +49,12 @@ jobs:
       - name: Note when the key is absent
         id: check
         env:
-          HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAVE_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' || secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         run: |
           echo "has_key=$HAVE_KEY" >> "$GITHUB_OUTPUT"
           if [ "$HAVE_KEY" != "true" ]; then
-            echo "SKIPPED: ANTHROPIC_API_KEY secret is not configured; no review ran." >> "$GITHUB_STEP_SUMMARY"
-            echo "::notice::Inquisitor skipped: ANTHROPIC_API_KEY secret is not configured. Skipped is not passed."
+            echo "SKIPPED: neither the ANTHROPIC_API_KEY nor the CLAUDE_CODE_OAUTH_TOKEN secret is configured; no review ran." >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Inquisitor skipped: neither ANTHROPIC_API_KEY nor CLAUDE_CODE_OAUTH_TOKEN is configured. Skipped is not passed."
           fi
 
   inquisitor:
@@ -66,7 +67,7 @@ jobs:
       id-token: write
     steps:
       # The agent lane runs sandboxed: ephemeral runner, no ambient secrets beyond its own
-      # API key, and egress BLOCKED except the endpoints the job demonstrably needs. If a
+      # model credential, and egress BLOCKED except the endpoints the job demonstrably needs. If a
       # legitimate endpoint gets blocked after a toolchain change, harden-runner's step
       # summary names it; extend this list in a reviewed commit, never by flipping back to
       # audit.
@@ -89,9 +90,11 @@ jobs:
           fetch-depth: 0
 
       - name: Run the Inquisitor
-        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790 # v1
+        uses: anthropics/claude-code-action@fd1c128679612beff4ca259c78021c506e8aa7a7 # v1
         with:
+          # The action takes whichever of the two is set; an unset secret arrives as "".
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             Read the file .github/INQUISITOR.md and follow it exactly. The base ref for
             the diff is origin/${{ github.base_ref }}. Produce inquisitor-report.md (and

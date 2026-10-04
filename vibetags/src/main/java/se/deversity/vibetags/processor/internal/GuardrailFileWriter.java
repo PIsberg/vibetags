@@ -13,6 +13,8 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.tools.Diagnostic;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -127,8 +129,8 @@ public final class GuardrailFileWriter {
      */
     @AIContract(reason = "Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics")
     public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
+        Path filePath = Paths.get(path);
         try {
-            Path filePath = Paths.get(path);
 
             // Fast-path: if our cache says we wrote this exact body to this file and the file
             // is byte-stable since (size + mtime unchanged), skip the read/diff/write entirely.
@@ -216,13 +218,67 @@ public final class GuardrailFileWriter {
                     hasNewRules, markers);
             }
             return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules);
+        } catch (CharacterCodingException e) {
+            return writeFailed(filePath, path, e, undecodableEncoding(filePath));
         } catch (IOException e) {
-            messager.printMessage(Diagnostic.Kind.WARNING,
-                "VibeTags: Failed to write AI rules file: " + path + " - " + e.getMessage());
-            if (!dryRun && writeCache != null) {
-                writeCache.recordFailure(Paths.get(path));
-            }
-            return false;
+            return writeFailed(filePath, path, e, null);
+        }
+    }
+
+    /**
+     * Warns that {@code path} could not be written and records the failure so the next build
+     * retries it. Always returns {@code false}, the caller's "nothing written".
+     *
+     * @param encoding what {@link #undecodableEncoding} found, or {@code null} to report
+     *                 {@code e} as it is
+     */
+    private boolean writeFailed(Path filePath, String path, IOException e, @Nullable String encoding) {
+        String reason;
+        if (encoding == null) {
+            reason = e.getMessage();
+        } else {
+            // The decoder's own message is "Input length = 1", which names neither the problem
+            // nor the remedy (#878). Transcoding the file would change its encoding under the
+            // user, so it is left alone and the warning says what to do instead.
+            debug("write.skip file={} reason=not-utf8 encoding={}", fileName(filePath), encoding);
+            reason = (NOT_UTF8.equals(encoding) ? "it is not valid UTF-8" : "it is saved as " + encoding)
+                + ", and VibeTags reads and writes UTF-8. Re-save it as UTF-8 and rebuild;"
+                + " it was left unchanged";
+        }
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: Failed to write AI rules file: " + path + " - " + reason);
+        if (!dryRun && writeCache != null) {
+            writeCache.recordFailure(filePath);
+        }
+        return false;
+    }
+
+    /** {@link #undecodableEncoding} for a file with no UTF-16 byte order mark. */
+    private static final String NOT_UTF8 = "unknown";
+
+    /**
+     * Why {@code file} cannot be read as UTF-8: {@code "UTF-16LE"} or {@code "UTF-16BE"} for a file
+     * that starts with that byte order mark (Windows PowerShell 5.1's {@code echo "" > CLAUDE.md}
+     * writes UTF-16 LE), {@link #NOT_UTF8} for any other invalid UTF-8, or {@code null} when the
+     * file decodes cleanly or cannot be read, in which case the coding failure came from somewhere
+     * other than the file and the caller reports it as it is.
+     */
+    private static @Nullable String undecodableEncoding(Path file) {
+        byte[] bytes;
+        try {
+            bytes = Files.readAllBytes(file);
+        } catch (IOException e) {
+            return null;
+        }
+        if (bytes.length >= 2) {
+            if (bytes[0] == (byte) 0xFF && bytes[1] == (byte) 0xFE) return "UTF-16LE";
+            if (bytes[0] == (byte) 0xFE && bytes[1] == (byte) 0xFF) return "UTF-16BE";
+        }
+        try {
+            StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes));
+            return null;
+        } catch (CharacterCodingException e) {
+            return NOT_UTF8;
         }
     }
 
