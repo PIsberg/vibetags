@@ -35,6 +35,7 @@ Read one of these before anything under `docs/`.
 | [`ANNOTATIONS.md`](ANNOTATIONS.md) | What each `@AI*` annotation means, its attributes, and which compile-time validation warnings it can raise. Read before adding or changing an annotation. |
 | [`PLATFORMS.md`](PLATFORMS.md) | Which generated file belongs to which tool, in which format, and which platforms take granular per-element rules. Read when a specific output file is the question. |
 | [`MULTI-MODULE.md`](MULTI-MODULE.md) | Reactor builds: sidecar merge, per-module output, `.vibetags-root-index`, `.vibetags-roles`, `.vibetags-mirror`, and the granular file layout. |
+| [`../vibetags-cli/README.md`](../vibetags-cli/README.md) | What the companion CLI's `init` and `doctor` commands do, every flag and exit code, example output, and the limits of each check. |
 | [`JVM-LANGUAGES.md`](JVM-LANGUAGES.md) | Kotlin, Groovy, Scala and Clojure: what works, what is silently lost, and how each rating was measured rather than claimed. |
 
 ### How it works

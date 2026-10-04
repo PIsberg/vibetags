@@ -562,6 +562,8 @@ The jar itself is not standalone: it declares a `Main-Class` but carries no depe
 `java -jar vibetags-cli-1.3.0.jar` fails on the processor classes. jbang — or any launcher that
 resolves the Maven coordinate — is the supported way to run it.
 
+Every command, check and exit code, with example output: [vibetags-cli/README.md](vibetags-cli/README.md).
+
 ## 🚀 Installation
 
 ### Prerequisites
