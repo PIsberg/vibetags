@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`vibetags-cli/README.md`.** The CLI's flags, exit codes and limits were spread over a USAGE.md
+  section and the usage text in `Main`. The new README puts them in one place, with examples for
+  each command and check. The output it shows comes from running the CLI against scratch
+  projects. Linked from the README, the docs index and the repository layout notes.
+
 ### Changed
 
 - **PMD 7.27.0 -> 7.28.0 (#889).** 7.28 adds `OnDemandImport` to the best-practices category,

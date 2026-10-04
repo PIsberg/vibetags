@@ -16,7 +16,8 @@ one-line map stay there):
   via `mavenLocal()` / `platform(...)`.
 - `vibetags-cli/` — companion CLI (`init` creates opt-in files, `doctor` reports project
   health). Depends on `vibetags` as a library for `ServiceRegistry.optInKeys()` and the marker
-  constants — it must never carry its own platform list. Build after `vibetags`.
+  constants — it must never carry its own platform list. Build after `vibetags`. Commands, exit
+  codes and examples: [`vibetags-cli/README.md`](../../vibetags-cli/README.md).
 - `vibetags-ksp/` — the KSP front end (#496): a `SymbolProcessorProvider` that presents Kotlin
   declarations as kapt-shaped `javax.lang.model` elements and drives the unchanged
   `AIGuardrailProcessor`. Depends on `vibetags` as a library; the KSP API and the Kotlin standard
