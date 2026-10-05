@@ -95,10 +95,21 @@ class WriteCacheCrossInstanceAsyncTest {
             // again after the read instead was the test's own race: macOS CI wrote a same-size
             // file in the same millisecond between the read and the second verdict, which made a
             // correct verdict look like a wrong one.
-            BasicFileAttributes before = Files.readAttributes(shared, BasicFileAttributes.class);
-            boolean unchanged = cache.isUnchanged(shared, body);
-            String onDisk = Files.readString(shared);
-            BasicFileAttributes after = Files.readAttributes(shared, BasicFileAttributes.class);
+            // Windows refuses a stat or read while another worker's rename is replacing the file
+            // (AccessDeniedException on windows-latest CI); that cycle is inconclusive too.
+            BasicFileAttributes before;
+            boolean unchanged;
+            String onDisk;
+            BasicFileAttributes after;
+            try {
+                before = Files.readAttributes(shared, BasicFileAttributes.class);
+                unchanged = cache.isUnchanged(shared, body);
+                onDisk = Files.readString(shared);
+                after = Files.readAttributes(shared, BasicFileAttributes.class);
+            } catch (IOException replacedMeanwhile) {
+                cache.flush();
+                continue;
+            }
             if (unchanged && sameFile(before, after) && !onDisk.contains(body)) {
                 throw new AssertionError("the cache vouched for a body the file does not hold.\n"
                     + "expected: " + body + "on disk:\n" + onDisk);

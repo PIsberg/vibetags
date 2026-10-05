@@ -339,14 +339,22 @@ public final class GuardrailFileWriter {
      * is recorded as failed, not dropped: a missing entry counts as stable to the early exit, and
      * the next build must look at this file again. {@code WriteCacheCrossInstanceAsyncTest} pins the
      * stat-only-now case; the before-only case is reasoned from the code and no test has made it
-     * fail, so the second stat is a guard rather than a measured fix.
+     * fail, so the second stat is a guard rather than a measured fix. The second stat failing is
+     * the same answer as the stats differing, not a write failure: Windows refuses a stat with
+     * {@code AccessDeniedException} while another process's rename is replacing the file (it hit
+     * this class's concurrency test on windows-latest CI), and the file was current when it was
+     * compared.
      */
-    private void noteCurrent(Path filePath, String bodyForCache, @Nullable BasicFileAttributes before)
-            throws IOException {
+    private void noteCurrent(Path filePath, String bodyForCache, @Nullable BasicFileAttributes before) {
         if (dryRun || writeCache == null) {
             return;
         }
-        BasicFileAttributes now = attributesOrNull(filePath);
+        BasicFileAttributes now;
+        try {
+            now = attributesOrNull(filePath);
+        } catch (IOException e) {
+            now = null;
+        }
         if (before != null && now != null && sameFile(before, now)) {
             writeCache.recordWrite(filePath, bodyForCache, before);
         } else {
