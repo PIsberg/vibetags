@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AIContext;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +38,9 @@ import java.util.stream.Stream;
  * "unchanged". Sidecars, the write cache and the locks report are outputs or run records with
  * checks of their own, and are left out because they change on every build.
  */
+@AIContext(
+    focus = "Every input that shapes generated output and is not an -A option, an opt-in file or a .vibetags-* config must be hashed here",
+    avoids = "Dropping or missing an input: a no-op rebuild then keeps stale output, and a test that compiles once never reaches the early exit, so nothing fails")
 public final class SourceDigest {
 
     private SourceDigest() {

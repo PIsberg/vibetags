@@ -129,7 +129,7 @@ answers; use it when the topic is not below.
   <scoped_rules>
     <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened. An elements entry lists names under a shared prefix: in="a.b" listing C, D means a.b.C and a.b.D. Unless an entry carries an explicit path, its file is .claude/rules/{path, every non-alphanumeric character replaced by &#39;-&#39;}.md. Consult the file before modifying an element.</note>
     <elements in="se.deversity.vibetags.processor">AIGuardrailProcessor, VibeTagsLogger, model</elements>
-    <elements in="se.deversity.vibetags.processor.internal">AnnotationCollector, BuildFingerprint, EnforcementBaseline, GranularRulesWriter, GuardrailFileWriter, JsonValueSpans, ModuleSidecar, ServiceRegistry, WriteCache, content</elements>
+    <elements in="se.deversity.vibetags.processor.internal">AnnotationCollector, BuildFingerprint, EnforcementBaseline, GranularRulesWriter, GuardrailFileWriter, JsonValueSpans, ModuleSidecar, ServiceRegistry, SourceDigest, TransitiveManifest, WriteCache, content</elements>
     <elements in="se.deversity.vibetags.processor.internal.content">PlatformRenderer</elements>
     <elements in="se.deversity.vibetags.processor.internal.validation">ValidationRule</elements>
     <elements in="se.deversity.vibetags.processor">MultiModuleYamlValidityTest, WriteCacheAsyncTest</elements>

@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal;
 
+import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import se.deversity.vibetags.processor.model.TransitiveRule;
@@ -34,6 +35,9 @@ import java.util.Set;
  * consumer's {@code BuildFingerprint}, where instability would churn generated files on every
  * compile.
  */
+@AIContext(
+    focus = "Manifests are read out of JARs already on Maven Central by other processor versions, so a field renamed or redefined needs a FORMAT_VERSION bump",
+    avoids = "Changing the JSON shape in place: older consumers misread it as version 1. A bump has a cost too: older processors skip the manifest and drop its inherited rules")
 public final class TransitiveManifest {
 
     /**
