@@ -21,5 +21,5 @@ paths: ["**/WriteCache.java"]
 
 ## Thread-Safety Guarantee
 - **Strategy**: SYNCHRONIZED
-- **Note**: Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it); instances must own disjoint roots, because two instances over the same .vibetags-cache race by design
+- **Note**: Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it). Instances over one .vibetags-cache, one per module of a parallel reactor, may drop each other's entries on flush, a cache miss; they never vouch for another writer's bytes (WriteCacheCrossInstanceAsyncTest proves it)
 <!-- VIBETAGS-END -->
