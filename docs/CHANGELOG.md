@@ -31,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`.aiexclude` no longer gets an empty header block for each module with nothing to exclude.**
+  `AiExcludeRenderer` always emitted its three-line header, and the reactor merge wraps every
+  non-blank contribution, so each module and each source set without an excludable type added a
+  header with no globs under it. This repository's own `.aiexclude` held two empty copies (main and
+  test rounds) and nothing else, and three of the six headers in `examples/multimodule` had no
+  globs under them. `IgnoreFileRenderer` stopped doing this for the other ignore files in #328;
+  `.aiexclude` has its own renderer and was missed. It now decides on the globs it emitted rather
+  than on the model, because a locked member is real but cannot be named by a glob. Pinned by
+  `AiExcludeEmptyContributionEndToEndTest`, which failed on the old renderer with the header-only
+  output.
 - **A guardrail file saved as UTF-16 now says so instead of `Input length = 1` (#878).** Windows
   PowerShell 5.1's `echo "" > CLAUDE.md` writes UTF-16 LE with a byte order mark (checked: the
   file starts `FF FE`). VibeTags reads and writes UTF-8, so every build warned
