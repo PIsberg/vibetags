@@ -19,6 +19,7 @@ import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
+import se.deversity.vibetags.processor.internal.GenerationLock;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.HandAuthoredYamlKeyWarner;
 import se.deversity.vibetags.processor.internal.RuleFileLengthWarner;
@@ -537,13 +538,27 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     if (checkMode) {
                         checkFiles();
                     } else {
-                        // Cleared before, recorded after: a generation that fails part-way must not
-                        // leave the last run's digest vouching for files it may have half-written.
-                        forgetSourceDigest();
-                        generateFiles();
-                        // Before the record, so an early-exited rebuild replays what it printed.
-                        checkOrphansIfShortCircuited();
-                        recordSourceDigest();
+                        // A module round of a reactor generates under the root's lock (#908), so
+                        // a sibling cannot save, read and write between this round's sidecar read
+                        // and its root-file write; that sibling then read first and lost its region
+                        // to this round's older merge. Taken here, around generateFiles(), because
+                        // the span to protect is the whole of that method and its step order is
+                        // locked. See sharesRootWithSiblings() for which rounds take it.
+                        try (GenerationLock generation = sharesRootWithSiblings()
+                                ? GenerationLock.acquire(root, currentModuleId(), log)
+                                : GenerationLock.none()) {
+                            if (log != null && log.isDebugEnabled()) {
+                                log.debug("generate.lock module={} held={}", currentModuleId(), generation.held());
+                            }
+                            // Cleared before, recorded after: a generation that fails part-way must
+                            // not leave the last run's digest vouching for files it may have
+                            // half-written.
+                            forgetSourceDigest();
+                            generateFiles();
+                            // Before the record, so an early-exited rebuild replays what it printed.
+                            checkOrphansIfShortCircuited();
+                            recordSourceDigest();
+                        }
                     }
                     // After, not beside the checks above: a rule file's length is a property of
                     // what this build leaves on disk, and measuring before generation would miss
@@ -2058,6 +2073,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
+     * Whether this round writes root files a sibling module may be writing at the same time, and so
+     * generates under {@link GenerationLock} (#908). A module round of a reactor does, when the root
+     * has opted into anything. The root's own round and a single module have no sibling to race. A
+     * root with no opt-in gets no root files, and must not get a lock file either: file presence is
+     * the only opt-in (invariant 1), and the third-party corpus asserts a project that never opted
+     * in is left with nothing written at all.
+     */
+    private boolean sharesRootWithSiblings() {
+        return !maySweepRoot(compilationRoot())
+            && !ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)).isEmpty();
+    }
+
+    /**
      * Runs the opt-in enforcing mode (issue #284). A no-op unless {@code -Avibetags.enforce} names
      * at least one family, so the advisory default is completely untouched.
      */
@@ -2555,6 +2583,20 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
+     * Test seam (#908), {@code null} outside {@code ParallelReactorGenerationTest}: run on the
+     * compiling thread once a round has read every sidecar and before it merges and writes. A
+     * module's sidecar read and its root-file write are milliseconds apart, so no timing-based test
+     * can land a sibling between them; this lets one hold a module exactly there. Not an extension
+     * point: nothing in a build sets it, and it is called from {@code checkFiles} as well.
+     */
+    private static volatile @Nullable Runnable afterSidecarRead;
+
+    /** Sets or clears {@link #afterSidecarRead}; for {@code ParallelReactorGenerationTest} only. */
+    static void setAfterSidecarRead(@Nullable Runnable seam) {
+        afterSidecarRead = seam;
+    }
+
+    /**
      * As above, narrating each decision to {@code log} at DEBUG.
      *
      * <p>Every branch here ends in one of two outcomes: this module's own rendering is published,
@@ -2569,6 +2611,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                                                   Map<String, Path> serviceFiles,
                                                   List<ModuleSidecar> allSidecars,
                                                   @Nullable Logger log) {
+        Runnable seam = afterSidecarRead;
+        if (seam != null) {
+            seam.run();
+        }
         // Non-null means "DEBUG is on": one reference carries both facts, so nothing below
         // formats an argument at a disabled level and NullAway can still see the guard.
         final @Nullable Logger debugLog = log != null && log.isDebugEnabled() ? log : null;

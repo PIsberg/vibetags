@@ -335,7 +335,8 @@ per module. Both work; pick per platform.
 | `.vibetags-locks` | root | Machine-readable `@AILocked` report with source line numbers |
 | `.vibetags-baseline` | root | Committed approval record for the enforcing mode — commit it |
 
-`.vibetags-mod-*`, `.vibetags-cache` and `vibetags.log` are generated build state. Gitignore them.
+`.vibetags-mod-*`, `.vibetags-cache`, `.vibetags-generate.lock` (a reactor root's generation lock) and
+`vibetags.log` are generated build state. Gitignore them.
 
 ---
 

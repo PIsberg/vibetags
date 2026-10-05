@@ -95,6 +95,18 @@ class SourceDigestTest {
     }
 
     @Test
+    void theLockFilesDoNotMoveTheKey() throws IOException {
+        // Empty and never read; the generation lock is created by the first reactor build, after
+        // that build has computed its key. Counted as configuration, it cost every reactor module
+        // the early exit on the build after it first appeared (#908).
+        project();
+        String before = key();
+        Files.writeString(root.resolve(GenerationLock.FILE_NAME), "", StandardCharsets.UTF_8);
+        Files.writeString(root.resolve(".vibetags-baseline.lock"), "", StandardCharsets.UTF_8);
+        assertEquals(before, key());
+    }
+
+    @Test
     void everyOtherInputMovesTheKey() throws IOException {
         project();
         String base = key();

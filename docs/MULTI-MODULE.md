@@ -236,6 +236,37 @@ before generation (invariant 17). The case still out of reach is a module or sou
 sources left at all, which no build compiles: its contribution stays until its `.vibetags-mod-*`
 file is deleted (or the module directory disappears).
 
+### Parallel builds
+
+A module round saves its sidecar, reads every sidecar, merges, and writes the root files. Under
+`mvn -T` or Gradle `--parallel` two modules can do that at once, and before #908 nothing stopped
+the one that read first from writing last: its merge did not include the sibling that saved in
+between, so that sibling's region was missing from `CLAUDE.md` and every other root file until the
+next build. `ParallelReactorGenerationTest` holds one module between its read and its write and
+reproduces it every time.
+
+A module round now generates under an exclusive lock on `.vibetags-generate.lock` at the VibeTags
+root (empty, never read; gitignore it like the sidecars). The second module waits, then reads after
+the first has written, so every merge sees every saved sidecar. Details that matter when reading a
+log:
+
+- **Only module rounds of an opted-in root lock.** The root's own round and a single-module build
+  never race a sibling, and a root with no opt-in gets no root files to race over, so none of them
+  takes the lock or creates the file: a project that never opted in still has nothing written to it
+  (invariant 1). The module test is the one the root sweep uses (`maySweepRoot`).
+- **It works within one JVM as well as across processes.** A file lock belongs to the whole JVM, so
+  a second module in the same build process gets `OverlappingFileLockException` instead of waiting,
+  whichever classloader loaded each processor. The lock polls `tryLock()` every 10 ms, which waits
+  in both cases.
+- **It never fails a build.** A root that will not open the file, a filesystem that refuses locks, an
+  interrupt, or a wait over two minutes proceed unlocked, as every build did before, and say so:
+  `generate.lock.skip module= reason=unopenable|unsupported|interrupted|timeout` (WARN). A module
+  that had to wait logs `generate.lock.wait module= reason=sibling-generating` and then
+  `generate.lock.acquired module= waitedMs=` (INFO).
+
+Generation is milliseconds to seconds per module, so the cost is that much serialisation on the
+VibeTags step only; compilation itself still runs in parallel.
+
 ## Per-module (nested) output
 
 The sidecar/merge above produces the **root** files. Independently, a module can opt into a guardrail

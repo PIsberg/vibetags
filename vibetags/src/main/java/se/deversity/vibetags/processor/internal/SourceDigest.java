@@ -36,7 +36,9 @@ import java.util.stream.Stream;
  * configuration file there.
  * Taking in more than output depends on only costs a missed exit; taking in less is a false
  * "unchanged". Sidecars, the write cache and the locks report are outputs or run records with
- * checks of their own, and are left out because they change on every build.
+ * checks of their own, and are left out because they change on every build. Lock files
+ * ({@code *.lock}) are left out too: empty, held and never read, and the generation lock first
+ * appears during a build, after that build computed its key.
  */
 @AIContext(
     focus = "Every input that shapes generated output and is not an -A option, an opt-in file or a .vibetags-* config must be hashed here",
@@ -133,7 +135,9 @@ public final class SourceDigest {
         return name.startsWith(".vibetags-")
             && !name.startsWith(".vibetags-mod-")
             && !name.startsWith(".vibetags-cache")
-            && !name.startsWith(ServiceRegistry.LOCKS_REPORT_FILE);
+            && !name.startsWith(ServiceRegistry.LOCKS_REPORT_FILE)
+            // An empty lock file is held, never read: GenerationLock's and the baseline's.
+            && !name.endsWith(".lock");
     }
 
     /**

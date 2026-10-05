@@ -41,6 +41,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A parallel reactor could drop a module's region from the root files (#908).** Under `mvn -T`
+  or Gradle `--parallel`, a module that read the sidecars before a sibling saved one could write
+  `CLAUDE.md` and the other root files last, from a merge without that sibling, and the region
+  stayed missing until the next build. Module rounds now generate under an exclusive lock on
+  `.vibetags-generate.lock` at the root (empty; gitignore it), taken around `generateFiles()` in
+  `process()` so the locked step order is untouched. The lock polls `tryLock()` because a second
+  module in the same JVM gets `OverlappingFileLockException` rather than a wait, and it never
+  fails a build: an unusable lock or a wait over two minutes proceeds unlocked and logs
+  `generate.lock.skip reason=`. The root round, single-module builds and a root with no opt-in
+  take no lock and create no file. Lock files no longer count as configuration in the early-exit
+  key, or the lock appearing would have cost every module its early exit on the next build
+  (`SourceDigestEarlyExitEndToEndTest` caught it). `ParallelReactorGenerationTest` holds one module between its sidecar read and its write
+  through a test-only seam, since the window is milliseconds: red 3 of 3 before, green 3 of 3
+  after, and red again with the lock planted to give up on `OverlappingFileLockException`.
 - **In a parallel reactor the write cache could vouch for another module's bytes.** Every
   module of a `mvn -T` or Gradle `--parallel` build writes the root files through its own
   `WriteCache` over the one `.vibetags-cache`. The writer stat'ed the file after moving its bytes
