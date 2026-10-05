@@ -13,7 +13,9 @@ import se.deversity.vibetags.processor.internal.WriteCache;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -86,18 +88,29 @@ class WriteCacheCrossInstanceAsyncTest {
             GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, null, cache);
             writer.writeFileIfChanged(shared.toString(), body, true);
 
-            if (cache.isUnchanged(shared, body)) {
-                // Read after the verdict: the verdict is the claim, the bytes are what it is checked
-                // against. Another module may have written since, which is fine as long as the
-                // verdict did not outlive it; the check below then sees the attributes move.
-                String onDisk = Files.readString(shared);
-                if (!onDisk.contains(body) && cache.isUnchanged(shared, body)) {
-                    throw new AssertionError("the cache vouched for a body the file does not hold.\n"
-                        + "expected: " + body + "on disk:\n" + onDisk);
-                }
+            // The verdict and the bytes must describe one file. A stat on each side of them is the
+            // snapshot: when the two agree on size, full mtime and file key, nothing replaced the
+            // file in between, so the verdict was about the bytes read. When they differ another
+            // module wrote meanwhile and this cycle proves nothing either way. Checking the verdict
+            // again after the read instead was the test's own race: macOS CI wrote a same-size
+            // file in the same millisecond between the read and the second verdict, which made a
+            // correct verdict look like a wrong one.
+            BasicFileAttributes before = Files.readAttributes(shared, BasicFileAttributes.class);
+            boolean unchanged = cache.isUnchanged(shared, body);
+            String onDisk = Files.readString(shared);
+            BasicFileAttributes after = Files.readAttributes(shared, BasicFileAttributes.class);
+            if (unchanged && sameFile(before, after) && !onDisk.contains(body)) {
+                throw new AssertionError("the cache vouched for a body the file does not hold.\n"
+                    + "expected: " + body + "on disk:\n" + onDisk);
             }
             cache.flush();
         }
         assertTrue(Files.exists(shared), "the shared file must survive the contention");
+    }
+
+    private static boolean sameFile(BasicFileAttributes a, BasicFileAttributes b) {
+        return a.size() == b.size()
+            && a.lastModifiedTime().equals(b.lastModifiedTime())
+            && Objects.equals(a.fileKey(), b.fileKey());
     }
 }

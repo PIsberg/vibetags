@@ -52,10 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   region. A write now records the staging file's attributes, which a rename keeps. A file found
   current is recorded only when a stat before the read and one after it agree on size, full
   mtime and file key (the inode on Linux and macOS); otherwise it is marked for re-checking next
-  build. A stat before the read alone was not enough: on macOS CI a replacement before the read,
-  followed by a third write of the same size in the same millisecond, matched it.
-  `WriteCacheCrossInstanceAsyncTest` reproduces the defect with 8 writers on one file; reverting
-  either half of the fix fails it in 3 of 3 runs on Windows.
+  build. The second stat guards an interleaving reasoned from the code, a replacement before the
+  read followed by a third write of the same size in the same millisecond; no test has made it
+  fail. `WriteCacheCrossInstanceAsyncTest` reproduces the defect with 8 writers on one file:
+  reverting the write-path fix or the found-current fix fails it in 3 of 3 runs on Windows.
 - **`.aiexclude` no longer gets an empty header block for each module with nothing to exclude.**
   `AiExcludeRenderer` always emitted its three-line header, and the reactor merge wraps every
   non-blank contribution, so each module and each source set without an excludable type added a

@@ -332,13 +332,14 @@ public final class GuardrailFileWriter {
      * describe. In a parallel reactor another module can replace the file at any point, and either
      * stat alone could pair this body's hash with that module's file: a stat taken only now, after
      * a replacement following the read; a stat taken only before, after a replacement before the
-     * read whose size and millisecond mtime a third write then repeats (seen on macOS CI). The
-     * cache then vouched for content the file did not hold, and the write that would have fixed it
-     * was skipped. The file key, an inode where the file system has one, tells two writes of one
-     * size in one millisecond apart, since every write here is a new file moved into place. When
-     * the stats differ the entry is recorded as failed, not dropped: a missing entry counts as
-     * stable to the early exit, and the next build must look at this file again. Pinned by
-     * {@code WriteCacheCrossInstanceAsyncTest}.
+     * read whose size and millisecond mtime a third write then repeats. The cache then vouched for
+     * content the file did not hold, and the write that would have fixed it was skipped. The file
+     * key, an inode where the file system has one, tells two writes of one size in one millisecond
+     * apart, since every write here is a new file moved into place. When the stats differ the entry
+     * is recorded as failed, not dropped: a missing entry counts as stable to the early exit, and
+     * the next build must look at this file again. {@code WriteCacheCrossInstanceAsyncTest} pins the
+     * stat-only-now case; the before-only case is reasoned from the code and no test has made it
+     * fail, so the second stat is a guard rather than a measured fix.
      */
     private void noteCurrent(Path filePath, String bodyForCache, @Nullable BasicFileAttributes before)
             throws IOException {
