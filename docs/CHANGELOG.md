@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Three more of this repository's own classes carry `@AIContext`.** Each states a fact that
+  lives in another file or another build, so the class cannot show it: `SourceDigest` (an input
+  that shapes output but is not an option, opt-in or `.vibetags-*` config must be hashed, and a
+  test that compiles once never reaches the early exit to notice), `TransitiveManifest` (its JSON
+  is read out of JARs already on Maven Central by other processor versions) and
+  `EnforcementBaseline` (consumers commit the file, and `GuardrailEnforcer` answers an
+  unrecognised format with a warning and a pass, so dropping format 1 turns enforcement off on
+  upgrade). `@AICore` was tried first and put the always-loaded block in `CLAUDE.md` at 8,213
+  bytes against its 7,000 budget (#752). The facts matter when one of these files is edited,
+  which is when its scoped rule loads, so the block grows by 34 bytes instead.
 - **PMD 7.27.0 -> 7.28.0 (#889).** 7.28 adds `OnDemandImport` to the best-practices category,
   which `pmd-ruleset.xml` imports whole, and it fired 5 times: three wildcard imports in the
   processor (`AIGuardrailProcessor`, `FormatterRegistry`, `PlatformDescriptors`) and the JMH
