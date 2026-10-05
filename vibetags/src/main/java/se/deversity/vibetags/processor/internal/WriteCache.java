@@ -464,7 +464,8 @@ public final class WriteCache {
 
     /**
      * Records that {@code file} holds {@code body}, where {@code attrs} describe those bytes: the
-     * staging file before it was moved into place, or the file as it stood before it was read.
+     * staging file before it was moved into place, or the file as it stood before it was read
+     * when a second stat after the read shows it unchanged.
      * A stat taken after the fact can belong to another writer's content, and pairing it with
      * this body's hash is the false positive this class must never produce. {@code null} drops
      * the entry rather than store stale data. No per-call byte[] allocation.

@@ -327,18 +327,37 @@ public final class GuardrailFileWriter {
      * {@link WriteCache#isUnchanged} has to compare against next time. Nothing to record in
      * dry-run, which must leave the cache as it found it.
      *
-     * <p>{@code attrs} are the file's attributes from before it was read, never a stat taken now.
-     * In a parallel reactor another module can replace the file between the read and this call,
-     * and a stat taken here paired this body's hash with that module's size and mtime: the cache
-     * then vouched for content the file did not hold, and the write that would have fixed it was
-     * skipped. Attributes from before the read can only be older than the bytes compared, which
-     * costs a cache miss at worst. Pinned by {@code WriteCacheCrossInstanceAsyncTest}.
+     * <p>{@code before} are the file's attributes from before it was read. The entry is made only
+     * when a stat taken now matches them, so the bytes compared are the bytes those attributes
+     * describe. In a parallel reactor another module can replace the file at any point, and either
+     * stat alone could pair this body's hash with that module's file: a stat taken only now, after
+     * a replacement following the read; a stat taken only before, after a replacement before the
+     * read whose size and millisecond mtime a third write then repeats (seen on macOS CI). The
+     * cache then vouched for content the file did not hold, and the write that would have fixed it
+     * was skipped. The file key, an inode where the file system has one, tells two writes of one
+     * size in one millisecond apart, since every write here is a new file moved into place. When
+     * the stats differ the entry is recorded as failed, not dropped: a missing entry counts as
+     * stable to the early exit, and the next build must look at this file again. Pinned by
+     * {@code WriteCacheCrossInstanceAsyncTest}.
      */
-    private void noteCurrent(Path filePath, String bodyForCache, @Nullable BasicFileAttributes attrs) {
+    private void noteCurrent(Path filePath, String bodyForCache, @Nullable BasicFileAttributes before)
+            throws IOException {
         if (dryRun || writeCache == null) {
             return;
         }
-        writeCache.recordWrite(filePath, bodyForCache, attrs);
+        BasicFileAttributes now = attributesOrNull(filePath);
+        if (before != null && now != null && sameFile(before, now)) {
+            writeCache.recordWrite(filePath, bodyForCache, before);
+        } else {
+            writeCache.recordFailure(filePath);
+        }
+    }
+
+    /** Whether two stats describe one unchanged file: size, full-precision mtime, and file key. */
+    private static boolean sameFile(BasicFileAttributes a, BasicFileAttributes b) {
+        return a.size() == b.size()
+            && a.lastModifiedTime().equals(b.lastModifiedTime())
+            && java.util.Objects.equals(a.fileKey(), b.fileKey());
     }
 
     /** The file's attributes, or {@code null} when it does not exist. */

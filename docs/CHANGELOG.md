@@ -49,11 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the file unchanged while it held other content, and the write that would have fixed it was
   skipped. How that reaches a user is reasoned, not reproduced end to end: a later build that
   renders an earlier body again, such as after a module is removed, keeps the departed module's
-  region. The entry now takes the
-  staging file's attributes, which a rename keeps, or the file's attributes from before it was
-  read: older than the bytes at worst, which costs a cache miss. `WriteCacheCrossInstanceAsyncTest`
-  reproduces it with 8 writers on one file; reverting either half of the fix fails it in 3 of 3
-  runs.
+  region. A write now records the staging file's attributes, which a rename keeps. A file found
+  current is recorded only when a stat before the read and one after it agree on size, full
+  mtime and file key (the inode on Linux and macOS); otherwise it is marked for re-checking next
+  build. A stat before the read alone was not enough: on macOS CI a replacement before the read,
+  followed by a third write of the same size in the same millisecond, matched it.
+  `WriteCacheCrossInstanceAsyncTest` reproduces the defect with 8 writers on one file; reverting
+  either half of the fix fails it in 3 of 3 runs on Windows.
 - **`.aiexclude` no longer gets an empty header block for each module with nothing to exclude.**
   `AiExcludeRenderer` always emitted its three-line header, and the reactor merge wraps every
   non-blank contribution, so each module and each source set without an excludable type added a
