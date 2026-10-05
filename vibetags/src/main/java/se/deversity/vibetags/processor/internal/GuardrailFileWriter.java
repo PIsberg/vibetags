@@ -21,6 +21,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
@@ -160,16 +161,12 @@ public final class GuardrailFileWriter {
             String[] markers = getMarkersFor(fileName);
             boolean supportsMarkers = markers != null;
 
-            // Pre-check size to allow non-marker overwrite branch to skip the full read
-            long existingSize;
-            boolean fileExists;
-            try {
-                existingSize = Files.size(filePath);
-                fileExists = true;
-            } catch (NoSuchFileException nsfe) {
-                existingSize = 0L;
-                fileExists = false;
-            }
+            // Pre-check size to allow non-marker overwrite branch to skip the full read. Taken
+            // before the file is read, so a file found current is recorded with attributes no newer
+            // than the bytes compared: see noteCurrent.
+            BasicFileAttributes existingAttrs = attributesOrNull(filePath);
+            boolean fileExists = existingAttrs != null;
+            long existingSize = existingAttrs != null ? existingAttrs.size() : 0L;
             byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
             int contentByteLen = contentBytes.length;
 
@@ -180,7 +177,7 @@ public final class GuardrailFileWriter {
                 if (fileBytesEqual(filePath, contentBytes)) {
                     // Byte-identical — nothing to do. Refresh the cache so subsequent calls hit
                     // the cheap WriteCache fast path even on the very first build.
-                    if (writeCache != null) writeCache.recordWrite(filePath, content);
+                    noteCurrent(filePath, content, existingAttrs);
                     debug("write.skip file={} reason=identical-bytes bytes={}", fileName, contentByteLen);
                     return false;
                 }
@@ -215,9 +212,10 @@ public final class GuardrailFileWriter {
                 // beside a new one. The markers are looked for behind it, and it is written back.
                 String bom = existing.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
                 return writeWithMarkers(filePath, fileName, path, content, existing.substring(bom.length()), bom,
-                    hasNewRules, markers);
+                    hasNewRules, markers, existingAttrs);
             }
-            return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules);
+            return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules,
+                existingAttrs);
         } catch (CharacterCodingException e) {
             return writeFailed(filePath, path, e, undecodableEncoding(filePath));
         } catch (IOException e) {
@@ -310,9 +308,9 @@ public final class GuardrailFileWriter {
             return;
         }
         debug("write.commit file={} bytes={}", fileName(filePath), finalContent.length());
-        writeContentWithBackup(filePath, finalContent);
+        BasicFileAttributes written = writeContentWithBackup(filePath, finalContent);
         if (writeCache != null) {
-            writeCache.recordWrite(filePath, bodyForCache);
+            writeCache.recordWrite(filePath, bodyForCache, written);
         }
     }
 
@@ -328,16 +326,33 @@ public final class GuardrailFileWriter {
      * The entry records the file as it is on disk, line endings included, which is exactly what
      * {@link WriteCache#isUnchanged} has to compare against next time. Nothing to record in
      * dry-run, which must leave the cache as it found it.
+     *
+     * <p>{@code attrs} are the file's attributes from before it was read, never a stat taken now.
+     * In a parallel reactor another module can replace the file between the read and this call,
+     * and a stat taken here paired this body's hash with that module's size and mtime: the cache
+     * then vouched for content the file did not hold, and the write that would have fixed it was
+     * skipped. Attributes from before the read can only be older than the bytes compared, which
+     * costs a cache miss at worst. Pinned by {@code WriteCacheCrossInstanceAsyncTest}.
      */
-    private void noteCurrent(Path filePath, String bodyForCache) {
+    private void noteCurrent(Path filePath, String bodyForCache, @Nullable BasicFileAttributes attrs) {
         if (dryRun || writeCache == null) {
             return;
         }
-        writeCache.recordWrite(filePath, bodyForCache);
+        writeCache.recordWrite(filePath, bodyForCache, attrs);
+    }
+
+    /** The file's attributes, or {@code null} when it does not exist. */
+    private static @Nullable BasicFileAttributes attributesOrNull(Path file) throws IOException {
+        try {
+            return Files.readAttributes(file, BasicFileAttributes.class);
+        } catch (NoSuchFileException e) {
+            return null;
+        }
     }
 
     private boolean writeWithMarkers(Path filePath, String fileName, String path, String content,
-                                     String existing, String bom, boolean hasNewRules, String[] markers)
+                                     String existing, String bom, boolean hasNewRules, String[] markers,
+                                     @Nullable BasicFileAttributes existingAttrs)
             throws IOException {
         String markerStart = markers[0];
         String markerEnd = markers[1];
@@ -376,7 +391,7 @@ public final class GuardrailFileWriter {
                 String finalContent = (before.isEmpty() ? "" : before + "\n\n") + wrappedBody + "\n";
                 if (contentMatches(existing, finalContent)) {
                     debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
-                    noteCurrent(filePath, content);
+                    noteCurrent(filePath, content, existingAttrs);
                     return false;
                 }
                 // As on every other path: a round with no annotations does not replace a block.
@@ -403,7 +418,7 @@ public final class GuardrailFileWriter {
             if (contentMatches(existing, finalContent)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=true",
                     fileName, finalContent.length());
-                noteCurrent(filePath, content);
+                noteCurrent(filePath, content, existingAttrs);
                 return false;
             }
 
@@ -427,7 +442,7 @@ public final class GuardrailFileWriter {
             if (contentMatches(existing, finalContent)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=legacy",
                     fileName, finalContent.length());
-                noteCurrent(filePath, content);
+                noteCurrent(filePath, content, existingAttrs);
                 return false;
             }
 
@@ -447,7 +462,7 @@ public final class GuardrailFileWriter {
                 ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
                 : withRenderedFrontMatter(existing.stripTrailing(), frontMatter) + "\n\n" + wrappedBody + "\n";
             if (contentMatches(existing, updated)) {
-                noteCurrent(filePath, content);
+                noteCurrent(filePath, content, existingAttrs);
                 return false;
             }
 
@@ -479,6 +494,7 @@ public final class GuardrailFileWriter {
      */
     private boolean writeSharedJsonValues(Path filePath, String fileName, String content, boolean hasNewRules,
                                           List<JsonValueSpans.SharedKey> sharedKeys) throws IOException {
+        BasicFileAttributes existingAttrs = attributesOrNull(filePath);
         String existing;
         try {
             existing = Files.readString(filePath, StandardCharsets.UTF_8);
@@ -507,7 +523,7 @@ public final class GuardrailFileWriter {
         }
         if (merged.equals(existing)) {
             debug("write.skip file={} reason=identical-bytes bytes={} markers=json-values", fileName, merged.length());
-            noteCurrent(filePath, content);
+            noteCurrent(filePath, content, existingAttrs);
             return false;
         }
         if (!hasNewRules && !existing.isBlank()) {
@@ -523,9 +539,10 @@ public final class GuardrailFileWriter {
 
     private boolean writeWithoutMarkers(Path filePath, String fileName, String content, String existing,
                                         boolean fileExists, long existingSize,
-                                        boolean hasNewRules) throws IOException {
+                                        boolean hasNewRules, @Nullable BasicFileAttributes existingAttrs)
+            throws IOException {
         if (contentMatches(existing, content)) {
-            noteCurrent(filePath, content);
+            noteCurrent(filePath, content, existingAttrs);
             return false;
         }
 
@@ -1075,7 +1092,7 @@ public final class GuardrailFileWriter {
         }
     }
 
-    private void writeContentWithBackup(Path filePath, String finalContent) throws IOException {
+    private BasicFileAttributes writeContentWithBackup(Path filePath, String finalContent) throws IOException {
         // Create the staging file with a fresh random name in the TARGET directory (so the atomic
         // move stays on the same filesystem). Files.createTempFile creates it atomically with
         // O_EXCL semantics, so it cannot follow or clobber a pre-planted symlink at a predictable
@@ -1088,11 +1105,17 @@ public final class GuardrailFileWriter {
         try {
             Files.writeString(tmp, finalContent, StandardCharsets.UTF_8);
             applyPermissions(tmp, filePath);
+            // Stat the staging file, not the target after the move: by then another module of a
+            // parallel reactor may have replaced the target, and its size and mtime would be
+            // recorded against this content (see noteCurrent). A rename keeps both, so these are
+            // the attributes the target has for as long as it holds these bytes.
+            BasicFileAttributes written = Files.readAttributes(tmp, BasicFileAttributes.class);
             try {
                 Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (java.nio.file.AtomicMoveNotSupportedException e) {
                 Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING);
             }
+            return written;
         } finally {
             // A successful move consumes tmp; clean it up only if a failure left it behind.
             Files.deleteIfExists(tmp);

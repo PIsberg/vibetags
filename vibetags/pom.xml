@@ -215,7 +215,7 @@
                      async tests need instrumented are exactly the ones the harness loads in
                      isolation.
 
-                     None of the six *AsyncTest classes drive javac, so a fork that runs only them
+                     None of the seven *AsyncTest classes drive javac, so a fork that runs only them
                      has no isolated classloader for the agent to trip over. JaCoCo appends both
                      forks to one jacoco.exec, so coverage stays whole. -->
                 <executions>

@@ -33,8 +33,13 @@ import java.util.Map;
  * the writer falls back to the existing read-compare-write path and rebuilds the
  * cache from scratch on the next successful write.
  *
- * <p>Not thread-safe across instances. A single processor invocation owns one
- * instance for its lifetime; concurrent compilations should use disjoint roots.
+ * <p>A single processor invocation owns one instance for its lifetime, but a parallel reactor
+ * runs one invocation per module against the same root, so several instances share one cache
+ * file. They are not coordinated: the last {@link #flush} wins and drops the entries the others
+ * recorded since they loaded, which costs those files a cache miss on the next build. What they
+ * must never do is produce a false positive, so an entry's attributes always describe the bytes
+ * its own writer wrote or compared (see {@link #recordWrite(Path, String, BasicFileAttributes)}),
+ * never a stat that can belong to another module's write.
  */
 @AICore(
     sensitivity = "high",
@@ -42,7 +47,7 @@ import java.util.Map;
 )
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.SYNCHRONIZED,
-    note = "Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it); instances must own disjoint roots, because two instances over the same .vibetags-cache race by design"
+    note = "Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it). Instances over one .vibetags-cache, one per module of a parallel reactor, may drop each other's entries on flush, a cache miss; they never vouch for another writer's bytes (WriteCacheCrossInstanceAsyncTest proves it)"
 )
 @AITestDriven(
     coverageGoal = 90,
@@ -442,22 +447,38 @@ public final class WriteCache {
         }
     }
 
-    /** Records that {@code body} was written to {@code file}. One {@code readAttributes} call
-     *  for both size and mtime; no per-call byte[] allocation. */
+    /**
+     * Records that {@code body} was written to {@code file}, with the file's attributes as they are
+     * now. Right only when nothing else can write {@code file} between the write and this call;
+     * a writer that shares the file uses {@link #recordWrite(Path, String, BasicFileAttributes)}.
+     */
     public synchronized void recordWrite(Path file, String body) {
-        loadIfNeeded();
+        BasicFileAttributes attrs;
         try {
-            BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
-            String relKey = cacheKey(file);
+            attrs = Files.readAttributes(file, BasicFileAttributes.class);
+        } catch (IOException ignored) {
+            attrs = null;
+        }
+        recordWrite(file, body, attrs);
+    }
+
+    /**
+     * Records that {@code file} holds {@code body}, where {@code attrs} describe those bytes: the
+     * staging file before it was moved into place, or the file as it stood before it was read.
+     * A stat taken after the fact can belong to another writer's content, and pairing it with
+     * this body's hash is the false positive this class must never produce. {@code null} drops
+     * the entry rather than store stale data. No per-call byte[] allocation.
+     */
+    public synchronized void recordWrite(Path file, String body, @Nullable BasicFileAttributes attrs) {
+        loadIfNeeded();
+        String relKey = cacheKey(file);
+        if (attrs == null) {
+            entries.remove(relKey);
+        } else {
             entries.put(relKey,
                 new Entry(fingerprint(body), attrs.size(), attrs.lastModifiedTime().toMillis()));
-            dirty = true;
-        } catch (IOException ignored) {
-            // If we can't stat the file we just wrote, drop the cache entry rather than store stale data.
-            String relKey = cacheKey(file);
-            entries.remove(relKey);
-            dirty = true;
         }
+        dirty = true;
     }
 
     /**

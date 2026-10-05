@@ -41,6 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **In a parallel reactor the write cache could vouch for another module's bytes.** Every
+  module of a `mvn -T` or Gradle `--parallel` build writes the root files through its own
+  `WriteCache` over the one `.vibetags-cache`. The writer stat'ed the file after moving its bytes
+  into place, and a file it found already current after reading it, so a sibling's write landing
+  in between paired this module's hash with the sibling's size and mtime. The cache then reported
+  the file unchanged while it held other content, and the write that would have fixed it was
+  skipped. How that reaches a user is reasoned, not reproduced end to end: a later build that
+  renders an earlier body again, such as after a module is removed, keeps the departed module's
+  region. The entry now takes the
+  staging file's attributes, which a rename keeps, or the file's attributes from before it was
+  read: older than the bytes at worst, which costs a cache miss. `WriteCacheCrossInstanceAsyncTest`
+  reproduces it with 8 writers on one file; reverting either half of the fix fails it in 3 of 3
+  runs.
 - **`.aiexclude` no longer gets an empty header block for each module with nothing to exclude.**
   `AiExcludeRenderer` always emitted its three-line header, and the reactor merge wraps every
   non-blank contribution, so each module and each source set without an excludable type added a
