@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`vibetags doctor --help` and `vibetags init --help` failed with exit 2 (#920).** Only a
   `--help` in first position was recognised; after a command it was a stray argument. `--help`
   and `-h` now print usage and exit 0 wherever they appear.
+- **`vibetags init --platforms` mishandled blank and repeated entries (#920).** `,cursor` or
+  `claude,,cursor` failed the whole command with `unknown platform key(s): ` and no key named;
+  `claude,claude` reported the key as both created and already active. Blank entries are now
+  skipped, repeats collapse to one, and a list with no key left is the usual "Nothing created"
+  usage error.
 - **A round skipped as unchanged flushed the shared write cache without the generation lock
   (#916).** When another processor generates sources after the first round was skipped, the round
   clears its recorded source digest and flushes `.vibetags-cache`. That flush re-reads and rewrites

@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,7 +62,15 @@ final class InitCommand {
             return 0;
         }
         int at = args.indexOf("--platforms");
-        if (at < 0 || at + 1 >= args.size()) {
+        // Blank entries are typos in the list (",claude", "claude,,cursor"), not keys, and a key
+        // named twice is one request; each used to fail or report twice (#920).
+        List<String> requested = at < 0 || at + 1 >= args.size() ? List.of()
+            : Arrays.stream(args.get(at + 1).split(","))
+                .map(String::trim)
+                .filter(key -> !key.isEmpty())
+                .distinct()
+                .toList();
+        if (requested.isEmpty()) {
             out.println("Nothing created. Pick platforms first:");
             out.println();
             list(serviceFiles, optIn);
@@ -70,9 +79,8 @@ final class InitCommand {
             return 2;
         }
 
-        List<String> requested = List.of(args.get(at + 1).split(","));
         List<String> unknown = requested.stream()
-            .filter(key -> !optIn.contains(key.trim()))
+            .filter(key -> !optIn.contains(key))
             .toList();
         if (!unknown.isEmpty()) {
             err.println("error: unknown platform key(s): " + String.join(", ", unknown));
@@ -83,8 +91,7 @@ final class InitCommand {
         List<String> created = new ArrayList<>();
         List<String> alreadyActive = new ArrayList<>();
         int refused = 0;
-        for (String rawKey : requested) {
-            String key = rawKey.trim();
+        for (String key : requested) {
             // Every key reaching here passed the optInKeys() filter above, and every opt-in key has
             // an entry in this map — pinned by ServiceRegistryKeyParityTest, because the two lists
             // are maintained by hand and a drift between them would surface here as a bare NPE on

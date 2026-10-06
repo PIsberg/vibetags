@@ -117,6 +117,9 @@ Then compile, and the processor fills each file in. What `init` guarantees:
   safe.
 - **`*_granular` keys create a directory**, everything else creates an empty file (with parent
   directories as needed).
+- **The key list is forgiving about its separators.** Spaces around keys, empty entries
+  (`claude,,cursor`) and a key named twice are all ignored. A list with no key in it is the same
+  usage error as no `--platforms` at all.
 - **Unknown keys fail the whole command before anything is created:**
 
   ```console
