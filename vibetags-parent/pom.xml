@@ -473,6 +473,11 @@
                                  Central's own validation is occasionally slow rather than stuck,
                                  so wait an hour before calling it a failure. -->
                             <waitMaxTime>3600</waitMaxTime>
+                            <!-- MD5 and SHA-1 only: Central requires those two and merely accepts
+                                 SHA-256 and SHA-512. The default, all four, put 6 files on Central
+                                 per published file and counted against the org's monthly file
+                                 allowance of 1,167 (#863). -->
+                            <checksums>required</checksums>
                         </configuration>
                     </plugin>
                 </plugins>

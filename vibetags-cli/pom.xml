@@ -249,7 +249,9 @@
                     <includeSystemScope>false</includeSystemScope>
                     <includeTestScope>false</includeTestScope>
                     <includeLicenseText>false</includeLicenseText>
-                    <outputFormat>all</outputFormat>
+                    <!-- JSON only: one SBOM format, since each published file costs 4 files of
+                         Central's monthly allowance with its signature and checksums (#863). -->
+                    <outputFormat>json</outputFormat>
                     <outputName>bom</outputName>
                 </configuration>
             </plugin>

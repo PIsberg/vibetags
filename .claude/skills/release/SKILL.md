@@ -35,6 +35,21 @@ Sanity-check the answer before continuing: it must be a release version (no
 `-SNAPSHOT` — Maven Central rejects those), and `git tag -l "v<version>"` must come
 back empty.
 
+## Step 1b — Count this month's releases against Central's allowance
+
+Maven Central allows an organization 7 releases, 1,167 files and 78 MB a month, and an org
+that stays over them is rate limited (#863). September 2026 had 7 tags. Count this calendar
+month's tags before going further:
+
+```bash
+git for-each-ref --format='%(creatordate:format:%Y-%m) %(refname:short)' 'refs/tags/v*' \
+  | grep "^$(date +%Y-%m) "
+```
+
+The cadence is **at most 3 releases a month**. If this would be the fourth or later, stop
+and tell the user the count, and continue only on an explicit go-ahead for a fix a consumer
+is blocked on. Say which it was in the release PR body.
+
 ## Step 2 — Preflight
 
 Refuse to continue and tell the user what is wrong if any of these fail:

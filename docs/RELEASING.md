@@ -196,6 +196,32 @@ browser, look for the file in real repositories on GitHub instead. Then act on w
   regenerating.
 - **Could not check.** Say so in the release PR, by name. An unchecked row is not a confirmed one.
 
+### 0c. Count this month's releases
+
+Maven Central allows an organization 7 releases, 1,167 files and 78 MB per calendar month.
+Going over starts a grace period, and an organization that stays over is rate limited
+([publishing limits](https://central.sonatype.org/publish/maven-central-publishing-limits/),
+#863). September 2026 used all 7 releases. So:
+
+- **At most 3 releases a month.** The exception is a fix a consumer is blocked on, and the
+  release PR says so.
+- Count before tagging:
+  ```bash
+  git for-each-ref --format='%(creatordate:format:%Y-%m) %(refname:short)' 'refs/tags/v*' \
+    | grep "^$(date +%Y-%m) "
+  ```
+- **84 files per release.** Each of the four jar artifacts publishes 5 files (jar, pom,
+  sources, javadoc, `-cyclonedx.json`) and each file goes up with its `.asc`, `.md5` and
+  `.sha1`; the BOM adds its pom with the same three. Until #863 it was 150: the publishing
+  plugin's default also sent `.sha256` and `.sha512`, which Central accepts but does not
+  require ([requirements](https://central.sonatype.org/publish/requirements/)), and the SBOM
+  went up as XML too. `<checksums>required</checksums>` in the `central-publish` profile and
+  `<outputFormat>json</outputFormat>` in each module's CycloneDX plugin are what keep it at 84;
+  `CentralPublishingBudgetTest` pins both.
+- Actual usage is on the [usage page](https://central.sonatype.com/publishing/usage?org=deversity)
+  (owner login). Whether Central counts each of `publish.yml`'s five deployments as a release
+  is not known yet; the page says.
+
 ### 1. Prepare the release
 
 Create a new branch from `main` (or your default branch):
