@@ -744,9 +744,6 @@ public final class GranularRulesWriter {
         new GranularFormat("windsurf_granular", GranularPairing.WINDSURF.extension(), GranularRulesWriter::fmTriggerGlob, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("continue_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("tabnine_granular", ".md", GranularRulesWriter::fmNone, n -> "# AI Guidelines for " + n + "\n\n"),
-        new GranularFormat("amazonq_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Q Rules for " + n + "\n\n"),
-        new GranularFormat("ai_rules_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
-        new GranularFormat("pearai_granular", ".md", GranularRulesWriter::fmDescGlobsApply, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("kiro_granular", ".md", GranularRulesWriter::fmNone, n -> "# Amazon Kiro Steering: " + n + "\n\n"),
         new GranularFormat("gemini_granular", GranularPairing.GEMINI_MD.extension(), GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("claude_granular", GranularPairing.CLAUDE.extension(), GranularRulesWriter::fmPaths, n -> "# Rules for " + n + "\n\n"),
@@ -766,12 +763,6 @@ public final class GranularRulesWriter {
         new GranularFormat("antigravity_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("aiassistant_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
         new GranularFormat("augment_granular", ".md", GranularRulesWriter::fmNone, n -> "# Rules for " + n + "\n\n"),
-        // Zencoder's own Repo-Info Agent writes .zencoder/rules/repo.md with exactly this front
-        // matter, so the shape is copied from the tool's output rather than inferred from prose.
-        // alwaysApply: true because a guardrail the model may decline to load is not a guardrail.
-        new GranularFormat("zencoder_granular", ".md",
-            (desc, globs) -> "---\ndescription: \"" + desc + "\"\nalwaysApply: true\n---\n\n",
-            n -> "# Rules for " + n + "\n\n"),
         // Cline's .clinerules/ directory (issue #642). Its loader (rule-helpers.ts) parses YAML front
         // matter and activates a rule when a paths: glob matches a file in the task's context, and
         // that context includes files Cline is about to edit, so a locked class's rule arrives before

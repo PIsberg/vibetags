@@ -33,7 +33,7 @@ public final class AISandboxOnlyFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### SANDBOX ONLY: ").append(className).append("\n- **Policy**: Sandbox/testing environments only.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (sandbox-only)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

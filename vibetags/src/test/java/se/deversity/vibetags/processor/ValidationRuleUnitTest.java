@@ -428,10 +428,6 @@ class ValidationRuleUnitTest {
     void duplicateYamlKey_ownedKeysAreTheTopLevelKeysEachYamlRendererWrites() {
         assertEquals(Set.of("read"), DuplicateYamlKeyRule.ownedKeys("aider_conf"));
         assertEquals(Set.of("reviews"), DuplicateYamlKeyRule.ownedKeys("coderabbit"));
-        assertEquals(Set.of("version", "pr_review"), DuplicateYamlKeyRule.ownedKeys("ellipsis"));
-        assertEquals(Set.of("rules"), DuplicateYamlKeyRule.ownedKeys("sweep"));
-        assertEquals(Set.of("guardrails"), DuplicateYamlKeyRule.ownedKeys("plandex"));
-        assertEquals(Set.of("instructions"), DuplicateYamlKeyRule.ownedKeys("interpreter"));
         assertEquals(Set.of("customModes"), DuplicateYamlKeyRule.ownedKeys("roo_modes"));
         assertEquals(Set.of(), DuplicateYamlKeyRule.ownedKeys("not-a-service-key"));
     }

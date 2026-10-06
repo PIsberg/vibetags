@@ -96,8 +96,7 @@ class AIGuardrailProcessorUnitTest {
         Set<String> active = Set.of("cursor", "claude", "qwen");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
 
-        // Claude is active but gets no warning: .claudeignore is deprecated (#667), so suggesting it
-        // would opt the project into an output the same build warns about.
+        // Claude is active but gets no warning: VibeTags writes no .claudeignore (#667, #720).
         assertEquals(2, warnings.size(), "Should have 2 warnings (cursor and qwen ignore missing): " + warnings);
         assertTrue(warnings.get(0).contains(".cursorignore"));
         assertTrue(warnings.get(1).contains(".qwenignore"));
@@ -166,7 +165,7 @@ class AIGuardrailProcessorUnitTest {
         assertFalse(note.contains("gemini_instructions.md"), "Note must not offer the file removed in 1.4.0 (#645)");
         assertTrue(note.contains("copilot-instructions.md"), "Note should list copilot file");
         assertTrue(note.contains(".cursorignore"), "Note should list cursor ignore file");
-        assertFalse(note.contains(".copilotignore"), "Note must not offer the deprecated copilot ignore file (#668)");
+        assertFalse(note.contains(".copilotignore"), "Note must not offer .copilotignore, removed in 1.4.0 (#720)");
     }
 
     @Test
@@ -201,30 +200,26 @@ class AIGuardrailProcessorUnitTest {
         // present it is treated as a pointer and left untouched (sole-file fallback rule).
         Set<String> expected = Set.of(
             "cursor", "claude", "aiexclude", "copilot", "qwen", "qwen_refactor",
-            "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
+            "cursor_ignore", "qwen_ignore",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
             // v0.7.0 platforms
             "windsurf", "zed",
             "windsurf_granular", "continue_granular", "tabnine_granular",
-            "amazonq_granular", "ai_rules_granular",
             // v0.8.0 platforms
-            "pearai_granular", "mentat", "sweep", "plandex",
-            "double_ignore", "interpreter", "codeium_ignore",
+            "codeium_ignore",
             // Ignore files for Roo Code, Continue and Augment Code
             "roo_ignore", "continue_ignore", "augment_ignore",
             // v0.9.6 platforms
-            "gemini_md", "antigravity_ignore",
+            "gemini_md",
             // v0.9.7 platforms
             "cline_granular", "junie", "junie_agents", "kiro_granular",
-            // Firebase AI
-            "firebase",
             // Context-packer ignore files
-            "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
+            "repomix_ignore", "gitingest_ignore", "gpt_ignore",
             // AI pull-request reviewers
-            "coderabbit", "pr_agent", "ellipsis",
+            "coderabbit", "pr_agent",
             // Editors & modes
-            "void", "roo_modes",
+            "roo_modes",
             // Machine-readable @AILocked report
             "locks_report",
             // Claude Code local override, Skill, and granular rules; Copilot granular instructions
@@ -239,7 +234,7 @@ class AIGuardrailProcessorUnitTest {
             // Greptile: the legacy greptile.json (key-merged) and .greptile/rules.md
             "greptile", "greptile_rules", "greptile_config",
             // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent file
-            "agents_skill", "zencoder_granular", "replit",
+            "agents_skill", "replit",
             // Devin Desktop, formerly Windsurf: its preferred rules directory and ignore file (#671)
             "devin_granular", "devin_ignore",
             // Lean indexed root aggregate opt-in (multi-module)

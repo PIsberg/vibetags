@@ -33,7 +33,7 @@ public final class AIPureFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### PURE FUNCTION: ").append(className).append("\n- **Policy**: Pure function (no state mutations allowed).\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (pure)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

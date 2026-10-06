@@ -32,7 +32,7 @@ public final class AISchemaSafeFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### SCHEMA SAFE: ").append(className).append("\n- **Rule**: Schema safety required. Do not change serialization formats, database columns, or API models without a migration plan.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (schema-safe)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

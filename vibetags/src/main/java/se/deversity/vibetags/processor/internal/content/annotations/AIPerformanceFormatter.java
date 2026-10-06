@@ -55,13 +55,7 @@ public final class AIPerformanceFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", constraint)).append('\n');
                 break;
-            case MENTAT:
-                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"constraint\": \"").append(Escape.json(constraint)).append("\"},\n");
-                break;
-            case SWEEP:
-                sb.append("  - \"Performance constraint for ").append(Escape.json(className)).append(": ").append(Escape.json(constraint)).append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (performance)").append(CommonFormatterHelper.clause(": ", constraint)).append('\n');
                 break;
             default:

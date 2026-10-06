@@ -11,9 +11,6 @@ import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.internal.content.annotations.*;
 import se.deversity.vibetags.processor.internal.content.platforms.IgnoreFileRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.MentatRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.PlandexRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.InterpreterRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.AiderConventionsRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.LlmsRenderer;
 
@@ -35,9 +32,6 @@ import static org.mockito.Mockito.*;
  * <ul>
  *   <li>PlatformRendererRegistry.getRenderer() — granular and cline/junie platform cases</li>
  *   <li>IgnoreFileRenderer.getPlatformSpecificName() default branch</li>
- *   <li>MentatRenderer.appendJsonSection() L61 — body not ending with ",\n"</li>
- *   <li>PlandexRenderer privacy section L36-37</li>
- *   <li>InterpreterRenderer — an uncovered branch</li>
  *   <li>GranularRulesWriter L54 — no granular services → early return</li>
  *   <li>AIAuditFormatter L24 default branch</li>
  *   <li>AISecureFormatter L62 (AIDER_CONVENTIONS with non-empty aspect)</li>
@@ -67,9 +61,6 @@ class RendererBranchCoverageTest {
         assertNotNull(PlatformRendererRegistry.getRenderer(Platform.WINDSURF_GRANULAR));
         assertNotNull(PlatformRendererRegistry.getRenderer(Platform.CONTINUE_GRANULAR));
         assertNotNull(PlatformRendererRegistry.getRenderer(Platform.TABNINE_GRANULAR));
-        assertNotNull(PlatformRendererRegistry.getRenderer(Platform.AMAZONQ_GRANULAR));
-        assertNotNull(PlatformRendererRegistry.getRenderer(Platform.AI_RULES_GRANULAR));
-        assertNotNull(PlatformRendererRegistry.getRenderer(Platform.PEARAI_GRANULAR));
         assertNotNull(PlatformRendererRegistry.getRenderer(Platform.KIRO_GRANULAR));
     }
 
@@ -81,7 +72,7 @@ class RendererBranchCoverageTest {
     @Test
     void platformRendererRegistry_ignorePlatforms_returnIgnoreFileRenderer() {
         // Verify all ignore-file platforms map to IgnoreFileRenderer
-        assertNotNull(PlatformRendererRegistry.getRenderer(Platform.ANTIGRAVITY_IGNORE));
+        assertNotNull(PlatformRendererRegistry.getRenderer(Platform.CURSOR_IGNORE));
         assertNotNull(PlatformRendererRegistry.getRenderer(Platform.CODEIUM_IGNORE));
     }
 
@@ -98,11 +89,11 @@ class RendererBranchCoverageTest {
     }
 
     @Test
-    void ignoreFileRenderer_withFirebasePlatform_producesDefaultName() {
-        // Platform.FIREBASE is not in any specific case → default: return "AI Platform"
+    void ignoreFileRenderer_withReplitPlatform_producesDefaultName() {
+        // Platform.REPLIT has no ignore label → default: return "AI Platform"
         IgnoreFileRenderer renderer = new IgnoreFileRenderer();
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("firebase"));
-        String result = renderer.render(oneIgnoredElement().model(), Platform.FIREBASE, ctx);
+        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("replit"));
+        String result = renderer.render(oneIgnoredElement().model(), Platform.REPLIT, ctx);
         assertTrue(result.contains("AI Platform"),
             "Default platform branch must produce 'AI Platform' in IgnoreFileRenderer");
     }
@@ -115,9 +106,9 @@ class RendererBranchCoverageTest {
     void ignoreFileRenderer_withNothingIgnored_emitsNothing() {
         IgnoreFileRenderer renderer = new IgnoreFileRenderer();
         AnnotationCollector empty = new AnnotationCollector();
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("claude_ignore"));
+        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("cursor_ignore"));
 
-        String result = renderer.render(empty.model(), Platform.CLAUDE_IGNORE, ctx);
+        String result = renderer.render(empty.model(), Platform.CURSOR_IGNORE, ctx);
 
         assertTrue(result.isEmpty(),
             "a module with no @AIIgnore must contribute an empty body, not a lone header");
@@ -132,104 +123,6 @@ class RendererBranchCoverageTest {
         AnnotationCollector collector = new AnnotationCollector();
         collector.collect(re);
         return collector;
-    }
-
-    // -----------------------------------------------------------------------
-    // MentatRenderer — appendJsonSection body does NOT end with ",\n"
-    // -----------------------------------------------------------------------
-
-    @Test
-    void mentatRenderer_lockedElement_producesValidJson() {
-        MentatRenderer renderer = new MentatRenderer();
-        AnnotationCollector collector = new AnnotationCollector();
-        RoundEnvironment re = mock(RoundEnvironment.class);
-
-        Element el = mockEl("com.example.LockedClass");
-        AILocked ann = mock(AILocked.class);
-        when(ann.reason()).thenReturn("test reason");
-        when(el.getAnnotation(AILocked.class)).thenReturn(ann);
-        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AILocked.class);
-        collector.collect(re);
-
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("mentat"));
-        String result = renderer.render(collector.model(), Platform.MENTAT, ctx);
-        assertNotNull(result);
-        // The body of appendJsonSection ends with ",\n" from the formatter,
-        // so the trim branch fires (L61 true branch = remove trailing comma).
-        assertTrue(result.contains("locked_files"), "Mentat output must contain locked_files section");
-        // Verify valid JSON: no trailing comma before closing bracket
-        assertFalse(result.contains(",\n    ]"),
-            "Mentat output must not have trailing comma before closing bracket");
-    }
-
-    // -----------------------------------------------------------------------
-    // PlandexRenderer — locked section (L23-25) and privacy section (L36-37)
-    // -----------------------------------------------------------------------
-
-    @Test
-    void plandexRenderer_lockedElement_includesLockedSection() {
-        PlandexRenderer renderer = new PlandexRenderer();
-        AnnotationCollector collector = new AnnotationCollector();
-        RoundEnvironment re = mock(RoundEnvironment.class);
-
-        Element el = mockEl("com.example.Config");
-        AILocked ann = mock(AILocked.class);
-        when(ann.reason()).thenReturn("do not modify");
-        when(el.getAnnotation(AILocked.class)).thenReturn(ann);
-        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AILocked.class);
-        collector.collect(re);
-
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("plandex"));
-        String result = renderer.render(collector.model(), Platform.PLANDEX, ctx);
-        assertNotNull(result);
-        assertTrue(result.contains("locked"), "Plandex output must contain locked section when @AILocked elements exist");
-        // Verify privacy section is absent when no @AIPrivacy elements exist
-        assertFalse(result.contains("  privacy:"), "Plandex output must omit privacy section when no @AIPrivacy elements");
-    }
-
-    @Test
-    void plandexRenderer_auditElement_includesAuditSection() {
-        // Cover the audit section (L28-31) which also has a partial branch
-        PlandexRenderer renderer = new PlandexRenderer();
-        AnnotationCollector collector = new AnnotationCollector();
-        RoundEnvironment re = mock(RoundEnvironment.class);
-
-        Element el = mockEl("com.example.Audited");
-        AIAudit ann = mock(AIAudit.class);
-        when(ann.checkFor()).thenReturn(new String[]{"XSS"});
-        when(el.getAnnotation(AIAudit.class)).thenReturn(ann);
-        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AIAudit.class);
-        collector.collect(re);
-
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("plandex"));
-        String result = renderer.render(collector.model(), Platform.PLANDEX, ctx);
-        assertNotNull(result);
-        // AIAuditFormatter handles PLANDEX via the default case — so audit content depends on formatter
-        assertNotNull(result, "PlandexRenderer must produce non-null output");
-    }
-
-    // -----------------------------------------------------------------------
-    // InterpreterRenderer — uncovered branch
-    // -----------------------------------------------------------------------
-
-    @Test
-    void interpreterRenderer_withLockedElement_includesLockedSection() {
-        se.deversity.vibetags.processor.internal.content.platforms.InterpreterRenderer renderer =
-            new se.deversity.vibetags.processor.internal.content.platforms.InterpreterRenderer();
-        AnnotationCollector collector = new AnnotationCollector();
-        RoundEnvironment re = mock(RoundEnvironment.class);
-
-        Element el = mockEl("com.example.Locked");
-        AILocked ann = mock(AILocked.class);
-        when(ann.reason()).thenReturn("test");
-        when(el.getAnnotation(AILocked.class)).thenReturn(ann);
-        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AILocked.class);
-        collector.collect(re);
-
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("interpreter"));
-        String result = renderer.render(collector.model(), Platform.INTERPRETER, ctx);
-        assertNotNull(result);
-        assertTrue(result.contains("com.example.Locked"), "InterpreterRenderer must include locked class");
     }
 
     // -----------------------------------------------------------------------
@@ -262,8 +155,8 @@ class RendererBranchCoverageTest {
         when(ann.checkFor()).thenReturn(new String[]{"SQL injection"});
         when(el.getAnnotation(AIAudit.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        // Platform.FIREBASE is not a case in AIAuditFormatter → default: break
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        // Platform.REPLIT is not a case in AIAuditFormatter → default: break
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length(), "Unhandled platform must produce no output from AIAuditFormatter");
     }
 
@@ -330,7 +223,7 @@ class RendererBranchCoverageTest {
         when(ann.defaultValue()).thenReturn(false);
         when(el.getAnnotation(AIFeatureFlag.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length(), "Unhandled platform must produce no output from AIFeatureFlagFormatter");
     }
 
@@ -374,25 +267,6 @@ class RendererBranchCoverageTest {
             collector, Set.of("cursor"));
         assertNotNull(fp);
         assertEquals(8, fp.length());
-    }
-
-    @Test
-    void interpreterRenderer_emptyCollector_omitsGuardrailsSection() {
-        // Kills the "changed conditional boundary" mutant on `if (rules.length() > 0)`:
-        // with an empty collector the rules buffer is empty, so the
-        // "## Project Guardrails" header must NOT be emitted. A `>= 0` mutant would
-        // emit the header for zero-length rules and this assertion catches it.
-        InterpreterRenderer renderer = new InterpreterRenderer();
-        AnnotationCollector collector = new AnnotationCollector();
-        RoundEnvironment re = mock(RoundEnvironment.class);
-        when(re.getElementsAnnotatedWith(any(Class.class))).thenReturn(Set.of());
-        collector.collect(re);
-
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("interpreter"));
-        String result = renderer.render(collector.model(), Platform.INTERPRETER, ctx);
-        assertNotNull(result);
-        assertFalse(result.contains("Project Guardrails"),
-            "empty collector must not emit the Project Guardrails section");
     }
 
     // ------------------------------------------------------------------
@@ -601,16 +475,6 @@ class RendererBranchCoverageTest {
         return collector;
     }
 
-    private static final String[] INTERPRETER_TAGS = {
-        "(locked):", "(context):", "(excluded):", "(audit):", "(draft):",
-        "(privacy):", "(core, sensitivity:", "(performance):", "(contract):",
-        "(test-driven):", "(thread-safe):", "(immutable)", "(deprecated):",
-        "(observability):", "(regulation):", "(test-isolation):", "(legacy-bridge):",
-        "(architecture):", "(public-api):", "(strict-exceptions):", "(strict-types):",
-        "(i18n):", "(strict-classpath):", "(schema-safe):", "(idempotent):",
-        "(feature-flag):", "(security-critical):",
-    };
-
     private static final String[] AIDER_HEADERS = {
         "#### LOCKED:", "#### CONTEXT:", "#### IGNORE:", "#### SECURITY AUDIT:",
         "#### DRAFT/TODO:", "#### PRIVACY/PII:", "#### CORE FUNCTIONALITY:",
@@ -622,17 +486,6 @@ class RendererBranchCoverageTest {
         "#### SCHEMA SAFE:", "#### IDEMPOTENT:", "#### FEATURE FLAG:",
         "#### SECURITY-CRITICAL:",
     };
-
-    @Test
-    void interpreterRenderer_rendersEveryAnnotationTag() {
-        InterpreterRenderer renderer = new InterpreterRenderer();
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("interpreter"));
-        String out = renderer.render(everyRenderedAnnotation().model(), Platform.INTERPRETER, ctx);
-        for (String tag : INTERPRETER_TAGS) {
-            assertTrue(out.contains(tag),
-                "InterpreterRenderer must emit the " + tag + " tag");
-        }
-    }
 
     @Test
     void aiderConventionsRenderer_rendersEveryAnnotationHeader() {

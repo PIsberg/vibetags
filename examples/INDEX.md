@@ -29,8 +29,8 @@ date. "Drift gate" is what CI does to the example's committed generated files af
 ### Which examples carry a YAML merge-shape platform
 
 `multimodule/` and `gradle-multimodule/` are the drift gate for `PlatformRenderer.mergeShape()`,
-so every YAML platform that declares one is opted into both: `.coderabbit.yaml`, `sweep.yaml`,
-`.plandex.yaml`, `.roomodes` and, since 2026-09-12, `.aider.conf.yml`. A YAML platform added to
+so every YAML platform that declares one is opted into both: `.coderabbit.yaml`, `.roomodes` and,
+since 2026-09-12, `.aider.conf.yml`. A YAML platform added to
 `basic/` alone has its shape checked by `YamlMergeShapeContractTest` against a single rendering and
 never against a real reactor merge, which is how `.aider.conf.yml` first shipped re-emitting its
 entry at column 0 in a reactor and column 2 in a single module.

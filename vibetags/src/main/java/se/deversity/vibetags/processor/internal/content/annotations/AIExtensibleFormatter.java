@@ -32,7 +32,7 @@ public final class AIExtensibleFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### POLYMORPHIC EXTENSION: ").append(className).append("\n- **Strategy**: ").append(strategy.name()).append("\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (extensible)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

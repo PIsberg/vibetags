@@ -88,9 +88,6 @@ class GranularRulesWriterUnitTest {
      *   windsurf_granular    → .md  in windsurf_granular dir
      *   continue_granular    → .md  in continue_granular dir
      *   tabnine_granular     → .md  in tabnine_granular dir
-     *   amazonq_granular     → .md  in amazonq_granular dir
-     *   ai_rules_granular    → .md  in ai_rules_granular dir
-     *   pearai_granular      → .md  in pearai_granular dir
      */
     /**
      * Verifies each non-cursor granular service individually using a fresh temp directory
@@ -102,10 +99,7 @@ class GranularRulesWriterUnitTest {
         "roo_granular",
         "windsurf_granular",
         "continue_granular",
-        "tabnine_granular",
-        "amazonq_granular",
-        "ai_rules_granular",
-        "pearai_granular"
+        "tabnine_granular"
     })
     void writeAll_nonCursorGranularService_writesFile(String service) throws IOException {
         Path tmp = Files.createTempDirectory("vibetags-test-");

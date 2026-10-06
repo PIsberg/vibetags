@@ -14,7 +14,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * End-to-end tests for platforms added in v0.7.0:
  * Windsurf, Zed, and the granular rule directories
- * for Windsurf, Continue, Tabnine, Amazon Q, and the universal .ai/rules/ standard.
+ * for Windsurf, Continue and Tabnine. Amazon Q's and the universal .ai/rules/ directories were
+ * removed in 1.4.0 (#720).
  */
 @Tag("e2e")
 class NewPlatformsEndToEndTest {
@@ -60,10 +61,6 @@ class NewPlatformsEndToEndTest {
             ".continue/rules should have PaymentProcessor rule");
         assertTrue(harness.fileExists(".tabnine/guidelines/com-example-payment-PaymentProcessor.md"),
             ".tabnine/guidelines should have PaymentProcessor rule");
-        assertTrue(harness.fileExists(".amazonq/rules/com-example-payment-PaymentProcessor.md"),
-            ".amazonq/rules should have PaymentProcessor rule");
-        assertTrue(harness.fileExists(".ai/rules/com-example-payment-PaymentProcessor.md"),
-            ".ai/rules should have PaymentProcessor rule");
     }
 
     // -----------------------------------------------------------------------
@@ -247,32 +244,6 @@ class NewPlatformsEndToEndTest {
         assertTrue(content.contains("AI Guidelines for PaymentProcessor"), "Should have guidelines heading");
         assertTrue(content.contains("Locked Status"), "Should have locked status content");
         assertFalse(content.startsWith("---"), "Tabnine uses plain Markdown, no front-matter");
-    }
-
-    // -----------------------------------------------------------------------
-    // Amazon Q granular .amazonq/rules/*.md
-    // -----------------------------------------------------------------------
-
-    @Test
-    void testAmazonQGranularRulesHaveContent() throws IOException {
-        String content = harness.readFile(".amazonq/rules/com-example-payment-PaymentProcessor.md");
-
-        assertTrue(content.contains("Amazon Q Rules for PaymentProcessor"), "Should have Amazon Q heading");
-        assertTrue(content.contains("Locked Status"), "Should have locked status content");
-        assertFalse(content.startsWith("---"), "Amazon Q uses plain Markdown, no front-matter");
-    }
-
-    // -----------------------------------------------------------------------
-    // Universal .ai/rules/*.md
-    // -----------------------------------------------------------------------
-
-    @Test
-    void testAiRulesGranularHaveContent() throws IOException {
-        String content = harness.readFile(".ai/rules/com-example-payment-PaymentProcessor.md");
-
-        assertTrue(content.contains("# Rules for PaymentProcessor"), "Should have rules heading");
-        assertTrue(content.contains("Locked Status"), "Should have locked status content");
-        assertTrue(content.contains("VIBETAGS-START"), "Should have VibeTags markers");
     }
 
     // -----------------------------------------------------------------------

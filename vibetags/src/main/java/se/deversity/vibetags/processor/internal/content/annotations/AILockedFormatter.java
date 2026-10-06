@@ -64,16 +64,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
-            case MENTAT:
-                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"reason\": \"").append(Escape.json(reason)).append("\"},\n");
-                break;
-            case SWEEP:
-                sb.append("  - \"Do not modify ").append(Escape.json(className)).append(": ").append(Escape.json(reason)).append("\"\n");
-                break;
-            case PLANDEX:
-                sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      reason: \"").append(Escape.json(reason)).append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (locked)").append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
             default:

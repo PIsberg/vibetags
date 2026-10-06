@@ -39,7 +39,7 @@ public final class TransitiveSection {
      * The aggregate instruction files that carry the inherited-guardrail appendix.
      *
      * <p>All markdown or free text. Deliberately excludes the structured-config platforms
-     * ({@code coderabbit}, {@code sweep}, {@code mentat}, {@code interpreter},
+     * ({@code coderabbit}, {@code pr_agent}, {@code roo_modes},
      * {@code codex_config}, and the rest), the ignore-file family, and
      * {@code llms} — whose whole shape is a terse link index that a prose block would spoil.
      */
@@ -56,9 +56,7 @@ public final class TransitiveSection {
         Platform.WINDSURF,
         Platform.ZED,
         Platform.JUNIE,
-        Platform.JUNIE_AGENTS,
-        Platform.FIREBASE,
-        Platform.VOID);
+        Platform.JUNIE_AGENTS);
 
     /** Heading of the safety-tier block. */
     static final String SAFETY_HEADING = "## Inherited Guardrails (dependencies)";

@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Breaking: the next release is 1.4.0.** It stops writing outputs that 1.3.5 deprecated (#641) with
-a compiler warning naming each file and its replacement. A build that never saw that warning is
-unaffected. See Removed.
+**Breaking: the next release is 1.4.0.** It stops writing every output that 1.3.5 and later
+deprecated (#641, #664 to #677, #845), each with a compiler warning naming the file and its
+replacement. A build that never saw that warning is unaffected. See Removed.
 
 ### Removed
 
@@ -37,6 +37,34 @@ unaffected. See Removed.
   `.clinerules/` directory instead, so `ExampleOptInCoverageTest` needs no exemption for it.
   `RemovedPlatformOutputsTest` pins the removal; all 8 of its cases fail against the 1.3.8
   processor.
+- **The other seventeen deprecated outputs are no longer written** (#720), on the same terms. The
+  replacement each warning named is in docs/PLATFORMS.md, "Outputs removed in 1.4.0".
+  - `.void/rules.md` (Void is archived and read `.voidrules`), `.mentatconfig.json` (Mentat read
+    `.mentat_config.json`), `sweep.yaml` (Sweep is now a JetBrains assistant), `.plandex.yaml`
+    (Plandex never read it), `.pearai/rules/`, `.ghostcoderignore`, `.doubleignore`,
+    `.piecesignore` and `.ai/rules/` (no tool documents them).
+  - `.claudeignore`, `.copilotignore` and `.antigravityignore`: none of the three vendors documents
+    the file. Claude Code uses `Read` deny rules, Copilot a Content exclusion setting, Antigravity
+    `read_file` Deny rules or `.gitignore`.
+  - `.idx/airules.md` and `.amazonq/rules/`, whose products end on 22 March 2027 and 30 April 2027.
+    The owner chose to remove them in 1.4.0 rather than hold them to a later major version, as the
+    1.3.5 warning promised: use Antigravity's `.agents/rules/` and Kiro's `.kiro/steering/`, which
+    VibeTags writes.
+  - `.interpreter/profiles/vibetags.yaml` and `ellipsis.yaml`, which their tools no longer read, and
+    `.zencoder/rules/`, which Zencoder removed in May 2026.
+
+  With no deprecated output left, `DeprecatedServices` is deleted, and with it the deprecation
+  warning, the `platform.deprecated` log event and `vibetags init --list`'s `[deprecated]` marker.
+  `MentatRenderer`, `SweepRenderer`, `PlandexRenderer`, `InterpreterRenderer` and
+  `EllipsisRenderer` are deleted with their 17 `Platform` constants, and so are the two merge
+  shapes only they used: `JsonRulesMerge` (Mentat's JSON) and `YamlMergeShape`'s keyed buckets
+  (Plandex). The prose formatter arms that `.coderabbit.yaml`, `.pr_agent.toml`, `.roomodes`,
+  `.gemini/styleguide.md` and Greptile share were `INTERPRETER`'s and are `CODERABBIT`'s now; every
+  one of those files is byte-identical. The README counts drop to 29 platforms, 47 config files and
+  16 scoped-rule directories; both reactors go from 53 active services to 38.
+  `examples/multimodule-indexed` opts into `.aiexclude` in place of `.claudeignore` and
+  `.copilotignore`. `RemovedPlatformOutputsTest` covers all 22 outputs; its 19 new cases fail
+  against the #645 commit.
 
 ### Added
 

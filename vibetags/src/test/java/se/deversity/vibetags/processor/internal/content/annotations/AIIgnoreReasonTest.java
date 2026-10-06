@@ -52,7 +52,7 @@ class AIIgnoreReasonTest {
     static Stream<Platform> prosePlatforms() {
         return Stream.of(Platform.CURSOR, Platform.WINDSURF, Platform.CLAUDE, Platform.CODEX,
             Platform.COPILOT, Platform.QWEN, Platform.GEMINI_MD, Platform.LLMS,
-            Platform.LLMS_FULL, Platform.AIDER_CONVENTIONS, Platform.ZED, Platform.INTERPRETER);
+            Platform.LLMS_FULL, Platform.AIDER_CONVENTIONS, Platform.ZED, Platform.CODERABBIT);
     }
 
     @ParameterizedTest(name = "{0}")
@@ -119,8 +119,6 @@ class AIIgnoreReasonTest {
         assertEquals(render(Platform.CURSOR_IGNORE, defaultReason()),
             render(Platform.CURSOR_IGNORE, WRITTEN_REASON),
             ".cursorignore is a glob list a tool parses; a reason has nowhere to go in it");
-        assertEquals(render(Platform.MENTAT, defaultReason()), render(Platform.MENTAT, WRITTEN_REASON),
-            "Mentat's output is a JSON schema, not prose");
     }
 
     /** The annotation's own default, read from the annotation rather than copied into this test. */

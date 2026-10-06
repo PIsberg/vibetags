@@ -62,7 +62,7 @@ public final class AIImmutableFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append("` (immutable)").append(note.isEmpty() ? "" : ": " + note).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (immutable)").append(note.isEmpty() ? "" : ": " + note).append('\n');
                 break;
             default:

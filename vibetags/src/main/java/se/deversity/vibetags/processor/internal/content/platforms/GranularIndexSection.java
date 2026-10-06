@@ -51,8 +51,8 @@ final class GranularIndexSection {
      * {@code null} when the platform has no granular sibling. {@code CLAUDE_LOCAL} deliberately maps
      * to {@code claude_granular}: {@code CLAUDE.local.md} is loaded by the same tool as
      * {@code CLAUDE.md} and mirrors its content, so it follows Claude's granular state. Platforms
-     * that merely reuse a renderer's format but read no scoped directory (Cline, Firebase, Junie,
-     * Void, the Claude skill) map to {@code null} and therefore never collapse to an index.
+     * that merely reuse a renderer's format but read no scoped directory (goose, Replit, Junie,
+     * the Claude skill) map to {@code null} and therefore never collapse to an index.
      */
     static @Nullable String governingGranularKey(Platform platform) {
         GranularPairing pairing = pairingFor(platform);

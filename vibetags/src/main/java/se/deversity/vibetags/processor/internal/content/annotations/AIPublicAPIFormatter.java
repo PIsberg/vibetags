@@ -32,7 +32,7 @@ public final class AIPublicAPIFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### PUBLIC API: ").append(className).append("\n- **Rule**: Exposes public API. Do not modify public signature or break backwards compatibility.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (public-api)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

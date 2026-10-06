@@ -60,21 +60,6 @@ class PlatformRenderersTest {
     }
 
     @Test
-    void firebaseRenderer_rendersEmptyModel() {
-        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.FIREBASE);
-        String output = renderer.render(GuardrailModel.EMPTY, Platform.FIREBASE, ctx);
-        assertTrue(output.contains("AUTO-GENERATED"));
-    }
-
-    @Test
-    void voidRenderer_rendersEmptyModel() {
-        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.VOID);
-        String output = renderer.render(GuardrailModel.EMPTY, Platform.VOID, ctx);
-        assertNotNull(output);
-        assertTrue(output.contains("AUTO-GENERATED"));
-    }
-
-    @Test
     void rooModesRenderer_rendersEmptyModel() {
         RooModesRenderer renderer = new RooModesRenderer();
         String output = renderer.render(GuardrailModel.EMPTY, Platform.ROO_MODES, ctx);
@@ -125,7 +110,7 @@ class PlatformRenderersTest {
     @Test
     void locksReportRenderer_rendersEmptyModel() {
         LocksReportRenderer renderer = new LocksReportRenderer();
-        String output = renderer.render(GuardrailModel.EMPTY, Platform.VOID, ctx);
+        String output = renderer.render(GuardrailModel.EMPTY, Platform.LOCKS_REPORT, ctx);
         assertNotNull(output);
         assertTrue(output.contains("{\"type\":\"format\",\"version\":1}"));
     }
@@ -147,7 +132,7 @@ class PlatformRenderersTest {
                 .build();
 
         LocksReportRenderer renderer = new LocksReportRenderer();
-        String output = renderer.render(model, Platform.VOID, ctx);
+        String output = renderer.render(model, Platform.LOCKS_REPORT, ctx);
 
         assertTrue(output.contains("{\"type\":\"format\",\"version\":1}"));
         assertTrue(output.contains("\"element\":\"com.example.\\\"Class\\\"\\n\""));

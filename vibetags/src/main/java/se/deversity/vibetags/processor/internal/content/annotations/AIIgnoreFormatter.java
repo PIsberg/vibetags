@@ -14,8 +14,8 @@ import se.deversity.vibetags.processor.internal.content.PlatformDescriptors;
  * Formats @AIIgnore annotations for all platforms.
  *
  * <p>The reason is rendered wherever the platform's output is prose, and omitted where it is a
- * path list a tool parses — the {@code *_IGNORE} globs, {@code .aiexclude} and Mentat's
- * JSON have nowhere to put a sentence.
+ * path list a tool parses — the {@code *_IGNORE} globs and {@code .aiexclude} have nowhere to put
+ * a sentence.
  *
  * <p>{@link AIIgnore#reason()} has a default, and the default is not printed: it says "Excluded
  * from AI context", which is what the section heading above the entry already says. Printing it
@@ -98,10 +98,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
-            case MENTAT:
-                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\"},\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (excluded): treat as non-existent")
                   .append(suffix).append('\n');
                 break;

@@ -11,7 +11,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
 
 /**
  * Builds a single, human-readable guardrail-instruction block covering every collected
- * annotation. Shared by the PR-reviewer renderers (CodeRabbit, Ellipsis, PR-Agent) and the
+ * annotation. Shared by the PR-reviewer renderers (CodeRabbit, PR-Agent) and the
  * Roo custom-mode renderer, which all need the same prose summary embedded into their own
  * schema (YAML block scalars, TOML multiline strings, etc.).
  *
@@ -21,10 +21,12 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * are identical apart from a heading suffix and a product name, so they share one
  * implementation; a change to the wording now reaches both or neither.
  *
- * <p>Formatting is delegated to the per-annotation formatters using {@link Platform#INTERPRETER}
- * (a free-text, single-line-per-element style already supported by every formatter), so the
- * block stays in lock-step with the rest of the generated guardrails without duplicating the
- * per-annotation prose here.
+ * <p>Formatting is delegated to the per-annotation formatters using {@link Platform#CODERABBIT}
+ * (a free-text, single-line-per-element style every formatter supports), so the block stays in
+ * lock-step with the rest of the generated guardrails without duplicating the per-annotation prose
+ * here. Those arms were {@code INTERPRETER}'s until 1.4.0 removed the Open Interpreter profile
+ * (#720); CodeRabbit is the first of the files that print this block, and none of them has arms of
+ * its own.
  */
 final class GuardrailInstructionBlock {
 
@@ -36,7 +38,7 @@ final class GuardrailInstructionBlock {
      */
     static String build(GuardrailModel model) {
         StringBuilder sb = new StringBuilder(1024);
-        Platform p = Platform.INTERPRETER;
+        Platform p = Platform.CODERABBIT;
         for (AnnotationDescriptor descriptor : AnnotationDescriptors.ALL) {
             for (TaggedElement e : model.of(descriptor.type())) {
                 descriptor.formatter().format(e, sb, p);

@@ -19,8 +19,6 @@ AI_FILES=(
   "llms.txt"
   "llms-full.txt"
   ".cursorignore"
-  ".claudeignore"
-  ".copilotignore"
   "CONVENTIONS.md"
   ".aiderignore"
   ".aider.conf.yml"
@@ -34,36 +32,24 @@ AI_FILES=(
   ".windsurfrules"
   ".rules"
   # v0.8.0 platforms
-  ".mentatconfig.json"
-  "sweep.yaml"
-  ".plandex.yaml"
-  ".doubleignore"
   ".rooignore"
   ".continueignore"
   ".augmentignore"
   ".devinignore"
-  ".interpreter/profiles/vibetags.yaml"
   ".codeiumignore"
   # v0.9.6 platforms
   "GEMINI.md"
-  ".antigravityignore"
   # v0.9.7 platforms
   ".junie/guidelines.md"
   ".junie/AGENTS.md"
-  # Firebase AI
-  ".idx/airules.md"
   # Context-packer ignore files
   ".repomixignore"
   ".gitingestignore"
   ".gptignore"
-  ".ghostcoderignore"
-  ".piecesignore"
   # AI pull-request reviewers
   ".coderabbit.yaml"
   ".pr_agent.toml"
-  "ellipsis.yaml"
-  # Editors & modes
-  ".void/rules.md"
+  # Modes
   ".roomodes"
   # Claude Code local override and Skill
   "CLAUDE.local.md"
@@ -98,7 +84,7 @@ find "$SCRIPT_DIR" -type f -name "*.bak" -exec rm -v {} + 2>/dev/null || true
 # Cleanup granular rules in directories. Kept in step with ServiceRegistry by
 # ExampleResetScriptCoverageTest: every directory this example opts into must appear here,
 # or a reset silently leaves the last build's rule files in place.
-for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".amazonq/rules" ".ai/rules" ".pearai/rules" ".claude/rules" ".github/instructions" ".kiro/steering" ".grok/rules" ".agents/rules" ".aiassistant/rules" ".augment/rules" ".gemini/rules" ".zencoder/rules" ".devin/rules" ".clinerules"; do
+for dir in ".cursor/rules" ".trae/rules" ".roo/rules" ".windsurf/rules" ".continue/rules" ".tabnine/guidelines" ".claude/rules" ".github/instructions" ".kiro/steering" ".grok/rules" ".agents/rules" ".aiassistant/rules" ".augment/rules" ".gemini/rules" ".devin/rules" ".clinerules"; do
   if [ -d "$SCRIPT_DIR/$dir" ]; then
     echo "  cleaning granular rules in: $dir"
     find "$SCRIPT_DIR/$dir" -type f \( -name "*.mdc" -o -name "*.md" \) -exec rm {} +

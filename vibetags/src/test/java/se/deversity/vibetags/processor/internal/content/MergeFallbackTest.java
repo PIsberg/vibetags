@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * What the structured merges do when a module's document is not the shape they were written for.
  *
- * <p>These three merges exist because concatenating two modules' YAML, TOML or JSON produces a
+ * <p>These merges exist because concatenating two modules' YAML or TOML produces a
  * document with duplicate keys — legal text, unusable configuration. Each therefore takes the
  * document apart and reassembles it, which means each has to answer the question "and if it does
  * not take apart the way I expect?".
@@ -105,32 +105,6 @@ class MergeFallbackTest {
             "a module with nothing to say must not leave an empty marker pair behind: " + merged);
     }
 
-    @Test
-    void keyedYamlMergesBucketByBucketRatherThanAppendingWholeBlocks() {
-        // Plandex's guardrails hold locked:/audit:/privacy:. Appending two modules' blocks would
-        // repeat every key they share, which is the duplicate-key defect one level further in.
-        YamlMergeShape shape = YamlMergeShape.keyed("guardrails:", 2);
-        String merged = shape.merge(docs(
-            "core", "guardrails:\n  locked:\n    - core.A\n  audit:\n    - core.B\n",
-            "app", "guardrails:\n  locked:\n    - app.A\n"), START, END);
-
-        assertNotNull(merged);
-        assertEquals(1, countOf(merged, "locked:"), "locked: must appear once: " + merged);
-        assertEquals(1, countOf(merged, "audit:"), "audit: must appear once: " + merged);
-        assertTrue(merged.indexOf("core.A") < merged.indexOf("core.B"),
-            "buckets keep their first-seen order: " + merged);
-        assertTrue(merged.contains("app.A"), merged);
-    }
-
-    @Test
-    void keyedYamlFallsBackWhenAChunkDoesNotDecomposeIntoBuckets() {
-        // Writing the part it could place and dropping the rest is the one outcome not allowed.
-        YamlMergeShape shape = YamlMergeShape.keyed("guardrails:", 2);
-        assertNull(shape.merge(docs(
-            "core", "guardrails:\n  locked:\n    - core.A\n",
-            "app", "guardrails:\n    - a bare sequence, not a keyed block\n"), START, END));
-    }
-
     // -----------------------------------------------------------------------
     // TomlInstructionsMerge
     // -----------------------------------------------------------------------
@@ -144,64 +118,6 @@ class MergeFallbackTest {
     @Test
     void tomlFallsBackWhenThereAreNoContributions() {
         assertNull(TomlInstructionsMerge.INSTANCE.merge(List.of()));
-    }
-
-    // -----------------------------------------------------------------------
-    // JsonRulesMerge
-    // -----------------------------------------------------------------------
-
-    @Test
-    void jsonFallsBackOnADocumentItCannotDecompose() {
-        assertNull(JsonRulesMerge.INSTANCE.merge(docs(
-            "core", "{\"rules\": \"not an array of sections\"}")));
-    }
-
-    @Test
-    void jsonWithNothingToMergeEmitsTheEmptyDocumentRatherThanFallingBack() {
-        // The empty rules object is a valid document and is exactly what the renderer emits for an
-        // empty model, so there is nothing here for a fallback to improve on.
-        String merged = JsonRulesMerge.INSTANCE.merge(List.of());
-        assertNotNull(merged);
-        assertTrue(merged.contains("\"rules\""), merged);
-        assertTrue(merged.strip().endsWith("}"), "must still be a closed JSON document: " + merged);
-    }
-
-    @Test
-    void jsonMergesTheSameKeyFromTwoModulesIntoOneArrayWithoutDuplicates() {
-        // Two modules that both lock the same shared class would otherwise produce the key twice —
-        // an object with a duplicate key, which most readers resolve by keeping only the last one.
-        String core = """
-            {
-              "_generated_by": "VibeTags",
-              "rules": {
-                  "locked": [
-                    "com.example.Shared",
-                    "com.example.Core"
-                  ]
-              }
-            }
-            """;
-        String app = """
-            {
-              "_generated_by": "VibeTags",
-              "rules": {
-                  "locked": [
-                    "com.example.Shared"
-                  ],
-                  "audit": [
-                    "com.example.App"
-                  ]
-              }
-            }
-            """;
-
-        String merged = JsonRulesMerge.INSTANCE.merge(docs("core", core, "app", app));
-        assertNotNull(merged, "both documents are the shape the renderer emits, so this must merge");
-        assertEquals(1, countOf(merged, "\"locked\""), "locked must appear once: " + merged);
-        assertEquals(1, countOf(merged, "\"audit\""), "audit must appear once: " + merged);
-        assertEquals(1, countOf(merged, "com.example.Shared"),
-            "a class locked by both modules must be listed once: " + merged);
-        assertTrue(merged.contains("com.example.Core") && merged.contains("com.example.App"), merged);
     }
 
     private static int countOf(String haystack, String needle) {

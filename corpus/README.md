@@ -216,9 +216,10 @@ Assertion 10 is the point of the phase. The fixture tests assert what a renderer
 asserts that a real parser accepts it. A YAML renderer emitting an unquoted value that starts with
 `@`, or a JSON one leaving a trailing comma, satisfies every `contains` assertion ever written and
 cannot be loaded by the tool it was written for. Ten files carry a structured format
-(`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json` (removed in 1.4.0), `.interpreter/profiles/vibetags.yaml`,
+(`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json`, `.interpreter/profiles/vibetags.yaml`,
 `.mentatconfig.json`, `.plandex.yaml`, `.pr_agent.toml`, `.qwen/settings.json`, `ellipsis.yaml`,
-`sweep.yaml`) and all ten parse. (`.qwen/settings.json` is no longer written since #650, so a
+`sweep.yaml`) and all ten parse. Seven of them are no longer written: 1.4.0 removed Cody's (#645)
+and five more (#720). (`.qwen/settings.json` is no longer written since #650, so a
 current run has nine to parse; not re-measured.)
 
 Measured: **48 of 62 platform files written, 10 parsed.** The remainder are opted out or are mode

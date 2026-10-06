@@ -37,7 +37,7 @@ class MergeAcrossModulesLogContractTest {
     /** A marker-based service: merged through the sub-marker path. */
     private static final String MARKER_SERVICE = "claude";
     /** A marker-free service whose file is JSON, so it merges as a whole document. */
-    private static final String JSON_SERVICE = "mentat";
+    private static final String JSON_SERVICE = "greptile";
     /** A marker-free service whose file is TOML. */
     private static final String TOML_SERVICE = "pr_agent";
 
@@ -94,8 +94,8 @@ class MergeAcrossModulesLogContractTest {
     @DisplayName("a whole-file JSON merge records how many modules contributed")
     void jsonServiceRecordsContributionCount() {
         merge(JSON_SERVICE, List.of(
-            sidecar("alpha", JSON_SERVICE, mentatDoc("com.example.Alpha")),
-            sidecar("beta", JSON_SERVICE, mentatDoc("com.example.Beta"))));
+            sidecar("alpha", JSON_SERVICE, greptileDoc("com.example.Alpha")),
+            sidecar("beta", JSON_SERVICE, greptileDoc("com.example.Beta"))));
 
         assertTrue(logged("merge.wholefile service=" + JSON_SERVICE + " contributions=2"),
             "contributions= is the count that answers \"did my sibling's rules make it in?\" — "
@@ -105,8 +105,8 @@ class MergeAcrossModulesLogContractTest {
     @Test
     @DisplayName("a merger that declines an unexpected shape says it declined")
     void declinedMergeSaysSo() {
-        // Not the document MentatRenderer emits, so JsonRulesMerge refuses to guess and returns
-        // null. The file then ships this module's own rendering: valid, but blind to every
+        // Not the document GreptileRenderer emits, so JsonLineArraysMerge refuses to guess and
+        // returns null. The file then ships this module's own rendering: valid, but blind to every
         // sibling. That is precisely the failure mode of #265, so it must never be silent.
         merge(JSON_SERVICE, List.of(
             sidecar("alpha", JSON_SERVICE, "not json at all"),
@@ -126,8 +126,8 @@ class MergeAcrossModulesLogContractTest {
             sidecar("alpha", TOML_SERVICE, "nonsense"),
             sidecar("beta", TOML_SERVICE, "nonsense")));
         merge(JSON_SERVICE, List.of(
-            sidecar("alpha", JSON_SERVICE, mentatDoc("com.example.A")),
-            sidecar("beta", JSON_SERVICE, mentatDoc("com.example.B"))));
+            sidecar("alpha", JSON_SERVICE, greptileDoc("com.example.A")),
+            sidecar("beta", JSON_SERVICE, greptileDoc("com.example.B"))));
 
         List<String> reasonless = events().stream()
             .filter(m -> m.contains(".skip"))
@@ -146,8 +146,8 @@ class MergeAcrossModulesLogContractTest {
     void debugOffEmitsNothing() {
         logger.setLevel(Level.INFO);
         merge(JSON_SERVICE, List.of(
-            sidecar("alpha", JSON_SERVICE, mentatDoc("com.example.A")),
-            sidecar("beta", JSON_SERVICE, mentatDoc("com.example.B"))));
+            sidecar("alpha", JSON_SERVICE, greptileDoc("com.example.A")),
+            sidecar("beta", JSON_SERVICE, greptileDoc("com.example.B"))));
 
         assertTrue(events().isEmpty(),
             "The merge runs once per build per service; at a disabled level it must not format "
@@ -165,19 +165,19 @@ class MergeAcrossModulesLogContractTest {
     }
 
     /**
-     * A {@code .mentatconfig.json} in the exact shape {@code MentatRenderer} emits, which is the
-     * only one {@code JsonRulesMerge} accepts. Built from one template rather than hand-written
-     * per test, so a fixture typo cannot masquerade as a declined merge.
+     * The owned lines of a {@code greptile.json} in the exact shape {@code GreptileRenderer} emits,
+     * which is the only one {@code JsonLineArraysMerge} accepts. Built from one template rather than
+     * hand-written per test, so a fixture typo cannot masquerade as a declined merge. (Mentat's
+     * {@code .mentatconfig.json} played this part until 1.4.0 removed it, #720.)
      */
-    private static String mentatDoc(String lockedPath) {
+    private static String greptileDoc(String lockedPath) {
         return """
             {
-              "_generated_by": "VibeTags",
-              "rules": {
-                "locked_files": [
-                {"path": "%s"}
-                ]
-              }
+              "instructions": [
+                "- `%s` (locked): frozen"
+              ],
+              "ignorePatterns": [
+              ]
             }
             """.formatted(lockedPath);
     }

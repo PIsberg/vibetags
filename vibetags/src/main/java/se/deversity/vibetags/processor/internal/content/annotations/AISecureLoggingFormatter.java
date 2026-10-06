@@ -32,7 +32,7 @@ public final class AISecureLoggingFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### SECURE LOGGING: ").append(className).append("\n- **Required Masking**: ").append(policy.name()).append("\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (secure-logging)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

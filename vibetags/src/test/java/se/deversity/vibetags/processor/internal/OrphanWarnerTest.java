@@ -94,23 +94,23 @@ class OrphanWarnerTest {
     }
 
     /**
-     * The warning tells a user to create a file. Telling them to create a deprecated one (#667,
-     * #668) would have them opt into an output the same build then warns is going away.
+     * The warning tells a user to create a file. Telling them to create one VibeTags no longer
+     * writes (#667, #668, removed in 1.4.0 by #720) would have them opt into nothing at all.
      */
     @Test
-    void noWarningInvitesCreatingADeprecatedOutput() {
+    void noWarningInvitesCreatingARemovedOutput() {
         RecordingMessager messager = warn(
             Set.of("cursor", "claude", "copilot", "qwen", "gemini_md", "codex"), true, true, false);
 
-        for (String file : DeprecatedServices.files().values()) {
-            assertTrue(!messager.mentions(file + " is missing"),
-                "suggests creating the deprecated " + file + ": " + messager.warnings);
+        for (String file : List.of(".claudeignore", ".copilotignore", ".antigravityignore")) {
+            assertTrue(!messager.mentions(file),
+                "suggests creating " + file + ", which VibeTags no longer writes: " + messager.warnings);
         }
     }
 
     @Test
     void aPlatformThatIsNotActiveIsNotWarnedAbout() {
-        // Only Cursor is opted in, so the absence of .claudeignore is not this project's problem.
+        // Only Cursor is opted in, so the absence of .qwenignore is not this project's problem.
         RecordingMessager messager = warn(Set.of("cursor"), false, true, false);
 
         assertEquals(1, messager.warnings.size(), messager.warnings.toString());

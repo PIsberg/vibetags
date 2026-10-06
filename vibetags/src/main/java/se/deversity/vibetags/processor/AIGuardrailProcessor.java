@@ -791,10 +791,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * that read files rather than the collected model still run, as they do after the fingerprint
      * short-circuit, because the file they warn about may still be on disk.
      *
-     * <p>That includes the ones {@code generateFiles()} raises ahead of its own short-circuit:
-     * the deprecated-output warning from {@code resolveActiveServices} and the two module-identity
-     * warnings. Every no-op rebuild printed those before the early exit existed, and skipping them
-     * made a {@code -Werror} build fail cold and pass on the rebuild (#859).
+     * <p>That includes the ones {@code generateFiles()} raises ahead of its own short-circuit: the
+     * two module-identity warnings (and, before 1.4.0, a deprecated-output warning, #720). Every
+     * no-op rebuild printed those before the early exit existed, and skipping them made a
+     * {@code -Werror} build fail cold and pass on the rebuild (#859).
      */
     @AIContext(
         focus = "Every diagnostic generateFiles() raises before its fingerprint short-circuit must also be raised here",
@@ -2391,8 +2391,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         Logger reopened = VibeTagsLogger.forRoot(root, logPath, logLevel);
         try {
-            // The quiet overload: the loud one already printed its notes and deprecation warnings at
-            // the top of generateFiles(), and it returns the same set.
+            // The quiet overload: the loud one already printed its notes at the top of
+            // generateFiles(), and it returns the same set.
             checkOrphanedAnnotations(processingEnv.getMessager(), reopened,
                 ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)),
                 !collector.locked().isEmpty(), !collector.ignore().isEmpty(), !collector.audit().isEmpty());

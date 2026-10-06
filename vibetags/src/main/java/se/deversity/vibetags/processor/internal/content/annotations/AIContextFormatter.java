@@ -83,7 +83,7 @@ public final class AIContextFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", inline)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (context)").append(CommonFormatterHelper.clause(": ", inline)).append('\n');
                 break;
             default:

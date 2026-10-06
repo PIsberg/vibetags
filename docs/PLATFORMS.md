@@ -38,7 +38,6 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.cursorignore` | Cursor IDE | Glob patterns |
 | `CLAUDE.md` | Claude | XML + Markdown |
 | `CLAUDE.local.md` | Claude Code (local override) | XML + Markdown |
-| `.claudeignore` | Claude (**deprecated**, see below) | Glob patterns |
 | `.claude/rules/*.md` | Claude Code (granular) | YAML front-matter + Markdown |
 | `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) | YAML front-matter + Markdown |
 | `.agents/skills/vibetags-guardrails/SKILL.md` | Agent Skills (cross-client) | YAML front-matter + Markdown |
@@ -48,7 +47,6 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.codex/rules/vibetags.rules` | Codex CLI | Starlark rules |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
-| `.copilotignore` | GitHub Copilot (**deprecated**, see below) | Glob patterns |
 | `CONVENTIONS.md` | Aider | Markdown |
 | `.aider.conf.yml` | Aider (loads `CONVENTIONS.md`) | YAML (`read:`) |
 | `.aiderignore` | Aider | Glob patterns |
@@ -67,15 +65,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.rules` | Zed Editor | Markdown |
 | `.continue/rules/*.md` | Continue (granular) | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine (granular) | Markdown |
-| `.amazonq/rules/*.md` | Amazon Q (granular, **deprecated**, see below) | Markdown |
-| `.ai/rules/*.md` | Universal AI standard (granular, **deprecated**, see below) | Markdown |
-| `.pearai/rules/*.md` | PearAI (granular, **deprecated**, see below) | YAML front-matter + Markdown |
 | `.kiro/steering/*.md` | Amazon Kiro (granular) | Markdown |
-| `.mentatconfig.json` | Mentat (**deprecated**, see below) | JSON config |
-| `sweep.yaml` | Sweep (GitHub App, **deprecated**, see below) | YAML rules list |
-| `.plandex.yaml` | Plandex (**deprecated**, see below) | YAML guardrails |
-| `.doubleignore` | Double.bot (**deprecated**, see below) | Glob patterns |
-| `.interpreter/profiles/vibetags.yaml` | Open Interpreter (**deprecated**, see below) | YAML profile |
 | `.codeiumignore` | Codeium; Devin Desktop still reads it under this legacy name | Glob patterns |
 | `.devinignore` | Devin Desktop | Glob patterns |
 | `GEMINI.md` | Google Gemini (official markdown) | Markdown |
@@ -84,19 +74,14 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.agents/rules/*.md` | Antigravity (granular, per element) | Markdown |
 | `.aiassistant/rules/*.md` | JetBrains AI Assistant (granular, per element) | Markdown |
 | `.augment/rules/*.md` | Augment Code (granular, per element) | Markdown |
-| `.zencoder/rules/*.md` | Zencoder (granular, per element, **deprecated**, see below) | YAML front-matter + Markdown |
 | `.goosehints` | goose (Agentic AI Foundation, formerly Block) | Markdown |
-| `.antigravityignore` | Antigravity AI (**deprecated**, see below) | Glob patterns |
 | `.clinerules/*.md` | Cline AI assistant (granular, per element, see [below](#clines-clinerules-directory)) | YAML front-matter + Markdown |
 | `.clinerules/+vibetags-safety.md` | Cline AI assistant (the always-loaded safety tier for the directory form, written whenever `.clinerules/` is; see [below](#clines-clinerules-directory)) | Markdown, no front matter |
 | `.junie/AGENTS.md` | JetBrains Junie (read first; not the root `AGENTS.md`, see [below](#junie-reads-junieagentsmd-first)) | Markdown |
 | `.junie/guidelines.md` | JetBrains Junie (legacy, still supported, not deprecated) | Markdown |
-| `.idx/airules.md` | Firebase AI (**deprecated**, see below) | Markdown |
-| `.void/rules.md` | Void Editor (**deprecated**, see below) | Markdown |
 | `replit.md` | Replit Agent | Markdown |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) | YAML (`reviews.path_instructions`) |
 | `.pr_agent.toml` | PR-Agent (AI PR reviewer, community-owned; formerly Qodo/Codium) | TOML (`extra_instructions`) |
-| `ellipsis.yaml` | Ellipsis (AI PR reviewer, **deprecated**, see below) | YAML (`pr_review.rules`) |
 | `.gemini/styleguide.md` | Gemini Code Assist (AI PR reviewer) | Markdown |
 | `.greptile/rules.md` | Greptile (AI PR reviewer) | Markdown |
 | `.greptile/config.json` | Greptile (AI PR reviewer, `@AIIgnore` paths) | JSON; a delimited span inside `ignorePatterns`, nothing else touched |
@@ -105,8 +90,6 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.repomixignore` | Repomix (context packer) | Glob patterns |
 | `.gitingestignore` | Gitingest (context packer) | Glob patterns |
 | `.gptignore` | GPT context packer | Glob patterns |
-| `.ghostcoderignore` | Ghostcoder (**deprecated**, see below) | Glob patterns |
-| `.piecesignore` | Pieces for Developers (**deprecated**, see below) | Glob patterns |
 | `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) | Glob patterns |
 | `.continueignore` | Continue | Glob patterns |
 | `.augmentignore` | Augment Code | Glob patterns |
@@ -116,7 +99,7 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 
 #### Granular rules
 
-Cursor, Devin Desktop (formerly Windsurf, in `.devin/rules/` and `.windsurf/rules/`), Continue, Tabnine, Amazon Q, Trae, Zoo Code, PearAI, Amazon Kiro, Claude Code, GitHub Copilot, Google Gemini, Grok Build, Antigravity, JetBrains AI Assistant, Augment Code, Zencoder, Cline, and the universal `.ai/rules/` standard all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
+Cursor, Devin Desktop (formerly Windsurf, in `.devin/rules/` and `.windsurf/rules/`), Continue, Tabnine, Trae, Zoo Code, Amazon Kiro, Claude Code, GitHub Copilot, Google Gemini, Grok Build, Antigravity, JetBrains AI Assistant, Augment Code and Cline all support per-class rule files. When a class or method is annotated, the processor writes one rule file per annotated class (filename derived from the fully-qualified class name). Orphaned granular files — for classes that have had annotations removed — are cleaned up **after** new files are written to prevent delete-then-recreate cycles.
 
 Claude Code's granular rules (`.claude/rules/*.md`) and Cline's (`.clinerules/*.md`) scope with a `paths:` front-matter glob list rather than Cursor's `globs:`/`alwaysApply:` pair. Devin Desktop's (`.devin/rules/*.md` and `.windsurf/rules/*.md`) open with `trigger: glob` and a `globs:` pattern instead; see [Windsurf is now Devin Desktop](#windsurf-is-now-devin-desktop). GitHub Copilot's granular files (`.github/instructions/*.instructions.md`) use a single `applyTo:` glob string and, unlike every other granular platform, a two-part `.instructions.md` extension.
 
@@ -152,10 +135,9 @@ documents a list whose entries are matched whole, the glob is kept as written. C
 | Claude Code | `paths: [...]` | a YAML list, with "brace expansion to match multiple extensions in one pattern" ([code.claude.com](https://code.claude.com/docs/en/memory)) | no |
 | Cline | `paths: [...]` | "`paths` is the supported conditional. It takes an array of glob patterns", with `packages/{web,api}/**` in the docs ([docs.cline.bot](https://docs.cline.bot/features/cline-rules/conditional-rules)) | no |
 | Continue | `globs: [...]` | "either a single pattern (e.g., `"**/*.{ts,tsx}"`) or an array of patterns" ([docs.continue.dev](https://docs.continue.dev/customize/deep-dives/rules)) | no |
-| PearAI | `globs: [...]` | none found; the header is Continue's, which PearAI forked | no |
 
-Kiro, Augment, Zencoder, JetBrains AI Assistant, Grok, Gemini, Antigravity, Amazon Q, Tabnine, Roo
-Code and `.ai/rules/` get no glob in their front matter, so nothing is joined. Cursor and Trae
+Kiro, Augment, JetBrains AI Assistant, Grok, Gemini, Antigravity, Tabnine and Roo Code get no glob
+in their front matter, so nothing is joined. Cursor and Trae
 read the value as a string, not a YAML list, which is why their headers are bare rather than
 bracketed; see [Cursor and Trae read `globs:` as a comma-separated string](#cursor-and-trae-read-globs-as-a-comma-separated-string) (#699).
 
@@ -183,8 +165,7 @@ Augment's "Workspace Guidelines + Rules are limited to a maximum of 49,512 chara
 cap, which no single file VibeTags writes decides, so it is not measured
 ([docs.augmentcode.com](https://docs.augmentcode.com/setup-augment/guidelines)); Cursor ("Keep rules
 under 500 lines") and Tabnine (a `guidelines.md` of "500 lines or less") give guidance, not a cap;
-Roo Code, Trae, Continue, Amazon Q, Kiro, Gemini, JetBrains AI Assistant, Zencoder and Cline name
-none; and no PearAI documentation of `.pearai/rules/` was found to check.
+Roo Code, Trae, Continue, Kiro, Gemini, JetBrains AI Assistant and Cline name none.
 
 **Cross-module mirroring (`.vibetags-mirror`).** A module that exercises another module's annotated code — a reactor's centralised test module is the canonical case — receives that module's granular rules by carrying a `.vibetags-mirror` file next to its own granular directory. Mirrored files are written as `mirrored-<sourceModuleId>-<stem>.<ext>` with the target's globs appended to the frontmatter; the target needs no annotations of its own. Details and format: `docs/MULTI-MODULE.md`.
 
@@ -198,19 +179,6 @@ VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent dis
 - **`llms-full.txt`** — The Book: A single expanded file with all rule details. Intended for large-context LLMs (Claude 4.6, Gemini 1.5 Pro) that can ingest the entire ruleset at once.
 
 Both files follow the llms.txt format hierarchy: `# Title`, `> Summary blockquote`, informational text, and `## H2` resource sections.
-
-### The review platforms carry a subset
-
-Sweep, Mentat and Plandex are code-review tools, not editors. Their formatters carry an arm for
-the annotations a reviewer can act on from a diff, and nothing else; every other platform carries
-every annotation. The three lists below are the declaration, and `ReviewPlatformSubsetClaimTest` derives
-each set from the formatters and holds these lines to it in both directions, so an arm added or
-removed without the matching name here fails the build. To carry one more annotation on one of
-these platforms, add the arm in its formatter and the name on its line in the same commit.
-
-- **Sweep** (`sweep.yaml`) carries: `@AIAudit`, `@AIBannedApi`, `@AIContract`, `@AICore`, `@AIDraft`, `@AIFeatureFlag`, `@AIGenerated`, `@AIIdempotent`, `@AIKeepInSync`, `@AILoadBearing`, `@AILocked`, `@AIPerformance`, `@AIPrivacy`, `@AISecure`, `@AITestDriven`, `@AIThreadAffinity`.
-- **Mentat** (`.mentatconfig.json`) carries: `@AIAudit`, `@AIContract`, `@AICore`, `@AIDraft`, `@AIIgnore`, `@AILocked`, `@AIPerformance`, `@AIPrivacy`, `@AITestDriven`.
-- **Plandex** (`.plandex.yaml`) carries: `@AIAudit`, `@AILocked`, `@AIPrivacy`.
 
 ### The YAML key VibeTags writes for aider, and the one it refuses to write for Gemini
 
@@ -230,9 +198,8 @@ The build says so when it happens. On every compile, including one the fingerpri
 skips, VibeTags reads each opted-in YAML file and warns about any top-level key the generated block
 writes that also appears outside it, naming both line numbers and which one a last-wins loader
 reads. That covers every YAML platform, not only aider: the keys come from the renderers
-themselves, so CodeRabbit's `reviews:`, Ellipsis's `version:` and `pr_review:`, Sweep's `rules:`,
-Plandex's `guardrails:`, Open Interpreter's `instructions:` and Zoo Code's `customModes:` (`.roomodes`) are
-checked the same way. `reviews:` is the one most likely to bite, since it is where CodeRabbit keeps
+themselves, so CodeRabbit's `reviews:` and Zoo Code's `customModes:` (`.roomodes`) are checked the
+same way. `reviews:` is the one most likely to bite, since it is where CodeRabbit keeps
 every review setting.
 
 `.gemini/config.yaml` is deliberately **not** written, for the same reason with none of the
@@ -314,8 +281,10 @@ an ordinary file-presence opt-in: regenerated when it exists, never created.
 
 ### Outputs removed in 1.4.0
 
-These were deprecated in 1.3.5 (#641), with a compiler warning on every build that opted into one
-naming the file and its replacement, and 1.4.0 no longer writes them. Their keys are gone from the
+These were deprecated in 1.3.5 (#641, and #664 to #677 and #845 after it), with a compiler warning
+on every build that opted into one naming the file and its replacement, and 1.4.0 no longer writes
+them. Each named a tool that had been retired, or a file its vendor did not document; every row was
+confirmed at the vendor, not taken from a round-up. Their keys are gone from the
 opt-in list, so an existing file is neither regenerated nor warned about: it is left byte-identical
 and stops tracking the annotations. To move off one, create the replacement, move any hand-written
 content outside the VibeTags markers across, then delete the old file or directory. The evidence
@@ -327,44 +296,23 @@ that retired each one stays here.
 | `.cody/config.json`, `.codyignore` | `AGENTS.md`, which Amp reads (#645). | **Plans retired, files undocumented.** Sourcegraph's announcement (25 June 2025) ended Cody Free and Pro on 23 July 2025 and names Amp, which reads `AGENTS.md`, as the path forward for those users. It also says Cody Enterprise is "not affected" and "remains fully supported, actively developed", so the product itself is not retired. The deprecation rests on the second half: Sourcegraph's docs repository (`sourcegraph/docs`, checked 2026-09-13) names neither file. Enterprise excludes content through admin-set Context Filters, custom commands moved to the Prompt Library, and the only ignore file the docs ever mention is an experimental `.cody/ignore` in the technical changelog. 4 and 3 public repositories. [Sourcegraph's announcement](https://sourcegraph.com/blog/changes-to-cody-free-pro-and-enterprise-starter-plans), [Context Filters](https://sourcegraph.com/docs/cody/capabilities/ignore-context) (#677) |
 | `.supermavenignore` | `.cursorignore`, which Cursor Tab reads (#645). | **Product sunset, autocomplete kept for existing users.** Supermaven's own post of 21 November 2025, "Sunsetting Supermaven", refunds subscribers, ends agent conversations, recommends existing VS Code users move to Cursor, and keeps free autocomplete inference running for existing JetBrains and Neovim customers "for the foreseeable future". So the plugin still completes code for some users; what ended is the product as something to adopt. Cursor's 2024 acquisition post said the plugin "will remain maintained", which the 2025 post supersedes. Cursor Tab reads `.cursorignore`, which VibeTags writes. 5 public repositories. [Sunsetting Supermaven](https://supermaven.com/blog/sunsetting-supermaven) (#677) |
 | `.clinerules` (the single file) | the `.clinerules/` directory (#645). | **Legacy shape.** [Cline's current rules documentation](https://docs.cline.bot/features/cline-rules) documents a `.clinerules/` **directory** and does not mention the file, though Cline's loader still reads it. VibeTags writes the directory form (see [Cline's `.clinerules/` directory](#clines-clinerules-directory)), which is the replacement. |
-
-### Deprecated outputs whose tool has moved on
-
-These are deprecated. They are still written, and an existing project's output does not change, but
-they stop being written in the next major version, tracked in
-[#720](https://github.com/PIsberg/vibetags/issues/720). Each names a tool that has been retired, or a
-file its vendor does not document, and the file-presence opt-in model means a path VibeTags names is
-a path a user may create. Every row was confirmed at the vendor, not taken from a round-up.
-
-They were not simply removed. Removing a service stops an opted-in consumer's file regenerating, and
-that file then sits in the repository looking current while it drifts from the annotations, which
-is worse than a file nobody reads. So a build that has one of them opted in gets one compiler
-warning per compilation naming each file and its replacement, and `vibetags.log` records a
-`platform.deprecated key=... file=... replacement=...` event per file. The "no AI config files
-found" note no longer offers them to a new project. The decision is recorded in #641.
-
-To move off one: create the replacement, move any hand-written content outside the VibeTags markers
-across, then delete the deprecated file or directory.
-
-| Output | Status | Evidence |
-|---|---|---|
-| `.void/rules.md` | **Product deprecated, and the path was never Void's.** The `voideditor/void` README opens "Void is now deprecated" and says the project is "no longer accepting contributions"; the repository was archived with its last push on 2026-06-02. It names no successor, only a list of community forks. Separately, Void's own `convertToLLMMessageService.ts` reads a `.voidrules` file from each workspace folder and nothing under `.void/`, so this output was not read by Void even while it was maintained. The log event records `replacement=none` (#665). | [Void README](https://github.com/voideditor/void), [`convertToLLMMessageService.ts`](https://github.com/voideditor/void/blob/main/src/vs/workbench/contrib/void/browser/convertToLLMMessageService.ts) |
-| `.mentatconfig.json` | **CLI archived, and the path was never Mentat's.** `AbanteAI/mentat` returns 404; the CLI lives on as the archived `AbanteAI/archive-old-cli-mentat` (last push 2025-01-07). Its `mentat/config.py` loads `.mentat_config.json`, and its configuration docs name the same file, so this output was never read (#666). | [`mentat/config.py`](https://github.com/AbanteAI/archive-old-cli-mentat/blob/HEAD/mentat/config.py) |
-| `sweep.yaml` | **Product changed.** The `sweepai/sweep` README now reads "We're now building an AI coding assistant for JetBrains", sweep.dev describes only the JetBrains plugin, and docs.sweep.dev returns HTTP 402. `sweep.yaml` configured the GitHub App the README no longer describes. Search summaries say the JetBrains plugin reads a `SWEEP.md` and falls back to `CLAUDE.md` and `AGENTS.md`, but the vendor docs that would confirm it did not load, so no replacement is named (#666). | [Sweep README](https://github.com/sweepai/sweep) |
-| `.plandex.yaml` | **Never read.** GitHub code search over `plandex-ai/plandex` finds no `.plandex.yaml` (the same search does find the `.plandex-v2` state directory, so the repository is indexed), and the README says Plandex Cloud is "Winding down as of 10/3/2025". Plandex loads context explicitly with `plandex load` (#666). | [Plandex README](https://github.com/plandex-ai/plandex) |
-| `.pearai/rules/` | **Never documented.** `trypear/pearai-app`, `pearai-submodule` and `PearAI-Roo-Code` are archived. PearAI's docs repository mentions `.pearaiignore` and the `~/.pearai/` index, and no rules directory; a clone of `pearai-submodule` has no reference to `.pearai/rules` (#666). | [PearAI docs source](https://github.com/trypear/pearai-documentation) |
-| `.ghostcoderignore` | **No tool reads it.** `aorwall/ghostcoder` redirects (HTTP 301) to `aorwall/moatless-tools`, a research project whose tree has no such file and whose code search finds no reference; every public hit for the name is in this repository (#666). | [moatless-tools](https://github.com/aorwall/moatless-tools) |
-| `.doubleignore` | **Never documented.** The 12 feature, pricing, changelog and blog pages listed in Double's `llms.txt` (43 KB in total; the changelog was last updated February 2025) mention no ignore or exclude mechanism (#666). | [Double docs index](https://docs.double.bot/llms.txt) |
-| `.piecesignore` | **Never documented.** Pieces' `llms-full.txt` (708 KB) has 0 mentions of `.piecesignore`; the exclusions it does document are per application, in the app's settings (#666). | [Pieces full docs](https://docs.pieces.app/llms-full.txt) |
-| `.ai/rules/` | **No vendor, no specification.** No tool or published convention checked reads this directory: the Agent Rules community standard is `AGENTS.md`, Block's `ai-rules` tool keeps its sources in `ai-rules/` (no dot), and aicodingrules.org lists per-tool paths only. This is a negative finding and would be overturned by one tool that reads the path (#666). | [agent-rules](https://github.com/agent-rules/agent-rules), [block/ai-rules](https://github.com/block/ai-rules) |
-| `.claudeignore` | **Not documented by the vendor.** `code.claude.com/docs/llms-full.txt` (9.2 MB, fetched 2026-09-13) has 0 mentions of `.claudeignore`. Claude Code's [permissions page](https://code.claude.com/docs/en/permissions) says: "To block Claude's file tools from reading a file or directory, add a `Read` deny rule for its path, such as `Read(./.env)` or `Read(./secrets/**)`", with a paste-ready example under [Exclude sensitive files](https://code.claude.com/docs/en/settings-reference#exclude-sensitive-files). The release re-check counted about 3,900 public repositories carrying a `.claudeignore` (not re-measured); whatever reads it there is not Claude Code as documented. This repository dogfoods the file, so its own build prints the warning. The `@AIIgnore` orphan warning no longer tells a Claude project to create the file (#667). | [Claude Code permissions](https://code.claude.com/docs/en/permissions) |
-| `.copilotignore` | **Not documented by the vendor.** GitHub's [Excluding content from GitHub Copilot](https://docs.github.com/en/copilot/how-tos/configure-content-exclusion/exclude-content-from-copilot) configures exclusions under the repository's Settings, Copilot, Content exclusion (or at organization and enterprise level), for Copilot Business and Enterprise plans, and the page has 0 mentions of `.copilotignore`; the GitHub Docs search API returns 0 hits for the name (2026-09-13). The release re-check counted about 1,000 public repositories carrying it (not re-measured). The `@AIIgnore` orphan warning no longer tells a Copilot project to create it (#668). | [Excluding content from GitHub Copilot](https://docs.github.com/en/copilot/how-tos/configure-content-exclusion/exclude-content-from-copilot) |
-| `.antigravityignore` | **Not documented by the vendor.** All 90 docs pages listed in [`antigravity.google/llms.txt`](https://antigravity.google/llms.txt), fetched as Markdown (435 KB, 2026-09-13), have 0 mentions of `.antigravityignore`. What they do document: the IDE settings page's "Respect .gitignore: The Agent will respect `.gitignore` rules, preventing it from accessing ignored files", and `read_file(/path)` rules in the Deny list on the [permissions page](https://antigravity.google/docs/permissions). The release re-check counted about 450 public repositories carrying the file (not re-measured) (#670). | [Antigravity permissions](https://antigravity.google/docs/permissions), [IDE settings](https://antigravity.google/docs/ide/settings) |
-| `.idx/airules.md` | **Sunset announced.** Firebase's own [Gemini-in-workspaces page](https://firebase.google.com/docs/studio/set-up-gemini) says: "Firebase Studio is sunsetting on March 22, 2027. As of June 22, 2026, new workspace creation and user signup are disabled. You can continue to work in and migrate your existing workspaces to Google AI Studio or Google Antigravity." The file is still documented and read until then; it is deprecated now so an opted-in build gets at least one release of warning before the end date. Antigravity reads `.agents/rules/`, which VibeTags writes (#676). | [Configure Gemini within workspaces](https://firebase.google.com/docs/studio/set-up-gemini) |
-| `.interpreter/profiles/vibetags.yaml` | **Not read by the current tool, and no project-level replacement exists.** Open Interpreter is now a Rust coding agent built on a Codex fork (`openinterpreter/openinterpreter`, checked at `ce5b3b43`, 2026-09-13), and GitHub code search over it finds no YAML profile and no `.interpreter/` directory. Its [`docs/config.md`](https://github.com/openinterpreter/openinterpreter/blob/main/docs/config.md) says "Open Interpreter reads durable settings from TOML files" and shows profiles as `[profiles.<name>]` tables, but those cannot live in a project: `codex-rs/config/src/loader/mod.rs` lists `"profile"` and `"profiles"` in `PROJECT_LOCAL_CONFIG_DENYLIST` and removes both from `.openinterpreter/config.toml` before merging it, and `ConfigProfile` in `profile_toml.rs` has no field for instruction text in any case. So no `.openinterpreter/config.toml` output is added. What Open Interpreter does read from a project is `AGENTS.md`: [`docs/agents_md.md`](https://github.com/openinterpreter/openinterpreter/blob/main/docs/agents_md.md) says "`AGENTS.md` is the project instruction file" (#674). | [Open Interpreter configuration](https://github.com/openinterpreter/openinterpreter/blob/main/docs/config.md), [config loader](https://github.com/openinterpreter/openinterpreter/blob/main/codex-rs/config/src/loader/mod.rs) |
-| `ellipsis.yaml` | **Not documented by the vendor, and its replacement is not written.** [`ellipsis.dev/llms-full.txt`](https://www.ellipsis.dev/llms-full.txt) (2.7 MB, fetched 2026-09-13) has 0 mentions of `ellipsis.yaml` or `pr_review`, and the old configuration page, `docs.ellipsis.dev/config`, now redirects to a 404. What is documented is [`.ellipsis/code_review.yaml`](https://www.ellipsis.dev/docs/code-review/configuration): "Use `ellipsis.kind: code_review` in `code_review.yaml`. The file customizes a pipeline; the dashboard toggle enables reviews." Its fields are pipeline stages (`pre_review`, `description`, `review`, `filter`, `post_review`), each holding agents that take a `name`, "exactly one of `claude_code` or `codex`", and optional `environment`, `permissions` and `budget`. There is no rules or instructions field: the only place text goes is an agent's `prompt`. VibeTags does not write that file, for three documented reasons. The [custom reviewers page](https://www.ellipsis.dev/docs/code-review/custom-reviewers) says "Declaring `review` replaces the default reviewer", so a generated reviewer would switch off Ellipsis's built-in bug review for every project that opted in. An agent needs a harness, and which one a project pays for is not something annotations say. And the [review scope page](https://www.ellipsis.dev/docs/code-review/which-prs-get-reviewed) says "An invalid or disabled file falls through to the next configuration", so a generated stage colliding with a hand-written one would silently revert the repository to the organization's or built-in review. Adding it would take a decision about which stage guardrails belong in, not a path fix (#675). | [Ellipsis configuration YAML](https://www.ellipsis.dev/docs/code-review/configuration) |
-| `.amazonq/rules/` | **End of support announced.** AWS's [Amazon Q Developer IDE plugins end of support](https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/q-developer-ide-end-of-support.html) page says: "On April 30, 2027, AWS will discontinue support for Amazon Q Developer IDE plugins", and names Kiro as the path forward. Kiro's steering files live in `.kiro/steering/` ([Kiro docs](https://kiro.dev/docs/steering/)), which VibeTags writes. Still read by the plugins until then (#676). | [AWS end-of-support page](https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/q-developer-ide-end-of-support.html) |
-| `.zencoder/rules/` | **Feature removed by the vendor.** Zencoder's [IDE Agent changelog](https://docs.zencoder.ai/changelog/home), read in a browser on 2026-09-26 because its docs refuse other clients, says in March 2026 that "Custom rules are being phased out", and in May 2026: "Custom rules removed", with `AGENTS.md` named as the replacement. Its July 2025 entry had already said the glob-scoped project instructions "now evolved into Skills". The old `rules-context/zen-rules` page now redirects to [Skills](https://docs.zencoder.ai/features/skills), which Zencoder loads from `.agents/skills/` (VibeTags writes one there), `rules-context/repo-info` is gone, and the [Context Management](https://docs.zencoder.ai/features/context-management) page lists no rule files among the sources an agent reads (#845). | [Zencoder changelog](https://docs.zencoder.ai/changelog/home) |
+| `.void/rules.md` | none; Void names no successor, only community forks (#720). | **Product deprecated, and the path was never Void's.** The `voideditor/void` README opens "Void is now deprecated" and says the project is "no longer accepting contributions"; the repository was archived with its last push on 2026-06-02. It names no successor, only a list of community forks. Separately, Void's own `convertToLLMMessageService.ts` reads a `.voidrules` file from each workspace folder and nothing under `.void/`, so this output was not read by Void even while it was maintained. The log event records `replacement=none` (#665). | [Void README](https://github.com/voideditor/void), [`convertToLLMMessageService.ts`](https://github.com/voideditor/void/blob/main/src/vs/workbench/contrib/void/browser/convertToLLMMessageService.ts) |
+| `.mentatconfig.json` | none; no tool reads this file (#720). | **CLI archived, and the path was never Mentat's.** `AbanteAI/mentat` returns 404; the CLI lives on as the archived `AbanteAI/archive-old-cli-mentat` (last push 2025-01-07). Its `mentat/config.py` loads `.mentat_config.json`, and its configuration docs name the same file, so this output was never read (#666). | [`mentat/config.py`](https://github.com/AbanteAI/archive-old-cli-mentat/blob/HEAD/mentat/config.py) |
+| `sweep.yaml` | none documented (#720). | **Product changed.** The `sweepai/sweep` README now reads "We're now building an AI coding assistant for JetBrains", sweep.dev describes only the JetBrains plugin, and docs.sweep.dev returns HTTP 402. `sweep.yaml` configured the GitHub App the README no longer describes. Search summaries say the JetBrains plugin reads a `SWEEP.md` and falls back to `CLAUDE.md` and `AGENTS.md`, but the vendor docs that would confirm it did not load, so no replacement is named (#666). | [Sweep README](https://github.com/sweepai/sweep) |
+| `.plandex.yaml` | `AGENTS.md`, loaded into a plan with `plandex load` (#720). | **Never read.** GitHub code search over `plandex-ai/plandex` finds no `.plandex.yaml` (the same search does find the `.plandex-v2` state directory, so the repository is indexed), and the README says Plandex Cloud is "Winding down as of 10/3/2025". Plandex loads context explicitly with `plandex load` (#666). | [Plandex README](https://github.com/plandex-ai/plandex) |
+| `.pearai/rules/` | none documented (#720). | **Never documented.** `trypear/pearai-app`, `pearai-submodule` and `PearAI-Roo-Code` are archived. PearAI's docs repository mentions `.pearaiignore` and the `~/.pearai/` index, and no rules directory; a clone of `pearai-submodule` has no reference to `.pearai/rules` (#666). | [PearAI docs source](https://github.com/trypear/pearai-documentation) |
+| `.ghostcoderignore` | none; no tool reads this file (#720). | **No tool reads it.** `aorwall/ghostcoder` redirects (HTTP 301) to `aorwall/moatless-tools`, a research project whose tree has no such file and whose code search finds no reference; every public hit for the name is in this repository (#666). | [moatless-tools](https://github.com/aorwall/moatless-tools) |
+| `.doubleignore` | none; Double offers no file-based exclusion (#720). | **Never documented.** The 12 feature, pricing, changelog and blog pages listed in Double's `llms.txt` (43 KB in total; the changelog was last updated February 2025) mention no ignore or exclude mechanism (#666). | [Double docs index](https://docs.double.bot/llms.txt) |
+| `.piecesignore` | the application exclusions in Pieces' own settings (#720). | **Never documented.** Pieces' `llms-full.txt` (708 KB) has 0 mentions of `.piecesignore`; the exclusions it does document are per application, in the app's settings (#666). | [Pieces full docs](https://docs.pieces.app/llms-full.txt) |
+| `.ai/rules/` | `AGENTS.md` (#720). | **No vendor, no specification.** No tool or published convention checked reads this directory: the Agent Rules community standard is `AGENTS.md`, Block's `ai-rules` tool keeps its sources in `ai-rules/` (no dot), and aicodingrules.org lists per-tool paths only. This is a negative finding and would be overturned by one tool that reads the path (#666). | [agent-rules](https://github.com/agent-rules/agent-rules), [block/ai-rules](https://github.com/block/ai-rules) |
+| `.claudeignore` | `Read` deny rules under `permissions.deny` in `.claude/settings.json` (#720). | **Not documented by the vendor.** `code.claude.com/docs/llms-full.txt` (9.2 MB, fetched 2026-09-13) has 0 mentions of `.claudeignore`. Claude Code's [permissions page](https://code.claude.com/docs/en/permissions) says: "To block Claude's file tools from reading a file or directory, add a `Read` deny rule for its path, such as `Read(./.env)` or `Read(./secrets/**)`", with a paste-ready example under [Exclude sensitive files](https://code.claude.com/docs/en/settings-reference#exclude-sensitive-files). The release re-check counted about 3,900 public repositories carrying a `.claudeignore` (not re-measured); whatever reads it there is not Claude Code as documented. This repository dogfoods the file, so its own build prints the warning. The `@AIIgnore` orphan warning no longer tells a Claude project to create the file (#667). | [Claude Code permissions](https://code.claude.com/docs/en/permissions) |
+| `.copilotignore` | the repository's Settings, Copilot, Content exclusion (#720). | **Not documented by the vendor.** GitHub's [Excluding content from GitHub Copilot](https://docs.github.com/en/copilot/how-tos/configure-content-exclusion/exclude-content-from-copilot) configures exclusions under the repository's Settings, Copilot, Content exclusion (or at organization and enterprise level), for Copilot Business and Enterprise plans, and the page has 0 mentions of `.copilotignore`; the GitHub Docs search API returns 0 hits for the name (2026-09-13). The release re-check counted about 1,000 public repositories carrying it (not re-measured). The `@AIIgnore` orphan warning no longer tells a Copilot project to create it (#668). | [Excluding content from GitHub Copilot](https://docs.github.com/en/copilot/how-tos/configure-content-exclusion/exclude-content-from-copilot) |
+| `.antigravityignore` | `read_file` Deny permission rules, or `.gitignore` with Respect .gitignore (#720). | **Not documented by the vendor.** All 90 docs pages listed in [`antigravity.google/llms.txt`](https://antigravity.google/llms.txt), fetched as Markdown (435 KB, 2026-09-13), have 0 mentions of `.antigravityignore`. What they do document: the IDE settings page's "Respect .gitignore: The Agent will respect `.gitignore` rules, preventing it from accessing ignored files", and `read_file(/path)` rules in the Deny list on the [permissions page](https://antigravity.google/docs/permissions). The release re-check counted about 450 public repositories carrying the file (not re-measured) (#670). | [Antigravity permissions](https://antigravity.google/docs/permissions), [IDE settings](https://antigravity.google/docs/ide/settings) |
+| `.idx/airules.md` | `.agents/rules/` (Google Antigravity), which VibeTags writes (#720). | **Sunset announced.** Firebase's own [Gemini-in-workspaces page](https://firebase.google.com/docs/studio/set-up-gemini) says: "Firebase Studio is sunsetting on March 22, 2027. As of June 22, 2026, new workspace creation and user signup are disabled. You can continue to work in and migrate your existing workspaces to Google AI Studio or Google Antigravity." The file is still documented and read until then; it is deprecated now so an opted-in build gets at least one release of warning before the end date. Antigravity reads `.agents/rules/`, which VibeTags writes (#676). | [Configure Gemini within workspaces](https://firebase.google.com/docs/studio/set-up-gemini) |
+| `.interpreter/profiles/vibetags.yaml` | `AGENTS.md` (#720). | **Not read by the current tool, and no project-level replacement exists.** Open Interpreter is now a Rust coding agent built on a Codex fork (`openinterpreter/openinterpreter`, checked at `ce5b3b43`, 2026-09-13), and GitHub code search over it finds no YAML profile and no `.interpreter/` directory. Its [`docs/config.md`](https://github.com/openinterpreter/openinterpreter/blob/main/docs/config.md) says "Open Interpreter reads durable settings from TOML files" and shows profiles as `[profiles.<name>]` tables, but those cannot live in a project: `codex-rs/config/src/loader/mod.rs` lists `"profile"` and `"profiles"` in `PROJECT_LOCAL_CONFIG_DENYLIST` and removes both from `.openinterpreter/config.toml` before merging it, and `ConfigProfile` in `profile_toml.rs` has no field for instruction text in any case. So no `.openinterpreter/config.toml` output is added. What Open Interpreter does read from a project is `AGENTS.md`: [`docs/agents_md.md`](https://github.com/openinterpreter/openinterpreter/blob/main/docs/agents_md.md) says "`AGENTS.md` is the project instruction file" (#674). | [Open Interpreter configuration](https://github.com/openinterpreter/openinterpreter/blob/main/docs/config.md), [config loader](https://github.com/openinterpreter/openinterpreter/blob/main/codex-rs/config/src/loader/mod.rs) |
+| `ellipsis.yaml` | a reviewer prompt in `.ellipsis/code_review.yaml`, written by hand (#720). | **Not documented by the vendor, and its replacement is not written.** [`ellipsis.dev/llms-full.txt`](https://www.ellipsis.dev/llms-full.txt) (2.7 MB, fetched 2026-09-13) has 0 mentions of `ellipsis.yaml` or `pr_review`, and the old configuration page, `docs.ellipsis.dev/config`, now redirects to a 404. What is documented is [`.ellipsis/code_review.yaml`](https://www.ellipsis.dev/docs/code-review/configuration): "Use `ellipsis.kind: code_review` in `code_review.yaml`. The file customizes a pipeline; the dashboard toggle enables reviews." Its fields are pipeline stages (`pre_review`, `description`, `review`, `filter`, `post_review`), each holding agents that take a `name`, "exactly one of `claude_code` or `codex`", and optional `environment`, `permissions` and `budget`. There is no rules or instructions field: the only place text goes is an agent's `prompt`. VibeTags does not write that file, for three documented reasons. The [custom reviewers page](https://www.ellipsis.dev/docs/code-review/custom-reviewers) says "Declaring `review` replaces the default reviewer", so a generated reviewer would switch off Ellipsis's built-in bug review for every project that opted in. An agent needs a harness, and which one a project pays for is not something annotations say. And the [review scope page](https://www.ellipsis.dev/docs/code-review/which-prs-get-reviewed) says "An invalid or disabled file falls through to the next configuration", so a generated stage colliding with a hand-written one would silently revert the repository to the organization's or built-in review. Adding it would take a decision about which stage guardrails belong in, not a path fix (#675). | [Ellipsis configuration YAML](https://www.ellipsis.dev/docs/code-review/configuration) |
+| `.amazonq/rules/` | `.kiro/steering/` (Kiro), which VibeTags writes (#720). | **End of support announced.** AWS's [Amazon Q Developer IDE plugins end of support](https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/q-developer-ide-end-of-support.html) page says: "On April 30, 2027, AWS will discontinue support for Amazon Q Developer IDE plugins", and names Kiro as the path forward. Kiro's steering files live in `.kiro/steering/` ([Kiro docs](https://kiro.dev/docs/steering/)), which VibeTags writes. Still read by the plugins until then (#676). | [AWS end-of-support page](https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/q-developer-ide-end-of-support.html) |
+| `.zencoder/rules/` | `AGENTS.md`, or the skill VibeTags writes under `.agents/skills/` (#720). | **Feature removed by the vendor.** Zencoder's [IDE Agent changelog](https://docs.zencoder.ai/changelog/home), read in a browser on 2026-09-26 because its docs refuse other clients, says in March 2026 that "Custom rules are being phased out", and in May 2026: "Custom rules removed", with `AGENTS.md` named as the replacement. Its July 2025 entry had already said the glob-scoped project instructions "now evolved into Skills". The old `rules-context/zen-rules` page now redirects to [Skills](https://docs.zencoder.ai/features/skills), which Zencoder loads from `.agents/skills/` (VibeTags writes one there), `rules-context/repo-info` is gone, and the [Context Management](https://docs.zencoder.ai/features/context-management) page lists no rule files among the sources an agent reads (#845). | [Zencoder changelog](https://docs.zencoder.ai/changelog/home) |
 
 The lesson is the one #611 recorded from the other direction. A platform list is not a thing you
 write once: the tools underneath it are renamed, acquired and retired, and a generated file
@@ -409,10 +357,12 @@ current form, and VibeTags writes it.
 
 VibeTags keeps writing `.cursorrules` with no deprecation warning (#672). "Will be deprecated" is
 an intent with no date, and the rows above are for outputs whose tool has retired them or never
-read them. The file also reaches past Cursor: Cline's loader reads it, so a warning would tell projects to drop a file another tool still uses. A new project on
-Cursor should opt into `.cursor/rules/`; with `.cursorrules` present as well, `.cursorrules`
-collapses to the scoped-rules index and keeps only the safety tier inline. The file gets a
-`DeprecatedServices` notice when Cursor says it no longer reads it.
+read them. The file also reaches past Cursor: Cline's loader reads it, so a warning would tell
+projects to drop a file another tool still uses. A new project on Cursor should opt into
+`.cursor/rules/`; with `.cursorrules` present as well, `.cursorrules` collapses to the scoped-rules
+index and keeps only the safety tier inline. The file gets a deprecation warning when Cursor says it
+no longer reads it, through the `DeprecatedServices` table 1.4.0 removed with its last row (#720),
+restored from git history.
 
 ### Cursor and Trae read `globs:` as a comma-separated string
 
@@ -473,8 +423,8 @@ verdict rests on the vendor statements above and on reading each tool's own bund
   last step was read from the source of `glob.ts`, not executed. Whether 2.3.33256 is Trae's newest build was not checked.
 
 What would add to this: a project opened in current Cursor and Trae with one rule written each way,
-recording which one attaches when a matching file is opened. Continue and PearAI keep the list,
-which Continue documents; see the table under [Granular rules](#granular-rules).
+recording which one attaches when a matching file is opened. Continue keeps the list, which it
+documents; see the table under [Granular rules](#granular-rules).
 
 ### Trae is now TraeCode, and can import `AGENTS.md` and `CLAUDE.md`
 

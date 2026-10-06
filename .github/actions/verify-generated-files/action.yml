@@ -25,7 +25,6 @@ runs:
           .greptile/rules.md .greptile/config.json greptile.json \
           .windsurfrules .rules \
           replit.md .agents/skills/vibetags-guardrails/SKILL.md \
-          .zencoder/rules/com-example-payment-PaymentProcessor.md \
           .cursor/rules/com-example-payment-PaymentProcessor.mdc \
           .cursor/rules/com-example-database-DatabaseConnector.mdc \
           .trae/rules/com-example-payment-PaymentProcessor.md \
@@ -33,16 +32,12 @@ runs:
           .windsurf/rules/com-example-payment-PaymentProcessor.md \
           .continue/rules/com-example-payment-PaymentProcessor.md \
           .tabnine/guidelines/com-example-payment-PaymentProcessor.md \
-          .amazonq/rules/com-example-payment-PaymentProcessor.md \
-          .ai/rules/com-example-payment-PaymentProcessor.md \
-          .pearai/rules/com-example-payment-PaymentProcessor.md \
-          .mentatconfig.json sweep.yaml .plandex.yaml \
-          .doubleignore .interpreter/profiles/vibetags.yaml .codeiumignore \
-          GEMINI.md .antigravityignore \
-          .repomixignore .gitingestignore .gptignore .ghostcoderignore .piecesignore .rooignore .continueignore .augmentignore .devinignore \
-          .coderabbit.yaml .pr_agent.toml ellipsis.yaml .void/rules.md .roomodes \
+          .codeiumignore \
+          GEMINI.md \
+          .repomixignore .gitingestignore .gptignore .rooignore .continueignore .augmentignore .devinignore \
+          .coderabbit.yaml .pr_agent.toml .roomodes \
           .clinerules/com-example-payment-PaymentProcessor.md .clinerules/+vibetags-safety.md \
-          .junie/guidelines.md .junie/AGENTS.md .idx/airules.md \
+          .junie/guidelines.md .junie/AGENTS.md \
           CLAUDE.local.md .claude/skills/vibetags-guardrails/SKILL.md TESTING.md \
           .claude/rules/com-example-payment-PaymentProcessor.md \
           .github/instructions/com-example-payment-PaymentProcessor.instructions.md \
@@ -147,14 +142,6 @@ runs:
         grep -q 'Tied to legacy database schema' .clinerules/+vibetags-safety.md || { echo "FAIL .clinerules/+vibetags-safety.md carries no locked reason (#648)"; exit 1; }
         echo "OK Cline .clinerules/ rule front matter and safety file"
         echo "OK Aider conventions audit section"
-        grep -q "Security audit required" sweep.yaml || { echo "FAIL sweep.yaml audit rule missing"; exit 1; }
-        echo "OK sweep.yaml audit rule"
-        grep -q '"audit"' .mentatconfig.json || { echo "FAIL .mentatconfig.json audit section missing"; exit 1; }
-        echo "OK .mentatconfig.json audit section"
-        grep -q "audit:" .plandex.yaml || { echo "FAIL .plandex.yaml audit section missing"; exit 1; }
-        echo "OK .plandex.yaml audit section"
-        grep -q "audit" .interpreter/profiles/vibetags.yaml || { echo "FAIL interpreter profile audit missing"; exit 1; }
-        echo "OK Open Interpreter profile audit"
         # TESTING.md. Existing and non-empty is not the property that matters here: the file ships
         # as an empty opt-in placeholder and a build that never ran a test round leaves it that
         # way, which is indistinguishable from a build where routing silently stopped working.

@@ -571,18 +571,13 @@ touch .devinignore                           # Indexing exclusion list (.codeium
 # --- Zed ---
 touch .rules                                 # Zed Editor
 
-# --- Continue, Tabnine, Amazon Q, Universal AI ---
+# --- Continue, Tabnine ---
 mkdir -p .continue/rules                     # Continue
 mkdir -p .tabnine/guidelines                 # Tabnine
-mkdir -p .amazonq/rules                      # Amazon Q (deprecated, #720: Kiro's .kiro/steering/ replaces it)
-mkdir -p .ai/rules                           # Universal .ai/rules standard (deprecated, #720)
 
 # --- Trae, Zoo Code ---
 mkdir -p .trae/rules                         # TraeCode (formerly Trae IDE)
 mkdir -p .roo/rules                          # Zoo Code (fork of the retired Roo Code; reads the same paths)
-
-# --- PearAI ---
-mkdir -p .pearai/rules                       # PearAI granular rules (deprecated, #720)
 
 # --- Amazon Kiro ---
 mkdir -p .kiro/steering                      # Amazon Kiro steering files (per-class .md)
@@ -596,16 +591,8 @@ mkdir -p .aiassistant/rules                  # JetBrains AI Assistant project ru
 mkdir -p .augment/rules                      # Augment Code workspace rules (per-class .md)
 touch .goosehints                            # goose project hints
 
-# --- Mentat, Sweep, Plandex ---
-touch .mentatconfig.json                     # Mentat AI assistant (deprecated, #720)
-touch sweep.yaml                             # Sweep AI code review (GitHub App; deprecated, #720)
-touch .plandex.yaml                          # Plandex AI coding agent (deprecated, #720)
-
-# --- Double.bot, Open Interpreter, Codeium, Antigravity ---
-touch .doubleignore                          # Double.bot exclusion list (deprecated, #720)
-mkdir -p .interpreter/profiles && touch .interpreter/profiles/vibetags.yaml  # Open Interpreter (deprecated, #720)
+# --- Codeium ---
 touch .codeiumignore                         # Codeium exclusion list
-touch .antigravityignore                     # Antigravity AI exclusion list (deprecated, #720)
 
 # --- Cline, JetBrains Junie ---
 mkdir -p .clinerules                         # Cline (granular per-class rules, plus an always-loaded safety file)
@@ -613,13 +600,12 @@ mkdir -p .clinerules                         # Cline (granular per-class rules, 
 touch .rooignore .continueignore .augmentignore  # Zoo Code / Continue / Augment exclusion lists
 touch replit.md                              # Replit Agent
 touch TESTING.md                             # not a tool's file: test-code guardrails go here, out of the always-loaded files (safety annotations stay)
-mkdir -p .zencoder/rules                     # Zencoder (deprecated, #845: use AGENTS.md)
 mkdir -p .agents/skills/vibetags-guardrails && touch .agents/skills/vibetags-guardrails/SKILL.md  # cross-client Agent Skills
 mkdir -p .junie && touch .junie/AGENTS.md    # JetBrains Junie (current; legacy .junie/guidelines.md also written)
 
 # --- Other platforms ---
 touch CONVENTIONS.md .aider.conf.yml .aiderignore  # Aider (.aider.conf.yml is what makes aider read CONVENTIONS.md)
-touch CLAUDE.md                              # Claude (.claudeignore is deprecated, #720: use Read deny rules in .claude/settings.json)
+touch CLAUDE.md                              # Claude
 touch QWEN.md .qwenignore                   # Qwen
 mkdir -p .qwen/commands && touch .qwen/commands/refactor.md  # Qwen /refactor command (its own opt-in)
 touch .aiexclude GEMINI.md                   # Gemini
@@ -627,7 +613,7 @@ mkdir -p .gemini && touch .gemini/styleguide.md    # Gemini Code Assist (GitHub 
 mkdir -p .greptile && touch .greptile/rules.md     # Greptile (AI PR reviewer, recommended form)
 touch .greptile/config.json                        # Greptile (@AIIgnore paths; only a span inside ignorePatterns is VibeTags')
 touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
-mkdir -p .github && touch .github/copilot-instructions.md  # GitHub Copilot (.copilotignore is deprecated, #720: use Content exclusion settings)
+mkdir -p .github && touch .github/copilot-instructions.md  # GitHub Copilot
 touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
 touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
 

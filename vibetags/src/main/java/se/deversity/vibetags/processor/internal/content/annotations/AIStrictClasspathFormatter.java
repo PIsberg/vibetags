@@ -32,7 +32,7 @@ public final class AIStrictClasspathFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### STRICT CLASSPATH: ").append(className).append("\n- **Rule**: Enforce strict classpath integrity. Dynamic loading or custom classloaders are prohibited.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (strict-classpath)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

@@ -42,10 +42,7 @@ public final class AIIdempotentFormatter implements AnnotationFormatter {
                 sb.append("#### IDEMPOTENT: ").append(className).append("\n- **Rule**: Must remain idempotent. Multiple invocations must produce the same result as one.\n")
                   .append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n").append('\n');
                 break;
-            case SWEEP:
-                sb.append("  - \"Idempotency requirement for ").append(Escape.json(className)).append(": ").append(Escape.json(summary)).append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (idempotent)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

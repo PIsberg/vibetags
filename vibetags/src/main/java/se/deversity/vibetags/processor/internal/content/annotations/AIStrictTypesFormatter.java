@@ -32,7 +32,7 @@ public final class AIStrictTypesFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### STRICT TYPES: ").append(className).append("\n- **Rule**: Loose typing is prohibited. Enforce explicit type-safety and strongly-typed objects.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (strict-types)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

@@ -485,7 +485,7 @@ class FormatterBranchCoverageTest {
         when(ann.note()).thenReturn("");
         when(el.getAnnotation(AIThreadSafe.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length(), "Unhandled platform must produce no output");
     }
 
@@ -500,7 +500,7 @@ class FormatterBranchCoverageTest {
         when(ann.framework()).thenReturn(new AITestDriven.Framework[0]);
         when(el.getAnnotation(AITestDriven.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length(), "Unhandled platform must produce no output");
     }
 
@@ -512,7 +512,7 @@ class FormatterBranchCoverageTest {
         when(ann.reason()).thenReturn("test");
         when(el.getAnnotation(AILocked.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length(), "Unhandled platform must produce no output");
     }
 
@@ -525,7 +525,7 @@ class FormatterBranchCoverageTest {
         when(ann.avoids()).thenReturn("regex");
         when(el.getAnnotation(AIContext.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length(), "Unhandled platform must produce no output");
     }
 
@@ -537,7 +537,7 @@ class FormatterBranchCoverageTest {
         when(ann.instructions()).thenReturn("do it");
         when(el.getAnnotation(AIDraft.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length());
     }
 
@@ -550,7 +550,7 @@ class FormatterBranchCoverageTest {
         when(ann.note()).thenReturn("core");
         when(el.getAnnotation(AICore.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length());
     }
 
@@ -562,7 +562,7 @@ class FormatterBranchCoverageTest {
         when(ann.reason()).thenReturn("frozen");
         when(el.getAnnotation(AIContract.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length());
     }
 
@@ -576,7 +576,7 @@ class FormatterBranchCoverageTest {
         when(ann.deadline()).thenReturn("");
         when(el.getAnnotation(AIDeprecated.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length());
     }
 
@@ -588,7 +588,7 @@ class FormatterBranchCoverageTest {
         when(ann.note()).thenReturn("frozen");
         when(el.getAnnotation(AIImmutable.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length());
     }
 
@@ -603,7 +603,7 @@ class FormatterBranchCoverageTest {
         when(ann.note()).thenReturn("");
         when(el.getAnnotation(AIObservability.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length());
     }
 
@@ -615,7 +615,7 @@ class FormatterBranchCoverageTest {
         when(ann.constraint()).thenReturn("O(1)");
         when(el.getAnnotation(AIPerformance.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length());
     }
 
@@ -629,7 +629,7 @@ class FormatterBranchCoverageTest {
         when(ann.description()).thenReturn("desc");
         when(el.getAnnotation(AIRegulation.class)).thenReturn(ann);
         StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sb, Platform.REPLIT);
         assertEquals(0, sb.length());
     }
 
@@ -672,14 +672,14 @@ class FormatterBranchCoverageTest {
         fmt.format(TaggedElements.tagged(el), sbAider, Platform.AIDER_CONVENTIONS);
         assertTrue(sbAider.toString().contains("#### CALLERS LIMIT: com.example.SecureSvc"));
 
-        // 6. INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(callers limited)"));
+        // 6. CODERABBIT (the shared prose arms)
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(callers limited)"));
 
         // 7. Default (Unhandled platform)
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -722,13 +722,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### SANDBOX ONLY: com.example.SandboxSvc"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(sandbox-only)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(sandbox-only)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -772,13 +772,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### MEMORY BUDGET: com.example.Alloc"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(memory-budget)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(memory-budget)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -821,13 +821,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### PURE FUNCTION: com.example.Pure"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(pure)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(pure)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -899,13 +899,13 @@ class FormatterBranchCoverageTest {
         when(ann.allow()).thenReturn(new String[]{"java.util"});
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(domain model)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(domain model)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -949,13 +949,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### POLYMORPHIC EXTENSION: com.example.Ext"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(extensible)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(extensible)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -1001,13 +1001,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### INPUT SANITIZATION: com.example.Input"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(sanitized)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(sanitized)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -1051,13 +1051,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### SECURE LOGGING: com.example.Log"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(secure-logging)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(secure-logging)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -1101,13 +1101,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### EXPLAIN RATIONALE: com.example.Exp"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(explain)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(explain)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -1150,13 +1150,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### EXPERIMENTAL PROTOTYPE: com.example.Proto"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(prototype)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(prototype)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -1231,13 +1231,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### SUNSET API: com.example.Sunset"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(sunset)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(sunset)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 
@@ -1282,13 +1282,13 @@ class FormatterBranchCoverageTest {
         assertTrue(sbAider.toString().contains("#### TEMPORARY WORKAROUND: com.example.Temp"));
 
         // INTERPRETER
-        StringBuilder sbInterpreter = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbInterpreter, Platform.INTERPRETER);
-        assertTrue(sbInterpreter.toString().contains("(temporary)"));
+        StringBuilder sbProse = new StringBuilder();
+        fmt.format(TaggedElements.tagged(el), sbProse, Platform.CODERABBIT);
+        assertTrue(sbProse.toString().contains("(temporary)"));
 
         // Default
         StringBuilder sbDefault = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.FIREBASE);
+        fmt.format(TaggedElements.tagged(el), sbDefault, Platform.REPLIT);
         assertEquals(0, sbDefault.length());
     }
 

@@ -65,12 +65,7 @@ public final class AIGeneratedFormatter implements AnnotationFormatter {
                   .append(regenerateWith.isEmpty() ? "" : "- **Regenerate with**: " + regenerateWith + "\n")
                   .append("- **Rule**: Never hand-edit. Change the source and regenerate.\n\n");
                 break;
-            case SWEEP:
-                sb.append("  - \"Generated code: ").append(Escape.json(className)).append(" comes from ")
-                  .append(Escape.json(from)).append(". Edit ").append(Escape.json(target))
-                  .append(" instead of the generated file.\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (generated)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

@@ -33,8 +33,9 @@ comment. Everything else — the contracts, the thread affinities, the banned AP
 notes — collapses to a one-line module pointer and loads from `core/.claude/rules/` or
 `app/.claude/rules/` when a matching source file is opened.
 
-`.claudeignore` and `.copilotignore` are opted in at the root so `@AIIgnore` has somewhere to write;
-without them the processor emits a NOTE saying the annotation is used but no ignore file exists.
+`.aiexclude` is opted in at the root so `@AIIgnore` and `@AILocked` have a hard exclusion to write
+to beside `GEMINI.md`; without it the processor warns that `.aiexclude` is missing. (`.claudeignore`
+and `.copilotignore` played this part until 1.4.0 removed them, #720.)
 
 `.clinerules/` is opted in at the root as a **directory**, Cline's granular form. `examples/basic`
 carries it too, as a single module; this reactor is the fixture for the cross-module case. Both

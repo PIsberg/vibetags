@@ -83,7 +83,7 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append("` (deprecated)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (deprecated)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

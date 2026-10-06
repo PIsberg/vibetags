@@ -43,7 +43,7 @@ public final class AIInputSanitizedFormatter implements AnnotationFormatter {
                 sb.append("#### INPUT SANITIZATION: ").append(className).append('\n')
                     .append(CommonFormatterHelper.bullet("Required Filters", typeList)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (sanitized)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

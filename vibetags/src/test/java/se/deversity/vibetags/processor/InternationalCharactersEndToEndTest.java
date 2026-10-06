@@ -84,14 +84,18 @@ class InternationalCharactersEndToEndTest {
 
     @Test
     @DisplayName("survive into JSON, and the document still parses")
-    void survivesIntoMentatJson(@TempDir Path dir) throws IOException {
-        ProcessorTestHarness harness = compileWithSamples(dir, ".mentatconfig.json");
-        String out = harness.readFile(".mentatconfig.json");
+    void survivesIntoGreptileJson(@TempDir Path dir) throws IOException {
+        // greptile.json is shared with the user, so VibeTags writes into an existing JSON object
+        // rather than an empty file (#639). Mentat's .mentatconfig.json was the JSON case here
+        // until 1.4.0 removed it (#720).
+        Files.writeString(dir.resolve("greptile.json"), "{}\n", StandardCharsets.UTF_8);
+        ProcessorTestHarness harness = compileWithSamples(dir, "greptile.json");
+        String out = harness.readFile("greptile.json");
 
         // Parsed, not string-matched: a renderer emitting a raw control character or a truncated
         // \\u escape would still "contain" the text while being unreadable to the tool.
         String flattened = String.valueOf(parseJson(out));
-        assertAllSamplesPresent(flattened, ".mentatconfig.json (after parsing)");
+        assertAllSamplesPresent(flattened, "greptile.json (after parsing)");
     }
 
     @Test

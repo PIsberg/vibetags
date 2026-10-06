@@ -236,10 +236,10 @@ class AIGuardrailProcessorProcessTest {
         Set<String> active = Set.of("copilot");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
 
-        // .copilotignore is deprecated (#668): Copilot excludes content in settings, so a Copilot
-        // project is no longer told to create the file.
+        // VibeTags writes no .copilotignore (#668, removed in 1.4.0 by #720): Copilot excludes
+        // content in settings, so a Copilot project is not told to create the file.
         assertTrue(warnings.stream().noneMatch(w -> w.contains(".copilotignore")),
-            "Should not suggest the deprecated .copilotignore: " + warnings);
+            "Should not suggest .copilotignore: " + warnings);
     }
 
     @Test
@@ -316,8 +316,8 @@ class AIGuardrailProcessorProcessTest {
 
         Set<String> active = Set.of(
             "cursor", "cursor_ignore",
-            "claude", "claude_ignore",
-            "copilot", "copilot_ignore",
+            "claude",
+            "copilot",
             "qwen", "qwen_ignore",
             "gemini_md", "codex", "aiexclude"
         );
@@ -350,33 +350,29 @@ class AIGuardrailProcessorProcessTest {
 
         Set<String> expectedKeys = Set.of(
             "cursor", "claude", "aiexclude", "codex", "copilot", "qwen",
-            "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
+            "cursor_ignore", "qwen_ignore",
             "codex_config", "codex_rules", "qwen_refactor",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
             // v0.7.0 platforms
             "windsurf", "zed",
             "windsurf_granular", "continue_granular", "tabnine_granular",
-            "amazonq_granular", "ai_rules_granular",
             // v0.8.0 platforms
-            "pearai_granular", "mentat", "sweep", "plandex",
-            "double_ignore", "interpreter", "codeium_ignore",
+            "codeium_ignore",
             // Ignore files for Roo Code, Continue and Augment Code
             "roo_ignore", "continue_ignore", "augment_ignore",
             // v0.9.6 platforms
-            "gemini_md", "antigravity_ignore",
+            "gemini_md",
             // v0.9.7 platforms
             "junie", "junie_agents", "kiro_granular",
             // Cline's .clinerules/ directory form, and the always-loaded safety file inside it (#648)
             "cline_granular", "cline_safety",
-            // Firebase AI
-            "firebase",
             // Context-packer ignore files
-            "repomix_ignore", "gitingest_ignore", "gpt_ignore", "ghostcoder_ignore", "pieces_ignore",
+            "repomix_ignore", "gitingest_ignore", "gpt_ignore",
             // AI pull-request reviewers
-            "coderabbit", "pr_agent", "ellipsis",
+            "coderabbit", "pr_agent",
             // Editors & modes
-            "void", "roo_modes",
+            "roo_modes",
             // Machine-readable @AILocked report
             "locks_report",
             // Claude Code local override, Skill, and granular rules; Copilot granular instructions
@@ -389,7 +385,7 @@ class AIGuardrailProcessorProcessTest {
             // Gemini Code Assist review style guide; aider's config, which is what loads CONVENTIONS.md
             "gemini_styleguide", "aider_conf", "greptile", "greptile_rules", "greptile_config",
             // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent file
-            "agents_skill", "zencoder_granular", "replit",
+            "agents_skill", "replit",
             // Devin Desktop, formerly Windsurf: its preferred rules directory and ignore file (#671)
             "devin_granular", "devin_ignore",
             // The always-on safety files inside .windsurf/rules/ and .devin/rules/ (#684)
@@ -427,8 +423,6 @@ class AIGuardrailProcessorProcessTest {
         assertEquals(root.resolve(".github/copilot-instructions.md"),   map.get("copilot"));
         assertEquals(root.resolve("QWEN.md"),                           map.get("qwen"));
         assertEquals(root.resolve(".cursorignore"),                     map.get("cursor_ignore"));
-        assertEquals(root.resolve(".claudeignore"),                     map.get("claude_ignore"));
-        assertEquals(root.resolve(".copilotignore"),                    map.get("copilot_ignore"));
         assertEquals(root.resolve(".qwenignore"),                       map.get("qwen_ignore"));
         assertEquals(root.resolve(".codex/config.toml"),                map.get("codex_config"));
         assertEquals(root.resolve(".codex/rules/vibetags.rules"),       map.get("codex_rules"));
@@ -1170,7 +1164,7 @@ class AIGuardrailProcessorProcessTest {
     @Test
     void warn_withNonNullLog_executesLogWarn(@TempDir Path tempDir) throws IOException {
         // Signal file: cursor is active, but .cursorignore is absent → warning fires. (Claude used to
-        // be the signal here; .claudeignore is deprecated and no longer suggested, #667.)
+        // be the signal here; VibeTags writes no .claudeignore, #667, #720.)
         Files.createFile(tempDir.resolve(".cursorrules"));
 
         List<String> warnings = new ArrayList<>();

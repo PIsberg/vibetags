@@ -63,7 +63,7 @@ public final class AIThreadSafeFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append("` (thread-safe)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (thread-safe)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

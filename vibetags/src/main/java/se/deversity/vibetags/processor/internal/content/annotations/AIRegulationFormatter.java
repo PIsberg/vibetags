@@ -69,7 +69,7 @@ public final class AIRegulationFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append("` (regulation)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (regulation)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

@@ -345,8 +345,9 @@ jobs:
           # collapses the aggregates, which is what examples/multimodule-indexed/ covers.)
           # TESTING.md is opted in: core's test source set is what gives the reactor a routed
           # round, so the merge of TESTING.md across modules is covered here and not only by the
-          # in-process fixtures. 53 since 1.4.0 removed five outputs (#645).
-          expected=53
+          # in-process fixtures. 38 since 1.4.0 removed twenty outputs this reactor opted into
+          # (#645, #720).
+          expected=38
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "expected $expected active services in the reactor, got $actual"
@@ -358,7 +359,7 @@ jobs:
           # the sole AI config file, which it is not here. JSON/TOML configs are whole-file
           # overwrites with no marker, so they are not in this list.)
           for f in GEMINI.md QWEN.md .windsurfrules CONVENTIONS.md \
-                   .junie/guidelines.md .void/rules.md sweep.yaml ellipsis.yaml .roomodes \
+                   .junie/guidelines.md .roomodes \
                    .qwen/commands/refactor.md llms-full.txt .vibetags-locks .aiexclude \
                    .pr_agent.toml .coderabbit.yaml; do
             test -s "$f" || { echo "reactor produced no content for: $f"; exit 1; }
@@ -398,8 +399,7 @@ jobs:
           python3 - <<'PY'
           import sys, yaml
 
-          FILES = ["sweep.yaml", "ellipsis.yaml", ".coderabbit.yaml", ".plandex.yaml",
-                   ".roomodes", ".interpreter/profiles/vibetags.yaml"]
+          FILES = [".coderabbit.yaml", ".roomodes"]
           # Declared in exactly one module each, so their presence proves the merge kept them all.
           WITNESSES = {
               "cli": "com.example.multimodule.cli.MultiModuleCli",
@@ -502,8 +502,8 @@ jobs:
           # .vibetags-roles routes core/, engine/ and cli/ into ONE root rule file, so all three
           # modules write the same path. Each compile used to replace it with its own classes
           # alone, and only the module that happened to compile last kept its guardrails.
-          for dir in .kiro/steering .trae/rules .roo/rules .ai/rules .continue/rules \
-                     .tabnine/guidelines .amazonq/rules .pearai/rules; do
+          for dir in .kiro/steering .trae/rules .roo/rules .continue/rules \
+                     .tabnine/guidelines; do
             f="$dir/reactor-spine.md"
             test -f "$f" || { echo "MISSING role rule file: $f"; exit 1; }
             for token in "VIBETAGS-MODULE: core" "VIBETAGS-MODULE: engine" "VIBETAGS-MODULE: cli" \
@@ -1119,24 +1119,17 @@ jobs:
           # that would be buying a clean number with two minutes of CI, so the family is named and
           # skipped instead. Everything else, "stated nowhere" included, still fails here.
           #
-          # The deprecation warning (#641) is excluded too, and asserted present instead. This
-          # reactor opts into every deprecated output it has a fixture for, on purpose, so they keep
-          # a fixture until the major version that removes them, and a build that opts in is
-          # exactly the build that must print it. The number is the count of DeprecatedServices rows
-          # this reactor opts into; DeprecatedServicesTest pins the line's shape.
+          # Until 1.4.0 the deprecation warning (#641) was excluded here too and asserted present.
+          # 1.4.0 removed every deprecated output (#645, #720), so nothing prints it and nothing
+          # here may.
           #
           # The log goes to RUNNER_TEMP so it can never dirty the tree the drift gate just checked.
           ./gradlew clean build --no-daemon > "$RUNNER_TEMP/gmm-build.log" 2>&1
           unexpected=$(grep "warning: VibeTags" "$RUNNER_TEMP/gmm-build.log" \
-            | grep -vE "\.java:[0-9]+: warning:" | grep -v "was opted into after" \
-            | grep -v "opted-in outputs are deprecated" | sort -u)
+            | grep -vE "\.java:[0-9]+: warning:" | grep -v "was opted into after" | sort -u)
           if [ -n "$unexpected" ]; then
             echo "::error::a warm build of an in-sync reactor emitted unexpected processor warnings."
             echo "$unexpected"
-            exit 1
-          fi
-          if ! grep -q "15 opted-in outputs are deprecated" "$RUNNER_TEMP/gmm-build.log"; then
-            echo "::error::the reactor opts into 15 deprecated outputs and was not warned about all of them."
             exit 1
           fi
           # And the specific regression this gate was built for, named so a future edit that
@@ -1181,7 +1174,7 @@ jobs:
           cd examples/gradle-multimodule
           # The reactor root opts into every service, so every renderer runs through the sidecar
           # merge rather than only the handful the hand-written modules happened to need.
-          expected=53
+          expected=38
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
           if [ "$actual" != "$expected" ]; then
             echo "::error::expected $expected active services in the Gradle reactor, got $actual"
@@ -1190,7 +1183,7 @@ jobs:
           fi
           # Spot-check marker-based files from renderers nothing else asserts.
           for f in GEMINI.md QWEN.md .windsurfrules CONVENTIONS.md \
-                   .junie/guidelines.md .void/rules.md sweep.yaml ellipsis.yaml .roomodes \
+                   .junie/guidelines.md .roomodes \
                    .qwen/commands/refactor.md llms-full.txt .vibetags-locks .aiexclude \
                    .pr_agent.toml .coderabbit.yaml CLAUDE.local.md; do
             test -s "$f" || { echo "::error::reactor produced no content for: $f"; exit 1; }
@@ -1252,8 +1245,7 @@ jobs:
           python3 - <<'PY'
           import sys, yaml
 
-          FILES = ["sweep.yaml", "ellipsis.yaml", ".coderabbit.yaml", ".plandex.yaml",
-                   ".roomodes", ".interpreter/profiles/vibetags.yaml"]
+          FILES = [".coderabbit.yaml", ".roomodes"]
           WITNESSES = {
               "core": "com.example.gmm.core.IrNode",
               "app": "com.example.gmm.app.App",
@@ -1364,8 +1356,8 @@ jobs:
           # .vibetags-roles routes core/ and app/ into ONE root rule file, so both modules write
           # the same path. Each compile used to replace it with its own classes alone, and only the
           # module that happened to compile last kept its guardrails.
-          for dir in .ai/rules .amazonq/rules .claude/rules .continue/rules .kiro/steering \
-                     .pearai/rules .roo/rules .tabnine/guidelines .trae/rules; do
+          for dir in .claude/rules .continue/rules .kiro/steering \
+                     .roo/rules .tabnine/guidelines .trae/rules; do
             f="$dir/reactor-spine.md"
             test -f "$f" || { echo "::error::MISSING role rule file: $f"; exit 1; }
             for token in "com.example.gmm.core.IrNode" "com.example.gmm.app.App"; do

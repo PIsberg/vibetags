@@ -45,7 +45,7 @@ public final class Escape {
 
     /**
      * Escapes a value for a JSON string literal (the caller supplies the surrounding quotes). Used
-     * by the JSON outputs ({@code .mentatconfig.json}, {@code greptile.json}). Escapes {@code " \}, the standard control shorthands, and any
+     * by the JSON outputs ({@code greptile.json}, {@code .greptile/config.json}, {@code .vibetags-locks}). Escapes {@code " \}, the standard control shorthands, and any
      * other control character as {@code \\uXXXX}.
      */
     public static String json(String s) {

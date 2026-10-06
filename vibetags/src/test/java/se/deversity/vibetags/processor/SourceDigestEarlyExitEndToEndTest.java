@@ -199,26 +199,6 @@ class SourceDigestEarlyExitEndToEndTest {
         assertEquals(List.of(), vibeTagsWarnings(after), "a replay of the warning that was fixed");
     }
 
-    @Test
-    void aRebuildRepeatsTheDeprecatedOutputWarning() throws IOException {
-        // resolveActiveServices warns about a deprecated opt-in ahead of the fingerprint
-        // short-circuit, so every no-op rebuild printed it until the early exit skipped
-        // generateFiles() whole. A -Werror build then failed cold and passed on the rebuild.
-        Files.writeString(root.resolve(".claudeignore"), "", StandardCharsets.UTF_8);
-        // Without it the orphan warning joins in, and its replay changes the order (#860), which
-        // the exact comparison below would read as a failure; the orphan cases cover it.
-        Files.writeString(root.resolve(".aiexclude"), "", StandardCharsets.UTF_8);
-        ProcessorTestHarness h = project(LEDGER);
-        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
-        assertTrue(first.stream().anyMatch(w -> w.contains("deprecated")),
-            "the fixture must warn about the deprecated output, or this proves nothing: " + first);
-
-        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
-
-        assertTrue(notes(second).contains(EARLY_EXIT), "this case is about the early exit:\n" + notes(second));
-        assertEquals(first, vibeTagsWarnings(second), "the rebuild must warn exactly as the first build did");
-    }
-
     private static final String ORPHAN = "@AILocked used but .aiexclude (hard guardrail) is missing";
 
     @Test

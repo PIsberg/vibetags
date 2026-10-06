@@ -32,7 +32,7 @@ public final class AILegacyBridgeFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### LEGACY BRIDGE: ").append(className).append("\n- **Rule**: Do not restructure or modernize this class. Compatibility bridge.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (legacy-bridge)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

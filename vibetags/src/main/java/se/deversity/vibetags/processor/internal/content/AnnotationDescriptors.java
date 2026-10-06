@@ -60,7 +60,7 @@ import java.util.List;
  * one entry here, and a consumer that walks {@link #ALL} cannot forget it.
  *
  * <p><strong>Append only, and the order is load-bearing twice over.</strong> It is the order the
- * sections appear in {@code CONVENTIONS.md}, the Open Interpreter profile, the PR-reviewer
+ * sections appear in {@code CONVENTIONS.md}, the PR-reviewer
  * instruction block and every granular rule file, so moving an entry rewrites generated files in
  * every consuming build. It is also the order {@code BuildFingerprint} hashes in, so moving an
  * entry, or changing a tag or what an extractor returns, changes every consumer's cached

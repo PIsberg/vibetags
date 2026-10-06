@@ -44,10 +44,11 @@ grep for when a module's section is missing from a generated file.
 
 ### YAML outputs merge differently
 
-Stacking whole renderings is right for Markdown and for ignore-file lists. It is wrong for the six
-generated YAML documents (`sweep.yaml`, `.plandex.yaml`, `.coderabbit.yaml`, `ellipsis.yaml`,
-`.roomodes`, `.interpreter/profiles/vibetags.yaml`): a YAML document has one `rules:`, one
-`reviews:`, one `customModes:`, and stacking N modules repeated the key N times. A strict parser
+Stacking whole renderings is right for Markdown and for ignore-file lists. It is wrong for the
+generated YAML documents (`.coderabbit.yaml`, `.roomodes`, `.aider.conf.yml`; until 1.4.0 also
+`sweep.yaml`, `.plandex.yaml`, `ellipsis.yaml` and the Open Interpreter profile, #720): a YAML
+document has one `reviews:`, one `customModes:`, one `read:`, and stacking N modules repeated the
+key N times. A strict parser
 rejects that; a lenient one keeps the last occurrence, so every module but one lost its guardrails
 silently. Measured on `examples/multimodule` before the fix: `.roomodes` and `.coderabbit.yaml`
 exposed 1 module of 4, `ellipsis.yaml` 90 rules of 100, `sweep.yaml` 54 of 59.
@@ -56,15 +57,15 @@ Those platforms therefore declare a `PlatformRenderer.mergeShape()` — the line
 ends on, the column their entries sit at, and what they emit when they have nothing to say. The
 merge writes the scaffold once and puts every module's entries under it, still wrapped in
 `VIBETAGS-MODULE` sub-markers (indented to the entries' column, because a dedented `#` line would
-terminate a block scalar). `.plandex.yaml` merges bucket by bucket instead, since its `locked:` /
-`audit:` / `privacy:` keys are conditional and would otherwise repeat in turn.
+terminate a block scalar).
 
 `YamlMergeShapeContractTest` renders each platform and fails if a declaration no longer matches what
 its renderer writes, or if a new YAML platform ships without one.
 
 ### JSON and TOML outputs merge differently again
 
-The marker-free files — `.mentatconfig.json` and `.pr_agent.toml` — failed twice over in a reactor,
+The marker-free files — `.pr_agent.toml`, and Mentat's `.mentatconfig.json` until 1.4.0 removed it
+(#720) — failed twice over in a reactor,
 and the first failure hid the second.
 
 They never refreshed. The write phase decides whether a shared file may be rewritten from

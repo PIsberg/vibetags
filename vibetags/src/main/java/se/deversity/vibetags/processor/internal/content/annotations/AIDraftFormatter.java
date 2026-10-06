@@ -55,13 +55,7 @@ public final class AIDraftFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;
-            case MENTAT:
-                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"instructions\": \"").append(Escape.json(instructions)).append("\"},\n");
-                break;
-            case SWEEP:
-                sb.append("  - \"Implementation task for ").append(Escape.json(className)).append(": ").append(Escape.json(instructions)).append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (draft)").append(CommonFormatterHelper.clause(": ", instructions)).append('\n');
                 break;
             default:

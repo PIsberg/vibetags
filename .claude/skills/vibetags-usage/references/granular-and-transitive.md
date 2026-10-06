@@ -17,9 +17,6 @@ When the granular rule directories exist, VibeTags generates **one rule file per
 | `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) | Markdown |
 | `.continue/rules/*.md` | Continue | YAML front-matter + Markdown |
 | `.tabnine/guidelines/*.md` | Tabnine | Markdown |
-| `.amazonq/rules/*.md` | Amazon Q (deprecated) | Markdown |
-| `.ai/rules/*.md` | Universal AI standard (deprecated) | Markdown |
-| `.pearai/rules/*.md` | PearAI (deprecated) | YAML front-matter + Markdown |
 | `.kiro/steering/*.md` | Amazon Kiro | Markdown |
 | `.grok/rules/*.md` | Grok Build | Markdown |
 | `.agents/rules/*.md` | Antigravity | Markdown |

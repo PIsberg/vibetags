@@ -157,18 +157,22 @@ class InitCommandTest {
         assertTrue(out().contains("cline_granular -> .clinerules  [active]"), out());
     }
 
-    /** The outputs removed in 1.4.0 (#645) are no longer offered, so init cannot opt a project back in. */
+    /** The outputs removed in 1.4.0 (#645, #720) are no longer offered, so init cannot opt a project back in. */
     @Test
     void list_offersNoOutputRemovedIn1_4_0() {
         run("init", "--list");
 
-        for (String removed : List.of("gemini ", "cody ", "cody_ignore ", "supermaven_ignore ", "cline ")) {
+        for (String removed : List.of("gemini ", "cody ", "cody_ignore ", "supermaven_ignore ", "cline ",
+                "void ", "mentat ", "sweep ", "plandex ", "pearai_granular ", "ghostcoder_ignore ", "double_ignore ",
+                "pieces_ignore ", "ai_rules_granular ", "claude_ignore ", "copilot_ignore ", "antigravity_ignore ",
+                "firebase ", "amazonq_granular ", "interpreter ", "ellipsis ", "zencoder_granular ")) {
             assertFalse(out().contains("  " + removed + "->"), "still lists " + removed.trim() + ":\n" + out());
         }
         for (String file : List.of("gemini_instructions.md", ".cody", ".codyignore", ".supermavenignore")) {
             assertFalse(out().contains(file), "still lists " + file + ":\n" + out());
         }
         assertTrue(out().contains("gemini_md -> GEMINI.md"), "the replacements are still offered:\n" + out());
+        assertFalse(out().contains("deprecated"), "nothing is deprecated after 1.4.0:\n" + out());
     }
 
     @Test
@@ -178,36 +182,6 @@ class InitCommandTest {
         assertEquals(2, code, out() + err());
         assertTrue(err().contains("cody_ignore"), err());
         assertFalse(Files.exists(dir.resolve(".codyignore")), "a removed output must not be created");
-    }
-
-    /**
-     * A deprecated output is one the next major version stops writing, and the processor already
-     * leaves it out of the "no AI config files found" suggestions. The CLI listed the same keys
-     * as if they were current, so a new project could opt into one on the CLI's say-so.
-     */
-    @Test
-    void list_marksEveryDeprecatedKeyWithItsReplacement() {
-        run("init", "--list");
-
-        for (String key : se.deversity.vibetags.processor.internal.DeprecatedServices.keys()) {
-            String line = out().lines().filter(l -> l.startsWith("  " + key + " -> ")).findFirst()
-                .orElseThrow(() -> new AssertionError(key + " is not listed:\n" + out()));
-            assertTrue(line.contains("[deprecated"), "unmarked deprecated key: " + line);
-        }
-        assertTrue(out().lines().anyMatch(l -> l.startsWith("  zencoder_granular -> ")
-            && l.contains("AGENTS.md")), "the marker names the replacement:\n" + out());
-        assertTrue(out().lines().filter(l -> l.startsWith("  claude -> ")).noneMatch(l -> l.contains("deprecated")),
-            "a current platform is not marked:\n" + out());
-    }
-
-    @Test
-    void platforms_deprecatedKeyIsCreatedButWarnedAbout() {
-        int code = run("init", "--platforms", "claude_ignore");
-
-        assertEquals(0, code, "the user asked for it by name, so it is still created:\n" + err());
-        assertTrue(Files.isRegularFile(dir.resolve(".claudeignore")));
-        assertTrue(err().contains("claude_ignore") && err().contains("deprecated") && err().contains(".claude/settings.json"),
-            "the warning names the key and its replacement:\n" + err());
     }
 
     @Test

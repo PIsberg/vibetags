@@ -62,11 +62,7 @@ public final class AIThreadAffinityFormatter implements AnnotationFormatter {
                   .append(symptom.isEmpty() ? "" : "- **Symptom if violated**: " + symptom + "\n")
                   .append("- **Rule**: Not thread-safe. Do not add locks; call it from the correct thread.\n\n");
                 break;
-            case SWEEP:
-                sb.append("  - \"Thread affinity: ").append(Escape.json(className)).append(" runs only on ")
-                  .append(Escape.json(where)).append(". Do not add locks.\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (thread affinity)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

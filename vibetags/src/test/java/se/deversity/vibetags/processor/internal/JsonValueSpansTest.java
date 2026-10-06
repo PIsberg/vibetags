@@ -249,7 +249,7 @@ class JsonValueSpansTest {
      * in a file that has no string value to put one in.
      */
     @ParameterizedTest
-    @ValueSource(strings = {"config.json", ".cody/config.json", ".qwen/settings.json", ".mentatconfig.json",
+    @ValueSource(strings = {"config.json", ".cody/config.json", ".qwen/settings.json", ".vibetags-locks",
         "greptile/config.json", ".greptile/rules.md", ".greptile/files.json", "greptile.jsonc"})
     void noOtherFileIsMergedThisWay(String other) {
         assertNull(JsonValueSpans.sharedKeysFor(Path.of(other)), other);

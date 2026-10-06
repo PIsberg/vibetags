@@ -37,7 +37,7 @@ class NoTrailingWhitespaceTest {
     static Stream<Platform> prosePlatforms() {
         return Stream.of(Platform.CURSOR, Platform.WINDSURF, Platform.CODEX, Platform.COPILOT,
             Platform.QWEN, Platform.GEMINI_MD, Platform.LLMS, Platform.LLMS_FULL,
-            Platform.ZED, Platform.INTERPRETER, Platform.CLAUDE);
+            Platform.ZED, Platform.CODERABBIT, Platform.CLAUDE);
     }
 
     @ParameterizedTest(name = "{0}")

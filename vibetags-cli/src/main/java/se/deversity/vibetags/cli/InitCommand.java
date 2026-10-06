@@ -1,6 +1,5 @@
 package se.deversity.vibetags.cli;
 
-import se.deversity.vibetags.processor.internal.DeprecatedServices;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 
 import java.io.IOException;
@@ -142,10 +141,6 @@ final class InitCommand {
                 throw new UncheckedIOException("could not create " + path, e);
             }
             created.add(key + " (" + dir.relativize(path) + ")");
-            if (!deprecation(key).isEmpty()) {
-                err.println("warning: " + key + " is deprecated: VibeTags stops writing " + dir.relativize(path)
-                    + " in the next major version" + deprecation(key) + "; see docs/PLATFORMS.md");
-            }
         }
 
         created.forEach(line -> out.println("created:        " + line));
@@ -190,22 +185,8 @@ final class InitCommand {
             if (optIn.contains(key)) {
                 // By kind, not existence: a leftover .clinerules file does not make cline_granular active.
                 String marker = ServiceRegistry.isOptedIn(key, path) ? "  [active]" : "";
-                out.println("  " + key + " -> " + dir.relativize(path) + marker
-                    + (deprecation(key).isEmpty() ? "" : "  [deprecated" + deprecation(key) + "]"));
+                out.println("  " + key + " -> " + dir.relativize(path) + marker);
             }
         });
-    }
-
-    /**
-     * For a key the next major version stops writing, a clause naming what to use instead; empty for
-     * a current key. The processor already leaves these out of its own suggestions, so the list a new
-     * project picks from has to say the same thing.
-     */
-    private static String deprecation(String key) {
-        String replacement = DeprecatedServices.replacement(key);
-        if (replacement == null) {
-            return "";
-        }
-        return "none".equals(replacement) ? ", nothing replaces it" : ", use " + replacement.replace(",", " or ");
     }
 }
