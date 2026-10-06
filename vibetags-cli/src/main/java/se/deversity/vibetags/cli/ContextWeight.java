@@ -146,32 +146,26 @@ final class ContextWeight {
             name(directory) + "/", bytes, count, count == 1 ? "" : "s"));
     }
 
-    /** Everything inside the file's marker pairs, or empty when it has none. */
+    /**
+     * The block the writer manages, or empty when the file has none: found with the writer's own
+     * search, so a marker quoted in prose or an example pair in a code fence is hand-written text
+     * here too, not the start of the generated share (#919).
+     */
     static Optional<String> generatedRegion(String text) {
-        StringBuilder region = new StringBuilder();
-        boolean found = false;
         for (String[] markers : new String[][]{
                 {GuardrailFileWriter.MARKER_START_MD, GuardrailFileWriter.MARKER_END_MD},
                 {GuardrailFileWriter.MARKER_START_HASH, GuardrailFileWriter.MARKER_END_HASH}}) {
-            int from = 0;
-            while (true) {
-                int start = text.indexOf(markers[0], from);
-                if (start < 0) {
-                    break;
-                }
-                int end = text.indexOf(markers[1], start);
-                if (end < 0) {
-                    break;
-                }
-                region.append(text, start + markers[0].length(), end);
-                found = true;
-                from = end + markers[1].length();
+            int start = GuardrailFileWriter.indexOfBlockStart(text, markers[0]);
+            if (start < 0) {
+                continue;
             }
-            if (found) {
-                break;
+            int from = start + markers[0].length();
+            int end = GuardrailFileWriter.indexOfMarkerLine(text, markers[1], from);
+            if (end >= 0) {
+                return Optional.of(text.substring(from, end));
             }
         }
-        return found ? Optional.of(region.toString()) : Optional.empty();
+        return Optional.empty();
     }
 
     /**

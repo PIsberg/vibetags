@@ -271,7 +271,9 @@ context weight (bytes are exact UTF-8; ~tokens is bytes / 4, an estimate, not a 
 ```
 
 - Bytes are exact. Tokens are bytes / 4, a rough estimate, not a tokenizer.
-- "generated" is the share inside the `VIBETAGS` markers, the part VibeTags controls.
+- "generated" is the share inside the `VIBETAGS` block the writer manages, the part VibeTags
+  controls. The block is found the way the writer finds it, so a marker quoted in a sentence or
+  an example pair in a code fence counts as hand-written text.
 - Sections are listed largest first, with entry counts. A section marked `(appears N times)` was
   rendered more than once in one file, the signature of a block rendered once per source set.
 - Scoped rule directories (`.claude/rules/`, `.cursor/rules/`, ...) are listed apart: tools load

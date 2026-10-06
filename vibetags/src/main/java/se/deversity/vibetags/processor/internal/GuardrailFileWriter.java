@@ -747,7 +747,7 @@ public final class GuardrailFileWriter {
      * @return index of the first character of the marker, or {@code -1} if it appears nowhere as a
      *         standalone line at or after {@code fromIndex}
      */
-    static int indexOfMarkerLine(String content, String marker, int fromIndex) {
+    public static int indexOfMarkerLine(String content, String marker, int fromIndex) {
         if (content == null || content.isEmpty() || marker == null || marker.isEmpty()) return -1;
         for (int i = content.indexOf(marker, Math.max(0, fromIndex)); i >= 0;
              i = content.indexOf(marker, i + 1)) {
@@ -763,7 +763,7 @@ public final class GuardrailFileWriter {
      * example's contents were replaced by the generated rules on every build, rendered as code no
      * agent reads as guardrails, and a real block below it was never refreshed.
      */
-    static int indexOfBlockStart(String content, String marker) {
+    public static int indexOfBlockStart(String content, String marker) {
         for (int i = indexOfMarkerLine(content, marker, 0); i >= 0; i = indexOfMarkerLine(content, marker, i + 1)) {
             if (!insideFence(content, i)) {
                 return i;

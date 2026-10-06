@@ -49,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   marker quoted inside a sentence, which the writer ignores. Doctor now asks the writer through
   `GuardrailFileWriter.hasBrokenMarkers`, built on the same search the write path uses. Three
   `DoctorCommandTest` cases were red before the change.
+- **`vibetags doctor --context` counted hand-written text as generated (#919).** The report found
+  the block with the same literal search, so a marker quoted in prose above the block made it
+  count everything from the quote down: 207 B reported as generated in a test file whose block
+  was 102 B. It now uses the writer's `indexOfBlockStart` and `indexOfMarkerLine`, and reports the
+  one block the writer manages.
 - **A round skipped as unchanged flushed the shared write cache without the generation lock
   (#916).** When another processor generates sources after the first round was skipped, the round
   clears its recorded source digest and flushes `.vibetags-cache`. That flush re-reads and rewrites

@@ -97,6 +97,31 @@ class DoctorCommandTest {
             && l.contains("2 files")), out());
     }
 
+    /**
+     * "generated" is the block the writer manages, found the way the writer finds it (#919). A
+     * marker quoted in a sentence and an example pair in a fence are hand-written text: counted
+     * from the quote, the report called the prose above the block generated.
+     */
+    @Test
+    void contextReport_countsOnlyTheBlockTheWriterManages() throws Exception {
+        mavenProjectWiredForVibeTags();
+        String block = "\n<project_guardrails>\n  <locked_files>\n    <file path=\"a.B\"/>\n  </locked_files>\n"
+            + "</project_guardrails>\n";
+        String claude = "# Hand-written\n\nKeep edits outside the `<!-- VIBETAGS-START -->` block.\n"
+            + "These notes are mine, and so is the example below.\n\n"
+            + "```markdown\n<!-- VIBETAGS-START -->\nexample\n<!-- VIBETAGS-END -->\n```\n\n"
+            + "<!-- VIBETAGS-START -->" + block + "<!-- VIBETAGS-END -->\n";
+        Files.writeString(dir.resolve("CLAUDE.md"), claude);
+
+        PrintStream stream = new PrintStream(stdout, true, StandardCharsets.UTF_8);
+        Main.run(new String[]{"doctor", "--context"}, stream, stream, dir);
+
+        int total = claude.getBytes(StandardCharsets.UTF_8).length;
+        int generatedBytes = block.getBytes(StandardCharsets.UTF_8).length;
+        assertTrue(out().contains(String.format(java.util.Locale.ROOT, "generated %,d B (%d%%)",
+            generatedBytes, generatedBytes * 100 / total)), out());
+    }
+
     @Test
     void withoutContext_doctorDoesNotWeighAnything() throws Exception {
         mavenProjectWiredForVibeTags();
