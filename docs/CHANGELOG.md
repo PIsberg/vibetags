@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Breaking: the next release is 1.4.0.** It stops writing every output that 1.3.5 and later
-deprecated (#641, #664 to #677, #845), each with a compiler warning naming the file and its
-replacement. A build that never saw that warning is unaffected. See Removed.
+**Breaking, in a minor release: the next release is 1.4.0.** It stops writing every output that
+1.3.5 and later deprecated (#641, #664 to #677, #845), each with a compiler warning naming the file
+and its replacement. The warning said the next *major* version; the removal ships in 1.4.0
+instead, by the owner's decision. A build that never saw that warning is unaffected. See Removed.
 
 ### Removed
 
