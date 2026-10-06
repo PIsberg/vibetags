@@ -328,9 +328,15 @@ class ProcessorTestHarness {
      * {@code ProcessingEnvironment} the way Gradle's incremental processing does.
      */
     void compileWith(javax.annotation.processing.Processor processor, String... extraOptions) {
+        compileWithReturningDiagnostics(processor, extraOptions);
+    }
+
+    /** As {@link #compileWith}, returning what javac reported. */
+    List<javax.tools.Diagnostic<? extends JavaFileObject>> compileWithReturningDiagnostics(
+            javax.annotation.processing.Processor processor, String... extraOptions) {
         this.processorOverride = processor;
         try {
-            compileReturningDiagnostics(extraOptions);
+            return compileReturningDiagnostics(extraOptions);
         } finally {
             this.processorOverride = null;
         }

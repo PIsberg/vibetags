@@ -41,6 +41,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A round skipped as unchanged flushed the shared write cache without the generation lock
+  (#916).** When another processor generates sources after the first round was skipped, the round
+  clears its recorded source digest and flushes `.vibetags-cache`. That flush re-reads and rewrites
+  the root file, and the merge on flush (#907) is not a lock: racing a sibling's generation flush,
+  either side's changes could be lost, the clear included, leaving a digest that vouches for the
+  skip. In a reactor that flush now takes `.vibetags-generate.lock` like generation's do. The branch
+  is rare, so the ordinary early exit waits on nothing. `ParallelReactorGenerationTest` holds the
+  lock while a rebuild takes that branch through a wrapper processor that generates a source; the
+  rebuild finished while the lock was held before the change and waits for it after.
 - **The `vibetags-self-check` pre-commit hook exited 127 on Windows outside Git Bash (#905).**
   Run from PowerShell or cmd, pre-commit found bash through `PATH`, which there is the WSL
   launcher in `WindowsApps`. WSL bash read the backslashed script path as escapes, so the hook
@@ -73,7 +82,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keys it recorded or removed, its own module section, and the root stamp if it set one. An entry
   is still kept exactly as its writer recorded it, so the merge cannot pair one writer's hash with
   another's file attributes. `WriteCacheTest` drives two instances loaded before either flushes;
-  two of its three new cases failed before the change. Not measured on a real `mvn -T` reactor.
+  two of its three new cases failed before the change. Measured on `examples/multimodule` (#915):
+  the second of two `clean verify` builds under `-T 4` took the cache fast path for 285 of 544
+  file writes before the change and 544 of 544 after, the same as a serial build; the other 259
+  fell back to read-and-compare. Identical in three runs each.
 - **A parallel reactor could drop a module's region from the root files (#908).** Under `mvn -T`
   or Gradle `--parallel`, a module that read the sidecars before a sibling saved one could write
   `CLAUDE.md` and the other root files last, from a merge without that sibling, and the region

@@ -273,8 +273,14 @@ only what that module changed (the entries it recorded or removed, its own `# mo
 and the root sidecar stamp if it set one), so the result is what a serial build would have left
 (#907). Before, each flush wrote its whole stale view, and the last module to flush dropped its
 siblings' entries, fingerprints and source digests: a cache miss for each, on the build after a
-parallel one. Generation's flushes run inside the lock above; one outside it, such as an
-early-exited round clearing its digest, can still race a sibling's and cost that cache miss.
+parallel one. On this repository's `examples/multimodule`, the second of two `mvn -T 4 clean
+verify` builds hit the cache for 285 of 544 file writes before the merge and 544 after, as many
+as a serial build; the misses fell back to reading and comparing the file (#915).
+
+The merge is not a lock, so every flush a module round makes runs under the lock above:
+generation's, and the one a round skipped as unchanged makes when another processor's
+generated sources force it to clear its source digest (#916). Two unlocked flushes could each
+re-read before the other wrote, and losing that clear would leave a digest vouching for the skip.
 
 ## Per-module (nested) output
 

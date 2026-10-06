@@ -804,7 +804,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String digest = sourceDigest;
         String shortDigest = digest == null ? "" : digest.substring(0, 12);
         if (sourcesAppearedAfterSkip.get()) {
-            forgetSourceDigest();
+            // The flush re-reads and rewrites the root .vibetags-cache, so in a reactor it takes the
+            // lock generation flushes under: racing a sibling's flush, either side's changes could
+            // be lost, this clear among them, leaving a digest that vouches for a skip (#916).
+            // Rare by construction, so the wait costs the ordinary early exit nothing.
+            try (@SuppressWarnings("PMD.UnusedLocalVariable") GenerationLock generation = sharesRootWithSiblings()
+                    ? GenerationLock.acquire(root, currentModuleId(), log)
+                    : GenerationLock.none()) {
+                forgetSourceDigest();
+            }
             messager.printMessage(Diagnostic.Kind.NOTE,
                 "VibeTags: another processor generated sources after the first round was skipped as"
                     + " unchanged; guardrail files are left as they are, and the next build regenerates them.");

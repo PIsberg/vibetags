@@ -7,12 +7,25 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
+import se.deversity.vibetags.processor.internal.GenerationLock;
+
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.TypeElement;
+import javax.tools.Diagnostic;
+import javax.tools.JavaFileObject;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -122,6 +135,95 @@ class ParallelReactorGenerationTest {
 
         assertFalse(Files.exists(root.resolve(".vibetags-generate.lock")),
             "a root with no opt-in has no root files to race over and must not get a lock file");
+    }
+
+    @Test
+    void anEarlyExitedRoundClearsItsDigestUnderTheLock() throws Exception {
+        // #916. A round skipped as unchanged that then sees another processor's generated sources
+        // clears its recorded digest and flushes the cache. That flush re-reads and rewrites the
+        // shared .vibetags-cache, so outside the lock it could race a sibling's generation flush,
+        // and the clear itself could be lost to it, leaving a digest that vouches for a skip.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        ProcessorTestHarness core = module("module-core", "com.example.core.IrNode", LOCKED_SOURCE);
+        core.compile();
+
+        List<Throwable> failures = new ArrayList<>();
+        List<String> notes = new ArrayList<>();
+        CountDownLatch done = new CountDownLatch(1);
+        Thread rebuild;
+        try (GenerationLock sibling = GenerationLock.acquire(root, "module-sibling", null)) {
+            assertTrue(sibling.held(), "precondition: the sibling holds the generation lock");
+            rebuild = new Thread(() -> {
+                try {
+                    for (Diagnostic<? extends JavaFileObject> d
+                            : core.compileWithReturningDiagnostics(new GeneratesASourceAfterTheFirstRound())) {
+                        synchronized (notes) {
+                            notes.add(d.getMessage(Locale.ROOT));
+                        }
+                    }
+                } catch (Throwable t) {
+                    synchronized (failures) {
+                        failures.add(t);
+                    }
+                }
+                done.countDown();
+            }, CORE_THREAD);
+            rebuild.start();
+            assertFalse(done.await(2, TimeUnit.SECONDS),
+                "the early-exited round flushed the shared cache while a sibling held the generation "
+                    + "lock: " + notes);
+        }
+        assertTrue(done.await(60, TimeUnit.SECONDS), "the rebuild must finish once the lock is free");
+        rebuild.join();
+        assertTrue(failures.isEmpty(), () -> "the rebuild threw: " + failures);
+        assertTrue(notes.stream().anyMatch(n -> n.contains("another processor generated sources")),
+            () -> "precondition: the rebuild must take the sources-appeared branch, not generate: " + notes);
+    }
+
+    /**
+     * Runs VibeTags and, after its first round, generates one source, as an annotation processor
+     * sharing the compilation can. Only a round skipped as unchanged then sees sources it never
+     * recorded, which is the branch {@link #anEarlyExitedRoundClearsItsDigestUnderTheLock} needs.
+     */
+    private static final class GeneratesASourceAfterTheFirstRound extends AbstractProcessor {
+        private final AIGuardrailProcessor delegate = new AIGuardrailProcessor();
+        private boolean generated;
+
+        @Override
+        public synchronized void init(ProcessingEnvironment env) {
+            super.init(env);
+            delegate.init(env);
+        }
+
+        @Override
+        public Set<String> getSupportedAnnotationTypes() {
+            return Set.of("*");
+        }
+
+        @Override
+        public Set<String> getSupportedOptions() {
+            return delegate.getSupportedOptions();
+        }
+
+        @Override
+        public SourceVersion getSupportedSourceVersion() {
+            return SourceVersion.latestSupported();
+        }
+
+        @Override
+        public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+            delegate.process(annotations, roundEnv);
+            if (!generated && !roundEnv.processingOver()) {
+                generated = true;
+                try (Writer out = processingEnv.getFiler()
+                        .createSourceFile("com.example.core.GeneratedLater").openWriter()) {
+                    out.write("package com.example.core;\npublic class GeneratedLater {}\n");
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }
+            return false;
+        }
     }
 
     private static final String LOCKED_SOURCE = """
