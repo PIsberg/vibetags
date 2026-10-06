@@ -1,5 +1,6 @@
 package se.deversity.vibetags.cli;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -8,13 +9,23 @@ import javax.tools.ToolProvider;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryPermission;
+import java.nio.file.attribute.AclEntryType;
+import java.nio.file.attribute.AclFileAttributeView;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.stream.Stream;
@@ -1704,6 +1715,70 @@ class DoctorCommandTest {
             "the readable classes in a jar still count: " + out());
         assertTrue(out().contains("com/acme/model/Broken.class"), out());
         assertTrue(out().contains("missing.jar") && out().contains("does not exist"), out());
+    }
+
+    /**
+     * One directory doctor may not list, inside a class directory on {@code --classpath}, ended the
+     * whole report: {@code Files.walk} throws it as an {@code UncheckedIOException}, which the
+     * {@code IOException} handler did not catch, so doctor printed a bare error with no Kotlin line
+     * and no result. It is one more unreadable entry, and the readable classes still count.
+     */
+    @Test
+    void unlistableDirectoryInAClassDirectory_isAFindingNotAnAbortedReport(@TempDir Path outside) throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        // Outside the project, as a dependency's classes are: the source scan never walks it.
+        Path classes = Files.move(compiledDependency(), outside.resolve("classes"));
+        Path locked = Files.createDirectories(classes.resolve("locked"));
+
+        try (AutoCloseable restore = denyListing(locked)) {
+            assertEquals(1, doctor("--classpath", classes.toString()), out());
+            assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"),
+                "the readable classes in the directory still count: " + out());
+            assertTrue(out().contains("result: "), "the report runs to its end: " + out());
+            assertTrue(out().lines().anyMatch(l -> l.contains("could not read") && l.contains("locked")),
+                "the unreadable directory is named as a finding: " + out());
+        }
+    }
+
+    /**
+     * Makes {@code directory} unlistable for the user running the test, through whichever view the
+     * platform has, and returns what puts it back. Aborts the test where that does not take, such as
+     * a run as root, rather than passing it without the condition it needs.
+     */
+    private static AutoCloseable denyListing(Path directory) throws IOException {
+        AutoCloseable restore;
+        PosixFileAttributeView posix = Files.getFileAttributeView(directory, PosixFileAttributeView.class);
+        if (posix != null) {
+            Set<PosixFilePermission> before = posix.readAttributes().permissions();
+            posix.setPermissions(Set.of());
+            restore = () -> posix.setPermissions(before);
+        } else {
+            AclFileAttributeView acl = Files.getFileAttributeView(directory, AclFileAttributeView.class);
+            Assumptions.assumeTrue(acl != null, "no file-attribute view can make a directory unreadable here");
+            List<AclEntry> before = acl.getAcl();
+            List<AclEntry> denied = new ArrayList<>(before);
+            denied.add(0, AclEntry.newBuilder().setType(AclEntryType.DENY).setPrincipal(acl.getOwner())
+                .setPermissions(AclEntryPermission.LIST_DIRECTORY, AclEntryPermission.READ_DATA).build());
+            acl.setAcl(denied);
+            restore = () -> acl.setAcl(before);
+        }
+        boolean listable;
+        try (DirectoryStream<Path> listing = Files.newDirectoryStream(directory)) {
+            listable = listing != null;
+        } catch (AccessDeniedException expected) {
+            listable = false;
+        }
+        if (listable) {
+            try {
+                restore.close();
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+        Assumptions.assumeFalse(listable, "the directory is still listable (running as root?)");
+        return restore;
     }
 
     @Test

@@ -58,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   count everything from the quote down: 207 B reported as generated in a test file whose block
   was 102 B. It now uses the writer's `indexOfBlockStart` and `indexOfMarkerLine`, and reports the
   one block the writer manages.
+- **`vibetags doctor --classpath` aborted on an unlistable directory in a class directory
+  (#921).** `Files.walk` threw it as an `UncheckedIOException` the `IOException` handler did not
+  catch, so doctor printed a bare `AccessDeniedException` and stopped after the marker line, with
+  no Kotlin check and no result. The class directory is now walked file by file: an unreadable
+  directory or class file is one more finding and the rest still counts.
 - **`vibetags doctor --help` and `vibetags init --help` failed with exit 2 (#920).** Only a
   `--help` in first position was recognised; after a command it was a stray argument. `--help`
   and `-h` now print usage and exit 0 wherever they appear.
