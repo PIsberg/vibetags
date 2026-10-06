@@ -36,7 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Some outputs name a tool that has moved on (#641, #664 to #677). They are still written, because
  * removing a service silently freezes an opted-in consumer's file, but a consumer who opted in has to be told
  * before the next major version stops writing them. These tests pin that telling: one warning, the
- * file, the replacement, and a {@code platform.deprecated} log event per file.
+ * file, the replacement, and a {@code platform.deprecated} log event per file. The five rows of #645
+ * were removed in 1.4.0; {@code RemovedPlatformOutputsTest} pins what that removal means.
  *
  * <p>The log events are a contract (docs/LOGGING.md). Renaming one is a breaking change.
  */
@@ -74,11 +75,6 @@ class DeprecatedServicesTest {
 
     private static Map<String, List<String>> expected() {
         Map<String, List<String>> m = new LinkedHashMap<>();
-        m.put("gemini", List.of("gemini_instructions.md", "GEMINI.md", ".gemini/styleguide.md"));
-        m.put("cody", List.of(".cody/config.json", "AGENTS.md"));
-        m.put("cody_ignore", List.of(".codyignore", "AGENTS.md"));
-        m.put("supermaven_ignore", List.of(".supermavenignore", ".cursorignore"));
-        m.put("cline", List.of(".clinerules", ".clinerules/"));
         // Void is deprecated and archived, and its source read .voidrules, not this path (#665)
         m.put("void", List.of(".void/rules.md", ".voidrules"));
         // Long-tail outputs no vendor reads, each confirmed at the vendor (#666)
@@ -156,28 +152,6 @@ class DeprecatedServicesTest {
     }
 
     @Test
-    @DisplayName("each notice claims no more than its vendor's own statement says (#677)")
-    void noticesMatchTheirPrimarySource(@TempDir Path root) throws IOException {
-        touch(root, "CLAUDE.md");
-        touch(root, ".cody/config.json");
-        touch(root, ".supermavenignore");
-        List<String> warnings = new ArrayList<>();
-
-        ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, warnings),
-            ServiceRegistry.buildServiceFileMap(root));
-
-        String warning = String.join("\n", warnings);
-        // supermaven.com/blog/sunsetting-supermaven (21 November 2025) keeps free autocomplete for
-        // existing JetBrains and Neovim users, so "discontinued" overstated it.
-        assertTrue(warning.contains("21 November 2025") && warning.contains("JetBrains and Neovim"),
-            "the Supermaven notice cites the sunset post and what it keeps running:\n" + warning);
-        assertFalse(warning.contains("discontinued"), "no discontinuation claim:\n" + warning);
-        // Sourcegraph's announcement ended Cody Free and Pro only; Cody Enterprise continues.
-        assertTrue(warning.contains("23 July 2025") && warning.contains("Cody Enterprise"),
-            "the Cody notice says which plans ended and that Enterprise did not:\n" + warning);
-    }
-
-    @Test
     @DisplayName("a project with no deprecated output opted in gets no deprecation warning")
     void currentOutputsDoNotWarn(@TempDir Path root) throws IOException {
         touch(root, "CLAUDE.md");
@@ -193,20 +167,6 @@ class DeprecatedServicesTest {
     }
 
     @Test
-    @DisplayName("a .clinerules/ directory is the current Cline shape and is not warned about")
-    void clineRulesDirectoryIsNotTheDeprecatedFile(@TempDir Path root) throws IOException {
-        touch(root, "CLAUDE.md");
-        Files.createDirectories(root.resolve(".clinerules"));
-        List<String> warnings = new ArrayList<>();
-
-        ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, warnings),
-            ServiceRegistry.buildServiceFileMap(root));
-
-        assertTrue(warnings.isEmpty(),
-            "the user already followed Cline's current docs; warning them to do so is noise: " + warnings);
-    }
-
-    @Test
     @DisplayName("the nothing-opted-in note does not invite a new user to create a deprecated file")
     void optInListLeavesDeprecatedFilesOut(@TempDir Path root) {
         List<String> notes = new ArrayList<>();
@@ -217,19 +177,19 @@ class DeprecatedServicesTest {
         assertEquals(1, notes.size(), "one opt-in note: " + notes);
         String note = notes.get(0);
         // Matched per line: the note lists root-relative paths, and a substring check would trip over
-        // .mentatconfig.json for Cody's config.json.
+        // a path that contains another.
         List<String> offered = note.lines().map(String::strip).toList();
         for (List<String> row : EXPECTED.values()) {
             assertFalse(offered.contains(row.get(0)), "does not offer " + row.get(0) + ":\n" + note);
         }
         assertTrue(offered.contains("GEMINI.md") && offered.contains("AGENTS.md"),
             "still offers the replacements:\n" + note);
-        // .clinerules is both the deprecated file and the current directory (#642), so only the
-        // trailing slash tells a new user which one to create.
+        // .clinerules was both a file and a directory service until 1.4.0 (#642, #645). The trailing
+        // slash still tells a new user to create the directory Cline reads, not a file.
         assertTrue(offered.contains(".clinerules/"),
             "offers Cline's directory, marked as a directory:\n" + note);
-        // .greptile/config.json and the deprecated .cody/config.json share a file name (#651), so the
-        // note names paths, not bare file names, or the current output reads as the deprecated one.
+        // The note names paths, not bare file names (#651): a bare config.json says nothing about
+        // which tool's config it is.
         assertTrue(offered.contains(".greptile/config.json"),
             "offers Greptile's config by its path:\n" + note);
         assertFalse(offered.contains("config.json"), "no ambiguous bare config.json:\n" + note);
@@ -239,11 +199,11 @@ class DeprecatedServicesTest {
     @DisplayName("each deprecated output logs platform.deprecated with its key, file and replacement")
     void logEventPerDeprecatedOutput() {
         DeprecatedServices.warnIfOptedIn(capturing(Diagnostic.Kind.WARNING, new ArrayList<>()), logger,
-            Set.of("cody_ignore", "supermaven_ignore", "claude"));
+            Set.of("claude_ignore", "plandex", "claude"));
 
-        assertTrue(logged("platform.deprecated key=cody_ignore file=.codyignore replacement=AGENTS.md"),
+        assertTrue(logged("platform.deprecated key=claude_ignore file=.claudeignore replacement=.claude/settings.json"),
             dump());
-        assertTrue(logged("platform.deprecated key=supermaven_ignore file=.supermavenignore replacement=.cursorignore"),
+        assertTrue(logged("platform.deprecated key=plandex file=.plandex.yaml replacement=AGENTS.md"),
             dump());
         assertEquals(2, appender.list.size(), "one event per deprecated output, none for claude:\n" + dump());
     }
@@ -252,7 +212,7 @@ class DeprecatedServicesTest {
     @DisplayName("the processor's root resolution writes the event to the build's own vibetags.log")
     void rootResolutionLogsToTheRootsLog(@TempDir Path root) throws IOException {
         touch(root, "CLAUDE.md");
-        touch(root, ".supermavenignore");
+        touch(root, ".claudeignore");
         VibeTagsLogger.forRoot(root, null, "INFO");
         try {
             ServiceRegistry.resolveActiveServices(capturing(Diagnostic.Kind.WARNING, new ArrayList<>()),
@@ -264,7 +224,7 @@ class DeprecatedServicesTest {
         Path log = root.resolve("vibetags.log");
         assertTrue(Files.exists(log), "the event is the log's only record, so the file must exist");
         assertTrue(Files.readString(log).contains(
-                "platform.deprecated key=supermaven_ignore file=.supermavenignore replacement=.cursorignore"),
+                "platform.deprecated key=claude_ignore file=.claudeignore replacement=.claude/settings.json"),
             "resolveActiveServices has no logger parameter, so it has to find the root's own:\n"
                 + Files.readString(log));
     }

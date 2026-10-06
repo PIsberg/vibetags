@@ -66,7 +66,7 @@ class MemoryVolumeStressTest {
 
     private static final String[] OPT_IN_FILES = {
             ".cursorrules", "CLAUDE.md", ".aiexclude", "AGENTS.md",
-            "gemini_instructions.md", "QWEN.md"
+            "GEMINI.md", "QWEN.md"
     };
 
     /**

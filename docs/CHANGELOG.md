@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Breaking: the next release is 1.4.0.** It stops writing outputs that 1.3.5 deprecated (#641) with
+a compiler warning naming each file and its replacement. A build that never saw that warning is
+unaffected. See Removed.
+
+### Removed
+
+- **Four deprecated platform outputs are no longer written** (#645). Each was deprecated in 1.3.5;
+  this is the removal that warning announced. Their keys are gone from the opt-in list, so an
+  existing file is neither regenerated nor warned about: it is left byte-identical and stops
+  tracking the annotations. Move any hand-written content to the replacement and delete the file.
+  - `gemini_instructions.md`, replaced by `GEMINI.md` (Gemini CLI) or `.gemini/styleguide.md`
+    (Gemini Code Assist). No Google product documents reading it; a last look before removal
+    (GitHub code search of the `google-gemini` and `googleapis` organisations, and a web search)
+    found no vendor source either.
+  - `.cody/config.json` and `.codyignore`, replaced by `AGENTS.md`, which Amp reads. Sourcegraph
+    ended Cody Free and Pro on 23 July 2025, and its docs describe neither file.
+  - `.supermavenignore`, replaced by `.cursorignore`, which Cursor Tab reads. Supermaven announced
+    its sunset on 21 November 2025.
+  - `.clinerules` as a single file, replaced by the `.clinerules/` directory, which VibeTags already
+    writes with an always-loaded `+vibetags-safety.md`. Cline's current docs describe only the
+    directory. A leftover file activates nothing, and `vibetags init --platforms cline_granular`
+    refuses to replace it.
+
+  `CodyRenderer` is deleted with the `Platform` constants `GEMINI`, `CODY`, `CODY_IGNORE`,
+  `SUPERMAVEN_IGNORE` and `CLINE`, and `vibetags init --list` no longer offers the five keys. The
+  README counts drop to 43 platforms and 60 config files. `examples/basic`, `examples/multimodule`
+  and `examples/gradle-multimodule` lose the fixtures, and `examples/basic` opts into the
+  `.clinerules/` directory instead, so `ExampleOptInCoverageTest` needs no exemption for it.
+  `RemovedPlatformOutputsTest` pins the removal; all 8 of its cases fail against the 1.3.8
+  processor.
+
 ### Added
 
 - **`vibetags-cli/README.md`.** The CLI's flags, exit codes and limits were spread over a USAGE.md
@@ -26,6 +57,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pointed at a closed port: 30 files before, 15 after, 36 and 20 once CI signs them.
   `CentralPublishingBudgetTest` pins both settings. `docs/RELEASING.md` and the release skill now
   count the month's tags before a release, with a cadence of at most 3 a month.
+- **`.aiexclude` is written beside `GEMINI.md`** (#645). It needed `gemini_instructions.md` or an
+  active `AGENTS.md` beside it, so a Gemini user who followed the deprecation notice to `GEMINI.md`
+  would have lost `.aiexclude` regeneration without a word. The orphan warning that suggests
+  creating `.aiexclude` follows the same pairing, so a project with `GEMINI.md`, `@AIIgnore` or
+  `@AILocked`, and no `.aiexclude` now gets that warning.
+- **Gemini's section wording is registered under `GEMINI_MD`** (#645). It lived under the removed
+  `GEMINI` platform, which `GEMINI.md` reached as an alias through `Platform.rendersAs()`. No
+  platform is an alias now; the seam stays for the next one. `GEMINI.md` prints the same bytes.
+)
 - **Test counts in the docs re-measured.** `docs/architecture/testing.md` carried a 0.7.x-era
   per-class table and totals of 1484 and "724+" tests; it now points at `docs/TESTS.md`, the
   maintained map. The tier table in `TESTS.md` is re-measured on 2026-10-06: 2655 tests in 208

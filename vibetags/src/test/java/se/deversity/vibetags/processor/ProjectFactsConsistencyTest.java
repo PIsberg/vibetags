@@ -366,7 +366,7 @@ class ProjectFactsConsistencyTest {
         for (Map.Entry<String, Path> service : ServiceRegistry.buildServiceFileMap(Paths.get(".")).entrySet()) {
             String rel = root.relativize(service.getValue().toAbsolutePath().normalize()).toString()
                 .replace(java.io.File.separatorChar, '/');
-            // By service kind, not by file name: .clinerules is both a file and a directory row.
+            // By service kind, not by file name: .clinerules has a dot and is a directory row.
             String needle = ServiceRegistry.writesDirectory(service.getKey())
                 ? "`" + rel + "/" : "`" + rel + "`";
             if (!md.contains(needle)) {

@@ -53,7 +53,7 @@ class AiExcludeEmptyContributionEndToEndTest {
         String content = h.readFile(".aiexclude");
         assertFalse(content.contains("strictly excluded"),
             "a module with no excludable type must not contribute a header. Was:\n" + content);
-        assertTrue(h.readFile("gemini_instructions.md").contains("com.example.Registry.ALL"),
+        assertTrue(h.readFile("GEMINI.md").contains("com.example.Registry.ALL"),
             "the member lock still reaches the platforms that can name a member");
     }
 
@@ -77,7 +77,7 @@ class AiExcludeEmptyContributionEndToEndTest {
     private ProcessorTestHarness optedIn() throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(tempDir, false);
         h.touchOptIn(".aiexclude");
-        h.touchOptIn("gemini_instructions.md"); // .aiexclude renders only beside gemini or codex
+        h.touchOptIn("GEMINI.md"); // .aiexclude renders only beside GEMINI.md or codex
         return h;
     }
 }

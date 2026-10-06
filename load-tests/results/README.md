@@ -251,9 +251,9 @@ body size because it must `readString` the entire file every call.
 ## Platform breadth (`PlatformBreadthStressTest`, since 1.3.7-SNAPSHOT)
 
 Every table above this one was measured with **six** opt-in files, the set
-`AnnotationVolumeStressTest` has created since 0.5.4. VibeTags now writes 65 config files across
-45 platforms, so those baselines describe a project that opted into six of them, and nothing said
-so. This test measures the rest of the curve at N=500, each level in its own project root.
+`AnnotationVolumeStressTest` has created since 0.5.4. VibeTags writes many times that many
+([current counts](../../README.md#project-facts)), so those baselines describe a project that opted
+into six of them, and nothing said so. This test measures the rest of the curve at N=500, each level in its own project root.
 
 Measured on the usual box (i7-1260P), main @ 802d1420:
 

@@ -30,8 +30,8 @@ class ServiceRoutingContractTest {
      * vary with the annotations.
      */
     private static final Set<String> ROUTED = Set.of(
-        "cursor", "claude", "codex", "gemini", "copilot", "qwen", "qwen_refactor", "codex_rules",
-        "aider_conventions", "windsurf", "zed", "gemini_md", "cline", "junie", "junie_agents",
+        "cursor", "claude", "codex", "copilot", "qwen", "qwen_refactor", "codex_rules",
+        "aider_conventions", "windsurf", "zed", "gemini_md", "junie", "junie_agents",
         "firebase", "claude_local", "claude_skill", "agents_skill", "replit", "goose",
         "gemini_styleguide", "greptile_rules", "void");
 

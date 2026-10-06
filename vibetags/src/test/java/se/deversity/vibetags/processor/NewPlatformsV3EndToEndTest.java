@@ -46,7 +46,7 @@ class NewPlatformsV3EndToEndTest {
     }
 
     // -----------------------------------------------------------------------
-    // GEMINI.md — content mirrors gemini_instructions.md
+    // GEMINI.md
     // -----------------------------------------------------------------------
 
     @Test
@@ -112,15 +112,13 @@ class NewPlatformsV3EndToEndTest {
     }
 
     @Test
-    void testGeminiMdContentMatchesGeminiInstructionsMd() throws IOException {
-        String geminiMd       = harness.readFile("GEMINI.md");
-        String geminiInstr    = harness.readFile("gemini_instructions.md");
+    void testGeminiMdCarriesTheGuardrails() throws IOException {
+        String geminiMd = harness.readFile("GEMINI.md");
 
-        // Both files should contain identical guardrail content (between markers)
-        assertTrue(geminiMd.contains("LOCKED FILES"),    "GEMINI.md should have locked section");
-        assertTrue(geminiInstr.contains("LOCKED FILES"), "gemini_instructions.md should have locked section");
-        assertTrue(geminiMd.contains("PaymentProcessor"),    "GEMINI.md should mention PaymentProcessor");
-        assertTrue(geminiInstr.contains("PaymentProcessor"), "gemini_instructions.md should mention PaymentProcessor");
+        assertTrue(geminiMd.contains("LOCKED FILES"), "GEMINI.md should have locked section");
+        assertTrue(geminiMd.contains("PaymentProcessor"), "GEMINI.md should mention PaymentProcessor");
+        // Gemini's own wording, from SectionCatalog's Gemini overrides (#645 moved them to GEMINI_MD)
+        assertTrue(geminiMd.contains("CONTINUOUS AUDIT REQUIREMENTS"), "GEMINI.md should use Gemini's audit heading");
     }
 
     // -----------------------------------------------------------------------

@@ -40,7 +40,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
-            case GEMINI:
+            case GEMINI_MD:
                 sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case LLMS:

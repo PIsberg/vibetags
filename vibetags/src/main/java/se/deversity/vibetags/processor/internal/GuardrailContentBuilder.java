@@ -189,8 +189,10 @@ public final class GuardrailContentBuilder {
                 views.of(child.serviceKey()), context);
         }
 
-        // Special case for AIExclude platform, which has strict activation criteria
-        if (activeServices.contains("aiexclude") && (activeServices.contains("gemini") || activeServices.contains("codex"))) {
+        // Special case for AIExclude platform, which has strict activation criteria: it needs a Gemini
+        // or Codex instruction file beside it. GEMINI.md took gemini_instructions.md's place in 1.4.0
+        // (#645), so a user who followed that file's deprecation notice keeps .aiexclude.
+        if (activeServices.contains("aiexclude") && (activeServices.contains("gemini_md") || activeServices.contains("codex"))) {
             Platform p = Platform.AI_EXCLUDE;
             String content = PlatformRendererRegistry.getRenderer(p).render(model, p, context);
             if (content != null) {

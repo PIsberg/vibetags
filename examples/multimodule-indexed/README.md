@@ -37,8 +37,8 @@ notes — collapses to a one-line module pointer and loads from `core/.claude/ru
 without them the processor emits a NOTE saying the annotation is used but no ignore file exists.
 
 `.clinerules/` is opted in at the root as a **directory**, Cline's granular form. `examples/basic`
-cannot carry it, because it carries the single `.clinerules` file at the same path, so this reactor
-is the fixture for it (`ExampleOptInCoverageTest` checks that). Both modules write into the one
+carries it too, as a single module; this reactor is the fixture for the cross-module case. Both
+modules write into the one
 shared directory, the same cross-module merge `.github/instructions/` exercises, and Cline has no
 aggregate here, so nothing collapses to an index for it. The safety tier instead lands in
 `.clinerules/+vibetags-safety.md`, one always-loaded file with both modules merged into it (#648).
@@ -82,7 +82,6 @@ file changed and you expected it not to, or the reverse:
 sidecar.save id=core region=core bodies=29 moduleBodies=1 stems=2 elements=2
 sidecar.read count=4 regions=4 ids=[cli, core, engine, showcase]
 merge.wholefile service=mentat contributions=4 bytes=10782
-merge.skip service=cody reason=no-whole-file-merger file=config.json
 write.skip file=CLAUDE.md reason=cache-unchanged bytes=2481
 ```
 

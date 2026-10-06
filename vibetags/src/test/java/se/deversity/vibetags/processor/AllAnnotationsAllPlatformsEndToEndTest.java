@@ -231,7 +231,6 @@ class AllAnnotationsAllPlatformsEndToEndTest {
         assertTrue(harness.fileExists("CLAUDE.md"), "CLAUDE.md should exist");
         assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md should exist");
         assertTrue(harness.fileExists("QWEN.md"), "QWEN.md should exist");
-        assertTrue(harness.fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
         assertTrue(harness.fileExists("GEMINI.md"), "GEMINI.md should exist");
         assertTrue(harness.fileExists(".github/copilot-instructions.md"), "copilot instructions should exist");
         assertTrue(harness.fileExists("CONVENTIONS.md"), "CONVENTIONS.md should exist");

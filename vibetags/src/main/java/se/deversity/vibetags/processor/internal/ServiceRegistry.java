@@ -172,10 +172,9 @@ public final class ServiceRegistry {
                 "VibeTags: No AI config files found - nothing will be generated.\n" +
                 "Create one or more of the following files in your project root to opt in:\n");
             // A deprecated output is left off: this list is what a new user copies from. A directory
-            // service carries a trailing '/', because .clinerules is both a deprecated file and a
-            // current directory, and a bare name would have a new user touch the deprecated one.
-            // Paths are root-relative for the same reason: .greptile/config.json and the deprecated
-            // .cody/config.json share a file name.
+            // service carries a trailing '/', so a new user creates .clinerules/ as the directory Cline
+            // reads rather than a file nothing reads. Paths are root-relative for the same reason: the
+            // two SKILL.md entries share a file name.
             Path root = rootOf(allServiceFiles);
             allServiceFiles.entrySet().stream()
                 .filter(e -> OPT_IN_KEYS.contains(e.getKey()) && !"root_index".equals(e.getKey())
@@ -190,8 +189,8 @@ public final class ServiceRegistry {
 
     /**
      * How the opt-in note names {@code path}: relative to the root, with {@code /} separators, so
-     * {@code .greptile/config.json} is not listed as a bare {@code config.json} that reads like
-     * Cody's, and the two {@code SKILL.md} entries are told apart. Falls back to the file name for a
+     * {@code .greptile/config.json} is not listed as a bare {@code config.json}, and the two
+     * {@code SKILL.md} entries are told apart. Falls back to the file name for a
      * hand-built map with no root to relativise against.
      */
     private static String optInName(@Nullable Path root, Path path) {
@@ -243,9 +242,9 @@ public final class ServiceRegistry {
      *
      * <p>The one definition of that distinction, for everything that has to know which kind of entry
      * a service path is without looking at the disk: opt-in resolution below, the CLI {@code init}
-     * command, and the tests that count and fixture the outputs. The file name cannot answer it,
-     * because one path is both: {@code .clinerules} is the {@code cline} file and the
-     * {@code cline_granular} directory.
+     * command, and the tests that count and fixture the outputs. The file name cannot answer it:
+     * {@code .clinerules} is the {@code cline_granular} directory, and until 1.4.0 the same path was
+     * also the single-file {@code cline} service (#645).
      *
      * <p>It used to read the {@code _granular} suffix, which is a naming convention and not a
      * declaration: a directory service named anything else answered wrongly, and nothing said so.
@@ -310,13 +309,13 @@ public final class ServiceRegistry {
      *
      * <p>This used to be a bare {@code Files.exists}, and the shape of that bug is worth keeping
      * written down. Cline reads {@code .clinerules} as a directory of rule files (its current
-     * documented shape) and as a single file (the shape VibeTags wrote first, which its loader still
-     * reads). A user following the current docs created the directory, {@code exists()} was true for
-     * it, the single-file service activated, and the writer was handed a directory to write a regular
-     * file over.
+     * documented shape) and as a single file (the shape VibeTags wrote until 1.4.0, which its loader
+     * still reads). A user following the current docs created the directory, {@code exists()} was true
+     * for it, the single-file service activated, and the writer was handed a directory to write a
+     * regular file over.
      *
-     * <p>A path cannot be both, so the entry's type is an unambiguous signal for which of the two the
-     * user meant, and the two services at that path can never both be active.
+     * <p>The single-file service is gone (#645), but the rule stands: a service activates only on the
+     * kind of entry it writes, so a leftover {@code .clinerules} file activates nothing.
      */
     public static boolean isOptedIn(String key, Path path) {
         return writesDirectory(key) ? Files.isDirectory(path) : Files.isRegularFile(path);

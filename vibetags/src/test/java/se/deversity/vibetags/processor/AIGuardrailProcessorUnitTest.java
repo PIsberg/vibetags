@@ -110,11 +110,11 @@ class AIGuardrailProcessorUnitTest {
         Messager messager = capturingMessager(Diagnostic.Kind.WARNING, warnings);
         AIGuardrailProcessor processor = new AIGuardrailProcessor();
 
-        Set<String> active = Set.of("gemini");
+        Set<String> active = Set.of("gemini_md");
         processor.checkOrphanedAnnotations(messager, active, true, true, false);
 
         // Should have 2 warnings for @AIIgnore and @AILocked about .aiexclude
-        assertEquals(2, warnings.size(), "Should have 2 warnings (gemini ignore and locked missing .aiexclude)");
+        assertEquals(2, warnings.size(), "Should have 2 warnings (GEMINI.md ignore and locked missing .aiexclude)");
         assertTrue(warnings.get(0).contains(".aiexclude"));
         assertTrue(warnings.get(1).contains(".aiexclude"));
     }
@@ -162,7 +162,8 @@ class AIGuardrailProcessorUnitTest {
         assertTrue(note.contains("CLAUDE.md"), "Note should list CLAUDE.md");
         assertTrue(note.contains(".cursorrules"), "Note should list .cursorrules");
         assertTrue(note.contains("AGENTS.md"), "Note should list codex file");
-        assertTrue(note.contains("GEMINI.md"), "Note should list the Gemini file (gemini_instructions.md is deprecated, #641)");
+        assertTrue(note.contains("GEMINI.md"), "Note should list the Gemini file");
+        assertFalse(note.contains("gemini_instructions.md"), "Note must not offer the file removed in 1.4.0 (#645)");
         assertTrue(note.contains("copilot-instructions.md"), "Note should list copilot file");
         assertTrue(note.contains(".cursorignore"), "Note should list cursor ignore file");
         assertFalse(note.contains(".copilotignore"), "Note must not offer the deprecated copilot ignore file (#668)");
@@ -197,15 +198,14 @@ class AIGuardrailProcessorUnitTest {
         Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
         Set<String> active = ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
         // Note: "codex" (AGENTS.md) is intentionally absent — when other AI config files are
-        // present it is treated as a pointer and left untouched (sole-file fallback rule). So is
-        // "cline_granular": .clinerules is a file here, and a path is one service or the other.
+        // present it is treated as a pointer and left untouched (sole-file fallback rule).
         Set<String> expected = Set.of(
-            "cursor", "claude", "aiexclude", "gemini", "copilot", "qwen", "qwen_refactor",
+            "cursor", "claude", "aiexclude", "copilot", "qwen", "qwen_refactor",
             "cursor_ignore", "claude_ignore", "copilot_ignore", "qwen_ignore",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
             // v0.7.0 platforms
-            "windsurf", "zed", "cody", "cody_ignore", "supermaven_ignore",
+            "windsurf", "zed",
             "windsurf_granular", "continue_granular", "tabnine_granular",
             "amazonq_granular", "ai_rules_granular",
             // v0.8.0 platforms
@@ -216,7 +216,7 @@ class AIGuardrailProcessorUnitTest {
             // v0.9.6 platforms
             "gemini_md", "antigravity_ignore",
             // v0.9.7 platforms
-            "cline", "junie", "junie_agents", "kiro_granular",
+            "cline_granular", "junie", "junie_agents", "kiro_granular",
             // Firebase AI
             "firebase",
             // Context-packer ignore files
@@ -250,27 +250,23 @@ class AIGuardrailProcessorUnitTest {
         assertEquals(expected, active, "Only primary opt-in services should be in the active resolution set");
         assertFalse(active.contains("codex"),
             "AGENTS.md (codex) must be skipped when other AI config files are present");
-        assertFalse(active.contains("cline_granular"),
-            ".clinerules exists as a file here, so the directory service at the same path must stay off");
+        assertTrue(active.contains("cline_granular"),
+            ".clinerules is created as the directory its one remaining service writes (#645)");
     }
 
     /**
      * Creates every service's path in the form that service writes: a directory holding a signal
      * file for a granular service, an empty file for everything else.
      *
-     * <p>One path is two services. {@code .clinerules} is the {@code cline} file and the
-     * {@code cline_granular} directory, and a filesystem entry can only be one of them, so the first
-     * key in map order claims the path and the second is skipped. Creating both used to throw
-     * {@code FileAlreadyExistsException} (issue #642).
+     * <p>Until 1.4.0 one path was two services, the {@code cline} file and the {@code cline_granular}
+     * directory, and creating both threw {@code FileAlreadyExistsException} (issue #642). The file
+     * service is gone (#645); the existence check stays so a future shared path cannot throw again.
      */
     private static void createEveryServicePath(Path root) {
         ServiceRegistry.buildServiceFileMap(root).forEach((key, p) -> {
             try {
                 if (Files.exists(p)) {
                     return; // claimed by the other service at this path
-                }
-                if (p.getParent() != null && Files.isRegularFile(p.getParent())) {
-                    return; // inside .clinerules/, which the cline file service claimed as a file
                 }
                 if (ServiceRegistry.writesDirectory(key)) {
                     Files.createDirectories(p);
@@ -604,7 +600,7 @@ class AIGuardrailProcessorUnitTest {
 
     @Test
     void writeFileIfChanged_skipsUpdate_whenNoAnnotationsAndFileHasContent(@TempDir Path tempDir) throws IOException {
-        Path file = tempDir.resolve("gemini_instructions.md");
+        Path file = tempDir.resolve("GEMINI.md");
         String existingContent =
             "<!-- VIBETAGS-START -->\n" +
             "# GEMINI AI INSTRUCTIONS\n\n" +

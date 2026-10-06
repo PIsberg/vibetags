@@ -78,7 +78,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(suffix).append('\n');
                 break;
-            case GEMINI:
+            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
             case LLMS:

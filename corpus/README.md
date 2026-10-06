@@ -216,7 +216,7 @@ Assertion 10 is the point of the phase. The fixture tests assert what a renderer
 asserts that a real parser accepts it. A YAML renderer emitting an unquoted value that starts with
 `@`, or a JSON one leaving a trailing comma, satisfies every `contains` assertion ever written and
 cannot be loaded by the tool it was written for. Ten files carry a structured format
-(`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json`, `.interpreter/profiles/vibetags.yaml`,
+(`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json` (removed in 1.4.0), `.interpreter/profiles/vibetags.yaml`,
 `.mentatconfig.json`, `.plandex.yaml`, `.pr_agent.toml`, `.qwen/settings.json`, `ellipsis.yaml`,
 `sweep.yaml`) and all ten parse. (`.qwen/settings.json` is no longer written since #650, so a
 current run has nine to parse; not re-measured.)
@@ -235,9 +235,8 @@ instead of silently narrowing what is checked; that is what caught #762 moving t
 `ServiceRegistry`.
 
 Only the entries that are opt-ins are seeded. The two Codex sidecars and the three granular
-safety files are written because another service is active, never because their own path exists,
-and `.clinerules/+vibetags-safety.md` could not be created anyway, since `.clinerules` is already
-seeded as the `cline` file. They are still verified when a run produces them.
+safety files are written because another service is active, never because their own path exists.
+They are still verified when a run produces them.
 
 ## The repos, and why each is here
 

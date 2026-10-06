@@ -231,7 +231,8 @@ class GranularIndexEndToEndTest {
      *
      * <p>The inline safety sections are documented to read identically to full mode, and every other
      * aggregate with its own wording keeps it when it collapses. {@code GEMINI.md} did not: its
-     * wording was registered only under the {@code gemini_instructions.md} platform, so the
+     * wording was registered only under the {@code gemini_instructions.md} platform (removed in
+     * 1.4.0, #645), so the
      * collapsed file fell back to the shared Cursor headings ({@code MANDATORY SECURITY AUDITS})
      * under the shared {@code # AUTO-GENERATED AI RULES} title, and a project that added
      * {@code .gemini/rules/} saw the safety tier it already had renamed under it.
@@ -323,18 +324,16 @@ class GranularIndexEndToEndTest {
      * audit block's trailing blank line instead. After any other list those three sat on the line
      * directly under the last bullet, and after an audit block every heading that did carry its
      * newline got two blank lines, as did the first heading under the generated header. Asserted on
-     * all three shapes that print this wording: the full {@code GEMINI.md}, the full
-     * {@code gemini_instructions.md}, and the collapsed {@code GEMINI.md}.
+     * both shapes that print this wording: the full and the collapsed {@code GEMINI.md}. The full
+     * {@code gemini_instructions.md} printed it too until 1.4.0 removed it (#645).
      */
     @Test
     void geminiRenders_setEverySectionOffByExactlyOneBlankLine(@TempDir Path dir) throws IOException {
         ProcessorTestHarness full = new ProcessorTestHarness(dir.resolve("full"), false);
         full.touchOptIn("GEMINI.md");
-        full.touchOptIn("gemini_instructions.md");
         addEverySpacingNeighbour(full);
         full.compile();
         String fullGemini = full.readFile("GEMINI.md");
-        String instructions = full.readFile("gemini_instructions.md");
         VibeTagsLogger.shutdown();
 
         ProcessorTestHarness collapsed = new ProcessorTestHarness(dir.resolve("collapsed"), false);
@@ -351,7 +350,6 @@ class GranularIndexEndToEndTest {
 
         for (var render : List.of(
                 java.util.Map.entry("full GEMINI.md", fullGemini),
-                java.util.Map.entry("gemini_instructions.md", instructions),
                 java.util.Map.entry("collapsed GEMINI.md", collapsedGemini))) {
             String text = render.getValue();
             assertFalse(text.contains("\n\n\n"),
@@ -524,7 +522,6 @@ class GranularIndexEndToEndTest {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
         h.touchOptIn(".cursorrules");
         h.touchOptIn(".cursor/rules/.vibetags");
-        h.touchOptIn(".clinerules");            // reuses CursorRenderer, but reads no scoped dir
         h.touchOptIn("CLAUDE.md");
         h.touchOptIn(".claude/rules/.vibetags");
         h.touchOptIn("CLAUDE.local.md");        // mirrors CLAUDE.md
@@ -534,11 +531,6 @@ class GranularIndexEndToEndTest {
         // Cursor itself collapses to an index (its sibling is active)…
         assertTrue(h.readFile(".cursorrules").contains("## Scoped Rules Index"),
             ".cursorrules collapses to an index when .cursor/rules is opted in");
-        // …but Cline, which merely reuses the Cursor format, must stay full — it has no scoped dir.
-        assertFalse(h.readFile(".clinerules").contains("## Scoped Rules Index"),
-            ".clinerules must NOT collapse — it has no granular sibling");
-        assertTrue(h.readFile(".clinerules").contains("CONTEXTUAL RULES"),
-            ".clinerules keeps the full contextual rules");
         // CLAUDE.local.md follows Claude's granular state, so it mirrors the indexed CLAUDE.md.
         assertEquals(h.readFile("CLAUDE.md"), h.readFile("CLAUDE.local.md"),
             "CLAUDE.local.md must mirror CLAUDE.md (both in index mode)");

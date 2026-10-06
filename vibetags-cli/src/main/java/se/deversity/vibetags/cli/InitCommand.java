@@ -103,13 +103,12 @@ final class InitCommand {
                 continue;
             }
             if (Files.exists(path)) {
-                // The entry is there as the other kind. .clinerules is the cline file and the
-                // cline_granular directory, so this is a different platform already opted in, not
-                // this one; reporting it active would tell the user they got the form they asked for.
+                // The entry is there as the other kind: a .clinerules file where cline_granular writes a
+                // directory, left over from the single-file service 1.4.0 removed (#645). Reporting it
+                // active would tell the user they got the form they asked for.
                 err.println("error: refusing " + key + " — " + dir.relativize(path) + " already exists as a "
                     + (Files.isDirectory(path) ? "directory" : "file") + ", but " + key + " writes a "
-                    + (ServiceRegistry.writesDirectory(key) ? "directory" : "file")
-                    + otherFormOf(key, path, serviceFiles) + "; nothing was changed");
+                    + (ServiceRegistry.writesDirectory(key) ? "directory" : "file") + "; nothing was changed");
                 refused++;
                 continue;
             }
@@ -184,26 +183,12 @@ final class InitCommand {
         }
     }
 
-    /**
-     * A clause naming the other opt-in service that writes {@code path} in the kind of entry that is
-     * actually there, so the refusal says what the user already has; empty when there is none.
-     */
-    private static String otherFormOf(String key, Path path, Map<String, Path> serviceFiles) {
-        return serviceFiles.entrySet().stream()
-            .filter(e -> !e.getKey().equals(key) && e.getValue().equals(path))
-            .filter(e -> ServiceRegistry.optInKeys().contains(e.getKey()))
-            .filter(e -> ServiceRegistry.isOptedIn(e.getKey(), path))
-            .map(e -> "; that entry is the " + e.getKey() + " platform's opt-in")
-            .findFirst()
-            .orElse("");
-    }
-
     private void list(Map<String, Path> serviceFiles, Set<String> optIn) {
         out.println("Opt-in platform keys (file presence = opt-in):");
         // TreeMap: stable, scannable order for humans and for tests.
         new TreeMap<>(serviceFiles).forEach((key, path) -> {
             if (optIn.contains(key)) {
-                // By kind, not existence: a .clinerules/ directory is cline_granular, not cline.
+                // By kind, not existence: a leftover .clinerules file does not make cline_granular active.
                 String marker = ServiceRegistry.isOptedIn(key, path) ? "  [active]" : "";
                 out.println("  " + key + " -> " + dir.relativize(path) + marker
                     + (deprecation(key).isEmpty() ? "" : "  [deprecated" + deprecation(key) + "]"));

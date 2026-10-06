@@ -96,7 +96,7 @@ class AnnotationBreadthStressTest {
     /** The six opt-in files every committed baseline's sweep creates, so the anchor column matches. */
     private static final String[] OPT_IN_FILES = {
         ".cursorrules", "CLAUDE.md", ".aiexclude", "AGENTS.md",
-        "gemini_instructions.md", "QWEN.md"
+        "GEMINI.md", "QWEN.md"
     };
 
     /** The two-fixture comparison. Matches the sweeps' mid N so the anchor column is recognisable. */

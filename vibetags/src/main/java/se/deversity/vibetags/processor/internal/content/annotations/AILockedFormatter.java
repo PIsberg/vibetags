@@ -47,7 +47,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", reason)).append('\n');
                 break;
-            case GEMINI:
+            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", reason)).append('\n');
                 break;
             case LLMS:

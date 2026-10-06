@@ -36,7 +36,7 @@ class NoTrailingWhitespaceTest {
     /** Platforms whose output for these annotations is prose with a summary sentence in it. */
     static Stream<Platform> prosePlatforms() {
         return Stream.of(Platform.CURSOR, Platform.WINDSURF, Platform.CODEX, Platform.COPILOT,
-            Platform.QWEN, Platform.GEMINI, Platform.GEMINI_MD, Platform.LLMS, Platform.LLMS_FULL,
+            Platform.QWEN, Platform.GEMINI_MD, Platform.LLMS, Platform.LLMS_FULL,
             Platform.ZED, Platform.INTERPRETER, Platform.CLAUDE);
     }
 

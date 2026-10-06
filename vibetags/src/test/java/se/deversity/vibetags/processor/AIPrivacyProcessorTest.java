@@ -210,16 +210,16 @@ class AIPrivacyProcessorTest {
 
     @Test
     void process_withPrivacyAnnotation_writesPiiSectionToGemini() throws Exception {
-        withSignalFiles(List.of("gemini_instructions.md"), () -> {
+        withSignalFiles(List.of("GEMINI.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor(List.of());
             processor.process(Set.of(), privacyRoundEnv("com.example.Order.cardNumber", "PCI-DSS card data"));
             triggerGeneration(processor);
 
-            String content = processor.contentFor("gemini_instructions.md");
+            String content = processor.contentFor("GEMINI.md");
             assertTrue(content.contains("PII / PRIVACY GUARDRAILS"),
-                "gemini_instructions.md must have PII guardrails section");
+                "GEMINI.md must have PII guardrails section");
             assertTrue(content.contains("com.example.Order.cardNumber"),
-                "gemini_instructions.md must list the annotated element");
+                "GEMINI.md must list the annotated element");
         });
     }
 

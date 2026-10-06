@@ -107,8 +107,9 @@ public final class JsonValueSpans {
      * this way.
      *
      * <p>Keyed on the parent directory as well as the name, because {@code config.json} is far too
-     * common a name to key on alone: {@code .cody/config.json} is also a VibeTags output, one rendered
-     * whole, and routed through here it would keep stale bytes and grow a span. Greptile reads a
+     * common a name to key on alone: {@code .cody/config.json} was also a VibeTags output until 1.4.0
+     * (#645), one rendered whole, and any such file routed through here would keep stale bytes and
+     * grow a span. Greptile reads a
      * {@code .greptile/} folder in any directory, so no deeper path is required.
      */
     public static @Nullable List<SharedKey> sharedKeysFor(Path file) {

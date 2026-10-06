@@ -53,7 +53,7 @@ class SectionCatalogContractTest {
     @Test
     @DisplayName("a registered platform override wins over the shared default")
     void overrideWinsOverDefault() {
-        String gemini = SectionCatalog.header(Platform.GEMINI, SectionCatalog.Key.SANDBOX_ONLY);
+        String gemini = SectionCatalog.header(Platform.GEMINI_MD, SectionCatalog.Key.SANDBOX_ONLY);
         String windsurf = SectionCatalog.header(Platform.WINDSURF, SectionCatalog.Key.SANDBOX_ONLY);
 
         assertNotNull(gemini);
@@ -66,15 +66,17 @@ class SectionCatalogContractTest {
     }
 
     @Test
-    @DisplayName("GEMINI.md and gemini_instructions.md look up the same wording for every section")
-    void bothGeminiFilesShareOneWording() {
-        // GEMINI.md's full render asks for Platform.GEMINI and its collapsed render for
-        // Platform.GEMINI_MD; when only the first was registered, the collapsed file printed the
-        // shared headings (#721).
-        for (SectionCatalog.Key key : SectionCatalog.Key.values()) {
-            assertEquals(SectionCatalog.header(Platform.GEMINI, key), SectionCatalog.header(Platform.GEMINI_MD, key),
-                key + ": the two Gemini platforms must not drift apart");
-        }
+    @DisplayName("GEMINI.md keeps Gemini's own wording after gemini_instructions.md went (#645)")
+    void geminiMdKeepsGeminisWording() {
+        // The wording was registered under Platform.GEMINI, gemini_instructions.md's platform, and
+        // GEMINI_MD reached it as an alias until 1.4.0 removed that file. Registered anywhere but
+        // GEMINI_MD now, GEMINI.md prints the shared headings, which is #721's shape. Cursor prints
+        // the shared defaults, and Gemini overrides 37 of them.
+        long differing = java.util.Arrays.stream(SectionCatalog.Key.values())
+            .filter(key -> !java.util.Objects.equals(SectionCatalog.header(Platform.GEMINI_MD, key),
+                SectionCatalog.header(Platform.CURSOR, key)))
+            .count();
+        assertTrue(differing >= 37, "only " + differing + " GEMINI.md headings differ from the shared defaults");
         String audit = SectionCatalog.header(Platform.GEMINI_MD, SectionCatalog.Key.AUDIT);
         assertNotNull(audit);
         assertTrue(audit.startsWith("\n## CONTINUOUS AUDIT REQUIREMENTS\n"),

@@ -49,7 +49,7 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md should exist");
         assertTrue(harness.fileExists(".codex/config.toml"), ".codex/config.toml should exist");
         assertTrue(harness.fileExists(".codex/rules/vibetags.rules"), ".codex/rules/vibetags.rules should exist");
-        assertTrue(harness.fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
+        assertTrue(harness.fileExists("GEMINI.md"), "GEMINI.md should exist");
         assertTrue(harness.fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
         assertTrue(harness.fileExists("QWEN.md"), "QWEN.md should exist");
         assertTrue(harness.fileExists(".qwen/commands/refactor.md"), ".qwen/commands/refactor.md should exist");
@@ -136,7 +136,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testGeminiInstructionsHasContinuousAudit() throws IOException {
-        String content = harness.readFile("gemini_instructions.md");
+        String content = harness.readFile("GEMINI.md");
 
         assertTrue(content.contains("CONTINUOUS AUDIT REQUIREMENTS"),
             "Should contain continuous audit requirements header");
@@ -152,22 +152,22 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testGeminiInstructionsHasLockedFiles() throws IOException {
-        String content = harness.readFile("gemini_instructions.md");
+        String content = harness.readFile("GEMINI.md");
 
         assertTrue(content.contains("LOCKED FILES"),
-            "gemini_instructions.md should contain a LOCKED FILES section");
+            "GEMINI.md should contain a LOCKED FILES section");
         assertTrue(content.contains("PaymentProcessor"),
-            "gemini_instructions.md should mention @AILocked PaymentProcessor");
+            "GEMINI.md should mention @AILocked PaymentProcessor");
     }
 
     @Test
     void testGeminiInstructionsHasContextRules() throws IOException {
-        String content = harness.readFile("gemini_instructions.md");
+        String content = harness.readFile("GEMINI.md");
 
         assertTrue(content.contains("CONTEXTUAL RULES"),
-            "gemini_instructions.md should contain a CONTEXTUAL RULES section");
+            "GEMINI.md should contain a CONTEXTUAL RULES section");
         assertTrue(content.contains("StringParser"),
-            "gemini_instructions.md should mention @AIContext StringParser");
+            "GEMINI.md should mention @AIContext StringParser");
     }
 
     @Test
@@ -227,7 +227,7 @@ class AnnotationProcessorEndToEndTest {
         assertFalse(agentsHarness.readFile("AGENTS.md").isEmpty());
         assertFalse(agentsHarness.readFile(".codex/config.toml").isEmpty());
         assertFalse(agentsHarness.readFile(".codex/rules/vibetags.rules").isEmpty());
-        assertFalse(harness.readFile("gemini_instructions.md").isEmpty());
+        assertFalse(harness.readFile("GEMINI.md").isEmpty());
         assertFalse(harness.readFile(".github/copilot-instructions.md").isEmpty());
     }
 
@@ -323,7 +323,7 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(harness.readFile("CLAUDE.md").contains(attribution));
         assertTrue(harness.readFile(".aiexclude").contains(attribution));
         assertTrue(agentsHarness.readFile("AGENTS.md").contains(attribution));
-        assertTrue(harness.readFile("gemini_instructions.md").contains(attribution));
+        assertTrue(harness.readFile("GEMINI.md").contains(attribution));
         assertTrue(harness.readFile(".github/copilot-instructions.md").contains(attribution));
     }
 
@@ -372,7 +372,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testGeminiInstructionsHasIgnoredElements() throws IOException {
-        String content = harness.readFile("gemini_instructions.md");
+        String content = harness.readFile("GEMINI.md");
         assertTrue(content.contains("IGNORED ELEMENTS"),
             "Should contain IGNORED ELEMENTS section");
         assertTrue(content.contains("GeneratedMetadata"),
@@ -608,7 +608,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testAICoreAppearsInGemini() throws IOException {
-        String content = harness.readFile("gemini_instructions.md");
+        String content = harness.readFile("GEMINI.md");
         assertTrue(content.contains("CriticalService"), "gemini must mention @AICore CriticalService");
         assertTrue(content.contains("CORE FUNCTIONALITY"), "gemini must have CORE FUNCTIONALITY section");
     }
@@ -654,7 +654,7 @@ class AnnotationProcessorEndToEndTest {
 
     @Test
     void testAIPerformanceAppearsInGemini() throws IOException {
-        String content = harness.readFile("gemini_instructions.md");
+        String content = harness.readFile("GEMINI.md");
         assertTrue(content.contains("HotPathRouter"), "gemini must mention @AIPerformance HotPathRouter");
         assertTrue(content.contains("PERFORMANCE CONSTRAINTS"), "gemini must have PERFORMANCE CONSTRAINTS section");
     }

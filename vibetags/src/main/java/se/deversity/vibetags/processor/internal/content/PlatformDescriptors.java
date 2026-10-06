@@ -13,7 +13,6 @@ import se.deversity.vibetags.processor.internal.content.platforms.ClaudeSkillRen
 import se.deversity.vibetags.processor.internal.content.platforms.ClineSafetyRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.CodeRabbitRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.CodexRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.CodyRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.CopilotRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.CursorRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.EllipsisRenderer;
@@ -89,7 +88,6 @@ public final class PlatformDescriptors {
     private static final IgnoreFileRenderer IGNORE_FILE_RENDERER = new IgnoreFileRenderer();
     private static final WindsurfRenderer WINDSURF_RENDERER = new WindsurfRenderer();
     private static final ZedRenderer ZED_RENDERER = new ZedRenderer();
-    private static final CodyRenderer CODY_RENDERER = new CodyRenderer();
     private static final MentatRenderer MENTAT_RENDERER = new MentatRenderer();
     private static final SweepRenderer SWEEP_RENDERER = new SweepRenderer();
     private static final PlandexRenderer PLANDEX_RENDERER = new PlandexRenderer();
@@ -116,19 +114,18 @@ public final class PlatformDescriptors {
      * comment. {@code PlatformDescriptorsTest} pins the order and each entry.
      */
     public static final List<PlatformDescriptor> ALL = List.of(
-        // Five other free-form Markdown outputs take the .cursorrules rendering as is, which is why
-        // CURSOR_RENDERER appears against cline, firebase, void, goose and replit below. They were five
-        // classes that each held a private CursorRenderer and forwarded to it (#764); naming the renderer
-        // in the table says the same thing without a class to keep in step. CursorRenderer formats as
-        // CURSOR whatever platform it is handed, and passes the real one to the scoped-rules index, where
-        // none of the five has a governing directory, so they never collapse.
+        // Four other free-form Markdown outputs take the .cursorrules rendering as is, which is why
+        // CURSOR_RENDERER appears against firebase, void, goose and replit below. They were classes that
+        // each held a private CursorRenderer and forwarded to it (#764); naming the renderer in the table
+        // says the same thing without a class to keep in step. CursorRenderer formats as CURSOR whatever
+        // platform it is handed, and passes the real one to the scoped-rules index, where none of the
+        // four has a governing directory, so they never collapse.
         new PlatformDescriptor("cursor", ".cursorrules", Kind.FILE, null, Platform.CURSOR, CURSOR_RENDERER, null, false),
         new PlatformDescriptor("claude", "CLAUDE.md", Kind.FILE, null, Platform.CLAUDE, CLAUDE_RENDERER, null, false),
         new PlatformDescriptor("aiexclude", ".aiexclude", Kind.FILE, null, Platform.AI_EXCLUDE, AI_EXCLUDE_RENDERER, null, true),
         // AGENTS.md. Written only as the sole AI config file, or into an existing marker pair
         // (invariant 4); resolveActiveServices drops it otherwise.
         new PlatformDescriptor("codex", "AGENTS.md", Kind.FILE, null, Platform.CODEX, CODEX_RENDERER, null, false),
-        new PlatformDescriptor("gemini", "gemini_instructions.md", Kind.FILE, null, Platform.GEMINI, GEMINI_RENDERER, null, false),
         new PlatformDescriptor("copilot", ".github/copilot-instructions.md", Kind.FILE, null, Platform.COPILOT, COPILOT_RENDERER, null, false),
         new PlatformDescriptor("qwen", "QWEN.md", Kind.FILE, null, Platform.QWEN, QWEN_RENDERER, null, false),
         new PlatformDescriptor("cursor_ignore", ".cursorignore", Kind.FILE, null, Platform.CURSOR_IGNORE, IGNORE_FILE_RENDERER, "Cursor", true),
@@ -159,9 +156,6 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("trae_granular", ".trae/rules", Kind.DIRECTORY, null, Platform.TRAE_GRANULAR, GRANULAR_RENDERER, null, false),
         new PlatformDescriptor("windsurf", ".windsurfrules", Kind.FILE, null, Platform.WINDSURF, WINDSURF_RENDERER, null, false),
         new PlatformDescriptor("zed", ".rules", Kind.FILE, null, Platform.ZED, ZED_RENDERER, null, false),
-        new PlatformDescriptor("cody", ".cody/config.json", Kind.FILE, null, Platform.CODY, CODY_RENDERER, null, false),
-        new PlatformDescriptor("cody_ignore", ".codyignore", Kind.FILE, null, Platform.CODY_IGNORE, IGNORE_FILE_RENDERER, "Cody", true),
-        new PlatformDescriptor("supermaven_ignore", ".supermavenignore", Kind.FILE, null, Platform.SUPERMAVEN_IGNORE, IGNORE_FILE_RENDERER, "Supermaven", true),
         new PlatformDescriptor("windsurf_granular", ".windsurf/rules", Kind.DIRECTORY, null, Platform.WINDSURF_GRANULAR, GRANULAR_RENDERER, null, false),
         // Inside .windsurf/rules/: the safety tier as a trigger: always_on rule (issue #684). Implicit,
         // like cline_safety, so it has no opt-in key of its own.
@@ -183,14 +177,12 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("roo_ignore", ".rooignore", Kind.FILE, null, Platform.ROO_IGNORE, IGNORE_FILE_RENDERER, "Roo Code", true),
         new PlatformDescriptor("continue_ignore", ".continueignore", Kind.FILE, null, Platform.CONTINUE_IGNORE, IGNORE_FILE_RENDERER, "Continue", true),
         new PlatformDescriptor("augment_ignore", ".augmentignore", Kind.FILE, null, Platform.AUGMENT_IGNORE, IGNORE_FILE_RENDERER, "Augment Code", true),
-        // GEMINI.md, the Gemini CLI file. Renders as GEMINI (Platform.rendersAs), so the two print the
-        // same words from one formatter arm (#721, #764).
+        // GEMINI.md, the Gemini CLI file. It printed gemini_instructions.md's words through
+        // Platform.rendersAs until 1.4.0 removed that file; the wording is now its own (#645, #721).
         new PlatformDescriptor("gemini_md", "GEMINI.md", Kind.FILE, null, Platform.GEMINI_MD, GEMINI_RENDERER, null, false),
         new PlatformDescriptor("antigravity_ignore", ".antigravityignore", Kind.FILE, null, Platform.ANTIGRAVITY_IGNORE, IGNORE_FILE_RENDERER, "Antigravity AI", true),
-        // The legacy single .clinerules file, mutually exclusive with the directory below.
-        new PlatformDescriptor("cline", ".clinerules", Kind.FILE, null, Platform.CLINE, CURSOR_RENDERER, null, false),
-        // Cline's directory form, at the same path as the file. A path is one or the other, so
-        // isOptedIn lets exactly one of the two activate (issue #642).
+        // Cline's directory form (issue #642). The single .clinerules file VibeTags wrote at the same path
+        // was removed in 1.4.0 (#645), and isOptedIn ignores a file there.
         new PlatformDescriptor("cline_granular", ".clinerules", Kind.DIRECTORY, null, Platform.CLINE_GRANULAR, GRANULAR_RENDERER, null, false),
         // Inside that directory: the safety tier, always loaded (issue #648). Implicit, like
         // codex_config under codex, so it has no opt-in key of its own.

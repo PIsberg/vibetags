@@ -47,7 +47,7 @@ import static org.mockito.Mockito.*;
  *   <li>Platform.fromServiceKey() returning null and getServiceKey()</li>
  *   <li>the FIREBASE platform's renderer (CursorRenderer, by registry fall-through since #764)</li>
  *   <li>GranularRenderer.render() returning null</li>
- *   <li>GuardrailContentBuilder — inactive codex/qwen/cody/aiexclude branches</li>
+ *   <li>GuardrailContentBuilder — inactive codex/qwen/aiexclude branches</li>
  *   <li>ModuleSidecar — computeModuleId/computeModulePath escaping/different-drive cases</li>
  *   <li>WriteCache — cacheKey() fallback with absolute path, flush AtomicMoveNotSupported</li>
  *   <li>Formatter null-guard branches (AISecureFormatter, AIIdempotentFormatter,
@@ -314,7 +314,7 @@ class Coverage1dot0GapTest {
     }
 
     // -----------------------------------------------------------------------
-    // GuardrailContentBuilder — inactive codex/qwen/cody/aiexclude branches
+    // GuardrailContentBuilder — inactive codex/qwen/aiexclude branches
     // -----------------------------------------------------------------------
 
     @Test
@@ -344,17 +344,6 @@ class Coverage1dot0GapTest {
     }
 
     @Test
-    void guardrailContentBuilder_noCody_codyBranchSkipped() {
-        AnnotationCollector collector = new AnnotationCollector();
-        Set<String> services = Set.of("cursor");
-        GuardrailContentBuilder builder = new GuardrailContentBuilder(
-            collector, services, "Project", "# header\n");
-        GuardrailContentBuilder.Result result = builder.build();
-        assertFalse(result.contentByService.containsKey("cody"),
-            "cody must not appear when cody is not active");
-    }
-
-    @Test
     void guardrailContentBuilder_aiexcludeWithoutGeminiOrCodex_excluded() {
         // aiexclude is active but neither gemini nor codex is present → branch at L213 is false
         AnnotationCollector collector = new AnnotationCollector();
@@ -369,9 +358,9 @@ class Coverage1dot0GapTest {
 
     @Test
     void guardrailContentBuilder_aiexcludeWithGemini_included() {
-        // aiexclude + gemini → the activation branch fires
+        // aiexclude + GEMINI.md → the activation branch fires
         AnnotationCollector collector = new AnnotationCollector();
-        Set<String> services = Set.of("aiexclude", "gemini");
+        Set<String> services = Set.of("aiexclude", "gemini_md");
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
             collector, services, "Project", "# header\n");
         GuardrailContentBuilder.Result result = builder.build();
@@ -423,18 +412,6 @@ class Coverage1dot0GapTest {
             collector, Set.of("qwen_refactor"), "Project", "# header\n").build();
         assertTrue(refactorOnly.contentByService.containsKey("qwen_refactor"),
             "an opted-in qwen_refactor renders without QWEN.md");
-    }
-
-    @Test
-    void guardrailContentBuilder_codyActive_codyContentIncluded() {
-        // cody active → implicit cody entry generated (L205-209)
-        AnnotationCollector collector = new AnnotationCollector();
-        Set<String> services = Set.of("cody");
-        GuardrailContentBuilder builder = new GuardrailContentBuilder(
-            collector, services, "Project", "# header\n");
-        GuardrailContentBuilder.Result result = builder.build();
-        assertTrue(result.contentByService.containsKey("cody"),
-            "cody active → cody must appear in result");
     }
 
     @Test

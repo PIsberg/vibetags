@@ -15,7 +15,6 @@ public enum Platform {
     CODEX("codex"),
     COPILOT("copilot"),
     QWEN("qwen"),
-    GEMINI("gemini"),
     LLMS("llms"),
     LLMS_FULL("llms_full"),
     AIDER_CONVENTIONS("aider_conventions"),
@@ -26,8 +25,6 @@ public enum Platform {
     QWEN_IGNORE("qwen_ignore"),
     WINDSURF("windsurf"),
     ZED("zed"),
-    CODY_IGNORE("cody_ignore"),
-    SUPERMAVEN_IGNORE("supermaven_ignore"),
     MENTAT("mentat"),
     SWEEP("sweep"),
     PLANDEX("plandex"),
@@ -41,7 +38,6 @@ public enum Platform {
     DEVIN_IGNORE("devin_ignore"),
     GEMINI_MD("gemini_md"),
     ANTIGRAVITY_IGNORE("antigravity_ignore"),
-    CLINE("cline"),
     JUNIE("junie"),
     // Junie's current guidelines file, .junie/AGENTS.md, checked before the legacy guidelines.md (#673)
     JUNIE_AGENTS("junie_agents"),
@@ -66,7 +62,6 @@ public enum Platform {
     CODEX_CONFIG("codex_config"),
     CODEX_RULES("codex_rules"),
     QWEN_REFACTOR("qwen_refactor"),
-    CODY("cody"),
     LOCKS_REPORT("locks_report"),
     GOOSE("goose"),
     GEMINI_STYLEGUIDE("gemini_styleguide"),
@@ -130,11 +125,13 @@ public enum Platform {
     /**
      * The platform whose wording this one prints: itself, except for an alias.
      *
-     * <p>An alias is a second file that a tool's sibling reads in the same words. {@code GEMINI_MD}
-     * ({@code GEMINI.md}, Gemini CLI) renders as {@code GEMINI} ({@code .gemini/styleguide.md},
-     * Gemini Code Assist). Before this was a property, every alias was a pair of {@code case} labels
-     * in each formatter and a second registration in {@code SectionCatalog}, and a missed one printed
-     * the default wording with nothing failing (#721, #764).
+     * <p>An alias is a second file that a tool's sibling reads in the same words. There is none
+     * today: the only one was {@code GEMINI_MD}, which rendered as {@code GEMINI}
+     * ({@code gemini_instructions.md}) until 1.4.0 removed that file and moved its wording to
+     * {@code GEMINI_MD} itself (#645). Before this was a property, every alias was a pair of
+     * {@code case} labels in each formatter and a second registration in {@code SectionCatalog}, and
+     * a missed one printed the default wording with nothing failing (#721, #764), so the seam stays
+     * for the next one.
      *
      * <p>Resolved once, by {@link AnnotationFormatter#format} and {@code SectionCatalog}, so a
      * formatter only ever sees a family and cannot handle half of a pair. It answers "which words",
@@ -142,7 +139,7 @@ public enum Platform {
      * file gets a section at all must keep asking the real platform.
      */
     public Platform rendersAs() {
-        return this == GEMINI_MD ? GEMINI : this;
+        return this;
     }
 
     public static @Nullable Platform fromServiceKey(String serviceKey) {

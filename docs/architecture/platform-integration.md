@@ -26,9 +26,9 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 ### Gemini
 
-**Files:** `.aiexclude` + `gemini_instructions.md`
+**Files:** `.aiexclude` + `GEMINI.md`
 
-**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `gemini_instructions.md` provides detailed persona and audit guidance.
+**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `GEMINI.md` provides detailed persona and audit guidance. (`gemini_instructions.md` did the same until 1.4.0 removed it, #645.)
 
 ### Codex CLI
 
