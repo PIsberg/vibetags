@@ -13,6 +13,7 @@
 * `com.example.service.OrderService.calculateTax(java.lang.String,double)` - Reason: Tax calculation uses Avalara API integration. Credentials and endpoint configuration managed by finance team.
 * `com.example.service.OrderService.processPayment(java.lang.String,double)` - Reason: Payment processing uses Stripe API v2024.10. Changes require PCI compliance review.
 * `com.example.service.OrderService.validateOrder(java.util.Map<java.lang.String,java.lang.Object>)` - Reason: Order validation implements 47 business rules. Last changed in Q2 2024 after 3-month testing cycle. DO NOT MODIFY without running full test suite.
+* `com.example.testing.GoldenPayloadFixtures` - Reason: These byte sequences are the partner's recorded settlement responses. Regenerating or reformatting them makes the suite agree with itself and disagree with production.
 
 ## 🛡️ MANDATORY SECURITY AUDITS
 When proposing edits or writing code for the following files, you MUST perform a security review before outputting the final code. You must explicitly state in your response that you have audited the changes for the required vulnerabilities.
