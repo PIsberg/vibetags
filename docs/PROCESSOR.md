@@ -214,11 +214,15 @@ against a pull request's diff and the granular rule files are named from it.
 Recording is safe to run in parallel. Every enforcing module of a reactor rewrites its own lines
 in the one root-level file from its own javac invocation, so `update()` re-reads the file and merges
 under an exclusive lock on `.vibetags-baseline.lock` (empty, gitignored, never read) and renames a
-temp file created unique per writer. Merging the snapshot loaded before a sibling wrote used to
-erase that sibling's approvals, and a shared temp name let one writer truncate the other's bytes
-mid-move — reported as a compile error on a build that changed nothing (issue #554,
-`EnforcementBaselineAsyncTest`). Where a filesystem refuses advisory locks the merge still re-reads,
-which is strictly better than the snapshot it replaced.
+temp file named unique per writer: pid, a tag drawn once per classloader, and a counter. Merging
+the snapshot loaded before a sibling wrote used to erase that sibling's approvals, and a shared
+temp name let one writer truncate the other's bytes mid-move — reported as a compile error on a
+build that changed nothing (issue #554, `EnforcementBaselineAsyncTest`). The lock is polled with
+`tryLock()`, as the generation lock is: a sibling module in the same JVM whose processor another
+classloader loaded meets a plain `lock()` as `OverlappingFileLockException`, and recording used to
+proceed unlocked on it (#911). Where a filesystem refuses advisory locks, or a wait passes two
+minutes, the merge runs unlocked but still re-reads, which is strictly better than the snapshot it
+replaced.
 
 Enforcement runs in `process()` before `generateFiles()`, deliberately: the generation path has a
 fingerprint short-circuit that would let an unchanged-inputs build skip the check silently.

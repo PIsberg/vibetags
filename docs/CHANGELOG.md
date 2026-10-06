@@ -41,6 +41,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `vibetags-self-check` pre-commit hook exited 127 on Windows outside Git Bash (#905).**
+  Run from PowerShell or cmd, pre-commit found bash through `PATH`, which there is the WSL
+  launcher in `WindowsApps`. WSL bash read the backslashed script path as escapes, so the hook
+  failed before `tools/self-check.sh` started. The hook now runs the script as a git `!` alias,
+  which Git runs with its own shell from the repository root on every platform. Verified from
+  PowerShell and from Git Bash: both run the 25 s regeneration and pass.
+- **Two copies of the processor in one JVM could write through the same temp file.** The root
+  `.vibetags-baseline` and `.vibetags-cache` are written to `<name>.<pid>-<n>.tmp` and renamed
+  into place, with `<n>` from a static counter. A parallel reactor that loads the processor once
+  per module has one counter per copy, each starting at zero, so two modules wrote
+  `.vibetags-baseline.<pid>-1.tmp` at once: one rename moved bytes its writer never produced and
+  the other failed with `NoSuchFileException`. The name now carries a random tag drawn once per
+  class load, `<name>.<pid>-<tag>-<n>.tmp`. Found by the two-classloader test written for #911.
+- **Enforcement baselines were recorded unlocked when a sibling module loaded the processor in
+  another classloader (#911).** `EnforcementBaseline.update()` took `.vibetags-baseline.lock` with
+  `lock()`. A file lock belongs to the whole JVM, and the per-root monitor in front of it only to
+  one copy of the class, so under `mvn -T` or Gradle `--parallel` the second module got
+  `OverlappingFileLockException` and merged with no lock: the #554 lost update again. It now polls
+  `tryLock()` through `GenerationLock`, which waits in both cases. Like generation, a wait over two
+  minutes proceeds unlocked instead of hanging the build; before, a lock held by another process
+  was waited on indefinitely. Two new `EnforcementBaselineTest` cases failed before the change: one
+  holds the lock outside the monitor and sees `update()` write anyway, and one records from two
+  classloaders at once and lost an approval in round 0.
+- **In a parallel reactor the last write-cache flush dropped every sibling's cache entries
+  (#907).** Each module's processor loads `.vibetags-cache` before any of them generates, and
+  `WriteCache.flush()` wrote that whole loaded view back, so the last module to flush erased the
+  entries, fingerprints, sidecar stamp and source digests its siblings had flushed since. Nothing
+  was wrong in the output, but the early exit and the per-file fast path missed on the build after
+  a parallel one. A flush now re-reads the file and replaces only what this instance changed: the
+  keys it recorded or removed, its own module section, and the root stamp if it set one. An entry
+  is still kept exactly as its writer recorded it, so the merge cannot pair one writer's hash with
+  another's file attributes. `WriteCacheTest` drives two instances loaded before either flushes;
+  two of its three new cases failed before the change. Not measured on a real `mvn -T` reactor.
 - **A parallel reactor could drop a module's region from the root files (#908).** Under `mvn -T`
   or Gradle `--parallel`, a module that read the sidecars before a sibling saved one could write
   `CLAUDE.md` and the other root files last, from a merge without that sibling, and the region

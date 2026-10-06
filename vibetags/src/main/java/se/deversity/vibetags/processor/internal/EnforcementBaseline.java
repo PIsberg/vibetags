@@ -4,12 +4,9 @@ import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -59,10 +56,12 @@ public final class EnforcementBaseline {
      */
     static final String LOCK_FILE_NAME = ".vibetags-baseline.lock";
     /**
-     * One monitor per reactor root, because a {@link FileLock} is held by the whole JVM: two
+     * One monitor per reactor root, because a {@code FileLock} is held by the whole JVM: two
      * threads of one Gradle daemon locking the same file get an
      * {@code OverlappingFileLockException} rather than mutual exclusion. Keyed by the normalised
-     * root so unrelated roots never serialise.
+     * root so unrelated roots never serialise. It covers threads that share this class only; a
+     * sibling module whose processor another classloader loaded has its own map, and the
+     * {@link GenerationLock} poll in {@link #update} is what makes that one wait (#911).
      */
     private static final ConcurrentMap<String, Object> ROOT_MONITORS = new ConcurrentHashMap<>();
     private static final String HEADER =
@@ -164,6 +163,13 @@ public final class EnforcementBaseline {
      * filesystem refuses the lock the merge still re-reads, which is strictly better than merging a
      * snapshot from before the sibling wrote.
      *
+     * <p>The lock is polled with {@code tryLock()} rather than taken with {@code lock()}. A sibling
+     * module in the same JVM whose processor another classloader loaded holds the file lock
+     * without sharing {@link #ROOT_MONITORS}, and {@code lock()} answers it with
+     * {@code OverlappingFileLockException}, on which this method recorded unlocked: #554 again for
+     * any {@code mvn -T} or Gradle {@code --parallel} build (#911). A wait past
+     * {@link GenerationLock#MAX_WAIT} records unlocked rather than hanging the build.
+     *
      * @param current family + path → signature for the compiling module
      */
     public void update(Path root, String moduleId, Map<String, String> current) throws IOException {
@@ -187,53 +193,12 @@ public final class EnforcementBaseline {
         Object monitor = ROOT_MONITORS.computeIfAbsent(
             root.toAbsolutePath().normalize().toString(), key -> new Object());
         synchronized (monitor) {
-            try (FileChannel channel = openLockFile(root)) {
-                FileLock lock = acquire(channel);
-                try {
-                    updateLocked(root, moduleId, families, current);
-                } finally {
-                    release(lock);
-                }
+            // Held for the scope of the merge and never read: whether it was taken changes nothing
+            // here, because an unlocked merge still re-reads (see above).
+            try (@SuppressWarnings("PMD.UnusedLocalVariable") GenerationLock lock = GenerationLock.acquireFile(
+                    root.resolve(LOCK_FILE_NAME), moduleId, null, GenerationLock.MAX_WAIT)) {
+                updateLocked(root, moduleId, families, current);
             }
-        }
-    }
-
-    /**
-     * The lock file's channel, or {@code null} when this filesystem will not give us one. A
-     * read-only or exotic root must not fail a build that is only recording a baseline, so the
-     * caller proceeds unlocked rather than throwing.
-     */
-    private static @Nullable FileChannel openLockFile(Path root) {
-        try {
-            return FileChannel.open(root.resolve(LOCK_FILE_NAME),
-                StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-        } catch (IOException | RuntimeException unlockable) {
-            return null;
-        }
-    }
-
-    /** The exclusive lock, or {@code null} when it could not be taken. */
-    private static @Nullable FileLock acquire(@Nullable FileChannel channel) {
-        if (channel == null) {
-            return null;
-        }
-        try {
-            return channel.lock();
-        } catch (IOException | RuntimeException unlockable) {
-            // NFS and some container overlays refuse advisory locks outright, and a second lock on
-            // the same file from this JVM arrives as OverlappingFileLockException.
-            return null;
-        }
-    }
-
-    private static void release(@Nullable FileLock lock) {
-        if (lock == null) {
-            return;
-        }
-        try {
-            lock.release();
-        } catch (IOException ignored) {
-            // The channel is closed immediately after, which releases it anyway.
         }
     }
 

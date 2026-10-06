@@ -25,7 +25,7 @@ class GenerationLockTest {
     @Test
     void aSecondModuleInThisJvmWaitsUntilTheFirstReleases() throws Exception {
         // Same JVM, same file: tryLock throws OverlappingFileLockException rather than waiting,
-        // which is the case a plain lock() call, or EnforcementBaseline's pattern, gets wrong.
+        // which is the case a plain lock() call gets wrong (EnforcementBaseline's did until #911).
         CountDownLatch secondDone = new CountDownLatch(1);
         AtomicBoolean secondHeld = new AtomicBoolean();
         AtomicLong releasedAt = new AtomicLong();

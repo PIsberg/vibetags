@@ -24,8 +24,9 @@ import java.time.Duration;
  * {@link FileChannel#tryLock()} in a short poll rather than {@code lock()}. A file lock is held by
  * the whole JVM, so a second module of {@code mvn -T} or Gradle {@code --parallel} in the same
  * process gets {@link OverlappingFileLockException} instead of waiting, whichever classloader each
- * processor was loaded in; {@code EnforcementBaseline} proceeds unlocked on that exception, which is
- * exactly the case this lock exists for. Polling covers both that and another process holding it.
+ * processor was loaded in. Polling covers both that and another process holding it.
+ * {@code EnforcementBaseline} takes the same poll over its own lock file through
+ * {@link #acquireFile}: with {@code lock()} it met that exception and recorded unlocked (#911).
  *
  * <p>Never fails a build. A root that will not give a channel, a filesystem that refuses locks, an
  * interrupt, or a wait past {@link #MAX_WAIT} all proceed unlocked, which is the behaviour before
@@ -65,9 +66,18 @@ public final class GenerationLock implements AutoCloseable {
     }
 
     static GenerationLock acquire(Path root, String moduleId, @Nullable Logger log, Duration maxWait) {
+        return acquireFile(root.resolve(FILE_NAME), moduleId, log, maxWait);
+    }
+
+    /**
+     * The same poll over another lock file, for a second read-merge-write that sibling modules run
+     * against one root file. {@code log} may be {@code null}; the events it gets are this class's
+     * {@code generate.lock.*} ones, so a caller with a different contract passes none.
+     */
+    static GenerationLock acquireFile(Path lockFile, String moduleId, @Nullable Logger log, Duration maxWait) {
         FileChannel channel;
         try {
-            channel = FileChannel.open(root.resolve(FILE_NAME), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
         } catch (IOException | RuntimeException e) {
             skip(log, moduleId, "unopenable", e.toString());
             return UNLOCKED;
