@@ -337,6 +337,32 @@ class DoctorCommandTest {
         assertTrue(out().toLowerCase().contains("dropped"), out());
     }
 
+    /**
+     * One directory doctor may not list, anywhere in the project (a database volume owned by root,
+     * say), ended the source walk: the Groovy and Kotlin checks saw only the files walked before it,
+     * or none. It is reported once, and every readable source is still checked.
+     */
+    @Test
+    void unlistableDirectoryInTheProject_doesNotStopTheSourceScan() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/groovy/com/example/Customer.groovy", """
+            class Customer {
+                @AIPrivacy(dataType = "email")
+                String billingEmail
+            }
+            """);
+        Path locked = Files.createDirectories(dir.resolve("data"));
+
+        try (AutoCloseable restore = denyListing(locked)) {
+            assertEquals(1, doctor(), out());
+            assertTrue(out().contains("groovy sources:  1 file(s); 1 field-level guardrail(s)"), out());
+            assertTrue(out().contains("on field 'billingEmail'"), out());
+            assertEquals(1, out().lines().filter(l -> l.contains("could not read directory") && l.contains("data")).count(),
+                "the unreadable directory is one finding, not one per file type scanned: " + out());
+        }
+    }
+
     @Test
     void groovyMethodAndClassGuardrails_areNotFlagged() throws Exception {
         // Types, constructors, methods and parameters all survive into groovyc's stubs; only

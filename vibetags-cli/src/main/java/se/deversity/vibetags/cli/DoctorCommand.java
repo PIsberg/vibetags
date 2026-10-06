@@ -37,6 +37,11 @@ final class DoctorCommand {
     private final List<Path> classpath;
     private final List<String> problems = new ArrayList<>();
 
+    /** Every developer-authored file under {@code dir}, walked once on first use; see {@link #sources}. */
+    private List<Path> projectFiles = List.of();
+
+    private boolean projectWalked;
+
     /**
      * @param classpath jars and class directories to read Kotlin value classes from, for value
      *                  classes declared in a dependency or a module outside {@code dir}; may be empty
@@ -297,9 +302,23 @@ final class DoctorCommand {
      * worktree) or a directory (a nested clone), is a separate copy of some repository. Claude Code
      * keeps full worktrees under {@code .claude/worktrees/}, and scanning them reported one Groovy
      * example 36 times over (#842).
+     *
+     * <p>The tree is walked once, and a directory doctor cannot list is reported once and walked
+     * past. Walking per extension and stopping at the first such directory turned the Groovy and
+     * Kotlin checks off for the whole project, and reported the directory once per extension (#922).
      */
     private List<Path> sources(String extension) {
-        List<Path> sources = new ArrayList<>();
+        if (!projectWalked) {
+            projectFiles = walkProject();
+            projectWalked = true;
+        }
+        return projectFiles.stream()
+            .filter(file -> String.valueOf(file.getFileName()).endsWith(extension))
+            .toList();
+    }
+
+    private List<Path> walkProject() {
+        List<Path> files = new ArrayList<>();
         Set<String> buildDirs = Set.of("build", "target", ".gradle", ".git");
         try {
             Files.walkFileTree(dir, new SimpleFileVisitor<>() {
@@ -315,17 +334,24 @@ final class DoctorCommand {
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    if (attrs.isRegularFile() && String.valueOf(file.getFileName()).endsWith(extension)) {
-                        sources.add(file);
+                    if (attrs.isRegularFile()) {
+                        files.add(file);
                     }
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException e) {
+                    problems.add("could not read directory " + dir.relativize(file) + " (" + e.getMessage()
+                        + "): Groovy and Kotlin sources under it were not checked");
                     return FileVisitResult.CONTINUE;
                 }
             });
         } catch (IOException e) {
-            problems.add("could not walk " + dir + " for " + extension + " sources: " + e.getMessage());
+            problems.add("could not walk " + dir + " for sources: " + e.getMessage());
         }
-        sources.sort(java.util.Comparator.comparing(Path::toString));
-        return sources;
+        files.sort(java.util.Comparator.comparing(Path::toString));
+        return files;
     }
 
     private void scanGroovySource(Path file, String text, List<String> dropped) {

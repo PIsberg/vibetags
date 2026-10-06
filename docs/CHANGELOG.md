@@ -58,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   count everything from the quote down: 207 B reported as generated in a test file whose block
   was 102 B. It now uses the writer's `indexOfBlockStart` and `indexOfMarkerLine`, and reports the
   one block the writer manages.
+- **One unlistable directory turned off doctor's Groovy and Kotlin checks (#922).** The project
+  was walked once per file type, and the first directory doctor could not list ended each walk,
+  so a root-owned directory such as a database volume left the checks with whatever came before
+  it, often nothing, and was reported once per file type. The project is now walked once; the
+  directory is one finding and every readable source is checked.
 - **`vibetags doctor --classpath` aborted on an unlistable directory in a class directory
   (#921).** `Files.walk` threw it as an `UncheckedIOException` the `IOException` handler did not
   catch, so doctor printed a bare `AccessDeniedException` and stopped after the marker line, with
