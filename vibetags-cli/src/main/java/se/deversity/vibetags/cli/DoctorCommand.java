@@ -160,10 +160,12 @@ final class DoctorCommand {
                 continue;
             }
             String text = read.get();
-            boolean brokenMd = text.contains(GuardrailFileWriter.MARKER_START_MD)
-                != text.contains(GuardrailFileWriter.MARKER_END_MD);
-            boolean brokenHash = text.contains(GuardrailFileWriter.MARKER_START_HASH)
-                != text.contains(GuardrailFileWriter.MARKER_END_HASH);
+            // The writer's own reading of the pair, not whether each literal appears somewhere:
+            // an end above the start, or an example pair in a fence, fooled a contains() check (#919).
+            boolean brokenMd = GuardrailFileWriter.hasBrokenMarkers(text,
+                GuardrailFileWriter.MARKER_START_MD, GuardrailFileWriter.MARKER_END_MD);
+            boolean brokenHash = GuardrailFileWriter.hasBrokenMarkers(text,
+                GuardrailFileWriter.MARKER_START_HASH, GuardrailFileWriter.MARKER_END_HASH);
             if (brokenMd || brokenHash) {
                 broken++;
                 problems.add("unbalanced VIBETAGS markers in " + dir.relativize(path)

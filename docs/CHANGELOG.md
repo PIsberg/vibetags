@@ -41,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`vibetags doctor` judged markers differently from the writer (#919).** It flagged a file when
+  one marker literal appeared and the other did not. The writer only counts a start marker that
+  owns its line outside a code fence, closed by the first end line after it. So doctor passed an
+  end above its start, and a real block that lost its end next to a fenced example of the pair,
+  both of which the next build repairs by discarding text or refuses; and it failed a CI gate on a
+  marker quoted inside a sentence, which the writer ignores. Doctor now asks the writer through
+  `GuardrailFileWriter.hasBrokenMarkers`, built on the same search the write path uses. Three
+  `DoctorCommandTest` cases were red before the change.
 - **A round skipped as unchanged flushed the shared write cache without the generation lock
   (#916).** When another processor generates sources after the first round was skipped, the round
   clears its recorded source digest and flushes `.vibetags-cache`. That flush re-reads and rewrites

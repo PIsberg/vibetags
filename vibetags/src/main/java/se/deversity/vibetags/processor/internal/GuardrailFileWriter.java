@@ -773,6 +773,22 @@ public final class GuardrailFileWriter {
     }
 
     /**
+     * Whether {@code content}'s marker pair is broken as this writer reads it: a block start with no
+     * end line after it, or an end line with no block start anywhere. The first is what
+     * {@code writeWithMarkers} repairs by discarding the text after the start, or refuses (#865);
+     * the second is what a lost start leaves, the old block kept as hand text above a new one.
+     * Uses the same line-owned, fence-aware search as the write path, so {@code vibetags doctor}
+     * cannot pass a file the next build breaks, nor flag a marker quoted in prose (#919).
+     */
+    public static boolean hasBrokenMarkers(String content, String markerStart, String markerEnd) {
+        int start = indexOfBlockStart(content, markerStart);
+        if (start >= 0) {
+            return indexOfMarkerLine(content, markerEnd, start + markerStart.length()) < 0;
+        }
+        return indexOfBlockStart(content, markerEnd) >= 0;
+    }
+
+    /**
      * Whether {@code index} lies inside a fenced code block: an odd number of fence lines above it.
      * A fence opens with a line starting {@code ```} or {@code ~~~} (an info string may follow) and
      * closes with a line of the same fence characters and nothing else, as CommonMark has it.

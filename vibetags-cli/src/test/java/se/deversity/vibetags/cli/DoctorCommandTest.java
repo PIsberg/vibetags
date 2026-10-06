@@ -163,6 +163,63 @@ class DoctorCommandTest {
         assertTrue(out().contains("unbalanced VIBETAGS markers in CLAUDE.md"), out());
     }
 
+    /**
+     * Doctor judges markers the way the writer finds them, not by whether each literal appears
+     * somewhere. The writer opens a block at a start marker that owns its line outside a code
+     * fence, and closes it at the first end line after that, so an end above the start closes
+     * nothing: the next build either discards everything after the start or, with no generated
+     * header there, leaves the file untouched with a warning.
+     */
+    @Test
+    void endMarkerAboveTheStart_needsAction() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"),
+            "<!-- VIBETAGS-END -->\nhand-written\n<!-- VIBETAGS-START -->\nhand-written after it\n");
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("unbalanced VIBETAGS markers in CLAUDE.md"), out());
+    }
+
+    /**
+     * A file documenting VibeTags can show the marker pair in a fenced example. The writer skips
+     * the fence and takes the real start below it, so a real block that lost its end is broken
+     * even though both literals are present.
+     */
+    @Test
+    void fencedExamplePairDoesNotCloseARealBlockThatLostItsEnd() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), """
+            # Notes
+
+            ```markdown
+            <!-- VIBETAGS-START -->
+            generated rules go here
+            <!-- VIBETAGS-END -->
+            ```
+
+            <!-- VIBETAGS-START -->
+            the real block, whose end marker someone deleted
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("unbalanced VIBETAGS markers in CLAUDE.md"), out());
+    }
+
+    /**
+     * A marker quoted inside a sentence is not a delimiter: the writer requires a marker to own
+     * its line, appends its block below, and the prose survives. Reporting that file as broken
+     * fails a CI gate on a project that is fine.
+     */
+    @Test
+    void markerQuotedInProse_isNotAFinding() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"),
+            "# Rules\n\nKeep hand edits outside the `<!-- VIBETAGS-START -->` block.\n");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("markers:         all intact"), out());
+    }
+
     @Test
     void unreadableMarkerFile_isAFindingNotAHealthyPass() throws Exception {
         // 0xFF can never appear in UTF-8, so Files.readString fails on this file. A file

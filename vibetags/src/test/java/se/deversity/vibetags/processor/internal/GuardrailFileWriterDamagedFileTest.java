@@ -195,6 +195,39 @@ class GuardrailFileWriterDamagedFileTest {
             "and it converges");
     }
 
+    @Test
+    @DisplayName("hasBrokenMarkers reads the marker pair the way the writer does (#919)")
+    void hasBrokenMarkersAgreesWithTheWriter(@TempDir Path dir) throws IOException {
+        // vibetags doctor reports these to the user before a build, so a broken verdict has to mean
+        // the writer will repair or refuse the file, and an intact one that it will not.
+        assertTrue(broken(START + "\n" + GENERATED), "a start with no end");
+        assertTrue(broken("```\n" + START + "\nexample\n" + END + "\n```\n\n" + START + "\n" + GENERATED),
+            "an example pair in a fence does not close the real block below it");
+        assertTrue(broken("old rules\n" + END + "\n"), "an end whose start was lost");
+        String endAboveStart = END + "\nhand-written\n" + START + "\nhand-written after it\n";
+        assertTrue(broken(endAboveStart), "an end above the start closes nothing");
+
+        assertFalse(broken(""), "no markers at all");
+        assertFalse(broken(START + "\n" + GENERATED + END + "\n"), "an intact pair");
+        assertFalse(broken("Keep edits outside the `" + START + "` block.\n"),
+            "a marker quoted in prose is not a delimiter");
+        assertFalse(broken("```\n" + START + "\nexample\n" + END + "\n```\n"), "an example pair alone");
+
+        // The writer's side of the same facts: the end above the start is refused, untouched (#865),
+        Path refused = dir.resolve("REFUSED.md");
+        Files.writeString(refused, endAboveStart, StandardCharsets.UTF_8);
+        assertFalse(new GuardrailFileWriter(HEADER, null, null).writeFileIfChanged(refused.toString(), GENERATED, true));
+        assertEquals(endAboveStart, Files.readString(refused, StandardCharsets.UTF_8));
+        // and a repaired file reads as intact.
+        Outcome repaired = repairTwice(dir.resolve("CLAUDE.md"), "notes\n\n" + START + "\n" + GENERATED);
+        assertTrue(repaired.firstWrote());
+        assertFalse(broken(repaired.afterFirst()), repaired.afterFirst());
+    }
+
+    private static boolean broken(String content) {
+        return GuardrailFileWriter.hasBrokenMarkers(content, START, END);
+    }
+
     /**
      * How many times {@code marker} stands alone on a line - the only form the writer treats as a
      * delimiter, so the only count that says where the block actually ends.

@@ -185,7 +185,7 @@ Exit code 1. Every finding says what to do about it.
 | Processor wiring | Neither `vibetags-processor` nor `vibetags-ksp` appears in the build file, so nothing regenerates the guardrail files. |
 | Annotations dependency | `vibetags-annotations` does not appear in the build file, so `@AI*` annotations will not compile. |
 | Active platforms | No opt-in file exists at all. |
-| Markers | An active file has a `VIBETAGS-START` without its `VIBETAGS-END`, or the reverse. The processor refuses to touch such a file, and hand-written content around the block is at risk. |
+| Markers | An active file has a `VIBETAGS-START` line with no `VIBETAGS-END` line after it, or an end line with no start. Markers are read the way the writer reads them: only a marker on a line of its own counts, a pair inside a fenced code example does not, and a marker quoted inside a sentence is ignored. On the next build the writer either repairs a start with no end by replacing everything after it, or, when no generated block follows the start, leaves the file untouched with a warning. Either way, text after the start is at risk. |
 | Readability | A file doctor needs cannot be read (permissions, not UTF-8). "Could not check" is always reported, never passed as "fine". |
 | Groovy fields | A `.groovy` source puts a guardrail on a field. groovyc's Java stubs carry no fields, so the processor never sees it. |
 | Kotlin value classes | A `.kt` declaration whose JVM name a value class mangles carries a guardrail. kapt leaves it out of its stubs, so the guardrail is dropped. |
