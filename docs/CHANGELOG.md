@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `vibetags-self-check` pre-commit hook exited 127 on Windows outside Git Bash (#905).**
+  Run from PowerShell or cmd, pre-commit found bash through `PATH`, which there is the WSL
+  launcher in `WindowsApps`. WSL bash read the backslashed script path as escapes, so the hook
+  failed before `tools/self-check.sh` started. The hook now runs the script as a git `!` alias,
+  which Git runs with its own shell from the repository root on every platform. Verified from
+  PowerShell and from Git Bash: both run the 25 s regeneration and pass.
 - **A parallel reactor could drop a module's region from the root files (#908).** Under `mvn -T`
   or Gradle `--parallel`, a module that read the sidecars before a sibling saved one could write
   `CLAUDE.md` and the other root files last, from a merge without that sibling, and the region

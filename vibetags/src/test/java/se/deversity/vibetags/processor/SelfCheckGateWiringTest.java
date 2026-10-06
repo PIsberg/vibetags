@@ -66,8 +66,21 @@ class SelfCheckGateWiringTest {
         int next = config.indexOf("- id:", at + 1);
         String hook = config.substring(at, next < 0 ? config.length() : next);
 
-        assertTrue(hook.contains("entry: " + SCRIPT),
+        Matcher entry = Pattern.compile("(?m)^\\s*entry:\\s*(.+?)\\s*$").matcher(hook);
+        assertTrue(entry.find(), "the vibetags-self-check hook has no entry:\n" + hook);
+        assertTrue(entry.group(1).contains(SCRIPT),
             "the vibetags-self-check hook does not run " + SCRIPT + ":\n" + hook);
+        // #905: pre-commit resolves the script's shebang (or a bare `bash` entry) through PATH.
+        // Launched from PowerShell or cmd, the first bash on PATH is the WSL launcher in
+        // WindowsApps, which reads the backslashed Windows path as escapes and exits 127 before
+        // the script starts. Git runs `!` aliases with its own shell on every platform, so the
+        // entry goes through git rather than through whatever `bash` PATH yields.
+        assertTrue(entry.group(1).startsWith("git ") && entry.group(1).contains("=!bash " + SCRIPT),
+            "the vibetags-self-check hook resolves bash through PATH, which on Windows outside "
+                + "Git Bash is WSL's launcher and fails with exit 127 (#905). Run it as a git "
+                + "`!` alias so Git's own shell runs it:\n" + hook);
+        assertFalse(hook.contains("language: script"),
+            "language: script makes pre-commit follow the shebang through PATH (#905):\n" + hook);
 
         Matcher files = Pattern.compile("(?m)^\\s*files:\\s*(\\S+)\\s*$").matcher(hook);
         assertTrue(files.find(), "the vibetags-self-check hook has no files: filter:\n" + hook);

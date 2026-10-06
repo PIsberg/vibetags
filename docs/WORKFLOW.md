@@ -73,7 +73,9 @@ Regenerating and diffing makes that a red build rather than something the next p
 profile by hand discovers. `ProjectFactsConsistencyTest` runs after the regeneration because it
 pins README.md's line counts for the regenerated files. JDK 21 only because it compares file
 content, which is JDK-independent. The same script is the `vibetags-self-check` pre-commit hook,
-so this drift fails locally first; `SelfCheckGateWiringTest` pins both callers to it.
+so this drift fails locally first; `SelfCheckGateWiringTest` pins both callers to it. The hook
+runs the script as a git `!` alias because a `PATH` lookup for bash from PowerShell finds WSL's
+launcher, which cannot read the Windows path (#905).
 
     It regenerates and diffs rather than using `-Dvibetags.selfcheck=true`, and the reason is worth
     keeping: check mode reports per compile round, and this project has two of them. Maven runs
