@@ -5,7 +5,7 @@ description: Build every downstream consumer of VibeTags against a chosen VibeTa
 
 # Consumer regression suite
 
-VibeTags' own 1537 tests say the processor works. They say nothing about whether a real
+VibeTags' own test suite says the processor works. It says nothing about whether a real
 consumer still builds. This skill answers that second question, for every Java repo under
 `../` that depends on VibeTags.
 

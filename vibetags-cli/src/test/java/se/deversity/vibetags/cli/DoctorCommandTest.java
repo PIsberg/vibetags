@@ -1,5 +1,6 @@
 package se.deversity.vibetags.cli;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -8,13 +9,23 @@ import javax.tools.ToolProvider;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryPermission;
+import java.nio.file.attribute.AclEntryType;
+import java.nio.file.attribute.AclFileAttributeView;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.stream.Stream;
@@ -97,6 +108,31 @@ class DoctorCommandTest {
             && l.contains("2 files")), out());
     }
 
+    /**
+     * "generated" is the block the writer manages, found the way the writer finds it (#919). A
+     * marker quoted in a sentence and an example pair in a fence are hand-written text: counted
+     * from the quote, the report called the prose above the block generated.
+     */
+    @Test
+    void contextReport_countsOnlyTheBlockTheWriterManages() throws Exception {
+        mavenProjectWiredForVibeTags();
+        String block = "\n<project_guardrails>\n  <locked_files>\n    <file path=\"a.B\"/>\n  </locked_files>\n"
+            + "</project_guardrails>\n";
+        String claude = "# Hand-written\n\nKeep edits outside the `<!-- VIBETAGS-START -->` block.\n"
+            + "These notes are mine, and so is the example below.\n\n"
+            + "```markdown\n<!-- VIBETAGS-START -->\nexample\n<!-- VIBETAGS-END -->\n```\n\n"
+            + "<!-- VIBETAGS-START -->" + block + "<!-- VIBETAGS-END -->\n";
+        Files.writeString(dir.resolve("CLAUDE.md"), claude);
+
+        PrintStream stream = new PrintStream(stdout, true, StandardCharsets.UTF_8);
+        Main.run(new String[]{"doctor", "--context"}, stream, stream, dir);
+
+        int total = claude.getBytes(StandardCharsets.UTF_8).length;
+        int generatedBytes = block.getBytes(StandardCharsets.UTF_8).length;
+        assertTrue(out().contains(String.format(java.util.Locale.ROOT, "generated %,d B (%d%%)",
+            generatedBytes, generatedBytes * 100 / total)), out());
+    }
+
     @Test
     void withoutContext_doctorDoesNotWeighAnything() throws Exception {
         mavenProjectWiredForVibeTags();
@@ -161,6 +197,63 @@ class DoctorCommandTest {
 
         assertEquals(1, doctor(), out());
         assertTrue(out().contains("unbalanced VIBETAGS markers in CLAUDE.md"), out());
+    }
+
+    /**
+     * Doctor judges markers the way the writer finds them, not by whether each literal appears
+     * somewhere. The writer opens a block at a start marker that owns its line outside a code
+     * fence, and closes it at the first end line after that, so an end above the start closes
+     * nothing: the next build either discards everything after the start or, with no generated
+     * header there, leaves the file untouched with a warning.
+     */
+    @Test
+    void endMarkerAboveTheStart_needsAction() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"),
+            "<!-- VIBETAGS-END -->\nhand-written\n<!-- VIBETAGS-START -->\nhand-written after it\n");
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("unbalanced VIBETAGS markers in CLAUDE.md"), out());
+    }
+
+    /**
+     * A file documenting VibeTags can show the marker pair in a fenced example. The writer skips
+     * the fence and takes the real start below it, so a real block that lost its end is broken
+     * even though both literals are present.
+     */
+    @Test
+    void fencedExamplePairDoesNotCloseARealBlockThatLostItsEnd() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), """
+            # Notes
+
+            ```markdown
+            <!-- VIBETAGS-START -->
+            generated rules go here
+            <!-- VIBETAGS-END -->
+            ```
+
+            <!-- VIBETAGS-START -->
+            the real block, whose end marker someone deleted
+            """);
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("unbalanced VIBETAGS markers in CLAUDE.md"), out());
+    }
+
+    /**
+     * A marker quoted inside a sentence is not a delimiter: the writer requires a marker to own
+     * its line, appends its block below, and the prose survives. Reporting that file as broken
+     * fails a CI gate on a project that is fine.
+     */
+    @Test
+    void markerQuotedInProse_isNotAFinding() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"),
+            "# Rules\n\nKeep hand edits outside the `<!-- VIBETAGS-START -->` block.\n");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("markers:         all intact"), out());
     }
 
     @Test
@@ -242,6 +335,32 @@ class DoctorCommandTest {
         assertTrue(out().contains("@AIPrivacy"), out());
         assertTrue(out().contains("billingEmail"), out());
         assertTrue(out().toLowerCase().contains("dropped"), out());
+    }
+
+    /**
+     * One directory doctor may not list, anywhere in the project (a database volume owned by root,
+     * say), ended the source walk: the Groovy and Kotlin checks saw only the files walked before it,
+     * or none. It is reported once, and every readable source is still checked.
+     */
+    @Test
+    void unlistableDirectoryInTheProject_doesNotStopTheSourceScan() throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/groovy/com/example/Customer.groovy", """
+            class Customer {
+                @AIPrivacy(dataType = "email")
+                String billingEmail
+            }
+            """);
+        Path locked = Files.createDirectories(dir.resolve("data"));
+
+        try (AutoCloseable restore = denyListing(locked)) {
+            assertEquals(1, doctor(), out());
+            assertTrue(out().contains("groovy sources:  1 file(s); 1 field-level guardrail(s)"), out());
+            assertTrue(out().contains("on field 'billingEmail'"), out());
+            assertEquals(1, out().lines().filter(l -> l.contains("could not read directory") && l.contains("data")).count(),
+                "the unreadable directory is one finding, not one per file type scanned: " + out());
+        }
     }
 
     @Test
@@ -1622,6 +1741,70 @@ class DoctorCommandTest {
             "the readable classes in a jar still count: " + out());
         assertTrue(out().contains("com/acme/model/Broken.class"), out());
         assertTrue(out().contains("missing.jar") && out().contains("does not exist"), out());
+    }
+
+    /**
+     * One directory doctor may not list, inside a class directory on {@code --classpath}, ended the
+     * whole report: {@code Files.walk} throws it as an {@code UncheckedIOException}, which the
+     * {@code IOException} handler did not catch, so doctor printed a bare error with no Kotlin line
+     * and no result. It is one more unreadable entry, and the readable classes still count.
+     */
+    @Test
+    void unlistableDirectoryInAClassDirectory_isAFindingNotAnAbortedReport(@TempDir Path outside) throws Exception {
+        mavenProjectWiredForVibeTags();
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+        sourceFile("src/main/kotlin/com/acme/app/Consumer.kt", CONSUMER);
+        // Outside the project, as a dependency's classes are: the source scan never walks it.
+        Path classes = Files.move(compiledDependency(), outside.resolve("classes"));
+        Path locked = Files.createDirectories(classes.resolve("locked"));
+
+        try (AutoCloseable restore = denyListing(locked)) {
+            assertEquals(1, doctor("--classpath", classes.toString()), out());
+            assertTrue(out().contains("Consumer.kt:8 @AILocked on fun forCustomer"),
+                "the readable classes in the directory still count: " + out());
+            assertTrue(out().contains("result: "), "the report runs to its end: " + out());
+            assertTrue(out().lines().anyMatch(l -> l.contains("could not read") && l.contains("locked")),
+                "the unreadable directory is named as a finding: " + out());
+        }
+    }
+
+    /**
+     * Makes {@code directory} unlistable for the user running the test, through whichever view the
+     * platform has, and returns what puts it back. Aborts the test where that does not take, such as
+     * a run as root, rather than passing it without the condition it needs.
+     */
+    private static AutoCloseable denyListing(Path directory) throws IOException {
+        AutoCloseable restore;
+        PosixFileAttributeView posix = Files.getFileAttributeView(directory, PosixFileAttributeView.class);
+        if (posix != null) {
+            Set<PosixFilePermission> before = posix.readAttributes().permissions();
+            posix.setPermissions(Set.of());
+            restore = () -> posix.setPermissions(before);
+        } else {
+            AclFileAttributeView acl = Files.getFileAttributeView(directory, AclFileAttributeView.class);
+            Assumptions.assumeTrue(acl != null, "no file-attribute view can make a directory unreadable here");
+            List<AclEntry> before = acl.getAcl();
+            List<AclEntry> denied = new ArrayList<>(before);
+            denied.add(0, AclEntry.newBuilder().setType(AclEntryType.DENY).setPrincipal(acl.getOwner())
+                .setPermissions(AclEntryPermission.LIST_DIRECTORY, AclEntryPermission.READ_DATA).build());
+            acl.setAcl(denied);
+            restore = () -> acl.setAcl(before);
+        }
+        boolean listable;
+        try (DirectoryStream<Path> listing = Files.newDirectoryStream(directory)) {
+            listable = listing != null;
+        } catch (AccessDeniedException expected) {
+            listable = false;
+        }
+        if (listable) {
+            try {
+                restore.close();
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+        Assumptions.assumeFalse(listable, "the directory is still listable (running as root?)");
+        return restore;
     }
 
     @Test

@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Test counts in the docs re-measured.** `docs/architecture/testing.md` carried a 0.7.x-era
+  per-class table and totals of 1484 and "724+" tests; it now points at `docs/TESTS.md`, the
+  maintained map. The tier table in `TESTS.md` is re-measured on 2026-10-06: 2655 tests in 208
+  classes for `mvn test`, 3625 in 320 for `mvn test -Pe2e`, against 957 and 1546 on 2026-08-10.
 - **Three more of this repository's own classes carry `@AIContext`.** Each states a fact that
   lives in another file or another build, so the class cannot show it: `SourceDigest` (an input
   that shapes output but is not an option, opt-in or `.vibetags-*` config must be hashed, and a
@@ -41,6 +45,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`vibetags doctor` judged markers differently from the writer (#919).** It flagged a file when
+  one marker literal appeared and the other did not. The writer only counts a start marker that
+  owns its line outside a code fence, closed by the first end line after it. So doctor passed an
+  end above its start, and a real block that lost its end next to a fenced example of the pair,
+  both of which the next build repairs by discarding text or refuses; and it failed a CI gate on a
+  marker quoted inside a sentence, which the writer ignores. Doctor now asks the writer through
+  `GuardrailFileWriter.hasBrokenMarkers`, built on the same search the write path uses. Three
+  `DoctorCommandTest` cases were red before the change.
+- **`vibetags doctor --context` counted hand-written text as generated (#919).** The report found
+  the block with the same literal search, so a marker quoted in prose above the block made it
+  count everything from the quote down: 207 B reported as generated in a test file whose block
+  was 102 B. It now uses the writer's `indexOfBlockStart` and `indexOfMarkerLine`, and reports the
+  one block the writer manages.
+- **One unlistable directory turned off doctor's Groovy and Kotlin checks (#922).** The project
+  was walked once per file type, and the first directory doctor could not list ended each walk,
+  so a root-owned directory such as a database volume left the checks with whatever came before
+  it, often nothing, and was reported once per file type. The project is now walked once; the
+  directory is one finding and every readable source is checked.
+- **`vibetags doctor --classpath` aborted on an unlistable directory in a class directory
+  (#921).** `Files.walk` threw it as an `UncheckedIOException` the `IOException` handler did not
+  catch, so doctor printed a bare `AccessDeniedException` and stopped after the marker line, with
+  no Kotlin check and no result. The class directory is now walked file by file: an unreadable
+  directory or class file is one more finding and the rest still counts.
+- **`vibetags doctor --help` and `vibetags init --help` failed with exit 2 (#920).** Only a
+  `--help` in first position was recognised; after a command it was a stray argument. `--help`
+  and `-h` now print usage and exit 0 wherever they appear.
+- **`vibetags init --platforms` mishandled blank and repeated entries (#920).** `,cursor` or
+  `claude,,cursor` failed the whole command with `unknown platform key(s): ` and no key named;
+  `claude,claude` reported the key as both created and already active. Blank entries are now
+  skipped, repeats collapse to one, and a list with no key left is the usual "Nothing created"
+  usage error.
 - **A round skipped as unchanged flushed the shared write cache without the generation lock
   (#916).** When another processor generates sources after the first round was skipped, the round
   clears its recorded source digest and flushes `.vibetags-cache`. That flush re-reads and rewrites

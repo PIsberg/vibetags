@@ -117,6 +117,9 @@ Then compile, and the processor fills each file in. What `init` guarantees:
   safe.
 - **`*_granular` keys create a directory**, everything else creates an empty file (with parent
   directories as needed).
+- **The key list is forgiving about its separators.** Spaces around keys, empty entries
+  (`claude,,cursor`) and a key named twice are all ignored. A list with no key in it is the same
+  usage error as no `--platforms` at all.
 - **Unknown keys fail the whole command before anything is created:**
 
   ```console
@@ -185,8 +188,8 @@ Exit code 1. Every finding says what to do about it.
 | Processor wiring | Neither `vibetags-processor` nor `vibetags-ksp` appears in the build file, so nothing regenerates the guardrail files. |
 | Annotations dependency | `vibetags-annotations` does not appear in the build file, so `@AI*` annotations will not compile. |
 | Active platforms | No opt-in file exists at all. |
-| Markers | An active file has a `VIBETAGS-START` without its `VIBETAGS-END`, or the reverse. The processor refuses to touch such a file, and hand-written content around the block is at risk. |
-| Readability | A file doctor needs cannot be read (permissions, not UTF-8). "Could not check" is always reported, never passed as "fine". |
+| Markers | An active file has a `VIBETAGS-START` line with no `VIBETAGS-END` line after it, or an end line with no start. Markers are read the way the writer reads them: only a marker on a line of its own counts, a pair inside a fenced code example does not, and a marker quoted inside a sentence is ignored. On the next build the writer either repairs a start with no end by replacing everything after it, or, when no generated block follows the start, leaves the file untouched with a warning. Either way, text after the start is at risk. |
+| Readability | A file doctor needs cannot be read (permissions, not UTF-8), or a directory under `--dir` or on `--classpath` cannot be listed. "Could not check" is always reported, never passed as "fine", and everything else is still checked. |
 | Groovy fields | A `.groovy` source puts a guardrail on a field. groovyc's Java stubs carry no fields, so the processor never sees it. |
 | Kotlin value classes | A `.kt` declaration whose JVM name a value class mangles carries a guardrail. kapt leaves it out of its stubs, so the guardrail is dropped. |
 
@@ -271,7 +274,9 @@ context weight (bytes are exact UTF-8; ~tokens is bytes / 4, an estimate, not a 
 ```
 
 - Bytes are exact. Tokens are bytes / 4, a rough estimate, not a tokenizer.
-- "generated" is the share inside the `VIBETAGS` markers, the part VibeTags controls.
+- "generated" is the share inside the `VIBETAGS` block the writer manages, the part VibeTags
+  controls. The block is found the way the writer finds it, so a marker quoted in a sentence or
+  an example pair in a code fence counts as hand-written text.
 - Sections are listed largest first, with entry counts. A section marked `(appears N times)` was
   rendered more than once in one file, the signature of a block rendered once per source set.
 - Scoped rule directories (`.claude/rules/`, `.cursor/rules/`, ...) are listed apart: tools load
@@ -307,7 +312,7 @@ has a task that prints the classpath, and lists what the scan still misses.
 |---|---|
 | `0` | Success. For `doctor`: healthy. |
 | `1` | `doctor` found something that needs action; `init` refused at least one key; or a file could not be written. |
-| `2` | Usage error: unknown command, unknown flag or key, stray argument, missing value, or a `--dir` that is not a directory. Running `vibetags` with no arguments prints usage and exits 2; `--help` exits 0. |
+| `2` | Usage error: unknown command, unknown flag or key, stray argument, missing value, or a `--dir` that is not a directory. Running `vibetags` with no arguments prints usage and exits 2; `--help` or `-h`, before or after the command (`vibetags doctor --help`), prints it and exits 0. |
 
 That makes `doctor` a cheap CI gate. It compiles nothing, so it runs in seconds. On a runner
 with jbang installed:

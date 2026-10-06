@@ -5,8 +5,11 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -16,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -69,15 +71,36 @@ final class JvmInlineClasses {
         return new Result(found, problems, classFiles[0]);
     }
 
+    /**
+     * Every class file under {@code root}. A directory or file that cannot be read is one more problem
+     * and the walk goes on: {@code Files.walk} threw an unlistable directory as an unchecked exception
+     * that ended the whole doctor report, and one unreadable file skipped every file after it (#921).
+     */
     private static void readDirectory(Path root, Set<String> found, List<String> problems, int[] classFiles) {
-        try (Stream<Path> walk = Files.walk(root)) {
-            for (Path file : walk.filter(Files::isRegularFile).toList()) {
-                String name = root.relativize(file).toString().replace('\\', '/');
-                if (isCandidate(name)) {
-                    classFiles[0]++;
-                    classify(root + ": " + name, Files.readAllBytes(file), found, problems);
+        try {
+            Files.walkFileTree(root, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    String name = root.relativize(file).toString().replace('\\', '/');
+                    if (attrs.isRegularFile() && isCandidate(name)) {
+                        classFiles[0]++;
+                        try {
+                            classify(root + ": " + name, Files.readAllBytes(file), found, problems);
+                        } catch (IOException e) {
+                            problems.add("could not read class file " + root + ": " + name + " (" + e.getMessage()
+                                + "): a value class declared in it cannot be seen");
+                        }
+                    }
+                    return FileVisitResult.CONTINUE;
                 }
-            }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException e) {
+                    problems.add("could not read classpath directory " + file + " (" + e.getMessage()
+                        + "): value classes declared under it cannot be seen");
+                    return FileVisitResult.CONTINUE;
+                }
+            });
         } catch (IOException e) {
             problems.add("could not read classpath directory " + root + ": " + e.getMessage());
         }

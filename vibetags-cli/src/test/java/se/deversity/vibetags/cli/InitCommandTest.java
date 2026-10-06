@@ -67,6 +67,39 @@ class InitCommandTest {
         assertTrue(out().contains("created:"), out());
     }
 
+    /**
+     * A doubled or leading comma is a typo in a list, not a key. It was read as an empty key and
+     * failed the whole command with "unknown platform key(s): " followed by nothing.
+     */
+    @Test
+    void platforms_emptyListEntriesAreSkipped() {
+        int code = run("init", "--platforms", ",claude,,cursor,");
+
+        assertEquals(0, code, err());
+        assertTrue(Files.isRegularFile(dir.resolve("CLAUDE.md")), out());
+        assertTrue(Files.isRegularFile(dir.resolve(".cursorrules")), out());
+        assertFalse(err().contains("unknown"), err());
+    }
+
+    @Test
+    void platforms_aListOfNothingIsAUsageErrorThatNamesNoBlankKey() {
+        int code = run("init", "--platforms", " , ");
+
+        assertEquals(2, code);
+        assertFalse(err().contains("unknown platform key(s): \n"), "no blank key is named: " + err());
+        assertTrue(out().contains("Nothing created"), out());
+    }
+
+    /** A key named twice is one request: reported once, as created, not also as already active. */
+    @Test
+    void platforms_aRepeatedKeyIsReportedOnce() {
+        int code = run("init", "--platforms", "claude,claude");
+
+        assertEquals(0, code, err());
+        assertTrue(out().contains("created:        claude (CLAUDE.md)"), out());
+        assertFalse(out().contains("already active"), out());
+    }
+
     @Test
     void granularKey_createsADirectory() {
         int code = run("init", "--platforms", "claude_granular");
