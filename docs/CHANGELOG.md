@@ -45,6 +45,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A module that gave up waiting for the generation lock released it for other processes on
+  Linux (#923).** Every waiter opened its own channel on `.vibetags-generate.lock` and polled
+  `tryLock()`. The JDK takes `fcntl` locks on Linux, which belong to the process, so when a waiter
+  timed out or was interrupted and closed its channel, the holder's lock was gone while the holder
+  still reported it held. A second build on the same root, a Gradle daemon beside a Maven run,
+  could then generate concurrently, which is the interleaving #908 added the lock to prevent.
+  `.vibetags-baseline.lock` used the same poll. Waiters in one JVM now queue at an in-JVM gate
+  before any of them opens a channel, so only the thread about to hold the lock has the file open.
+  The gate is an interned string's monitor and a system property, because each processor
+  classloader has its own copy of the class. Windows locks per handle and never had the bug.
+  `GenerationLockTest` starts a second JVM after a waiter gives up and asserts it cannot take the
+  lock; on Linux JDK 21 it failed before the fix.
 - **`vibetags doctor` judged markers differently from the writer (#919).** It flagged a file when
   one marker literal appeared and the other did not. The writer only counts a start marker that
   owns its line outside a code fence, closed by the first end line after it. So doctor passed an

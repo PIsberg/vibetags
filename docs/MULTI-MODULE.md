@@ -257,7 +257,9 @@ log:
 - **It works within one JVM as well as across processes.** A file lock belongs to the whole JVM, so
   a second module in the same build process gets `OverlappingFileLockException` instead of waiting,
   whichever classloader loaded each processor. The lock polls `tryLock()` every 10 ms, which waits
-  in both cases.
+  in both cases. Threads of one JVM queue at an in-JVM gate before opening the file at all (#923):
+  on Linux closing any channel on a locked file drops the process's lock, so a waiter that gave up
+  and closed its own channel used to free the holder's lock for another process.
 - **It never fails a build.** A root that will not open the file, a filesystem that refuses locks, an
   interrupt, or a wait over two minutes proceed unlocked, as every build did before, and say so:
   `generate.lock.skip module= reason=unopenable|unsupported|interrupted|timeout` (WARN). A module
