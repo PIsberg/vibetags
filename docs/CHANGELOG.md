@@ -54,6 +54,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.vibetags-baseline.<pid>-1.tmp` at once: one rename moved bytes its writer never produced and
   the other failed with `NoSuchFileException`. The name now carries a random tag drawn once per
   class load, `<name>.<pid>-<tag>-<n>.tmp`. Found by the two-classloader test written for #911.
+- **Enforcement baselines were recorded unlocked when a sibling module loaded the processor in
+  another classloader (#911).** `EnforcementBaseline.update()` took `.vibetags-baseline.lock` with
+  `lock()`. A file lock belongs to the whole JVM, and the per-root monitor in front of it only to
+  one copy of the class, so under `mvn -T` or Gradle `--parallel` the second module got
+  `OverlappingFileLockException` and merged with no lock: the #554 lost update again. It now polls
+  `tryLock()` through `GenerationLock`, which waits in both cases. Like generation, a wait over two
+  minutes proceeds unlocked instead of hanging the build; before, a lock held by another process
+  was waited on indefinitely. Two new `EnforcementBaselineTest` cases failed before the change: one
+  holds the lock outside the monitor and sees `update()` write anyway, and one records from two
+  classloaders at once and lost an approval in round 0.
 - **A parallel reactor could drop a module's region from the root files (#908).** Under `mvn -T`
   or Gradle `--parallel`, a module that read the sidecars before a sibling saved one could write
   `CLAUDE.md` and the other root files last, from a merge without that sibling, and the region

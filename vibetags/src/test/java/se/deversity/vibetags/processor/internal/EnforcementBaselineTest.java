@@ -4,13 +4,26 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -269,5 +282,96 @@ class EnforcementBaselineTest {
 
         assertEquals(first, second,
             "this file is committed; a build that rewrites it unchanged puts it in every commit");
+    }
+
+    @Test
+    void updateWaitsForALockHeldElsewhereInThisJvm(@TempDir Path root) throws Exception {
+        // #911. A FileLock belongs to the whole JVM, so a sibling module whose processor was loaded
+        // by another classloader, with its own copy of the per-root monitor, meets this lock as
+        // OverlappingFileLockException. Holding it here, outside the monitor, is that sibling.
+        Map<String, String> current = new LinkedHashMap<>();
+        current.put(EnforcementBaseline.familyAndPath("AIContract", "com.example.A#a()"), "a():void");
+        CountDownLatch done = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Path file = root.resolve(EnforcementBaseline.FILE_NAME);
+        try (FileChannel channel = FileChannel.open(root.resolve(EnforcementBaseline.LOCK_FILE_NAME),
+                StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+             FileLock sibling = channel.lock()) {
+            assertTrue(sibling.isValid(), "precondition: the sibling holds the baseline lock");
+            Thread recorder = new Thread(() -> {
+                try {
+                    EnforcementBaseline.load(root).update(root, "core", current);
+                } catch (Throwable e) {
+                    failure.set(e);
+                }
+                done.countDown();
+            });
+            recorder.start();
+            assertFalse(done.await(300, TimeUnit.MILLISECONDS),
+                "update() ran its read-merge-write while a sibling in this JVM held the lock, "
+                    + "which is the lost-update race of #554 for any reactor whose modules load "
+                    + "the processor in separate classloaders");
+            assertFalse(Files.exists(file), "nothing may be written while the sibling holds the lock");
+        }
+        assertTrue(done.await(10, TimeUnit.SECONDS), "update() must proceed once the lock is free");
+        assertNull(failure.get(), () -> "update() failed: " + failure.get());
+        assertEquals("a():void", EnforcementBaseline.load(root)
+            .signatureFor("core", "AIContract", "com.example.A#a()"));
+    }
+
+    @Test
+    void twoClassloadersRecordingAtOnceKeepEachOthersApprovals(@TempDir Path root) throws Exception {
+        // #911 as it happens in a build: two copies of EnforcementBaseline, each with its own
+        // per-root monitor, recording sibling modules into one root at the same moment.
+        String element = "com.example.A#a()";
+        String key = EnforcementBaseline.familyAndPath("AIContract", element);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try (URLClassLoader coreLoader = ownLoader(); URLClassLoader webLoader = ownLoader()) {
+            Method[] core = baselineMethods(coreLoader);
+            Method[] web = baselineMethods(webLoader);
+            for (int round = 0; round < 150; round++) {
+                CyclicBarrier start = new CyclicBarrier(2);
+                String coreSig = "core" + round;
+                String webSig = "web" + round;
+                Future<?> a = pool.submit(() -> record(core, start, root, "core", Map.of(key, coreSig)));
+                Future<?> b = pool.submit(() -> record(web, start, root, "web", Map.of(key, webSig)));
+                a.get(30, TimeUnit.SECONDS);
+                b.get(30, TimeUnit.SECONDS);
+                EnforcementBaseline after = EnforcementBaseline.load(root);
+                assertEquals(coreSig, after.signatureFor("core", "AIContract", element),
+                    "round " + round + ": web's write dropped core's approval");
+                assertEquals(webSig, after.signatureFor("web", "AIContract", element),
+                    "round " + round + ": core's write dropped web's approval");
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    /** A loader that defines the processor's classes again rather than delegating to the test's. */
+    private static URLClassLoader ownLoader() {
+        URL[] path = {
+            EnforcementBaseline.class.getProtectionDomain().getCodeSource().getLocation(),
+            org.slf4j.Logger.class.getProtectionDomain().getCodeSource().getLocation(),
+        };
+        return new URLClassLoader(path, ClassLoader.getPlatformClassLoader());
+    }
+
+    /** {@code load} and {@code update} of the EnforcementBaseline copy that {@code loader} defines. */
+    private static Method[] baselineMethods(ClassLoader loader) throws Exception {
+        Class<?> type = loader.loadClass(EnforcementBaseline.class.getName());
+        assertFalse(type == EnforcementBaseline.class, "precondition: a second copy of the class");
+        return new Method[] {
+            type.getMethod("load", Path.class),
+            type.getMethod("update", Path.class, String.class, Map.class),
+        };
+    }
+
+    private static Void record(Method[] baseline, CyclicBarrier start, Path root, String module,
+                               Map<String, String> current) throws Exception {
+        Object loaded = baseline[0].invoke(null, root);
+        start.await(10, TimeUnit.SECONDS);
+        baseline[1].invoke(loaded, root, module, current);
+        return null;
     }
 }
