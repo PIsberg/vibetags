@@ -89,11 +89,13 @@ class RendererBranchCoverageTest {
     }
 
     @Test
-    void ignoreFileRenderer_withReplitPlatform_producesDefaultName() {
-        // Platform.REPLIT has no ignore label → default: return "AI Platform"
+    void ignoreFileRenderer_withUnlabelledGlobPlatform_producesDefaultName() {
+        // Platform.AI_EXCLUDE writes globs but declares no ignore label → default: "AI Platform".
+        // A platform that writes no globs at all contributes nothing (#926), so it cannot reach
+        // the header, which is why this is not REPLIT any more.
         IgnoreFileRenderer renderer = new IgnoreFileRenderer();
-        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("replit"));
-        String result = renderer.render(oneIgnoredElement().model(), Platform.REPLIT, ctx);
+        RenderingContext ctx = new RenderingContext("P", "# header\n", Set.of("aiexclude"));
+        String result = renderer.render(oneIgnoredElement().model(), Platform.AI_EXCLUDE, ctx);
         assertTrue(result.contains("AI Platform"),
             "Default platform branch must produce 'AI Platform' in IgnoreFileRenderer");
     }

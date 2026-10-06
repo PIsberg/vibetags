@@ -268,7 +268,7 @@ public class GeneratedMetadata {
 
 **Difference from `@AILocked`:** `@AILocked` says "you can see this but cannot modify it". `@AIIgnore` says "this does not exist — never mention it, never reference it, never include it in suggestions."
 
-**Generated ignore files:** Elements annotated with `@AIIgnore` are added as glob patterns to `.cursorignore`, `.qwenignore`, `.codeiumignore`, `.aiderignore`, and `.aiexclude`.
+**Generated ignore files:** Elements annotated with `@AIIgnore` are added as glob patterns to `.cursorignore`, `.qwenignore`, `.codeiumignore`, `.aiderignore`, and `.aiexclude`. Only a type becomes a glob; an ignored field or method has no file of its own, so it is excluded in the prose outputs instead (#926).
 
 **Smart Validation:** If you apply `@AIPrivacy` to an element already marked with `@AIIgnore`, the compiler warns you — `@AIIgnore` already hides the element entirely, making `@AIPrivacy` redundant.
 
