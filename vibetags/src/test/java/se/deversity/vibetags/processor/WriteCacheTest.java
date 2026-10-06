@@ -774,4 +774,94 @@ class WriteCacheTest {
         assertNull(cache.getSourceDigest());
         assertEquals(java.util.List.of(), cache.getSourceDiagnostics());
     }
+
+    // ---------------------------------------------------------------- sibling instances (#907)
+    //
+    // A parallel reactor gives every module its own instance over the one root cache, each loaded
+    // before any of them flushes. These pin that a flush writes what a serial build would have:
+    // what is on disk now, with this instance's own changes on top.
+
+    @Test
+    void siblingFlush_keepsTheEntriesAndHeadersAnotherModuleFlushedFirst(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Path coreFile = Files.writeString(tmp.resolve("core.md"), "core body");
+        Path webFile = Files.writeString(tmp.resolve("web.md"), "web body");
+        WriteCache core = new WriteCache(cachePath);
+        core.bindModule("core");
+        WriteCache web = new WriteCache(cachePath);
+        web.bindModule("web");
+
+        core.recordWrite(coreFile, "core body");
+        core.setBuildFingerprint("fp-core");
+        core.setSourceDigest("digest-core");
+        core.setSidecarStamp("stamp-after-core");
+        core.flush();
+        web.recordWrite(webFile, "web body");
+        web.setBuildFingerprint("fp-web");
+        web.flush();
+
+        WriteCache nextCore = new WriteCache(cachePath);
+        nextCore.bindModule("core");
+        assertTrue(nextCore.isUnchanged(coreFile, "core body"),
+            "web's flush dropped core's entry, so core's next build misses on a file it wrote");
+        assertEquals("fp-core", nextCore.getBuildFingerprint(), "web's flush dropped core's fingerprint");
+        assertEquals("digest-core", nextCore.getSourceDigest(), "web's flush dropped core's source digest");
+        assertEquals("stamp-after-core", nextCore.getSidecarStamp(),
+            "web set no stamp, so the one core recorded must stand");
+        WriteCache nextWeb = new WriteCache(cachePath);
+        nextWeb.bindModule("web");
+        assertTrue(nextWeb.isUnchanged(webFile, "web body"));
+        assertEquals("fp-web", nextWeb.getBuildFingerprint());
+    }
+
+    @Test
+    void siblingFlush_aKeyTheLaterFlusherWroteOrRemovedTakesItsValue(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Path shared = Files.writeString(tmp.resolve("CLAUDE.md"), "first");
+        Path retired = Files.writeString(tmp.resolve("retired.md"), "retired");
+        WriteCache seed = new WriteCache(cachePath);
+        seed.recordWrite(retired, "retired");
+        seed.flush();
+
+        WriteCache core = new WriteCache(cachePath);
+        core.bindModule("core");
+        WriteCache web = new WriteCache(cachePath);
+        web.bindModule("web");
+        core.recordWrite(shared, "first");
+        core.flush();
+        Files.writeString(shared, "second, longer");
+        web.recordWrite(shared, "second, longer");
+        web.invalidate(retired);
+        web.flush();
+
+        WriteCache next = new WriteCache(cachePath);
+        assertTrue(next.isUnchanged(shared, "second, longer"), "the later writer's entry must win");
+        assertFalse(next.isUnchanged(shared, "first"), "the earlier writer's bytes are no longer on disk");
+        assertFalse(next.isUnchanged(retired, "retired"),
+            "web invalidated this entry; re-reading the file must not bring it back");
+    }
+
+    @Test
+    void siblingFlush_anEntryTheLaterFlusherOnlyLoadedTakesTheNewerValue(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Path shared = Files.writeString(tmp.resolve("CLAUDE.md"), "v1");
+        Path webFile = Files.writeString(tmp.resolve("web.md"), "web body");
+        WriteCache seed = new WriteCache(cachePath);
+        seed.recordWrite(shared, "v1");
+        seed.flush();
+
+        WriteCache core = new WriteCache(cachePath);
+        core.bindModule("core");
+        WriteCache web = new WriteCache(cachePath);
+        web.bindModule("web");
+        assertTrue(web.isUnchanged(shared, "v1"), "precondition: web loaded the v1 entry");
+        Files.writeString(shared, "v2, rewritten by core");
+        core.recordWrite(shared, "v2, rewritten by core");
+        core.flush();
+        web.recordWrite(webFile, "web body");
+        web.flush();
+
+        assertTrue(new WriteCache(cachePath).isUnchanged(shared, "v2, rewritten by core"),
+            "web never touched CLAUDE.md, so its stale v1 entry must not replace core's newer one");
+    }
 }

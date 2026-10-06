@@ -267,6 +267,15 @@ log:
 Generation is milliseconds to seconds per module, so the cost is that much serialisation on the
 VibeTags step only; compilation itself still runs in parallel.
 
+The write cache is shared the same way: every module's processor holds its own view of the one
+`.vibetags-cache`, loaded before any of them generates. A flush re-reads the file and writes back
+only what that module changed (the entries it recorded or removed, its own `# module:` section,
+and the root sidecar stamp if it set one), so the result is what a serial build would have left
+(#907). Before, each flush wrote its whole stale view, and the last module to flush dropped its
+siblings' entries, fingerprints and source digests: a cache miss for each, on the build after a
+parallel one. Generation's flushes run inside the lock above; one outside it, such as an
+early-exited round clearing its digest, can still race a sibling's and cost that cache miss.
+
 ## Per-module (nested) output
 
 The sidecar/merge above produces the **root** files. Independently, a module can opt into a guardrail

@@ -13,9 +13,11 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Per-output-file content cache. Lets {@link GuardrailFileWriter} skip the
@@ -35,11 +37,14 @@ import java.util.Map;
  *
  * <p>A single processor invocation owns one instance for its lifetime, but a parallel reactor
  * runs one invocation per module against the same root, so several instances share one cache
- * file. They are not coordinated: the last {@link #flush} wins and drops the entries the others
- * recorded since they loaded, which costs those files a cache miss on the next build. What they
- * must never do is produce a false positive, so an entry's attributes always describe the bytes
- * its own writer wrote or compared (see {@link #recordWrite(Path, String, BasicFileAttributes)}),
- * never a stat that can belong to another module's write.
+ * file, each loaded before any of them flushes. {@link #flush} therefore re-reads the file and
+ * writes it back with only this instance's own changes on top: the entries it recorded or removed,
+ * its module's section, and the root sidecar stamp if it set one. Writing its whole loaded view
+ * instead dropped every entry and header a sibling had flushed since, a cache miss on exactly the
+ * build after a parallel one (#907). What instances must never do is produce a false positive, so
+ * an entry's attributes always describe the bytes its own writer wrote or compared (see
+ * {@link #recordWrite(Path, String, BasicFileAttributes)}), never a stat that can belong to another
+ * module's write; the merge keeps each entry as its writer recorded it.
  */
 @AICore(
     sensitivity = "high",
@@ -47,7 +52,7 @@ import java.util.Map;
 )
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.SYNCHRONIZED,
-    note = "Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it). Instances over one .vibetags-cache, one per module of a parallel reactor, may drop each other's entries on flush, a cache miss; they never vouch for another writer's bytes (WriteCacheCrossInstanceAsyncTest proves it)"
+    note = "Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it). Instances over one .vibetags-cache, one per module of a parallel reactor, merge on flush, so a sibling's entries survive; two flushes racing outside the generation lock can still drop one side's, a cache miss. They never vouch for another writer's bytes (WriteCacheCrossInstanceAsyncTest proves it)"
 )
 @AITestDriven(
     coverageGoal = 90,
@@ -134,6 +139,18 @@ public final class WriteCache {
     /** Per-module run headers, keyed by module id; see {@link Section}. */
     private final Map<String, Section> sections = new LinkedHashMap<>();
 
+    /**
+     * Entry keys this instance recorded or removed since its last flush. Only these override what
+     * {@link #flush} re-reads from disk; every other entry there is a sibling's newer record.
+     */
+    private final Set<String> touchedKeys = new HashSet<>();
+
+    /** Whether {@link #bindModule} moved the whole-root section into this module's; see {@link #flush}. */
+    private boolean legacyAdopted;
+
+    /** Whether {@link #setSidecarStamp} changed the root stamp since the last flush. */
+    private boolean rootStampSet;
+
     /** Stamp over the sidecar set as the last full round of any module left it; {@code null} when unknown. */
     private @Nullable String sidecarStamp;
 
@@ -201,6 +218,7 @@ public final class WriteCache {
             Section legacy = sections.remove(LEGACY_SECTION);
             if (legacy != null) {
                 sections.put(moduleId, legacy);
+                legacyAdopted = true;
                 dirty = true;
             }
         }
@@ -313,6 +331,7 @@ public final class WriteCache {
         loadIfNeeded();
         if (!java.util.Objects.equals(this.sidecarStamp, stamp)) {
             this.sidecarStamp = stamp;
+            this.rootStampSet = true;
             this.dirty = true;
         }
         Section section = section();
@@ -385,6 +404,7 @@ public final class WriteCache {
                 // — so drop it here, or its absence would suppress the short-circuit forever.
                 if (INPUT_HASH.equals(e.getValue().hash)) {
                     it.remove();
+                    touchedKeys.add(e.getKey());
                     dirty = true;
                 }
                 return false; // missing or unreadable — caller must regenerate
@@ -415,9 +435,11 @@ public final class WriteCache {
                 return; // unchanged — do not dirty the cache for a file we only read
             }
             entries.put(relKey, new Entry(INPUT_HASH, attrs.size(), attrs.lastModifiedTime().toMillis()));
+            touchedKeys.add(relKey);
             dirty = true;
         } catch (IOException ignored) {
             if (entries.remove(relKey) != null) {
+                touchedKeys.add(relKey);
                 dirty = true;
             }
         }
@@ -479,6 +501,7 @@ public final class WriteCache {
             entries.put(relKey,
                 new Entry(fingerprint(body), attrs.size(), attrs.lastModifiedTime().toMillis()));
         }
+        touchedKeys.add(relKey);
         dirty = true;
     }
 
@@ -495,7 +518,9 @@ public final class WriteCache {
      */
     public synchronized void recordFailure(Path file) {
         loadIfNeeded();
-        entries.put(cacheKey(file), new Entry(FAILED_HASH, -1, -1));
+        String relKey = cacheKey(file);
+        entries.put(relKey, new Entry(FAILED_HASH, -1, -1));
+        touchedKeys.add(relKey);
         dirty = true;
     }
 
@@ -510,32 +535,70 @@ public final class WriteCache {
         loadIfNeeded();
         String relKey = cacheKey(file);
         if (entries.remove(relKey) != null) {
+            touchedKeys.add(relKey);
             dirty = true;
         }
     }
 
-    /** Persists the cache to disk if anything changed. No-op when nothing was recorded. */
+    /**
+     * Persists the cache to disk if anything changed. No-op when nothing was recorded.
+     *
+     * <p>Merges rather than overwrites (#907): the file is re-read, and only what this instance
+     * changed replaces what is there, so the result is what a serial build would have written had
+     * this module loaded the cache after its siblings flushed. A module round's generation flushes
+     * inside the generation lock (#908), which serialises the re-read and the write across a
+     * reactor. A flush outside it, such as an early-exited round clearing its digest, can race a
+     * sibling's and lose one side's changes: a cache miss, and the behaviour before the merge.
+     */
     public synchronized void flush() {
         if (!dirty) return;
-        StringBuilder sb = new StringBuilder(64 + 128 * entries.size());
+        WriteCache onDisk = new WriteCache(cachePath);
+        Map<String, Entry> mergedEntries;
+        Map<String, Section> mergedSections;
+        String diskStamp;
+        synchronized (onDisk) {
+            onDisk.loadIfNeeded();
+            mergedEntries = new LinkedHashMap<>(onDisk.entries);
+            mergedSections = new LinkedHashMap<>(onDisk.sections);
+            diskStamp = onDisk.sidecarStamp;
+        }
+        for (String key : touchedKeys) {
+            Entry mine = entries.get(key);
+            if (mine == null) {
+                mergedEntries.remove(key);
+            } else {
+                mergedEntries.put(key, mine);
+            }
+        }
+        // Sections other than this module's are siblings' headers, and only they write them.
+        if (legacyAdopted) {
+            mergedSections.remove(LEGACY_SECTION);
+        }
+        Section own = sections.get(currentModule);
+        if (own != null) {
+            mergedSections.put(currentModule, own);
+        }
+        String mergedStamp = rootStampSet ? sidecarStamp : diskStamp;
+
+        StringBuilder sb = new StringBuilder(64 + 128 * mergedEntries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n")
             .append("# format: ").append(FORMAT_VERSION).append('\n');
-        if (sidecarStamp != null) {
-            sb.append("# sidecar-stamp: ").append(sidecarStamp).append('\n');
+        if (mergedStamp != null) {
+            sb.append("# sidecar-stamp: ").append(mergedStamp).append('\n');
         }
         // One header block per module. The legacy (unbound) section, when present, is written
         // first and without a "# module:" line, which is exactly the shape version 2 read.
-        Section legacy = sections.get(LEGACY_SECTION);
+        Section legacy = mergedSections.get(LEGACY_SECTION);
         if (legacy != null) {
             appendHeaders(sb, LEGACY_SECTION, legacy);
         }
-        for (Map.Entry<String, Section> section : sections.entrySet()) {
+        for (Map.Entry<String, Section> section : mergedSections.entrySet()) {
             if (!LEGACY_SECTION.equals(section.getKey())) {
                 sb.append("# module: ").append(section.getKey()).append('\n');
                 appendHeaders(sb, section.getKey(), section.getValue());
             }
         }
-        for (Map.Entry<String, Entry> e : entries.entrySet()) {
+        for (Map.Entry<String, Entry> e : mergedEntries.entrySet()) {
             sb.append(e.getKey()).append('\t')
               .append(e.getValue().hash).append('\t')
               .append(e.getValue().size).append('\t')
@@ -560,6 +623,10 @@ public final class WriteCache {
             Files.writeString(tmp, sb.toString(), StandardCharsets.UTF_8);
             ModuleSidecar.moveIntoPlace(tmp, cachePath, ModuleSidecar.ATOMIC_REPLACE);
             dirty = false;
+            // On disk now; a later flush re-reads them, and must not re-assert a value a sibling
+            // has replaced since.
+            touchedKeys.clear();
+            rootStampSet = false;
         } catch (IOException ignored) {
             // Cache flush is best-effort — losing it just means we rebuild on the next compile.
         }

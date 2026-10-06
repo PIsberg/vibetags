@@ -64,6 +64,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was waited on indefinitely. Two new `EnforcementBaselineTest` cases failed before the change: one
   holds the lock outside the monitor and sees `update()` write anyway, and one records from two
   classloaders at once and lost an approval in round 0.
+- **In a parallel reactor the last write-cache flush dropped every sibling's cache entries
+  (#907).** Each module's processor loads `.vibetags-cache` before any of them generates, and
+  `WriteCache.flush()` wrote that whole loaded view back, so the last module to flush erased the
+  entries, fingerprints, sidecar stamp and source digests its siblings had flushed since. Nothing
+  was wrong in the output, but the early exit and the per-file fast path missed on the build after
+  a parallel one. A flush now re-reads the file and replaces only what this instance changed: the
+  keys it recorded or removed, its own module section, and the root stamp if it set one. An entry
+  is still kept exactly as its writer recorded it, so the merge cannot pair one writer's hash with
+  another's file attributes. `WriteCacheTest` drives two instances loaded before either flushes;
+  two of its three new cases failed before the change. Not measured on a real `mvn -T` reactor.
 - **A parallel reactor could drop a module's region from the root files (#908).** Under `mvn -T`
   or Gradle `--parallel`, a module that read the sidecars before a sibling saved one could write
   `CLAUDE.md` and the other root files last, from a merge without that sibling, and the region
