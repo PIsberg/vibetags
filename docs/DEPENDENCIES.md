@@ -110,7 +110,9 @@ configured cannot fail and so reports nothing when it is missing.
 testing runs on demand only, via `.github/workflows/mutation.yml`, because it costs minutes rather
 than seconds.
 
-**Supply chain and publishing.** `cyclonedx-maven-plugin` emits the SBOM.
+**Supply chain and publishing.** `cyclonedx-maven-plugin` emits the SBOM, as JSON only: each
+published file costs Central's monthly file allowance 4 files with its signature and checksums
+(#863).
 `maven-enforcer-plugin` (`maven-enforcer-plugin.version`) bans any compile- or runtime-scoped
 dependency outside the allowlist declared in `vibetags-parent` — this document is the ledger of
 what ships, and the enforcer rule is that ledger's executable form. Test scope is exempt: it

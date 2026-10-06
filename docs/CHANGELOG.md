@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A release puts 84 files on Maven Central instead of 150 (#863).** Central allows an
+  organization 1,167 files and 7 releases a month and rate-limits one that stays over, and
+  September 2026 was over both. The publishing plugin's default sent SHA-256 and SHA-512 beside
+  the MD5 and SHA-1 Central requires, and CycloneDX wrote each SBOM as XML as well as JSON. The
+  `central-publish` profile now sets `<checksums>required</checksums>` and every published module
+  writes `-cyclonedx.json` only; anyone fetching the `-cyclonedx.xml` classifier will find no new
+  versions of it. Measured on a local bundle of `vibetags-annotations` built with the upload
+  pointed at a closed port: 30 files before, 15 after, 36 and 20 once CI signs them.
+  `CentralPublishingBudgetTest` pins both settings. `docs/RELEASING.md` and the release skill now
+  count the month's tags before a release, with a cadence of at most 3 a month.
 - **Test counts in the docs re-measured.** `docs/architecture/testing.md` carried a 0.7.x-era
   per-class table and totals of 1484 and "724+" tests; it now points at `docs/TESTS.md`, the
   maintained map. The tier table in `TESTS.md` is re-measured on 2026-10-06: 2655 tests in 208
@@ -45,6 +55,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A module that gave up waiting for the generation lock released it for other processes on
+  Linux (#923).** Every waiter opened its own channel on `.vibetags-generate.lock` and polled
+  `tryLock()`. The JDK takes `fcntl` locks on Linux, which belong to the process, so when a waiter
+  timed out or was interrupted and closed its channel, the holder's lock was gone while the holder
+  still reported it held. A second build on the same root, a Gradle daemon beside a Maven run,
+  could then generate concurrently, which is the interleaving #908 added the lock to prevent.
+  `.vibetags-baseline.lock` used the same poll. Waiters in one JVM now queue at an in-JVM gate
+  before any of them opens a channel, so only the thread about to hold the lock has the file open.
+  The gate is an interned string's monitor and a system property, because each processor
+  classloader has its own copy of the class. Windows locks per handle and never had the bug.
+  `GenerationLockTest` starts a second JVM after a waiter gives up and asserts it cannot take the
+  lock; on Linux JDK 21 it failed before the fix.
 - **`vibetags doctor` judged markers differently from the writer (#919).** It flagged a file when
   one marker literal appeared and the other did not. The writer only counts a start marker that
   owns its line outside a code fence, closed by the first end line after it. So doctor passed an

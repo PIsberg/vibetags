@@ -28,6 +28,14 @@ import java.time.Duration;
  * {@code EnforcementBaseline} takes the same poll over its own lock file through
  * {@link #acquireFile}: with {@code lock()} it met that exception and recorded unlocked (#911).
  *
+ * <p>Only one thread per JVM opens a channel on a lock file at a time; the others wait at an
+ * in-JVM gate first (#923). On Linux the JDK takes {@code fcntl} locks, which belong to the
+ * process, and closing <em>any</em> channel on the file drops all of them. A waiter that opened
+ * its own channel and closed it on giving up freed the holder's lock for another process, while
+ * the holder still reported it held. Each processor classloader has its own copy of this class, so
+ * the gate cannot be a static field: it is an interned string's monitor, with a system property
+ * naming the holder, the two pieces of state every classloader in the JVM shares.
+ *
  * <p>Never fails a build. A root that will not give a channel, a filesystem that refuses locks, an
  * interrupt, or a wait past {@link #MAX_WAIT} all proceed unlocked, which is the behaviour before
  * this lock existed, and each says so in the log with its reason.
@@ -45,14 +53,23 @@ public final class GenerationLock implements AutoCloseable {
 
     private static final long POLL_MILLIS = 10;
 
-    private static final GenerationLock UNLOCKED = new GenerationLock(null, null);
+    /** Prefix of the system property that marks a lock file's in-JVM gate as taken. */
+    private static final String GATE_PROPERTY_PREFIX = "se.deversity.vibetags.lock-gate.";
+
+    /** How {@link #enterGate} ended. */
+    private enum Gate { ENTERED, ENTERED_AFTER_WAIT, TIMED_OUT }
+
+    private static final GenerationLock UNLOCKED = new GenerationLock(null, null, null);
 
     private final @Nullable FileChannel channel;
     private final @Nullable FileLock lock;
+    /** The gate this lock holds, left after the channel closes. */
+    private final @Nullable String gate;
 
-    private GenerationLock(@Nullable FileChannel channel, @Nullable FileLock lock) {
+    private GenerationLock(@Nullable FileChannel channel, @Nullable FileLock lock, @Nullable String gate) {
         this.channel = channel;
         this.lock = lock;
+        this.gate = gate;
     }
 
     /** No lock: for a round that cannot race a sibling, the root's own or a single module's. */
@@ -75,25 +92,42 @@ public final class GenerationLock implements AutoCloseable {
      * {@code generate.lock.*} ones, so a caller with a different contract passes none.
      */
     static GenerationLock acquireFile(Path lockFile, String moduleId, @Nullable Logger log, Duration maxWait) {
+        long start = System.nanoTime();
+        long deadline = start + maxWait.toNanos();
+        String gate = GATE_PROPERTY_PREFIX + gateKey(lockFile);
+        Gate entered;
+        try {
+            entered = enterGate(gate, moduleId, deadline, log);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            skip(log, moduleId, "interrupted", "");
+            return UNLOCKED;
+        }
+        if (entered == Gate.TIMED_OUT) {
+            skip(log, moduleId, "timeout", "waitedMs=" + maxWait.toMillis());
+            return UNLOCKED;
+        }
         FileChannel channel;
         try {
             channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
         } catch (IOException | RuntimeException e) {
+            leaveGate(gate);
             skip(log, moduleId, "unopenable", e.toString());
             return UNLOCKED;
         }
-        long start = System.nanoTime();
-        long deadline = start + maxWait.toNanos();
-        boolean waited = false;
+        boolean waited = entered == Gate.ENTERED_AFTER_WAIT;
+        // Every close below is safe: holding the gate, no other thread in this JVM holds the lock.
         while (true) {
             FileLock lock;
             try {
                 lock = channel.tryLock();
             } catch (OverlappingFileLockException heldInThisJvm) {
+                // Past the gate, only a processor that predates it can hold the lock in this JVM.
                 lock = null;
             } catch (IOException | RuntimeException e) {
                 // NFS and some container overlays refuse advisory locks outright.
                 closeQuietly(channel);
+                leaveGate(gate);
                 skip(log, moduleId, "unsupported", e.toString());
                 return UNLOCKED;
             }
@@ -102,7 +136,7 @@ public final class GenerationLock implements AutoCloseable {
                     log.info("generate.lock.acquired module={} waitedMs={}", moduleId,
                         Duration.ofNanos(System.nanoTime() - start).toMillis());
                 }
-                return new GenerationLock(channel, lock);
+                return new GenerationLock(channel, lock, gate);
             }
             if (!waited && log != null) {
                 log.info("generate.lock.wait module={} reason=sibling-generating", moduleId);
@@ -110,6 +144,7 @@ public final class GenerationLock implements AutoCloseable {
             waited = true;
             if (System.nanoTime() >= deadline) {
                 closeQuietly(channel);
+                leaveGate(gate);
                 skip(log, moduleId, "timeout", "waitedMs=" + maxWait.toMillis());
                 return UNLOCKED;
             }
@@ -118,10 +153,56 @@ public final class GenerationLock implements AutoCloseable {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 closeQuietly(channel);
+                leaveGate(gate);
                 skip(log, moduleId, "interrupted", "");
                 return UNLOCKED;
             }
         }
+    }
+
+    /** Waits until no other thread in this JVM holds {@code gate}, then takes it, unless the deadline passes first. */
+    private static Gate enterGate(String gate, String moduleId, long deadline, @Nullable Logger log)
+            throws InterruptedException {
+        Object monitor = gate.intern();
+        boolean waited = false;
+        synchronized (monitor) {
+            while (System.getProperty(gate) != null) {
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) {
+                    return Gate.TIMED_OUT;
+                }
+                if (!waited && log != null) {
+                    log.info("generate.lock.wait module={} reason=sibling-generating", moduleId);
+                }
+                waited = true;
+                monitor.wait(Math.max(1, Duration.ofNanos(remaining).toMillis()));
+            }
+            System.setProperty(gate, moduleId);
+        }
+        return waited ? Gate.ENTERED_AFTER_WAIT : Gate.ENTERED;
+    }
+
+    private static void leaveGate(String gate) {
+        Object monitor = gate.intern();
+        synchronized (monitor) {
+            System.clearProperty(gate);
+            monitor.notifyAll();
+        }
+    }
+
+    /** One key per lock file however a caller spells its root, so two spellings share one gate. */
+    private static String gateKey(Path lockFile) {
+        Path absolute = lockFile.toAbsolutePath().normalize();
+        Path parent = absolute.getParent();
+        Path name = absolute.getFileName();
+        if (parent != null && name != null) {
+            try {
+                return parent.toRealPath().resolve(name.toString()).toString();
+            } catch (IOException | RuntimeException e) {
+                // A root that does not exist: its spelling is all there is to go on.
+            }
+        }
+        return absolute.toString();
     }
 
     /** Whether this generation runs under the lock; false on every path that proceeds unlocked. */
@@ -140,6 +221,9 @@ public final class GenerationLock implements AutoCloseable {
         }
         if (channel != null) {
             closeQuietly(channel);
+        }
+        if (gate != null) {
+            leaveGate(gate);
         }
     }
 
