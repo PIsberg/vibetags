@@ -8,16 +8,20 @@ Index of every test class in `vibetags/src/test` and what it covers — use this
 everything, and that is what CI runs on all three legs that execute tests (`build-maven`,
 `cross-platform`, `build-gradle`). Gradle mirrors both: `gradlew test` and `gradlew test -Pe2e`.
 
-Measured on a 16-core Windows machine on 2026-08-10, warm compile, `-Dmaven.pmd.skip -Dspotbugs.skip`:
+Measured on a 16-core Windows machine on 2026-10-06, warm compile, offline, Maven 3.9.11. Both
+surefire executions are counted (`default-test` plus the `async-tests` fork):
 
 | Command | Classes | Tests | Wall clock |
 |---|---|---|---|
-| `mvn test` | 88 | 957 | 41s |
-| `mvn test -Pe2e` | 142 | 1546 | 61s |
+| `mvn test` | 208 | 2655 | 49s |
+| `mvn test -Pe2e` | 320 | 3625 | 78s |
+
+The 2026-08-10 figures were 88 classes and 957 tests for the fast tier, 142 and 1546 for the
+whole suite. These numbers drift with every PR; the surefire summary is the authority.
 
 Compile, Error Prone and JaCoCo account for the first few seconds of either figure rather than
-tests — `mvn test -DskipTests` costs 4.6s fully warm on the same machine — so the tests themselves
-go from ~36s to ~56s.
+tests: `mvn test -DskipTests` cost 4.6s fully warm on the same machine when last measured
+(2026-08-10).
 
 **What is tagged, and why.** The 52 classes that took over 5s in the full-suite baseline of
 2026-08-06: 599.66s of the 704.15s the suite spent. The rule is cost, not category.

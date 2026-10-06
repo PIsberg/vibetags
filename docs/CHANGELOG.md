@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Test counts in the docs re-measured.** `docs/architecture/testing.md` carried a 0.7.x-era
+  per-class table and totals of 1484 and "724+" tests; it now points at `docs/TESTS.md`, the
+  maintained map. The tier table in `TESTS.md` is re-measured on 2026-10-06: 2655 tests in 208
+  classes for `mvn test`, 3625 in 320 for `mvn test -Pe2e`, against 957 and 1546 on 2026-08-10.
 - **Three more of this repository's own classes carry `@AIContext`.** Each states a fact that
   lives in another file or another build, so the class cannot show it: `SourceDigest` (an input
   that shapes output but is not an option, opt-in or `.vibetags-*` config must be hashed, and a

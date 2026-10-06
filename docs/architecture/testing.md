@@ -4,36 +4,19 @@ Part of the [architecture deep dive](../ARCHITECTURE.md), which indexes every pa
 
 ## Testing Strategy
 
-### Unit Tests (vibetags/)
+### Where the tests are
 
-| Test Class | Tests | Purpose |
-|---|---|---|
-| `AnnotationDefinitionsTest` | 40 | Verify annotation structure, retention policies, targets, and defaults (the original annotation set; newer annotations are covered by the `NewAnnotations*` definition tests) |
-| `AIGuardrailProcessorTest` | 3 | Processor configuration (@SupportedAnnotationTypes, source version) |
-| `AIGuardrailProcessorUnitTest` | 40 | Processor logic: resolveActiveServices, writeFileIfChanged, checkOrphanedAnnotations, validateAnnotations, stripLegacyVibeTagsBlock basics |
-| `AIGuardrailProcessorProcessTest` | 64 | process() method: annotation accumulation, PII sections, orphaned annotation warnings, write-if-changed, marker-based updates, llms.txt opt-in, aider opt-in |
-| `AIIgnoreProcessorUnitTest` | 11 | @AIIgnore annotation definition and opt-in behavior |
-| `AIPrivacyProcessorTest` | 15 | @AIPrivacy: generated content for all platforms, @AIPrivacy+@AIIgnore redundancy warning, no-op when no annotations |
-| `AIContractProcessorTest` | 15 | @AIContract: annotation definition, @AIContract+@AIDraft and @AIContract+@AILocked validation warnings, per-platform content (Cursor, Claude, Codex, Gemini, Copilot, Qwen, llms.txt, Aider), no-op when absent |
-| `CleanupGranularDirectoryTest` | 8 | (0.6.0) Orphan removal: marker stripping, boilerplate-only deletion, human-content preservation, excludeQNames, YAML front-matter |
-| `WriteFileFrontMatterTest` | 4 | (0.6.0) Markers placed AFTER YAML front-matter on .mdc files; hash-marker fallback for .aiderignore-style files |
-| `StripLegacyVibeTagsBlockEdgeCasesTest` | 7 | (0.6.0) XML-closer detection edge cases: both `</rule>` and `</project_guardrails>`, multi-paragraph human content, bare-header detection |
-| `WriteCacheTest` | 15 | (0.7.1) `WriteCache`: hit, miss-on-different-body, mtime/size/delete invalidation, persistence across instances, corrupt-cache fallback, recordWrite-on-missing-file, flush-on-unwritable-parent |
-| `WriteCacheProcessorIntegrationTest` | 3 | (0.7.1) Cache E2E via processor: `.vibetags-cache` is created on first compile; second compile against unchanged sources keeps file mtimes stable; external edit invalidates the entry and triggers a rewrite that preserves user content above the marker block |
-| `StreamingByteCompareTest` | 8 | (0.7.1) `GuardrailFileWriter.fileBytesEqual`: exact match, first-/last-byte mismatch, empty file, 256 KB random, 64 KB with one bit flipped, multi-byte UTF-8, exact 8 KB buffer-boundary |
-| `GuardrailFileWriterCoverageTest` | 4 | (0.7.1) Streaming-cache hit records cache entry; size match + byte mismatch + `!hasNewRules` skips; same with `hasNewRules=true` writes; all four `noopMessager` overloads return silently |
-| `QwenProcessorUnitTest` | 15 | Qwen-specific: service file map, active resolution, file generation, settings JSON validation |
-| `NewPlatformsEndToEndTest` | 29 | (0.7.0) Windsurf, Zed, Cody, Supermaven, Continue, Tabnine, Amazon Q, `.ai/rules/` E2E |
-| `AnnotationProcessorEndToEndTest` | 76 | End-to-end snapshot net: compiles annotated fixture sources in-memory via `ProcessorTestHarness`, verifies all generated files and content across all 9 annotation types × all platforms (the safety net for `GuardrailContentBuilder` extraction) <!-- not-a-total --> |
-| `GranularRulesEndToEndTest` | 9 | Cursor/Trae/Roo granular rule file generation, orphaned file cleanup |
-| `QwenEndToEndTest` | 19 | Qwen end-to-end: QWEN.md structure, settings.json format, .qwenignore patterns, version stamping |
-| `MultiModuleStabilityTest` | 3 | Multi-module safety: no-annotation module preserves sibling module content |
-| `VibeTagsLoggerUnitTest` | 13 | File logging: log level filtering, file rotation, shutdown |
-| `AIGuardrailProcessorIntegrationTest` | 23 | Full workflow with backup/restore. Self-contained via `ProcessorTestHarness`; runs with plain `mvn test` |
+The per-class map is [TESTS.md](../TESTS.md): every test class in `vibetags/src/test`, what it
+covers, and which tier it runs in. This page used to carry its own copy of that table, with
+per-class tallies from the 0.7.x era and a suite total measured on 2026-08-06; both had drifted
+far from the build, so the map now lives in one place.
 
-**Total: 1484 tests** (the surefire summary of `mvn test` in `vibetags/`, measured 2026-08-06). The
-per-class tallies above date from the 0.7.x era and the table no longer lists every class; trust the
-build's own summary over any total restated here.
+The tiers, in short: `mvn test` runs the fast tier and skips every class tagged `@Tag("e2e")`;
+`mvn test -Pe2e` runs everything, and is what CI runs. A second surefire execution,
+`async-tests`, runs the `*AsyncTest` classes in a fork of their own, under the async-test agent
+that `vibetags/pom.xml` attaches to that fork only. For the current total, read
+the surefire summary rather than any number written here; TESTS.md records the last
+measurement with its date.
 
 **JMH benchmarks** (under `load-tests/`, not counted above):
 - `ProcessorHotPathBenchmark` — 6 benchmarks: `buildServiceFileMap`, `resolveActiveServices_{all,none}Present`, `writeFileIfChanged_{noChange,smallWrite,largeWrite}`. Run on every release-tagged baseline.
@@ -41,7 +24,7 @@ build's own summary over any total restated here.
 
 ### Concurrency & Thread-Isolated Logging
 
-To run all 724+ unit and integration tests concurrently without static resource conflicts, the VibeTags test suite leverages a thread-isolated execution architecture under JUnit 5.
+To run the whole suite concurrently without static resource conflicts, the VibeTags test suite leverages a thread-isolated execution architecture under JUnit 5.
 
 #### 1. JUnit 5 Parallel Test Execution
 Tests are run fully concurrently at both the class and method levels. This is configured in [junit-platform.properties](../../vibetags/src/test/resources/junit-platform.properties):
@@ -101,3 +84,6 @@ GitHub Actions workflow tests:
 - Verifies generated file existence
 - Validates content in all outputs
 - Code coverage via Codecov
+
+These are the test legs only. [WORKFLOW.md](../WORKFLOW.md) lists every workflow and job CI runs,
+including the static-analysis, corpus and self-check gates.
