@@ -47,6 +47,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failed before `tools/self-check.sh` started. The hook now runs the script as a git `!` alias,
   which Git runs with its own shell from the repository root on every platform. Verified from
   PowerShell and from Git Bash: both run the 25 s regeneration and pass.
+- **Two copies of the processor in one JVM could write through the same temp file.** The root
+  `.vibetags-baseline` and `.vibetags-cache` are written to `<name>.<pid>-<n>.tmp` and renamed
+  into place, with `<n>` from a static counter. A parallel reactor that loads the processor once
+  per module has one counter per copy, each starting at zero, so two modules wrote
+  `.vibetags-baseline.<pid>-1.tmp` at once: one rename moved bytes its writer never produced and
+  the other failed with `NoSuchFileException`. The name now carries a random tag drawn once per
+  class load, `<name>.<pid>-<tag>-<n>.tmp`. Found by the two-classloader test written for #911.
 - **A parallel reactor could drop a module's region from the root files (#908).** Under `mvn -T`
   or Gradle `--parallel`, a module that read the sidecars before a sibling saved one could write
   `CLAUDE.md` and the other root files last, from a merge without that sibling, and the region

@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -149,6 +153,36 @@ class ModuleSidecarResilienceTest {
                 "swallowing the interrupt would leave javac unable to shut down");
         } finally {
             Thread.interrupted(); // clear the flag so it cannot leak into the next test
+        }
+    }
+
+    @Test
+    void twoClassloadersInOneProcessNeverShareATempName(@TempDir Path dir) throws Exception {
+        // A parallel reactor can load the processor once per module, each copy with its own
+        // sequence counter, so `<pid>-<n>` repeats across them. Two modules then wrote the root
+        // .vibetags-baseline or .vibetags-cache through one temp file: one rename moved bytes its
+        // writer never produced and the other failed with NoSuchFileException (found by #911's test).
+        Path first = tempNameFromOwnLoader(dir);
+        Path second = tempNameFromOwnLoader(dir);
+        assertNotEquals(first, second,
+            "two copies of ModuleSidecar in one JVM produced the same temp file name");
+        assertTrue(first.getFileName().toString().startsWith(".vibetags-baseline.")
+                && first.getFileName().toString().endsWith(".tmp"),
+            "readAll, the prune scan and .gitignore match the prefix and the .tmp suffix: " + first);
+    }
+
+    /** The first temp name a fresh copy of ModuleSidecar, in a classloader of its own, hands out. */
+    private static Path tempNameFromOwnLoader(Path dir) throws Exception {
+        URL[] path = {
+            ModuleSidecar.class.getProtectionDomain().getCodeSource().getLocation(),
+            org.slf4j.Logger.class.getProtectionDomain().getCodeSource().getLocation(),
+        };
+        try (URLClassLoader loader = new URLClassLoader(path, ClassLoader.getPlatformClassLoader())) {
+            Class<?> type = loader.loadClass(ModuleSidecar.class.getName());
+            assertNotSame(ModuleSidecar.class, type, "precondition: a second copy of the class");
+            Method unique = type.getDeclaredMethod("uniqueTempFile", Path.class, String.class);
+            unique.setAccessible(true);
+            return (Path) unique.invoke(null, dir, ".vibetags-baseline");
         }
     }
 

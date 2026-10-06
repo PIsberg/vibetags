@@ -492,23 +492,34 @@ public final class ModuleSidecar {
         }
     };
 
-    /** Distinguishes two temp files written by two threads of one JVM; the pid does the rest. */
+    /** Distinguishes two temp files written by two threads of one copy of this class. */
     private static final AtomicLong TEMP_SEQUENCE = new AtomicLong();
 
     /**
-     * A temp-file path unique to this process and call: {@code <baseName>.<pid>-<n>.tmp}.
+     * Distinguishes two copies of this class in one JVM. A parallel reactor can load the processor
+     * once per module, and each copy's {@link #TEMP_SEQUENCE} starts at zero, so pid and counter
+     * alone repeat across them. Drawn once per class load; 60 random bits make a repeat negligible.
+     */
+    private static final String LOADER_TAG =
+        Long.toHexString(java.util.UUID.randomUUID().getMostSignificantBits());
+
+    /**
+     * A temp-file path unique to this process and call: {@code <baseName>.<pid>-<tag>-<n>.tmp}.
      *
      * <p>A fixed {@code <baseName>.tmp} is the bug this replaces (#554). Every module of a parallel
      * reactor writes the root-level cache and baseline, and two of them sharing one temp name means
      * the second truncates the first's bytes: one rename moves content its writer never produced,
-     * and the other fails outright. Built by hand rather than with {@code Files.createTempFile}
-     * because that call is a find-sec-bugs path-traversal sink when the directory comes from a
-     * processor option, and the name still has to start with the caller's prefix and end in
+     * and the other fails outright. The pid separates processes, {@link #LOADER_TAG} separates the
+     * copies of this class one process loads, and the counter separates calls.
+     *
+     * <p>Built by hand rather than with {@code Files.createTempFile} because that call is a
+     * find-sec-bugs path-traversal sink when the directory comes from a processor option, and the
+     * name still has to start with the caller's prefix and end in
      * {@code .tmp} — what {@code readAll}, the prune scan and the ignore files all filter on.
      */
     static Path uniqueTempFile(Path dir, String baseName) {
         return dir.resolve(baseName + "." + ProcessHandle.current().pid()
-            + "-" + TEMP_SEQUENCE.incrementAndGet() + ".tmp");
+            + "-" + LOADER_TAG + "-" + TEMP_SEQUENCE.incrementAndGet() + ".tmp");
     }
 
     /**
