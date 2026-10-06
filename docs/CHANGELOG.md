@@ -41,6 +41,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A round skipped as unchanged flushed the shared write cache without the generation lock
+  (#916).** When another processor generates sources after the first round was skipped, the round
+  clears its recorded source digest and flushes `.vibetags-cache`. That flush re-reads and rewrites
+  the root file, and the merge on flush (#907) is not a lock: racing a sibling's generation flush,
+  either side's changes could be lost, the clear included, leaving a digest that vouches for the
+  skip. In a reactor that flush now takes `.vibetags-generate.lock` like generation's do. The branch
+  is rare, so the ordinary early exit waits on nothing. `ParallelReactorGenerationTest` holds the
+  lock while a rebuild takes that branch through a wrapper processor that generates a source; the
+  rebuild finished while the lock was held before the change and waits for it after.
 - **The `vibetags-self-check` pre-commit hook exited 127 on Windows outside Git Bash (#905).**
   Run from PowerShell or cmd, pre-commit found bash through `PATH`, which there is the WSL
   launcher in `WindowsApps`. WSL bash read the backslashed script path as escapes, so the hook

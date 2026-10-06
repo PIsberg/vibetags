@@ -52,7 +52,7 @@ import java.util.Set;
 )
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.SYNCHRONIZED,
-    note = "Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it). Instances over one .vibetags-cache, one per module of a parallel reactor, merge on flush, so a sibling's entries survive; two flushes racing outside the generation lock can still drop one side's, a cache miss. They never vouch for another writer's bytes (WriteCacheCrossInstanceAsyncTest proves it)"
+    note = "Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it). Instances over one .vibetags-cache, one per module of a parallel reactor, merge on flush, so a sibling's entries survive. The merge is not a lock: a reactor module must flush under the generation lock, or two flushes can drop one side's changes, a cleared source digest among them. They never vouch for another writer's bytes (WriteCacheCrossInstanceAsyncTest proves it)"
 )
 @AITestDriven(
     coverageGoal = 90,
@@ -545,10 +545,10 @@ public final class WriteCache {
      *
      * <p>Merges rather than overwrites (#907): the file is re-read, and only what this instance
      * changed replaces what is there, so the result is what a serial build would have written had
-     * this module loaded the cache after its siblings flushed. A module round's generation flushes
-     * inside the generation lock (#908), which serialises the re-read and the write across a
-     * reactor. A flush outside it, such as an early-exited round clearing its digest, can race a
-     * sibling's and lose one side's changes: a cache miss, and the behaviour before the merge.
+     * this module loaded the cache after its siblings flushed. The merge is not a lock: two flushes
+     * that re-read before either writes still lose one side's changes, which can be a cleared
+     * source digest coming back. So in a reactor every flush runs under the generation lock
+     * (#908), the early-exited round's included (#916), and a new caller must take it too.
      */
     public synchronized void flush() {
         if (!dirty) return;

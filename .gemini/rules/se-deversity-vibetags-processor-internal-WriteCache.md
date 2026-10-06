@@ -17,5 +17,5 @@
 
 ## Thread-Safety Guarantee
 - **Strategy**: SYNCHRONIZED
-- **Note**: Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it). Instances over one .vibetags-cache, one per module of a parallel reactor, merge on flush, so a sibling's entries survive; two flushes racing outside the generation lock can still drop one side's, a cache miss. They never vouch for another writer's bytes (WriteCacheCrossInstanceAsyncTest proves it)
+- **Note**: Safe for concurrent calls on one instance (WriteCacheAsyncTest proves it). Instances over one .vibetags-cache, one per module of a parallel reactor, merge on flush, so a sibling's entries survive. The merge is not a lock: a reactor module must flush under the generation lock, or two flushes can drop one side's changes, a cleared source digest among them. They never vouch for another writer's bytes (WriteCacheCrossInstanceAsyncTest proves it)
 <!-- VIBETAGS-END -->
