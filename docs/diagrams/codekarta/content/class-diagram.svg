@@ -453,8 +453,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="EllipsisRenderer" data-target="PlatformRenderer" data-type="IMPLEMENTS" x="1029.0" y="326.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="SectionCatalog" data-target="String&gt;" data-type="HAS" d="M804.0 366.5 Q933.0 227.5 1012.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="SectionCatalog" data-target="String&gt;" data-type="HAS" x="920.5" y="213.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">OVERRIDES</text>
-<path class="edge-line" data-source="AnnotationDescriptors" data-target="AnnotationDescriptor" data-type="HAS" d="M204.0 546.5 Q219.3 535.4 224.0 517.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AnnotationDescriptors" data-target="AnnotationDescriptor" data-type="HAS" x="216.7" y="527.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL</text>
+<path class="edge-line" data-source="AnnotationDescriptors" data-target="AnnotationDescriptor" data-type="HAS" d="M204.0 561.5 Q222.0 542.9 224.0 517.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AnnotationDescriptors" data-target="AnnotationDescriptor" data-type="HAS" x="218.0" y="535.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL</text>
 <path class="edge-line" data-source="RenderingContext" data-target="TaggedElement" data-type="HAS" d="M204.0 524.0 Q722.7 321.1 1212.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="RenderingContext" data-target="TaggedElement" data-type="HAS" x="715.3" y="299.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularOwners</text>
 <path class="edge-line" data-source="RenderingContext" data-target="TaggedElement" data-type="HAS" d="M204.0 524.0 Q722.7 321.1 1212.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -1478,15 +1478,17 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="AnnotationDescriptors">
   <title>AnnotationDescriptors [CLASS]</title>
-  <rect class="node-rect" x="24.0" y="474.0" width="180.0" height="145.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="24.0" y="474.0" width="180.0" height="175.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="114.0" y="496.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AnnotationDescriptors</text>
   <line x1="24.0" y1="518.0" x2="204.0" y2="518.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="32.0" y="531.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">IGNORE_DEFAULT_REASON: String</text>
   <text x="32.0" y="546.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ALL: List&lt;AnnotationDescriptor&gt;</text>
   <line x1="24.0" y1="560.0" x2="204.0" y2="560.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="32.0" y="573.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">reason(String): String</text>
-  <text x="32.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">reason(String, String): String</text>
-  <text x="32.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ignoreDefaultReason(): String</text>
+  <text x="32.0" y="573.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members(Object): String</text>
+  <text x="32.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendMember(StringBuilder, Str…</text>
+  <text x="32.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">reason(String): String</text>
+  <text x="32.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">reason(String, String): String</text>
+  <text x="32.0" y="633.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ignoreDefaultReason(): String</text>
 </g>
 <g id="YamlMergeShape">
   <title>YamlMergeShape [CLASS]</title>

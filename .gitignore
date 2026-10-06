@@ -35,6 +35,9 @@ load-tests/dependency-reduced-pom.xml
 # VibeTags enforcement-baseline lock: an empty inter-process mutex held while a module merges
 # its lines into the committed .vibetags-baseline. The baseline itself is committed; this is not.
 .vibetags-baseline.lock
+# VibeTags generation lock (#908): empty, held by one reactor module at a time while it reads the
+# sidecars and writes the root files. Never read, never committed.
+.vibetags-generate.lock
 # Temp files from an interrupted atomic write (baseline, cache, sidecar). Each is created with a
 # unique name so parallel writers cannot truncate each other's, and deleted on a failed move.
 .vibetags-*.tmp
