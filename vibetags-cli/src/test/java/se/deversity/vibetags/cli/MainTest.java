@@ -67,6 +67,27 @@ class MainTest {
         assertEquals(0, run("init", "--platforms", "claude"));
     }
 
+    /**
+     * {@code vibetags doctor --help} is how most people ask a command what it takes. It was read
+     * as a stray argument and failed with exit 2, so the question got an error instead of usage.
+     */
+    @Test
+    void helpAfterACommandPrintsUsageAndSucceeds() throws Exception {
+        for (String command : new String[] {"doctor", "init"}) {
+            for (String flag : new String[] {"--help", "-h"}) {
+                stdout.reset();
+                stderr.reset();
+                assertEquals(0, run(command, flag), command + " " + flag + ": " + err());
+                assertTrue(stdout.toString(StandardCharsets.UTF_8).contains("Usage:"),
+                    command + " " + flag + " prints usage: " + stdout);
+                assertTrue(err().isEmpty(), command + " " + flag + ": " + err());
+            }
+        }
+        try (Stream<Path> created = Files.list(dir)) {
+            assertEquals(0, created.count(), "asking for help creates nothing");
+        }
+    }
+
     @Test
     void dirMustBeAnExistingDirectory() {
         Path missing = dir.resolve("does-not-exist");

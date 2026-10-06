@@ -54,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   count everything from the quote down: 207 B reported as generated in a test file whose block
   was 102 B. It now uses the writer's `indexOfBlockStart` and `indexOfMarkerLine`, and reports the
   one block the writer manages.
+- **`vibetags doctor --help` and `vibetags init --help` failed with exit 2 (#920).** Only a
+  `--help` in first position was recognised; after a command it was a stray argument. `--help`
+  and `-h` now print usage and exit 0 wherever they appear.
 - **A round skipped as unchanged flushed the shared write cache without the generation lock
   (#916).** When another processor generates sources after the first round was skipped, the round
   clears its recorded source digest and flushes `.vibetags-cache`. That flush re-reads and rewrites

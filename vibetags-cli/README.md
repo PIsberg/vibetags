@@ -309,7 +309,7 @@ has a task that prints the classpath, and lists what the scan still misses.
 |---|---|
 | `0` | Success. For `doctor`: healthy. |
 | `1` | `doctor` found something that needs action; `init` refused at least one key; or a file could not be written. |
-| `2` | Usage error: unknown command, unknown flag or key, stray argument, missing value, or a `--dir` that is not a directory. Running `vibetags` with no arguments prints usage and exits 2; `--help` exits 0. |
+| `2` | Usage error: unknown command, unknown flag or key, stray argument, missing value, or a `--dir` that is not a directory. Running `vibetags` with no arguments prints usage and exits 2; `--help` or `-h`, before or after the command (`vibetags doctor --help`), prints it and exits 0. |
 
 That makes `doctor` a cheap CI gate. It compiles nothing, so it runs in seconds. On a runner
 with jbang installed:

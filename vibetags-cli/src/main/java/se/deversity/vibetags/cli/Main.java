@@ -65,7 +65,9 @@ public final class Main {
             rest.remove(dirAt + 1);
             rest.remove(dirAt);
         }
-        if (rest.isEmpty() || "--help".equals(rest.get(0)) || "-h".equals(rest.get(0))) {
+        // Anywhere, not only first: "doctor --help" is how most people ask a command what it takes,
+        // and it used to fail as a stray argument (#920).
+        if (rest.isEmpty() || rest.contains("--help") || rest.contains("-h")) {
             usage(out);
             return rest.isEmpty() ? 2 : 0;
         }
