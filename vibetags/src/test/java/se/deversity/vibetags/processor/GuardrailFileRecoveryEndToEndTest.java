@@ -280,9 +280,59 @@ class GuardrailFileRecoveryEndToEndTest {
             "and the block still carries the guardrails:\n" + after);
     }
 
+    /**
+     * A TOML output has nowhere to put a marker line, so VibeTags writes it whole. That is right
+     * for a file VibeTags wrote and destructive for one a person did: a project that already
+     * configures Codex in {@code .codex/config.toml} had it replaced the first time {@code AGENTS.md}
+     * was managed, which writes that file implicitly.
+     */
+    @Test
+    void aHandWrittenCodexConfig_isNotOverwritten(@TempDir Path dir) throws Exception {
+        String config = "model = \"gpt-5-codex\"\n\n[mcp_servers.docs]\ncommand = \"docs-mcp\"\n";
+        Files.createDirectories(dir.resolve(".codex"));
+        Files.writeString(dir.resolve(".codex/config.toml"), config, StandardCharsets.UTF_8);
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("AGENTS.md");
+        addLedger(h);
+        h.compile();
+        VibeTagsLogger.shutdown();
+
+        assertTrue(Files.readString(dir.resolve("AGENTS.md")).contains(REASON),
+            "precondition: AGENTS.md is managed, which is what writes .codex/config.toml");
+        assertEquals(config, Files.readString(dir.resolve(".codex/config.toml"), StandardCharsets.UTF_8),
+            "a Codex configuration VibeTags did not write must be left exactly as it is");
+    }
+
+    /** The same for the PR-Agent configuration, whose presence is the opt-in. */
+    @Test
+    void aHandWrittenPrAgentConfig_isNotOverwritten(@TempDir Path dir) throws Exception {
+        String config = "[pr_reviewer]\nnum_code_suggestions = 3\nrequire_tests_review = true\n";
+        Files.writeString(dir.resolve(".pr_agent.toml"), config, StandardCharsets.UTF_8);
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("CLAUDE.md");
+        addLedger(h);
+        List<Diagnostic<? extends JavaFileObject>> diagnostics = h.compileReturningDiagnostics();
+        VibeTagsLogger.shutdown();
+
+        assertTrue(Files.readString(dir.resolve("CLAUDE.md")).contains(REASON), "precondition: the round generated");
+        assertEquals(config, Files.readString(dir.resolve(".pr_agent.toml"), StandardCharsets.UTF_8),
+            "review settings VibeTags did not write must be left exactly as they are");
+        assertTrue(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.WARNING
+                && d.getMessage(java.util.Locale.ROOT).contains(".pr_agent.toml")),
+            "and the build must say why the file carries no guardrails: " + diagnostics);
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    private static void addLedger(ProcessorTestHarness h) {
+        h.addSource("com.example.Ledger",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"" + REASON + "\")\n"
+                + "public class Ledger {}\n");
+    }
 
     private static void compileOnce(Path dir) throws IOException {
         harness(dir).compile();

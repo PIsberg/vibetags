@@ -124,6 +124,15 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **A hand-written `.pr_agent.toml` or `.codex/config.toml` is no longer overwritten.** TOML has
+  nowhere for a marker line, so VibeTags writes both files whole, and it replaced whatever was there:
+  a team's PR-Agent settings the first time `.pr_agent.toml` counted as an opt-in, and a project's
+  Codex configuration (model, MCP servers) the first time `AGENTS.md` was managed, which writes
+  `.codex/config.toml` implicitly. Each is now replaced only when it is empty or carries the
+  generated header; otherwise it is left exactly as it is, with a warning that says why it carries no
+  guardrails and how to hand it over. The log records `write.skip reason=hand-written-whole-file`.
+  `aHandWrittenCodexConfig_isNotOverwritten` and `aHandWrittenPrAgentConfig_isNotOverwritten`
+  failed before the change.
 - **A test-compile with no annotations no longer empties the ignore files.** Ignore files
   (`.cursorignore`, `.aiderignore` and the rest) were rewritten from every round, even one that
   found no annotation. In a single-module Maven or Gradle build, the test-compile round sees only

@@ -100,11 +100,27 @@ class GuardrailFileWriterLogContractTest {
     }
 
     @Test
+    @DisplayName("a hand-written whole-file output is skipped with reason=hand-written-whole-file")
+    void handWrittenWholeFileSkipsWithItsReason(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve(".pr_agent.toml");
+        String handWritten = "[pr_reviewer]\nnum_code_suggestions = 3\n";
+        Files.writeString(file, handWritten);
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        assertFalse(writer.writeFileIfChanged(file.toString(), HEADER + "[pr_reviewer]\n", true),
+            "a configuration VibeTags did not write is not replaced");
+        assertEquals(handWritten, Files.readString(file));
+        assertTrue(logged("write.skip file=.pr_agent.toml reason=hand-written-whole-file"),
+            "the skip names its own reason: " + events());
+    }
+
+    @Test
     @DisplayName("a non-marker file with matching size but differing bytes logs reason=bytes-differ")
     void exactSizeMismatchLogsBytesDiffer(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("settings.toml");
-        String initial = "key = \"value1\"\n";
-        String updated = "key = \"value2\"\n";
+        // Behind the writer's header: a whole-file output without it is hand-written and left alone.
+        String initial = HEADER + "key = \"value1\"\n";
+        String updated = HEADER + "key = \"value2\"\n";
         Files.writeString(file, initial);
         GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
 

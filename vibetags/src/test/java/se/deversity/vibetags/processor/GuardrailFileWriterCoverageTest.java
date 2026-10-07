@@ -75,8 +75,9 @@ class GuardrailFileWriterCoverageTest {
         GuardrailFileWriter writer = new GuardrailFileWriter(GENERATED_HEADER, null, null, null);
 
         Path file = tmp.resolve("config.json");
-        String existing = "abc12345\n";
-        String newSameLen = "abcXYZ45\n";
+        // A file this writer wrote carries its header; a hand-written one is left alone.
+        String existing = GENERATED_HEADER + "abc12345\n";
+        String newSameLen = GENERATED_HEADER + "abcXYZ45\n";
         Files.writeString(file, existing, StandardCharsets.UTF_8);
 
         boolean wrote = writer.writeFileIfChanged(file.toString(), newSameLen, /*hasNewRules*/ true);

@@ -102,9 +102,10 @@ class GuardrailFileWriterEdgeCaseTest {
     void nonMarkerFile_sameSizeDiffBytes_hasNewRulesTrue_writes(@TempDir Path tmp) throws IOException {
         GuardrailFileWriter writer = new GuardrailFileWriter("# VibeTags\n", null, null, null);
         Path file = tmp.resolve("config.json");
-        // Both strings are 14 UTF-8 bytes — same size, different content.
-        String existing = "{\"v\": \"old\"}\n";
-        String newContent = "{\"v\": \"new\"}\n";
+        // Same size, different content; both behind the writer's header, which is what marks a
+        // whole-file output as one it may replace.
+        String existing = "# VibeTags\n{\"v\": \"old\"}\n";
+        String newContent = "# VibeTags\n{\"v\": \"new\"}\n";
         Files.writeString(file, existing);
         assertTrue(writer.writeFileIfChanged(file.toString(), newContent, true),
             "same-size different-bytes JSON file with hasNewRules=true must be written");
