@@ -1059,6 +1059,18 @@ public final class GuardrailFileWriter {
     }
 
     /**
+     * Takes the generated block out of one rule file named for removal, as the orphan sweep does for
+     * each file it finds: the file is deleted when nothing of the developer's is left in it, and
+     * rewritten without the block otherwise. A missing file, and a file with no marker pair (so not
+     * ours), are left alone.
+     *
+     * @return {@code true} when the block was removed (in dry-run: would have been)
+     */
+    public boolean removeGeneratedBlock(Path file) {
+        return scrubGranularFile(file);
+    }
+
+    /**
      * Takes the VibeTags section out of one granular rule file, deleting the file when nothing
      * of its own is left.
      *
@@ -1109,13 +1121,11 @@ public final class GuardrailFileWriter {
                 }
 
                 if (isEmptyOrBoilerplate) {
-                    try {
-                        Files.delete(p);
-                    } catch (IOException e) {
-                        recordFailedRemoval(p, e);
+                    // Through deleteIfExists, which logs the removal, drops the cache entry, and
+                    // records a failed delete for the next build to retry.
+                    if (!deleteIfExists(p)) {
                         return false;
                     }
-                    if (writeCache != null) writeCache.invalidate(p);
                 } else {
                     // Atomic, like every other write: an in-place write interrupted halfway left
                     // the developer's remaining text truncated (#875).

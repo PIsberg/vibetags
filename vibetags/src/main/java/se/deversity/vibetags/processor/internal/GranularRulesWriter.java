@@ -416,8 +416,9 @@ public final class GranularRulesWriter {
     }
 
     /**
-     * Removes the rule files for {@code stems} from every active granular directory, whatever the
-     * round's jurisdiction over that directory otherwise is.
+     * Removes the generated block of the rule files for {@code stems} from every active granular
+     * directory, whatever the round's jurisdiction over that directory otherwise is. A file left with
+     * nothing of the developer's in it is deleted, exactly as by the sweep.
      *
      * <p>Named stems only, and that is the whole difference from {@link #cleanupAll}. The sweep
      * cannot run from a reactor module round because it argues from absence — a file nothing has
@@ -447,8 +448,10 @@ public final class GranularRulesWriter {
             for (String stem : stems) {
                 // Through the writer, never Files.deleteIfExists: the writer invalidates the
                 // cache entry (a recorded file that is missing pins the short-circuit off) and,
-                // in dry-run, reports the removal instead of performing it.
-                if (fileWriter.deleteIfExists(dir.resolve(stem + f.extension))) {
+                // in dry-run, reports the removal instead of performing it. Only the generated
+                // block goes, as in the sweep: text the developer added to the file is theirs
+                // (invariant 2), and deleting the file by name took it too.
+                if (fileWriter.removeGeneratedBlock(dir.resolve(stem + f.extension))) {
                     removed.add(stem);
                 }
             }

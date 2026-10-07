@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class GuardrailFileWriterEdgeCaseTest {
 
     /**
-     * The departed-module path removes rule files through {@code deleteIfExists}. A removal that
+     * Rule-file removals, the sweep's and the departed-module path's, delete through
+     * {@code deleteIfExists}. A removal that
      * fails has to leave the write cache unable to vouch for the file, or the next unchanged build
      * short-circuits and never retries it (#867).
      */

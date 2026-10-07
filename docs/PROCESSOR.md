@@ -393,7 +393,8 @@ The verdict names exactly the files a real round would write or delete, under th
 those rules matter in a reactor: a module round never sweeps the shared root's granular directory
 for orphans (issue #383, so a cold-clone check no longer lists every sibling's committed rule file
 on top of the merged aggregates), and a module that has left the reactor has its rule files reported
-for removal, because the next real build of any survivor removes them
+for removal, because the next real build of any survivor removes them. As with the sweep, only the
+generated block goes: a rule file that also holds hand-written text keeps that text and stays
 (`CheckModeTest.checkMode_onAColdCloneModuleRound_agreesWithGeneration`,
 `checkMode_reportsADepartedModulesRuleFileAsDrift`).
 

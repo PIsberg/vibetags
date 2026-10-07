@@ -124,6 +124,13 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **A module leaving the reactor no longer deletes the hand-written text in its rule files.** The
+  departed module's granular rule files were deleted by name, so a note the developer had added
+  below the markers went with them, the one thing invariant 2 says never happens. The orphan sweep
+  already removed only the generated block; the departure now does the same, deleting the file
+  only when nothing of the developer's is left, and leaving a same-named file with no markers
+  alone. `moduleRemovedFromTheReactor_keepsTheHandWrittenTextInItsRuleFile` failed before the
+  change.
 - **A rule file whose generated block could not be removed is retried by the next build.** When the
   orphan sweep takes a guardrail out of a granular rule file that also holds the developer's own
   text, it rewrites the file instead of deleting it. A failed rewrite (a file an editor holds open
