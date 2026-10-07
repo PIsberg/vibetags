@@ -100,6 +100,45 @@ class GuardrailFileWriterLogContractTest {
     }
 
     @Test
+    @DisplayName("a rule file whose generated block could not be removed logs reason=io-error")
+    void failedScrubLogsIoError(@TempDir Path dir) throws Exception {
+        Path rule = dir.resolve("com-example-Gone.md");
+        Files.writeString(rule, GuardrailFileWriter.MARKER_START_MD + "\n" + HEADER + "rule\n"
+            + GuardrailFileWriter.MARKER_END_MD + "\n\nThe developer's note.\n");
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        try (AutoCloseable held = blockRewrite(rule)) {
+            assertEquals(List.of(), writer.cleanupGranularDirectory(dir, ".md", java.util.Set.of()),
+                "a removal that failed is not reported as one");
+        }
+        assertTrue(logged("write.skip file=com-example-Gone.md reason=io-error"),
+            "the failed rewrite names its reason: " + events());
+    }
+
+    /**
+     * Makes replacing {@code file} fail until closed: an open handle on Windows, which does not
+     * share delete access with a rename over the file, and a read-only directory elsewhere.
+     */
+    private static AutoCloseable blockRewrite(Path file) throws IOException {
+        if (System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win")) {
+            return new java.io.FileInputStream(file.toFile());
+        }
+        Path parent = file.getParent();
+        java.util.Set<java.nio.file.attribute.PosixFilePermission> before = Files.getPosixFilePermissions(parent);
+        Files.setPosixFilePermissions(parent, java.nio.file.attribute.PosixFilePermissions.fromString("r-xr-xr-x"));
+        AutoCloseable restore = () -> Files.setPosixFilePermissions(parent, before);
+        if (Files.isWritable(parent)) {
+            try {
+                restore.close();
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+            org.junit.jupiter.api.Assumptions.abort("a read-only directory does not block a rewrite here");
+        }
+        return restore;
+    }
+
+    @Test
     @DisplayName("a hand-written whole-file output is skipped with reason=hand-written-whole-file")
     void handWrittenWholeFileSkipsWithItsReason(@TempDir Path dir) throws IOException {
         Path file = dir.resolve(".pr_agent.toml");
