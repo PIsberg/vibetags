@@ -196,8 +196,9 @@ public final class GuardrailFileWriter {
                     skipUpdateMsg(fileName);
                     return false;
                 }
-                if (!replaceableWholeFile(Files.readString(filePath, StandardCharsets.UTF_8))) {
-                    return refuseHandWrittenWholeFile(fileName);
+                String sameSize = Files.readString(filePath, StandardCharsets.UTF_8);
+                if (!replaceableWholeFile(sameSize)) {
+                    return writeHandWrittenWholeFile(filePath, fileName, content, sameSize, existingAttrs);
                 }
                 debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
                     fileName, existingSize, contentByteLen);
@@ -591,7 +592,7 @@ public final class GuardrailFileWriter {
         }
 
         if (!replaceableWholeFile(existing)) {
-            return refuseHandWrittenWholeFile(fileName);
+            return writeHandWrittenWholeFile(filePath, fileName, content, existing, existingAttrs);
         }
 
         writeAndCache(filePath, content, content);
@@ -610,6 +611,50 @@ public final class GuardrailFileWriter {
      */
     private boolean replaceableWholeFile(String existing) {
         return existing.isBlank() || existing.contains(generatedMark);
+    }
+
+    /** The PR-Agent configuration, the one whole-file output with a span merge for a hand-written copy (#933). */
+    private static final String PR_AGENT_FILE = ".pr_agent.toml";
+
+    /**
+     * A whole-file output somebody wrote by hand. {@code .pr_agent.toml} gets the guardrails spliced
+     * into its {@code extra_instructions} strings by {@link TomlValueSpans}, every other byte kept, as
+     * {@code greptile.json} does (#639); a document the merge cannot read without guessing is left
+     * alone with a warning. Any other such file is left alone. The cache records {@code content}, the
+     * rendering, so an edit outside the span still invalidates it, as for a marker file.
+     */
+    private boolean writeHandWrittenWholeFile(Path filePath, String fileName, String content, String existing,
+                                              @Nullable BasicFileAttributes existingAttrs) throws IOException {
+        if (!PR_AGENT_FILE.equals(fileName)) {
+            return refuseHandWrittenWholeFile(fileName);
+        }
+        String body = TomlValueSpans.bodyFrom(content);
+        if (body == null) {
+            if (log != null) {
+                log.warn("write.skip file={} reason=unreadable-rendering bytes={}", fileName, content.length());
+            }
+            return false;
+        }
+        TomlValueSpans.Outcome outcome = TomlValueSpans.merge(existing, body);
+        String merged = outcome.document();
+        if (merged == null) {
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: left " + fileName + " untouched because " + outcome.detail()
+                    + ". Its guardrails are not being updated until that is fixed.");
+            debug("write.skip file={} reason={} detail={}", fileName,
+                String.valueOf(outcome.skipReason()), String.valueOf(outcome.detail()));
+            return false;
+        }
+        if (merged.equals(existing)) {
+            debug("write.skip file={} reason=identical-bytes bytes={} markers=toml-values", fileName, merged.length());
+            noteCurrent(filePath, content, existingAttrs);
+            return false;
+        }
+        debug("write.update file={} reason=toml-values-differ oldBytes={} newBytes={} markers=toml-values",
+            fileName, existing.length(), merged.length());
+        writeAndCache(filePath, merged, content);
+        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
+        return true;
     }
 
     /** Leaves a hand-written whole-file output alone and says so. Always {@code false}, "nothing written". */

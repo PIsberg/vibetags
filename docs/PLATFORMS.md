@@ -260,6 +260,21 @@ the repository root, Greptile reads `.greptile/` and ignores `greptile.json` ent
 off. That is Greptile's precedence rule, not VibeTags', and VibeTags does not second-guess which of
 the two you meant.
 
+### `.pr_agent.toml`, and the TOML file VibeTags shares with you
+
+TOML has nowhere for a marker line outside a string, so VibeTags writes `.pr_agent.toml` whole when
+the file is empty (a fresh opt-in) or carries the generated header. A `.pr_agent.toml` your team
+configured by hand is merged instead, the way `greptile.json` is (#933): VibeTags owns a
+`<!-- VIBETAGS-START -->` / `<!-- VIBETAGS-END -->` span inside the `extra_instructions` multi-line
+string of `[pr_reviewer]` and of `[pr_code_suggestions]`, and nothing else. Text you wrote in either
+string stays first, with the span after it; every other setting and comment stays byte for byte. A
+table or key the file lacks is added. When the file cannot be merged without guessing (a table or
+the key defined twice, a value that is not a `"""` string, a start marker with no end, the table set
+through a dotted key or an array of tables), VibeTags writes nothing and says why in a build warning.
+
+`.codex/config.toml` is not merged: a hand-written one is left exactly as it is, with a warning.
+Whether VibeTags should write that file at all is open (#934).
+
 ### `.qwen/settings.json` is not written
 
 Until #650, opting into `QWEN.md` also wrote `.qwen/settings.json`, as a whole-file overwrite, with

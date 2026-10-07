@@ -69,6 +69,15 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Added
 
+- **A hand-written `.pr_agent.toml` gets the guardrails without losing its settings (#933).** The
+  file is now merged the way `greptile.json` is (#639): VibeTags owns a delimited span inside the
+  `extra_instructions` strings of `[pr_reviewer]` and `[pr_code_suggestions]`, adds a table or key
+  the file lacks, and keeps every other byte. A document it cannot merge without guessing is left
+  alone with a warning naming why; the log records `write.skip reason=` with the merge's reason
+  (`duplicate-table`, `not-multiline-string`, `unclosed-span` and the rest). Until now such a file
+  was skipped outright, and before that overwritten. `TomlValueSpansTest` (8 cases) and
+  `aHandWrittenPrAgentConfig_keepsItsSettingsAndGainsTheGuardrails` cover it; the latter failed before
+  the change.
 - **`vibetags-cli/README.md`.** The CLI's flags, exit codes and limits were spread over a USAGE.md
   section and the usage text in `Main`. The new README puts them in one place, with examples for
   each command and check. The output it shows comes from running the CLI against scratch

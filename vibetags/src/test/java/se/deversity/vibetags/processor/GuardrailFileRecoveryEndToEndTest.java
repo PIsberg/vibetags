@@ -331,23 +331,58 @@ class GuardrailFileRecoveryEndToEndTest {
             "a Codex configuration VibeTags did not write must be left exactly as it is");
     }
 
-    /** The same for the PR-Agent configuration, whose presence is the opt-in. */
+    /**
+     * The PR-Agent configuration, whose presence is the opt-in, is merged rather than replaced
+     * (#933): the team's settings stay byte for byte, and the guardrails go into a delimited span
+     * inside the two {@code extra_instructions} strings, which follows later edits.
+     */
     @Test
-    void aHandWrittenPrAgentConfig_isNotOverwritten(@TempDir Path dir) throws Exception {
+    void aHandWrittenPrAgentConfig_keepsItsSettingsAndGainsTheGuardrails(@TempDir Path dir) throws Exception {
         String config = "[pr_reviewer]\nnum_code_suggestions = 3\nrequire_tests_review = true\n";
         Files.writeString(dir.resolve(".pr_agent.toml"), config, StandardCharsets.UTF_8);
-        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
-        h.touchOptIn("CLAUDE.md");
-        addLedger(h);
-        List<Diagnostic<? extends JavaFileObject>> diagnostics = h.compileReturningDiagnostics();
-        VibeTagsLogger.shutdown();
+        compilePrAgent(dir, REASON);
 
-        assertTrue(Files.readString(dir.resolve("CLAUDE.md")).contains(REASON), "precondition: the round generated");
-        assertEquals(config, Files.readString(dir.resolve(".pr_agent.toml"), StandardCharsets.UTF_8),
-            "review settings VibeTags did not write must be left exactly as they are");
+        String merged = Files.readString(dir.resolve(".pr_agent.toml"), StandardCharsets.UTF_8);
+        assertTrue(merged.contains("num_code_suggestions = 3\nrequire_tests_review = true\n"),
+            "review settings VibeTags did not write must be kept as they are:\n" + merged);
+        assertEquals(2, merged.split(REASON, -1).length - 1,
+            "both instruction strings carry the guardrail:\n" + merged);
+        assertEquals(1, merged.split("\\[pr_reviewer\\]", -1).length - 1, "no second table:\n" + merged);
+
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        compilePrAgent(dir, "Reconciliation moved to the ledger service");
+
+        String edited = Files.readString(dir.resolve(".pr_agent.toml"), StandardCharsets.UTF_8);
+        assertTrue(edited.contains("Reconciliation moved to the ledger service") && !edited.contains(REASON),
+            "an edited guardrail replaces the span:\n" + edited);
+        assertTrue(edited.contains("num_code_suggestions = 3\nrequire_tests_review = true\n"), edited);
+    }
+
+    /** A configuration the merge cannot read without guessing is left alone, and the build says so. */
+    @Test
+    void aPrAgentConfigThatCannotBeMerged_isLeftAloneWithAWarning(@TempDir Path dir) throws Exception {
+        String config = "[pr_reviewer]\nextra_instructions = \"one line\"\n";
+        Files.writeString(dir.resolve(".pr_agent.toml"), config, StandardCharsets.UTF_8);
+        List<Diagnostic<? extends JavaFileObject>> diagnostics = compilePrAgent(dir, REASON);
+
+        assertEquals(config, Files.readString(dir.resolve(".pr_agent.toml"), StandardCharsets.UTF_8));
         assertTrue(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.WARNING
                 && d.getMessage(java.util.Locale.ROOT).contains(".pr_agent.toml")),
-            "and the build must say why the file carries no guardrails: " + diagnostics);
+            "the build must say why the file carries no guardrails: " + diagnostics);
+    }
+
+    private static List<Diagnostic<? extends JavaFileObject>> compilePrAgent(Path dir, String reason)
+            throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("CLAUDE.md");
+        h.addSource("com.example.Ledger",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AILocked(reason = \"" + reason + "\")\n"
+                + "public class Ledger {}\n");
+        List<Diagnostic<? extends JavaFileObject>> diagnostics = h.compileReturningDiagnostics();
+        VibeTagsLogger.shutdown();
+        return diagnostics;
     }
 
     // -----------------------------------------------------------------------
