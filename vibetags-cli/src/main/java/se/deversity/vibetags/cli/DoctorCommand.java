@@ -145,7 +145,13 @@ final class DoctorCommand {
     private static final Pattern DEPENDENCY_MANAGEMENT = Pattern.compile(
         "<dependencyManagement>.*?</dependencyManagement>", Pattern.DOTALL);
 
-    private static final Pattern GRADLE_INCLUDE = Pattern.compile("^\\s*include\\b(.*)$", Pattern.MULTILINE);
+    /**
+     * An {@code include} and its arguments, which may span lines: everything up to the closing
+     * parenthesis, or in the Groovy form without one, every line that ends in a comma and the line
+     * after it.
+     */
+    private static final Pattern GRADLE_INCLUDE = Pattern.compile(
+        "^\\s*include\\b\\s*(\\([^)]*\\)|(?:[^\\n]*,[ \\t]*\\r?\\n)*[^\\n]*)", Pattern.MULTILINE);
 
     private static final Pattern QUOTED = Pattern.compile("[\"']([^\"']+)[\"']");
 

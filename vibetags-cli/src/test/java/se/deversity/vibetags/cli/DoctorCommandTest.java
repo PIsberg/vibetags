@@ -360,6 +360,58 @@ class DoctorCommandTest {
         assertTrue(out().contains("modules:         2 use the annotations, all wired"), out());
     }
 
+    /**
+     * An include call spread over several lines, one project per line, as a long settings file is
+     * usually laid out in either DSL. Only the line holding {@code include} was read, so the reactor
+     * looked empty and doctor fell back to the root-only check #929 replaced.
+     */
+    @Test
+    void gradleIncludeSpanningSeveralLines_readsEachProject() throws Exception {
+        Files.writeString(dir.resolve("settings.gradle.kts"), """
+            rootProject.name = "karta"
+            include(
+                ":core",
+                ":tools:cli",
+            )
+            """);
+        Files.writeString(dir.resolve("build.gradle.kts"), "plugins { java }\n");
+        String wired = """
+            dependencies {
+                compileOnly("se.deversity.vibetags:vibetags-processor:1.4.0")
+                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.4.0")
+            }
+            """;
+        module("core", "build.gradle.kts", wired, true);
+        module("tools/cli", "build.gradle.kts", wired, true);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("modules:         2 use the annotations, all wired"), out());
+    }
+
+    /** The Groovy DSL's form: no parentheses, the list continued after a trailing comma. */
+    @Test
+    void groovyIncludeContinuedOnTheNextLine_readsEachProject() throws Exception {
+        Files.writeString(dir.resolve("settings.gradle"), """
+            rootProject.name = 'karta'
+            include 'core',
+                    'cli'
+            """);
+        Files.writeString(dir.resolve("build.gradle"), "plugins { id 'java' }\n");
+        String wired = """
+            dependencies {
+                compileOnly 'se.deversity.vibetags:vibetags-processor:1.4.0'
+                annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.4.0'
+            }
+            """;
+        module("core", "build.gradle", wired, true);
+        module("cli", "build.gradle", wired, true);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("modules:         2 use the annotations, all wired"), out());
+    }
+
     @Test
     void noOptInFiles_needsAction() throws Exception {
         mavenProjectWiredForVibeTags();

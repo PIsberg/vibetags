@@ -158,6 +158,11 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   unwired module is named; a module with no annotations needs nothing. Four `DoctorCommandTest`
   cases failed before the change; codekarta, the consumer in the issue, now reports `6 use the
   annotations, all wired` and exits 0.
+- **`vibetags doctor` reads a Gradle `include` that spans lines.** Only the line holding `include`
+  was read, so `include(` with one project per line below it listed no module and doctor fell back
+  to the root-only check above, and a Groovy `include 'core',` continued on the next line lost
+  every project after the first. The arguments are now read to the closing parenthesis, or across
+  every line ending in a comma. Two `DoctorCommandTest` cases failed before the change.
 - **Upgrading a pre-marker file keeps the hand-written text below a long legacy block (#936).** The
   end of an XML-shaped legacy block was looked for only in the first 2,000 characters after its
   header, so a block longer than that (a dozen guardrails) read as running to the end of the file,
