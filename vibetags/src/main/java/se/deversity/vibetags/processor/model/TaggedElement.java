@@ -121,6 +121,15 @@ public final class TaggedElement {
         return fileStem;
     }
 
+    /**
+     * Whether this is a top-level type, the one element a {@code **}{@code /<Name>.java} glob names
+     * the file of. A member is not a file, and neither is a nested type: its code is in its
+     * outermost type's file (#926).
+     */
+    public boolean ownsSourceFile() {
+        return (kind.isClass() || kind.isInterface()) && fileStem.equals(simpleName);
+    }
+
     /** What kind of element this is. */
     public ElementTag kind() {
         return kind;

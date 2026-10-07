@@ -242,6 +242,12 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   output that can name it. A module whose only `@AIIgnore` is on a member contributes nothing to
   an ignore file, rather than a header with no globs under it. `MemberLevelAIIgnoreGlobTest`
   failed 2 of 2 before the change.
+- **A nested type annotated `@AIIgnore` or `@AILocked` no longer becomes a file glob either.** It
+  was written as `**/<NestedName>.java`, a file that does not exist, while its code is in the
+  outermost type's file: an unrelated file of that name was hidden and the code meant to be was
+  not. Only a top-level type contributes a glob now; the nested type is still excluded or locked
+  in every prose output. Hiding the whole outer file instead would hide code nobody marked.
+  `aNestedTypeIsNotWrittenAsAFileGlob` failed before the change, for both annotations.
 - **A module that gave up waiting for the generation lock released it for other processes on
   Linux (#923).** Every waiter opened its own channel on `.vibetags-generate.lock` and polled
   `tryLock()`. The JDK takes `fcntl` locks on Linux, which belong to the process, so when a waiter

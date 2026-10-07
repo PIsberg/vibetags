@@ -106,6 +106,44 @@ class MemberLevelAIIgnoreGlobTest {
             "Greptile's ignorePatterns must hold no glob");
     }
 
+    /**
+     * A nested type is not a file either: its code is in the outermost type's file. It was written
+     * as {@code **}{@code /Snapshot.java}, which hid an unrelated {@code Snapshot.java} if one existed
+     * and never the code it was meant to hide. Like a member, it stays excluded in prose only. The
+     * same holds for a locked nested type's {@code .aiexclude} line.
+     */
+    @Test
+    @DisplayName("a nested type's @AIIgnore or @AILocked puts no **/<Nested>.java line in any exclusion file")
+    void aNestedTypeIsNotWrittenAsAFileGlob(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = optedIn(root);
+        h.addSource("com.example.Ledger", """
+            package com.example;
+            import se.deversity.vibetags.annotations.AIIgnore;
+            import se.deversity.vibetags.annotations.AILocked;
+            public class Ledger {
+                @AIIgnore(reason = "derived cache")
+                static class Snapshot {}
+                @AILocked(reason = "wire format")
+                public record Entry(long amount) {}
+            }
+            """);
+        h.addSource("com.example.GeneratedTable", IGNORED_TYPE);
+
+        h.compile();
+
+        for (String f : GLOB_FILES) {
+            String content = h.readFile(f);
+            assertFalse(content.contains("Snapshot.java") || content.contains("Entry.java"),
+                f + " names a nested type as if it were a file:\n" + content);
+            assertTrue(content.contains("**/GeneratedTable.java"),
+                f + " must still carry the top-level type's glob:\n" + content);
+        }
+        assertFalse(h.readFile(".greptile/config.json").contains("Snapshot.java"),
+            "Greptile's ignorePatterns names the nested type");
+        assertTrue(h.readFile("GEMINI.md").contains("com.example.Ledger.Snapshot"),
+            "the nested type must still reach the prose outputs");
+    }
+
     private static List<String> ignorePatternLines(String json) {
         return json.lines().filter(l -> l.contains("**/")).toList();
     }
