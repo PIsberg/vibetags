@@ -2179,6 +2179,10 @@ public final class ModuleSidecar {
             if (document != null) return document.strip();
         }
 
+        // Every module rendered its own scoped-rules section; stacked, the heading and its preamble
+        // repeated once per module (#930). Written once, after the module blocks, with every line.
+        String scopedIndex = hoistScopedIndex(contributions);
+
         StringBuilder merged = new StringBuilder();
         for (Map.Entry<String, String> entry : contributions) {
             String id = entry.getKey();
@@ -2195,7 +2199,84 @@ public final class ModuleSidecar {
             }
             merged.append('\n');
         }
-        return withFrontMatter(frontMatter, merged.toString().strip());
+        String document = merged.toString().strip();
+        if (!scopedIndex.isEmpty()) {
+            document = document + "\n\n" + scopedIndex;
+        }
+        return withFrontMatter(frontMatter, document);
+    }
+
+    /** The heading a Markdown aggregate's scoped-rules section opens with. */
+    private static final String SCOPED_INDEX_HEADING = "## Scoped Rules Index";
+
+    /**
+     * Takes the scoped-rules section out of each contribution and returns it as one section: the
+     * heading, the preamble once, and every contribution's index lines in order, duplicates dropped.
+     * The contributions are replaced by what is left of them.
+     *
+     * <p>Applies only when at least two contributions carry the section, every one of them has the
+     * shape {@code GranularIndexSection} renders (the heading, one preamble line, then {@code - }
+     * lines up to the next {@code ## } heading or the end), and the preambles are identical. Anything
+     * else returns {@code ""} and leaves every contribution as it was, which is the stacked output
+     * this replaced: repetitive, but nothing lost and nothing guessed.
+     */
+    private static String hoistScopedIndex(List<Map.Entry<String, String>> contributions) {
+        String preamble = null;
+        Set<String> items = new LinkedHashSet<>();
+        List<String> remainders = new ArrayList<>(contributions.size());
+        int found = 0;
+        for (Map.Entry<String, String> entry : contributions) {
+            String body = entry.getValue();
+            int start = indexOfHeadingLine(body);
+            if (start < 0) {
+                remainders.add(body);
+                continue;
+            }
+            int next = body.indexOf("\n## ", start + SCOPED_INDEX_HEADING.length());
+            int end = next < 0 ? body.length() : next + 1;
+            String sectionPreamble = null;
+            boolean sectionHasItems = false;
+            for (String line : body.substring(start + SCOPED_INDEX_HEADING.length(), end).split("\n")) {
+                String t = line.strip();
+                if (t.isEmpty()) {
+                    continue;
+                }
+                if (t.startsWith("- ")) {
+                    items.add(t);
+                    sectionHasItems = true;
+                } else if (sectionPreamble == null && !sectionHasItems) {
+                    sectionPreamble = t;
+                } else {
+                    return "";
+                }
+            }
+            if (sectionPreamble == null || (preamble != null && !preamble.equals(sectionPreamble))) {
+                return "";
+            }
+            preamble = sectionPreamble;
+            found++;
+            remainders.add((body.substring(0, start).stripTrailing() + "\n\n" + body.substring(end).stripLeading()).strip());
+        }
+        if (found < 2 || items.isEmpty()) {
+            return "";
+        }
+        for (int i = 0; i < contributions.size(); i++) {
+            contributions.get(i).setValue(remainders.get(i));
+        }
+        return SCOPED_INDEX_HEADING + "\n" + preamble + "\n\n" + String.join("\n", items);
+    }
+
+    /** Where {@link #SCOPED_INDEX_HEADING} stands on a line of its own in {@code body}, or {@code -1}. */
+    private static int indexOfHeadingLine(String body) {
+        for (int i = body.indexOf(SCOPED_INDEX_HEADING); i >= 0; i = body.indexOf(SCOPED_INDEX_HEADING, i + 1)) {
+            boolean lineStart = i == 0 || body.charAt(i - 1) == '\n';
+            int after = i + SCOPED_INDEX_HEADING.length();
+            boolean lineEnd = after == body.length() || body.charAt(after) == '\n' || body.charAt(after) == '\r';
+            if (lineStart && lineEnd) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**

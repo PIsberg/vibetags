@@ -226,6 +226,32 @@ class MultiModuleAggregationTest {
         assertTrue(merged.contains("com.example.KartaCli"), "CLI annotation should be present");
     }
 
+    /**
+     * The scoped-rules section is written once for the whole file (#930), but only when every module
+     * rendered it the same way. Two preambles that differ (two processor versions in one reactor)
+     * keep the stacked form: repetitive, but nothing guessed and nothing lost.
+     */
+    @Test
+    void mergeFor_hoistsTheScopedIndexOnlyWhenThePreamblesAgree() {
+        String preamble = "Detailed per-element guardrails live in scoped rule files.";
+        ModuleSidecar core = new ModuleSidecar("core", "core");
+        core.putBody("gemini_md", "# GEMINI\n\n## Scoped Rules Index\n" + preamble + "\n\n- `a`: `A`");
+        ModuleSidecar cli = new ModuleSidecar("cli", "cli");
+        cli.putBody("gemini_md", "# GEMINI\n\n## Scoped Rules Index\n" + preamble + "\n\n- `b`: `B`\n\n## Later\ntext");
+
+        String merged = ModuleSidecar.mergeFor("gemini_md", List.of(core, cli), true);
+        assertEquals(1, merged.split("## Scoped Rules Index", -1).length - 1, merged);
+        assertTrue(merged.endsWith("## Scoped Rules Index\n" + preamble + "\n\n- `a`: `A`\n- `b`: `B`"),
+            "one section after the module blocks, every module's line in it:\n" + merged);
+        assertTrue(merged.contains("## Later\ntext"), "a section after the index stays in its module:\n" + merged);
+
+        ModuleSidecar older = new ModuleSidecar("cli", "cli");
+        older.putBody("gemini_md", "# GEMINI\n\n## Scoped Rules Index\nAn older preamble.\n\n- `b`: `B`");
+        String stacked = ModuleSidecar.mergeFor("gemini_md", List.of(core, older), true);
+        assertEquals(2, stacked.split("## Scoped Rules Index", -1).length - 1,
+            "differing preambles are left stacked:\n" + stacked);
+    }
+
     @Test
     void mergeFor_twoModules_wrapsInSubMarkers_htmlStyle() {
         ModuleSidecar graph = new ModuleSidecar("module-graph", "module-graph");

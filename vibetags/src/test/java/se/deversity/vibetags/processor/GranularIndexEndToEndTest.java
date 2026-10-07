@@ -517,6 +517,81 @@ class GranularIndexEndToEndTest {
             "no per-class file once the element is grouped into a role");
     }
 
+    /**
+     * Elements a role routes onto one file share its pointer, so the index names the file once per
+     * package rather than once per element (#931). async-test-lib's root GEMINI.md carried 83
+     * explicit-path lines pointing at 5 role files.
+     */
+    @Test
+    void elementsSharingARoleFile_shareOneIndexLine(@TempDir Path dir) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+        h.touchOptIn("CLAUDE.md");
+        h.touchOptIn(".claude/rules/.vibetags");
+        h.touchOptIn("GEMINI.md");
+        h.touchOptIn(".gemini/rules/.vibetags");
+        Files.writeString(dir.resolve(".vibetags-roles"), "public-api = **/api/**\n", StandardCharsets.UTF_8);
+        for (String type : new String[]{"Alpha", "Beta", "Gamma"}) {
+            h.addSource("com.example.api." + type, "package com.example.api;\n"
+                + "import se.deversity.vibetags.annotations.AIContext;\n"
+                + "@AIContext(focus = \"" + type + " is public API\")\n"
+                + "public class " + type + " {}\n");
+        }
+        h.compile();
+
+        String claude = h.readFile("CLAUDE.md");
+        assertTrue(claude.contains(
+                "<elements in=\"com.example.api\" rules=\".claude/rules/public-api.md\">Alpha, Beta, Gamma</elements>"),
+            "one line per package and role file in CLAUDE.md:\n" + claude);
+        assertEquals(1, claude.split("public-api\\.md", -1).length - 1,
+            "the role file is named once, not once per element:\n" + claude);
+
+        String gemini = h.readFile("GEMINI.md");
+        assertTrue(gemini.contains("- `com.example.api`: `Alpha`, `Beta`, `Gamma` → `.gemini/rules/public-api.md`"),
+            "and the same in GEMINI.md:\n" + gemini);
+        assertEquals(1, gemini.split("public-api\\.md", -1).length - 1,
+            "the role file is named once, not once per element:\n" + gemini);
+        for (String type : new String[]{"Alpha", "Beta", "Gamma"}) {
+            assertTrue(ProcessorTestHarness.mentions(claude, "com.example.api." + type), type + " in CLAUDE.md");
+            assertTrue(ProcessorTestHarness.mentions(gemini, "com.example.api." + type), type + " in GEMINI.md");
+        }
+    }
+
+    /**
+     * A reactor root's Markdown aggregate stacks one block per module, and each module rendered its
+     * own scoped-rules section, so the heading and its 378-byte preamble repeated once per module:
+     * 20 to 24% of two consumers' GEMINI.md (#930). Once per file is enough, with every module's
+     * lines under it.
+     */
+    @Test
+    void aReactorRootStatesTheIndexPreambleOnce(@TempDir Path dir) throws IOException {
+        Files.createFile(dir.resolve("GEMINI.md"));
+        Files.createDirectories(dir.resolve(".gemini/rules"));
+        for (String module : new String[]{"core", "cli"}) {
+            ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
+            Files.createDirectories(dir.resolve(module));
+            Files.writeString(dir.resolve(module).resolve("pom.xml"),
+                "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
+            String type = module.equals("core") ? "IrNode" : "Cli";
+            h.writeSourceFile(module + "/src/main/java/com/example/" + module + "/" + type + ".java",
+                "package com.example." + module + ";\n"
+                    + "import se.deversity.vibetags.annotations.AIContext;\n"
+                    + "@AIContext(focus = \"" + type + " focus\")\n"
+                    + "public class " + type + " {}\n");
+            h.compile();
+            VibeTagsLogger.shutdown();
+        }
+
+        String gemini = Files.readString(dir.resolve("GEMINI.md"), StandardCharsets.UTF_8);
+        assertTrue(gemini.contains("VIBETAGS-MODULE"), "precondition: two module blocks:\n" + gemini);
+        assertEquals(1, gemini.split("## Scoped Rules Index", -1).length - 1,
+            "one index heading per file:\n" + gemini);
+        assertEquals(1, gemini.split("does not load on its own", -1).length - 1,
+            "one preamble per file:\n" + gemini);
+        assertTrue(ProcessorTestHarness.mentions(gemini, "com.example.core.IrNode")
+                && ProcessorTestHarness.mentions(gemini, "com.example.cli.Cli"),
+            "every module's index line is kept:\n" + gemini);
+    }
+
     @Test
     void cursorReuseRenderers_stayFullWhileClaudeLocalMirrors(@TempDir Path dir) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);

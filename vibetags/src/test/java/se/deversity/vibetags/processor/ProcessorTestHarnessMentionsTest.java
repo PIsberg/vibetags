@@ -32,6 +32,19 @@ class ProcessorTestHarnessMentionsTest {
         assertFalse(ProcessorTestHarness.mentions(index, "com.example.a.Gamma"));
     }
 
+    /** A group that names its role file (#931): the pointer is not one of the names. */
+    @Test
+    void findsANameInAGroupThatNamesItsFile() {
+        String xml = "    <elements in=\"com.example.api\" rules=\".claude/rules/api.md\">Alpha, Beta</elements>\n";
+        assertTrue(ProcessorTestHarness.mentions(xml, "com.example.api.Beta"));
+        assertFalse(ProcessorTestHarness.mentions(xml, "com.example.api.Gamma"));
+
+        String md = "- `com.example.api`: `Alpha`, `Beta` → `.gemini/rules/api.md`\n";
+        assertTrue(ProcessorTestHarness.mentions(md, "com.example.api.Beta"),
+            "the last name is not swallowed by the trailing file pointer");
+        assertFalse(ProcessorTestHarness.mentions(md, "com.example.api.Gamma"));
+    }
+
     @Test
     void stillFindsALiteralMention() {
         assertTrue(ProcessorTestHarness.mentions("<file path=\"com.example.cli.Cli\">", "com.example.cli.Cli"));

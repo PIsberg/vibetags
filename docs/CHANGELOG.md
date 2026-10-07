@@ -124,6 +124,22 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **A reactor root's Markdown aggregate states the scoped-rules index once (#930).** Each module
+  rendered its own `## Scoped Rules Index` heading and its 378-byte note, and the merge stacked them,
+  so they repeated once per module: 20% of blindbean's `GEMINI.md` and 24% of codekarta's. The merge
+  now writes the heading and note once, after the module blocks, with every module's lines under
+  them. It does so only when every module's section has the shape the renderer emits and the notes
+  agree; otherwise, as with two processor versions in one reactor, the stacked form is kept. The
+  sidecar format is unchanged. `examples/multimodule-indexed`'s `copilot-instructions.md` loses its
+  second copy. `aReactorRootStatesTheIndexPreambleOnce` failed before the change.
+- **The scoped-rules index names a role file once per package (#931).** An element routed onto a
+  role file by `.vibetags-roles` kept a line of its own with the file repeated:
+  async-test-lib's root `GEMINI.md` had 83 such lines, 8,744 bytes, pointing at 5 files. Elements
+  of one package in one role file now share a line,
+  `<elements in="a.b" rules=".claude/rules/api.md">C, D</elements>` in `CLAUDE.md` and
+  `` - `a.b`: `C`, `D` → `.gemini/rules/api.md` `` in the Markdown aggregates. A role-file entry
+  for a single element keeps its one-element form, which is shorter. `examples/all-tiers` changes
+  accordingly. `elementsSharingARoleFile_shareOneIndexLine` failed before the change.
 - **`vibetags doctor` checks a reactor module by module (#929).** It read only the root build file,
   so a Maven reactor whose root only manages `vibetags-processor` and whose modules declare it was
   told the annotations "will not compile" and exited 1, while a processor that was only managed

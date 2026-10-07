@@ -52,13 +52,14 @@ class ProcessorTestHarness {
         }
         String prefix = Pattern.quote(qualifiedName.substring(0, dot));
         String name = qualifiedName.substring(dot + 1);
-        Matcher xml = Pattern.compile("<elements in=\"" + prefix + "\">([^<]*)</elements>").matcher(text);
+        // An entry may also name its role file: rules="..." in XML, a trailing → `file` in markdown (#931).
+        Matcher xml = Pattern.compile("<elements in=\"" + prefix + "\"(?: rules=\"[^\"]*\")?>([^<]*)</elements>").matcher(text);
         while (xml.find()) {
             if (Arrays.asList(xml.group(1).split(", ")).contains(name)) {
                 return true;
             }
         }
-        Matcher md = Pattern.compile("(?m)^- `" + prefix + "`: (.*)").matcher(text);
+        Matcher md = Pattern.compile("(?m)^- `" + prefix + "`: (.*?)(?: → `[^`]*`)?$").matcher(text);
         while (md.find()) {
             if (Arrays.asList(md.group(1).replace("`", "").split(", ")).contains(name)) {
                 return true;
