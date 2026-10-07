@@ -39,6 +39,7 @@ public final class TaggedElement {
     private final String simpleName;
     private final String displayName;
     private final String granularQName;
+    private final String fileStem;
     private final ElementTag kind;
     private final Map<Class<? extends Annotation>, Annotation> annotations;
     private final Map<String, String> typeMembers;
@@ -57,6 +58,7 @@ public final class TaggedElement {
         this.simpleName = b.simpleName;
         this.displayName = b.displayName;
         this.granularQName = b.granularQName;
+        this.fileStem = b.fileStem.isEmpty() ? b.simpleName : b.fileStem;
         this.kind = b.kind;
         this.annotations = b.annotations.isEmpty()
             ? Map.of()
@@ -107,6 +109,16 @@ public final class TaggedElement {
     /** Granular rule filename stem: the FQN with every non-{@code [A-Za-z0-9-]} character hyphenated. */
     public String granularQName() {
         return granularQName;
+    }
+
+    /**
+     * For a type, the simple name of the outermost type enclosing it, which names the source file
+     * that declares it: {@code Ledger} for {@code Ledger.Entry}, and the type's own simple name when
+     * it is top-level. For any other element, its simple name. A glob for the file a type's code is
+     * in is built from this, never from {@link #simpleName()}: no {@code Entry.java} exists.
+     */
+    public String fileStem() {
+        return fileStem;
     }
 
     /** What kind of element this is. */
@@ -176,6 +188,7 @@ public final class TaggedElement {
         private String simpleName = "";
         private String displayName = "";
         private String granularQName = "";
+        private String fileStem = "";
         private ElementTag kind = ElementTag.OTHER;
         private final Map<Class<? extends Annotation>, Annotation> annotations = new LinkedHashMap<>();
         private final Map<String, String> typeMembers = new LinkedHashMap<>();
@@ -191,6 +204,15 @@ public final class TaggedElement {
             this.simpleName = simpleName;
             this.displayName = displayName;
             this.granularQName = granularQName;
+            return this;
+        }
+
+        /**
+         * Records the outermost enclosing type's simple name for a nested type; see
+         * {@link TaggedElement#fileStem()}. Left unset, or empty, it is the simple name.
+         */
+        public Builder fileStem(String fileStem) {
+            this.fileStem = fileStem;
             return this;
         }
 

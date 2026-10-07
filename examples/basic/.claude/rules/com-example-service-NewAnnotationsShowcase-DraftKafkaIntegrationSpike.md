@@ -1,5 +1,5 @@
 ---
-paths: ["**/DraftKafkaIntegrationSpike.java"]
+paths: ["**/NewAnnotationsShowcase.java"]
 ---
 
 <!-- VIBETAGS-START -->

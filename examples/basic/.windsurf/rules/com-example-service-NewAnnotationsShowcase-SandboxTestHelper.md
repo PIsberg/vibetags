@@ -1,6 +1,6 @@
 ---
 trigger: glob
-globs: **/SandboxTestHelper.java
+globs: **/NewAnnotationsShowcase.java
 ---
 
 <!-- VIBETAGS-START -->

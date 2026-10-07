@@ -1,5 +1,5 @@
 ---
-paths: ["**/ImmutableProductPrice.java"]
+paths: ["**/NewAnnotationsShowcase.java"]
 ---
 
 <!-- VIBETAGS-START -->

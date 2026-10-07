@@ -1,6 +1,6 @@
 ---
 trigger: glob
-globs: **/DraftKafkaIntegrationSpike.java
+globs: **/NewAnnotationsShowcase.java
 ---
 
 <!-- VIBETAGS-START -->

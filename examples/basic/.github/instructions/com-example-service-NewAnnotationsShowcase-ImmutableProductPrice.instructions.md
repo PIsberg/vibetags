@@ -1,5 +1,5 @@
 ---
-applyTo: "**/ImmutableProductPrice.java"
+applyTo: "**/NewAnnotationsShowcase.java"
 ---
 
 <!-- VIBETAGS-START -->

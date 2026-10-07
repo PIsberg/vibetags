@@ -161,6 +161,13 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   unwired module is named; a module with no annotations needs nothing. Four `DoctorCommandTest`
   cases failed before the change; codekarta, the consumer in the issue, now reports `6 use the
   annotations, all wired` and exits 0.
+- **A nested type's scoped rule loads for the file its code is in.** The glob was built from the
+  type's own simple name, so `Ledger.Entry` got `**/Entry.java`: no such file exists, and the rule
+  never loaded when `Ledger.java` was opened, or an unrelated `Entry.java` elsewhere loaded it. A
+  member of a nested type files under that type and had the same glob. The glob now names the
+  outermost enclosing type's file, `**/Ledger.java`. The file a nested type is in reaches the build
+  fingerprint, so moving `Entry` into a file of its own regenerates the glob; for every other
+  element the fingerprint is unchanged. `NestedTypeRuleGlobTest` failed before the change.
 - **`vibetags doctor` reads a Gradle `include` that spans lines.** Only the line holding `include`
   was read, so `include(` with one project per line below it listed no module and doctor fell back
   to the root-only check above, and a Groovy `include 'core',` continued on the next line lost

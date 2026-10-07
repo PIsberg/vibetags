@@ -1,6 +1,6 @@
 ---
 trigger: glob
-globs: **/ImmutableProductPrice.java
+globs: **/NewAnnotationsShowcase.java
 ---
 
 <!-- VIBETAGS-START -->

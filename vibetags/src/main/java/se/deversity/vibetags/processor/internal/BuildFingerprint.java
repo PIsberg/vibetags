@@ -155,8 +155,14 @@ public final class BuildFingerprint {
             // — changes what the file says while every other input here stays byte-identical.
             // Left out, that edit short-circuited past regeneration and check mode failed on the
             // tree the build had just called current.
-            sb.append(e.path()).append('#').append(e.kind().name())
-              .append('=').append(attrs.of(e)).append(';');
+            sb.append(e.path()).append('#').append(e.kind().name());
+            // The file a nested owner's code is in names its rule's glob. Appended only for a nested
+            // owner, so every other element's contribution, and the pinned values, are unchanged.
+            TaggedElement owner = e.owner();
+            if (!owner.fileStem().equals(owner.simpleName())) {
+                sb.append('@').append(owner.fileStem());
+            }
+            sb.append('=').append(attrs.of(e)).append(';');
         }
         sb.append('}');
     }

@@ -44,6 +44,25 @@ public final class ElementNaming {
     }
 
     /**
+     * For a nested type, the simple name of the outermost type enclosing it, which names the source
+     * file that declares it; {@code ""} for a top-level type and for anything that is not a type.
+     * A local class counts as nested in the type whose method declares it.
+     */
+    public static String fileStem(Element e) {
+        if (!(e instanceof TypeElement)) {
+            return "";
+        }
+        Element outermost = e;
+        for (Element at = e.getEnclosingElement(); at != null && at.getKind() != ElementKind.PACKAGE
+                && at.getKind() != ElementKind.MODULE; at = at.getEnclosingElement()) {
+            if (at instanceof TypeElement) {
+                outermost = at;
+            }
+        }
+        return outermost.equals(e) ? "" : outermost.getSimpleName().toString();
+    }
+
+    /**
      * Derives the granular rule filename stem (minus extension) for an element: its FQN with every
      * character outside {@code [A-Za-z0-9-]} replaced by {@code -} (dots included). This is the
      * single source of truth shared by {@link GranularRulesWriter} (which names the scoped files)
