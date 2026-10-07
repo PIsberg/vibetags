@@ -40,7 +40,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append("` - Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
-            case GEMINI:
+            case GEMINI_MD:
                 sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
             case LLMS:
@@ -59,13 +59,7 @@ public final class AICoreFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append("`: Sensitivity: ").append(sensitivity).append('.').append(CommonFormatterHelper.detail(" ", "Note: ", note)).append('\n');
                 break;
-            case MENTAT:
-                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"sensitivity\": \"").append(Escape.json(sensitivity)).append("\", \"note\": \"").append(Escape.json(note)).append("\"},\n");
-                break;
-            case SWEEP:
-                sb.append("  - \"Core functionality (change with caution): ").append(Escape.json(className)).append(" [sensitivity: ").append(Escape.json(sensitivity)).append("]\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (core, sensitivity: ").append(sensitivity).append(')').append(CommonFormatterHelper.clause(": ", note)).append('\n');
                 break;
             default:

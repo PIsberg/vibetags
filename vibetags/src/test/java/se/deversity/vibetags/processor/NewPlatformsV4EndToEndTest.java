@@ -16,10 +16,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * editor expansion:
  * <ul>
  *   <li>Context-packer ignore files: {@code .repomixignore}, {@code .gitingestignore},
- *       {@code .gptignore}, {@code .ghostcoderignore}, {@code .piecesignore}</li>
- *   <li>AI PR reviewers: {@code .coderabbit.yaml}, {@code .pr_agent.toml}, {@code ellipsis.yaml}</li>
- *   <li>Editors &amp; modes: {@code .void/rules.md}, {@code .roomodes}</li>
+ *       {@code .gptignore}</li>
+ *   <li>AI PR reviewers: {@code .coderabbit.yaml}, {@code .pr_agent.toml}</li>
+ *   <li>Editors &amp; modes: {@code .roomodes}</li>
  * </ul>
+ * {@code .ghostcoderignore}, {@code .piecesignore}, {@code ellipsis.yaml} and {@code .void/rules.md}
+ * were removed in 1.4.0 (#720).
  */
 @Tag("e2e")
 class NewPlatformsV4EndToEndTest {
@@ -48,12 +50,8 @@ class NewPlatformsV4EndToEndTest {
         assertTrue(harness.fileExists(".repomixignore"), ".repomixignore should exist");
         assertTrue(harness.fileExists(".gitingestignore"), ".gitingestignore should exist");
         assertTrue(harness.fileExists(".gptignore"), ".gptignore should exist");
-        assertTrue(harness.fileExists(".ghostcoderignore"), ".ghostcoderignore should exist");
-        assertTrue(harness.fileExists(".piecesignore"), ".piecesignore should exist");
         assertTrue(harness.fileExists(".coderabbit.yaml"), ".coderabbit.yaml should exist");
         assertTrue(harness.fileExists(".pr_agent.toml"), ".pr_agent.toml should exist");
-        assertTrue(harness.fileExists("ellipsis.yaml"), "ellipsis.yaml should exist");
-        assertTrue(harness.fileExists(".void/rules.md"), ".void/rules.md should exist");
         assertTrue(harness.fileExists(".roomodes"), ".roomodes should exist");
     }
 
@@ -74,7 +72,7 @@ class NewPlatformsV4EndToEndTest {
 
     @Test
     void testContextPackerIgnoreFilesShareContent() throws IOException {
-        for (String f : new String[]{".gitingestignore", ".gptignore", ".ghostcoderignore", ".piecesignore"}) {
+        for (String f : new String[]{".gitingestignore", ".gptignore"}) {
             String content = harness.readFile(f);
             assertTrue(content.contains("GeneratedMetadata"), f + " should list @AIIgnore elements");
             assertTrue(content.contains("# VIBETAGS-START"), f + " should use hash markers");
@@ -85,10 +83,6 @@ class NewPlatformsV4EndToEndTest {
     void testGptIgnoreIdentifiesPlatform() throws IOException {
         assertTrue(harness.readFile(".gptignore").contains("GPT context packer"),
             ".gptignore should identify the GPT context packer");
-        assertTrue(harness.readFile(".ghostcoderignore").contains("Ghostcoder"),
-            ".ghostcoderignore should identify Ghostcoder");
-        assertTrue(harness.readFile(".piecesignore").contains("Pieces"),
-            ".piecesignore should identify Pieces");
     }
 
     // -----------------------------------------------------------------------
@@ -106,20 +100,6 @@ class NewPlatformsV4EndToEndTest {
     }
 
     // -----------------------------------------------------------------------
-    // Ellipsis
-    // -----------------------------------------------------------------------
-
-    @Test
-    void testEllipsisYaml() throws IOException {
-        String content = harness.readFile("ellipsis.yaml");
-        assertTrue(content.contains("version: 1.3"), "should declare Ellipsis version");
-        assertTrue(content.contains("pr_review:"), "should declare pr_review block");
-        assertTrue(content.contains("rules:"), "should declare rules list");
-        assertTrue(content.contains("PaymentProcessor"), "should list @AILocked element as a rule");
-        assertTrue(content.contains("# VIBETAGS-START"), "yaml should use hash markers");
-    }
-
-    // -----------------------------------------------------------------------
     // PR-Agent (TOML — full overwrite, no markers)
     // -----------------------------------------------------------------------
 
@@ -130,18 +110,6 @@ class NewPlatformsV4EndToEndTest {
         assertTrue(content.contains("extra_instructions"), "should set extra_instructions");
         assertTrue(content.contains("PaymentProcessor"), "should mention @AILocked element");
         assertFalse(content.contains("# VIBETAGS-START"), "toml is overwritten without markers");
-    }
-
-    // -----------------------------------------------------------------------
-    // Void editor
-    // -----------------------------------------------------------------------
-
-    @Test
-    void testVoidRulesMd() throws IOException {
-        String content = harness.readFile(".void/rules.md");
-        assertTrue(content.contains("LOCKED FILES"), "should mirror Cursor markdown layout");
-        assertTrue(content.contains("PaymentProcessor"), "should mention @AILocked element");
-        assertTrue(content.contains("<!-- VIBETAGS-START -->"), "md should use HTML markers");
     }
 
     // -----------------------------------------------------------------------

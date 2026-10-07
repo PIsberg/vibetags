@@ -145,7 +145,7 @@ class IncrementalRebuildStressTest {
 
     /** The same six opt-ins the volume sweeps use, so this table reads against those baselines. */
     private static final String[] OPT_IN_FILES = {
-        ".cursorrules", "CLAUDE.md", ".aiexclude", "AGENTS.md", "gemini_instructions.md", "QWEN.md"
+        ".cursorrules", "CLAUDE.md", ".aiexclude", "AGENTS.md", "GEMINI.md", "QWEN.md"
     };
 
     /**

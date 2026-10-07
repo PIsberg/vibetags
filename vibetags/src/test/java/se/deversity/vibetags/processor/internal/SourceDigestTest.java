@@ -62,7 +62,8 @@ class SourceDigestTest {
 
     @Test
     void anOptInThatChangesKindMovesTheKey() throws IOException {
-        // .clinerules is the cline file and the cline_granular directory: same path, other platform.
+        // A .clinerules file opts into nothing since 1.4.0 (#645); the cline_granular directory at
+        // the same path does, so swapping one for the other must move the key.
         project();
         Files.createFile(root.resolve(".clinerules"));
         String asFile = key();

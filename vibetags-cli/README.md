@@ -54,7 +54,7 @@ The examples below assume it.
 
 | Command | What it does |
 |---|---|
-| `vibetags init --list` | List every opt-in platform key, the file it maps to, and which are active or deprecated. |
+| `vibetags init --list` | List every opt-in platform key, the file it maps to, and which are active. |
 | `vibetags init --platforms <key,...>` | Create the opt-in files for those keys, empty, for the next compile to fill. |
 | `vibetags doctor` | Report the project's VibeTags health. Exit 1 if anything needs action. |
 | `vibetags doctor --context` | Also weigh the active guardrail files: bytes, generated share, per-section sizes. |
@@ -77,13 +77,11 @@ the processor writes Claude guardrails into it; if it does not, nothing is writt
 $ vibetags init --list
 Opt-in platform keys (file presence = opt-in):
   agents_skill -> .agents/skills/vibetags-guardrails/SKILL.md
-  ai_rules_granular -> .ai/rules  [deprecated, use AGENTS.md]
   aiassistant_granular -> .aiassistant/rules
   aider_conf -> .aider.conf.yml
   ...
   claude -> CLAUDE.md  [active]
   claude_granular -> .claude/rules
-  claude_ignore -> .claudeignore  [deprecated, use .claude/settings.json]
   ...
   cursor -> .cursorrules
   cursor_granular -> .cursor/rules
@@ -91,12 +89,10 @@ Opt-in platform keys (file presence = opt-in):
   windsurf -> .windsurfrules
   windsurf_granular -> .windsurf/rules
   zed -> .rules
-  zencoder_granular -> .zencoder/rules  [deprecated, use AGENTS.md or .agents/skills/]
 ```
 
 The list is sorted by key. `[active]` marks a platform whose opt-in file already exists in this
-project. `[deprecated, use X]` marks an output the next major version stops writing, and names
-what replaces it.
+project.
 
 ### Activate platforms
 
@@ -135,11 +131,11 @@ Then compile, and the processor fills each file in. What `init` guarantees:
   error: init does not understand: --platfroms claude
   ```
 
-- **It refuses a path that exists as the wrong kind.** `.clinerules` is a file for `cline` and a
-  directory for `cline_granular`; asking for one when the other is there is refused and names the
-  platform that owns it.
+- **It refuses a path that exists as the wrong kind.** `cline_granular` writes `.clinerules` as a
+  directory, so asking for it when a `.clinerules` file is there, left over from the single-file
+  service 1.4.0 removed, is refused rather than replacing the file.
 - **It refuses to write outside the project root**, for example through a symlinked `.github`.
-- **Deprecated keys still work when named**, with a warning on stderr saying what to use instead.
+- **A key removed in 1.4.0 is rejected as unknown** (#645, #720), like any other key it does not know.
 
 ## `doctor`: check a project
 

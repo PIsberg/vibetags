@@ -75,11 +75,7 @@ public final class AIKeepInSyncFormatter implements AnnotationFormatter {
                   .append(enforcedBy.isEmpty() ? "nothing — verify by hand" : enforcedBy).append('\n')
                   .append("- **Rule**: Change all sites in the same commit, or none.\n\n");
                 break;
-            case SWEEP:
-                sb.append("  - \"Keep in sync: editing ").append(Escape.json(className))
-                  .append(" requires the same edit at ").append(Escape.json(mirrors)).append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (mirrored)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

@@ -158,9 +158,9 @@ class DocumentationLinksTest {
     }
 
     /**
-     * Removes fenced code blocks. Links inside them illustrate generated output — the sample
-     * {@code .mentatconfig.json} contains {@code [PaymentProcessor](com.example...)} — and are not
-     * navigation. Checking them reports four failures that no reader can ever encounter.
+     * Removes fenced code blocks. Links inside them illustrate generated output — a sample
+     * {@code llms.txt} contains {@code [PaymentProcessor](com.example...)} — and are not
+     * navigation. Checking them reports failures that no reader can ever encounter.
      */
     private static String stripFencedCode(String text) {
         StringBuilder out = new StringBuilder(text.length());

@@ -298,7 +298,7 @@ class ProjectLifecycleEndToEndTest {
     @Test
     void moduleRemovedFromTheReactor_leavesEveryMergedFile(@TempDir Path root) throws Exception {
         Files.createFile(root.resolve("CLAUDE.md"));
-        Files.createFile(root.resolve(".mentatconfig.json"));
+        Files.createFile(root.resolve(".pr_agent.toml"));
         compileModule(root, "module-core", "com.example.core.IrNode",
             locked("com.example.core", "IrNode", "Core IR node"));
         compileModule(root, "module-cli", "com.example.cli.Cli",
@@ -321,10 +321,10 @@ class ProjectLifecycleEndToEndTest {
         assertFalse(Files.exists(root.resolve(".vibetags-mod-module-cli")),
             "the deleted module's sidecar must be pruned, or it keeps re-supplying the guardrails");
 
-        String mentat = Files.readString(root.resolve(".mentatconfig.json"));
-        assertFalse(ProcessorTestHarness.mentions(mentat, "com.example.cli.Cli"),
-            "the whole-file JSON is assembled from sidecars, so the removal has to reach it too");
-        assertTrue(mentat.contains("com.example.core.IrNode"), "and must keep the surviving module");
+        String prAgent = Files.readString(root.resolve(".pr_agent.toml"));
+        assertFalse(ProcessorTestHarness.mentions(prAgent, "com.example.cli.Cli"),
+            "the whole-file TOML is assembled from sidecars, so the removal has to reach it too");
+        assertTrue(prAgent.contains("com.example.core.IrNode"), "and must keep the surviving module");
     }
 
     /**

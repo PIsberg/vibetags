@@ -130,11 +130,11 @@ class TestingMdSafetyEndToEndTest {
     void anIgnoredTestFileIsStillExcludedWithTestingMdPresent() throws IOException {
         Path root = Files.createDirectories(tmp.resolve("ignore"));
         Files.createFile(root.resolve(".cursorignore"));
-        Files.createFile(root.resolve(".claudeignore"));
+        Files.createFile(root.resolve(".qwenignore"));
         Path built = build("ignore", true,
             testSource("AIIgnore", "@AIIgnore(reason = \"recorded partner payloads\")", "", ""));
 
-        for (String ignoreFile : List.of(".cursorignore", ".claudeignore")) {
+        for (String ignoreFile : List.of(".cursorignore", ".qwenignore")) {
             String content = Files.readString(built.resolve(ignoreFile));
             assertTrue(content.contains("GoldenLedgerFixture"), ignoreFile + " must still list the test file:\n" + content);
         }

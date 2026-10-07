@@ -36,9 +36,9 @@ public record PlatformDescriptor(
     /**
      * Whether a service's path is a file or a directory.
      *
-     * <p>The file name cannot answer it: {@code .clinerules} is the {@code cline} file and the
-     * {@code cline_granular} directory at the same path, and {@code isOptedIn} lets exactly one of
-     * the two activate (issue #642).
+     * <p>The file name cannot answer it: {@code .clinerules} is the {@code cline_granular}
+     * directory, and until 1.4.0 the same path was also the single-file {@code cline} service
+     * (#642, #645). {@code isOptedIn} activates a service only on the kind of entry it writes.
      */
     public enum Kind {
         /** One file, written whole or between markers. */

@@ -52,7 +52,7 @@ class AnnotationVolumeStressTest {
     // Names of the opt-in files we pre-create so the processor has services to write.
     private static final String[] OPT_IN_FILES = {
         ".cursorrules", "CLAUDE.md", ".aiexclude", "AGENTS.md",
-        "gemini_instructions.md", "QWEN.md"
+        "GEMINI.md", "QWEN.md"
     };
 
     // -------------------------------------------------------------------------

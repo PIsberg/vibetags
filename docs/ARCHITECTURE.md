@@ -33,7 +33,7 @@ Developer Annotations → javac + Annotation Processor → AI Config Files
 - **Zero runtime dependency**: No VibeTags classes in production artifacts
 - **File-existence opt-in**: Only generates files that already exist on disk
 - **Write-if-changed**: Only updates files when content actually differs
-- **Multi-platform**: Generates configs for all supported AI platforms simultaneously (Cursor, Claude, Gemini, Codex, Copilot, Qwen, Aider, Trae, Roo, Windsurf via llms.txt, AI PR reviewers like CodeRabbit/PR-Agent/Ellipsis, context packers, and more — see the [project facts](../README.md#project-facts))
+- **Multi-platform**: Generates configs for all supported AI platforms simultaneously (Cursor, Claude, Gemini, Codex, Copilot, Qwen, Aider, Trae, Roo, Windsurf via llms.txt, AI PR reviewers like CodeRabbit/PR-Agent/Greptile, context packers, and more — see the [project facts](../README.md#project-facts))
 - **Version stamped**: Every file includes VibeTags version + GitHub URL
 
 ### Published Artifacts

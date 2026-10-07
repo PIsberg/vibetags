@@ -74,12 +74,11 @@ package "Generated AI Config Files" {
   rectangle "Claude Files" as ClaudeFiles
   note right of ClaudeFiles
     CLAUDE.md
-    .claudeignore
   end note
 
   rectangle "Gemini Files" as GeminiFiles
   note right of GeminiFiles
-    gemini_instructions.md
+    GEMINI.md
     .aiexclude
   end note
 
@@ -93,7 +92,6 @@ package "Generated AI Config Files" {
   rectangle "Copilot Files" as CopilotFiles
   note right of CopilotFiles
     .github/copilot-instructions.md
-    .copilotignore
   end note
 
   rectangle "Aider Files" as AiderFiles

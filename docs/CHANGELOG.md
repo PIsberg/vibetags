@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Breaking, in a minor release: the next release is 1.4.0.** It stops writing every output that
+1.3.5 and later deprecated (#641, #664 to #677, #845), each with a compiler warning naming the file
+and its replacement. The warning said the next *major* version; the removal ships in 1.4.0
+instead, by the owner's decision. A build that never saw that warning is unaffected. See Removed.
+
+### Removed
+
+- **Four deprecated platform outputs are no longer written** (#645). Each was deprecated in 1.3.5;
+  this is the removal that warning announced. Their keys are gone from the opt-in list, so an
+  existing file is neither regenerated nor warned about: it is left byte-identical and stops
+  tracking the annotations. Move any hand-written content to the replacement and delete the file.
+  - `gemini_instructions.md`, replaced by `GEMINI.md` (Gemini CLI) or `.gemini/styleguide.md`
+    (Gemini Code Assist). No Google product documents reading it; a last look before removal
+    (GitHub code search of the `google-gemini` and `googleapis` organisations, and a web search)
+    found no vendor source either.
+  - `.cody/config.json` and `.codyignore`, replaced by `AGENTS.md`, which Amp reads. Sourcegraph
+    ended Cody Free and Pro on 23 July 2025, and its docs describe neither file.
+  - `.supermavenignore`, replaced by `.cursorignore`, which Cursor Tab reads. Supermaven announced
+    its sunset on 21 November 2025.
+  - `.clinerules` as a single file, replaced by the `.clinerules/` directory, which VibeTags already
+    writes with an always-loaded `+vibetags-safety.md`. Cline's current docs describe only the
+    directory. A leftover file activates nothing, and `vibetags init --platforms cline_granular`
+    refuses to replace it.
+
+  `CodyRenderer` is deleted with the `Platform` constants `GEMINI`, `CODY`, `CODY_IGNORE`,
+  `SUPERMAVEN_IGNORE` and `CLINE`, and `vibetags init --list` no longer offers the five keys. The
+  README counts drop to 43 platforms and 60 config files. `examples/basic`, `examples/multimodule`
+  and `examples/gradle-multimodule` lose the fixtures, and `examples/basic` opts into the
+  `.clinerules/` directory instead, so `ExampleOptInCoverageTest` needs no exemption for it.
+  `RemovedPlatformOutputsTest` pins the removal; all 8 of its cases fail against the 1.3.8
+  processor.
+- **The other seventeen deprecated outputs are no longer written** (#720), on the same terms. The
+  replacement each warning named is in docs/PLATFORMS.md, "Outputs removed in 1.4.0".
+  - `.void/rules.md` (Void is archived and read `.voidrules`), `.mentatconfig.json` (Mentat read
+    `.mentat_config.json`), `sweep.yaml` (Sweep is now a JetBrains assistant), `.plandex.yaml`
+    (Plandex never read it), `.pearai/rules/`, `.ghostcoderignore`, `.doubleignore`,
+    `.piecesignore` and `.ai/rules/` (no tool documents them).
+  - `.claudeignore`, `.copilotignore` and `.antigravityignore`: none of the three vendors documents
+    the file. Claude Code uses `Read` deny rules, Copilot a Content exclusion setting, Antigravity
+    `read_file` Deny rules or `.gitignore`.
+  - `.idx/airules.md` and `.amazonq/rules/`, whose products end on 22 March 2027 and 30 April 2027.
+    The owner chose to remove them in 1.4.0 rather than hold them to a later major version, as the
+    1.3.5 warning promised: use Antigravity's `.agents/rules/` and Kiro's `.kiro/steering/`, which
+    VibeTags writes.
+  - `.interpreter/profiles/vibetags.yaml` and `ellipsis.yaml`, which their tools no longer read, and
+    `.zencoder/rules/`, which Zencoder removed in May 2026.
+
+  With no deprecated output left, `DeprecatedServices` is deleted, and with it the deprecation
+  warning, the `platform.deprecated` log event and `vibetags init --list`'s `[deprecated]` marker.
+  `MentatRenderer`, `SweepRenderer`, `PlandexRenderer`, `InterpreterRenderer` and
+  `EllipsisRenderer` are deleted with their 17 `Platform` constants, and so are the two merge
+  shapes only they used: `JsonRulesMerge` (Mentat's JSON) and `YamlMergeShape`'s keyed buckets
+  (Plandex). The prose formatter arms that `.coderabbit.yaml`, `.pr_agent.toml`, `.roomodes`,
+  `.gemini/styleguide.md` and Greptile share were `INTERPRETER`'s and are `CODERABBIT`'s now; every
+  one of those files is byte-identical. The README counts drop to 29 platforms, 47 config files and
+  16 scoped-rule directories; both reactors go from 53 active services to 38.
+  `examples/multimodule-indexed` opts into `.aiexclude` in place of `.claudeignore` and
+  `.copilotignore`. `RemovedPlatformOutputsTest` covers all 22 outputs; its 19 new cases fail
+  against the #645 commit.
+
 ### Added
 
 - **`vibetags-cli/README.md`.** The CLI's flags, exit codes and limits were spread over a USAGE.md
@@ -26,6 +86,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pointed at a closed port: 30 files before, 15 after, 36 and 20 once CI signs them.
   `CentralPublishingBudgetTest` pins both settings. `docs/RELEASING.md` and the release skill now
   count the month's tags before a release, with a cadence of at most 3 a month.
+- **`.aiexclude` is written beside `GEMINI.md`** (#645). It needed `gemini_instructions.md` or an
+  active `AGENTS.md` beside it, so a Gemini user who followed the deprecation notice to `GEMINI.md`
+  would have lost `.aiexclude` regeneration without a word. The orphan warning that suggests
+  creating `.aiexclude` follows the same pairing, so a project with `GEMINI.md`, `@AIIgnore` or
+  `@AILocked`, and no `.aiexclude` now gets that warning.
+- **Gemini's section wording is registered under `GEMINI_MD`** (#645). It lived under the removed
+  `GEMINI` platform, which `GEMINI.md` reached as an alias through `Platform.rendersAs()`. No
+  platform is an alias now; the seam stays for the next one. `GEMINI.md` prints the same bytes.
+)
 - **Test counts in the docs re-measured.** `docs/architecture/testing.md` carried a 0.7.x-era
   per-class table and totals of 1484 and "724+" tests; it now points at `docs/TESTS.md`, the
   maintained map. The tier table in `TESTS.md` is re-measured on 2026-10-06: 2655 tests in 208
@@ -55,6 +124,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A field or method annotated `@AIIgnore` no longer becomes a file glob (#926).** Every
+  exclusion file (`.cursorignore`, `.aiexclude`, Greptile's `ignorePatterns` and the rest) wrote
+  it as `**/<memberName>.java`: a glob for a file that does not exist, or for an unrelated file
+  that happens to share the name. `examples/multimodule-indexed` carried
+  `**/cachedExpiryEpochDay.java` for a `private transient long`. Only a type contributes a glob
+  now, as `@AILocked` already did for `.aiexclude`; the member is still excluded in every prose
+  output that can name it. A module whose only `@AIIgnore` is on a member contributes nothing to
+  an ignore file, rather than a header with no globs under it. `MemberLevelAIIgnoreGlobTest`
+  failed 2 of 2 before the change.
 - **A module that gave up waiting for the generation lock released it for other processes on
   Linux (#923).** Every waiter opened its own channel on `.vibetags-generate.lock` and polled
   `tryLock()`. The JDK takes `fcntl` locks on Linux, which belong to the process, so when a waiter

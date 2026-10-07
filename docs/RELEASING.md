@@ -189,10 +189,11 @@ browser, look for the file in real repositories on GitHub instead. Then act on w
 
 - **Still documented.** Nothing to do.
 - **Renamed or superseded.** Open an issue to write the current path.
-- **Retired, or no longer documented.** Deprecate it, do not remove it: add a row to
-  `DeprecatedServices` and to the deprecated table in PLATFORMS.md, which warns every opted-in
-  build for at least one release, and add the file to the removal issue for the next major
-  version. Removing it in a minor release leaves consumers with a file that silently stops
+- **Retired, or no longer documented.** Deprecate it, do not remove it: it needs a compiler
+  warning on every opted-in build for at least one release, then removal in the next major
+  version. 1.4.0 removed the last deprecated output and the `DeprecatedServices` table that raised
+  that warning (#720); restore the table from git history, add the row and a PLATFORMS.md entry,
+  and open the removal issue. Removing it in a minor release leaves consumers with a file that silently stops
   regenerating.
 - **Could not check.** Say so in the release PR, by name. An unchecked row is not a confirmed one.
 

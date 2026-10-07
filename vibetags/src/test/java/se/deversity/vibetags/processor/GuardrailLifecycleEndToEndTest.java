@@ -66,7 +66,7 @@ class GuardrailLifecycleEndToEndTest {
         after.addSource("com.example.Ledger", ledger("Balances are reconciled hourly since INC-88"));
         after.compile();
 
-        for (String file : new String[]{"CLAUDE.md", ".cursorrules", "llms.txt", ".mentatconfig.json"}) {
+        for (String file : new String[]{"CLAUDE.md", ".cursorrules", "llms.txt", ".pr_agent.toml"}) {
             String content = after.readFile(file);
             assertTrue(content.contains("Balances are reconciled hourly since INC-88"),
                 file + " must carry the edited reason");
@@ -196,8 +196,8 @@ class GuardrailLifecycleEndToEndTest {
 
         assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("com.example.cli.Cli"),
             "both modules must be present before the removal");
-        assertTrue(Files.readString(root.resolve(".mentatconfig.json")).contains("com.example.cli.Cli"),
-            "the whole-file JSON must carry both modules before the removal");
+        assertTrue(Files.readString(root.resolve("greptile.json")).contains("com.example.cli.Cli"),
+            "the key-merged JSON must carry both modules before the removal");
 
         ProcessorTestHarness.awaitFilesystemTick(root);
         VibeTagsLogger.shutdown();
@@ -219,10 +219,10 @@ class GuardrailLifecycleEndToEndTest {
             "the module that was not recompiled must keep its guardrails — its sidecar is the only "
                 + "record of them");
 
-        String mentat = Files.readString(root.resolve(".mentatconfig.json"));
-        assertFalse(ProcessorTestHarness.mentions(mentat, "com.example.cli.Cli"),
-            "the whole-file JSON is assembled from sidecars, so a removal has to reach it too");
-        assertTrue(mentat.contains("com.example.core.IrNode"),
+        String greptile = Files.readString(root.resolve("greptile.json"));
+        assertFalse(ProcessorTestHarness.mentions(greptile, "com.example.cli.Cli"),
+            "the key-merged JSON is assembled from sidecars, so a removal has to reach it too");
+        assertTrue(greptile.contains("com.example.core.IrNode"),
             "and must still carry the module that did not recompile");
     }
 
@@ -277,7 +277,7 @@ class GuardrailLifecycleEndToEndTest {
         compileModule(root, "module-cli", "com.example.cli.Cli",
             locked("com.example.cli", "Cli", "Rewritten CLI reason"));
 
-        for (String file : new String[]{"CLAUDE.md", ".mentatconfig.json", ".pr_agent.toml"}) {
+        for (String file : new String[]{"CLAUDE.md", "greptile.json", ".pr_agent.toml"}) {
             String content = Files.readString(root.resolve(file));
             assertTrue(content.contains("Rewritten CLI reason"), file + " must carry the edited reason");
             assertFalse(content.contains("Original CLI reason"),
@@ -295,16 +295,16 @@ class GuardrailLifecycleEndToEndTest {
             locked("com.example.core", "IrNode", "Core IR node"));
         compileModule(root, "module-cli", "com.example.cli.Cli",
             locked("com.example.cli", "Cli", "CLI entry point"));
-        assertTrue(Files.exists(root.resolve(".mentatconfig.json")), "opted in to begin with");
+        assertTrue(Files.exists(root.resolve("greptile.json")), "opted in to begin with");
 
-        Files.delete(root.resolve(".mentatconfig.json"));
+        Files.delete(root.resolve("greptile.json"));
         ProcessorTestHarness.awaitFilesystemTick(root);
         VibeTagsLogger.shutdown();
 
         compileModule(root, "module-core", "com.example.core.IrNode",
             locked("com.example.core", "IrNode", "Core IR node, revised"));
 
-        assertFalse(Files.exists(root.resolve(".mentatconfig.json")),
+        assertFalse(Files.exists(root.resolve("greptile.json")),
             "a platform opted out at the reactor root must stay out when any module recompiles");
         assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("Core IR node, revised"),
             "the platforms still opted in must keep updating");
@@ -416,12 +416,15 @@ class GuardrailLifecycleEndToEndTest {
             + "public class " + type + " {}\n";
     }
 
-    /** Opt-in files at the shared root, covering a marker file and both whole-file formats. */
+    /** Opt-in files at the shared root, covering a marker file, a key-merged JSON and a whole-file TOML. */
     private static void setUpReactor(Path root) throws IOException {
         Files.createDirectories(root.resolve("module-core"));
         Files.createDirectories(root.resolve("module-cli"));
         Files.createFile(root.resolve("CLAUDE.md"));
-        Files.createFile(root.resolve(".mentatconfig.json"));
+        // A JSON document VibeTags shares with the user (#639): it owns spans inside it, so it is
+        // seeded with an object. Mentat's .mentatconfig.json was the JSON format here until 1.4.0
+        // removed it (#720).
+        Files.writeString(root.resolve("greptile.json"), "{}\n");
         Files.createFile(root.resolve(".pr_agent.toml"));
     }
 

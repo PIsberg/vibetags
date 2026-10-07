@@ -44,7 +44,7 @@ public final class AITemporaryFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Expires On", expiresOn))
                     .append(CommonFormatterHelper.bullet("Reason", reason)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (temporary)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

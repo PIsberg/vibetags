@@ -13,10 +13,8 @@ import se.deversity.vibetags.processor.internal.content.platforms.ClaudeSkillRen
 import se.deversity.vibetags.processor.internal.content.platforms.ClineSafetyRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.CodeRabbitRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.CodexRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.CodyRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.CopilotRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.CursorRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.EllipsisRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.GeminiRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.GeminiStyleguideRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.GranularRenderer;
@@ -24,17 +22,13 @@ import se.deversity.vibetags.processor.internal.content.platforms.GreptileConfig
 import se.deversity.vibetags.processor.internal.content.platforms.GreptileRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.GreptileRulesRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.IgnoreFileRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.InterpreterRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.JunieRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.LlmsRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.LocksReportRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.MentatRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.PlandexRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.PrAgentRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.QwenRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.RooModesRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.RoutedTestingRenderer;
-import se.deversity.vibetags.processor.internal.content.platforms.SweepRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.WindsurfRenderer;
 import se.deversity.vibetags.processor.internal.content.platforms.ZedRenderer;
 
@@ -89,18 +83,12 @@ public final class PlatformDescriptors {
     private static final IgnoreFileRenderer IGNORE_FILE_RENDERER = new IgnoreFileRenderer();
     private static final WindsurfRenderer WINDSURF_RENDERER = new WindsurfRenderer();
     private static final ZedRenderer ZED_RENDERER = new ZedRenderer();
-    private static final CodyRenderer CODY_RENDERER = new CodyRenderer();
-    private static final MentatRenderer MENTAT_RENDERER = new MentatRenderer();
-    private static final SweepRenderer SWEEP_RENDERER = new SweepRenderer();
-    private static final PlandexRenderer PLANDEX_RENDERER = new PlandexRenderer();
-    private static final InterpreterRenderer INTERPRETER_RENDERER = new InterpreterRenderer();
     private static final ClineSafetyRenderer CLINE_SAFETY_RENDERER = new ClineSafetyRenderer();
     private static final JunieRenderer JUNIE_RENDERER = new JunieRenderer();
     private static final ClaudeLocalRenderer CLAUDE_LOCAL_RENDERER = new ClaudeLocalRenderer();
     private static final ClaudeSkillRenderer CLAUDE_SKILL_RENDERER = new ClaudeSkillRenderer();
     private static final CodeRabbitRenderer CODERABBIT_RENDERER = new CodeRabbitRenderer();
     private static final PrAgentRenderer PR_AGENT_RENDERER = new PrAgentRenderer();
-    private static final EllipsisRenderer ELLIPSIS_RENDERER = new EllipsisRenderer();
     private static final RooModesRenderer ROO_MODES_RENDERER = new RooModesRenderer();
     private static final LocksReportRenderer LOCKS_REPORT_RENDERER = new LocksReportRenderer();
     private static final GranularRenderer GRANULAR_RENDERER = new GranularRenderer();
@@ -116,24 +104,21 @@ public final class PlatformDescriptors {
      * comment. {@code PlatformDescriptorsTest} pins the order and each entry.
      */
     public static final List<PlatformDescriptor> ALL = List.of(
-        // Five other free-form Markdown outputs take the .cursorrules rendering as is, which is why
-        // CURSOR_RENDERER appears against cline, firebase, void, goose and replit below. They were five
-        // classes that each held a private CursorRenderer and forwarded to it (#764); naming the renderer
-        // in the table says the same thing without a class to keep in step. CursorRenderer formats as
-        // CURSOR whatever platform it is handed, and passes the real one to the scoped-rules index, where
-        // none of the five has a governing directory, so they never collapse.
+        // Two other free-form Markdown outputs take the .cursorrules rendering as is, which is why
+        // CURSOR_RENDERER appears against goose and replit below. They were classes that each held a
+        // private CursorRenderer and forwarded to it (#764); naming the renderer in the table says the
+        // same thing without a class to keep in step. CursorRenderer formats as CURSOR whatever platform
+        // it is handed, and passes the real one to the scoped-rules index, where neither has a governing
+        // directory, so they never collapse.
         new PlatformDescriptor("cursor", ".cursorrules", Kind.FILE, null, Platform.CURSOR, CURSOR_RENDERER, null, false),
         new PlatformDescriptor("claude", "CLAUDE.md", Kind.FILE, null, Platform.CLAUDE, CLAUDE_RENDERER, null, false),
         new PlatformDescriptor("aiexclude", ".aiexclude", Kind.FILE, null, Platform.AI_EXCLUDE, AI_EXCLUDE_RENDERER, null, true),
         // AGENTS.md. Written only as the sole AI config file, or into an existing marker pair
         // (invariant 4); resolveActiveServices drops it otherwise.
         new PlatformDescriptor("codex", "AGENTS.md", Kind.FILE, null, Platform.CODEX, CODEX_RENDERER, null, false),
-        new PlatformDescriptor("gemini", "gemini_instructions.md", Kind.FILE, null, Platform.GEMINI, GEMINI_RENDERER, null, false),
         new PlatformDescriptor("copilot", ".github/copilot-instructions.md", Kind.FILE, null, Platform.COPILOT, COPILOT_RENDERER, null, false),
         new PlatformDescriptor("qwen", "QWEN.md", Kind.FILE, null, Platform.QWEN, QWEN_RENDERER, null, false),
         new PlatformDescriptor("cursor_ignore", ".cursorignore", Kind.FILE, null, Platform.CURSOR_IGNORE, IGNORE_FILE_RENDERER, "Cursor", true),
-        new PlatformDescriptor("claude_ignore", ".claudeignore", Kind.FILE, null, Platform.CLAUDE_IGNORE, IGNORE_FILE_RENDERER, "Claude", true),
-        new PlatformDescriptor("copilot_ignore", ".copilotignore", Kind.FILE, null, Platform.COPILOT_IGNORE, IGNORE_FILE_RENDERER, "Copilot", true),
         new PlatformDescriptor("qwen_ignore", ".qwenignore", Kind.FILE, null, Platform.QWEN_IGNORE, IGNORE_FILE_RENDERER, "Qwen", true),
         // The Codex sidecar: the one documented exception to invariant 1. Implicit, activated by
         // codex rather than by its own presence, so it has no opt-in key.
@@ -159,23 +144,12 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("trae_granular", ".trae/rules", Kind.DIRECTORY, null, Platform.TRAE_GRANULAR, GRANULAR_RENDERER, null, false),
         new PlatformDescriptor("windsurf", ".windsurfrules", Kind.FILE, null, Platform.WINDSURF, WINDSURF_RENDERER, null, false),
         new PlatformDescriptor("zed", ".rules", Kind.FILE, null, Platform.ZED, ZED_RENDERER, null, false),
-        new PlatformDescriptor("cody", ".cody/config.json", Kind.FILE, null, Platform.CODY, CODY_RENDERER, null, false),
-        new PlatformDescriptor("cody_ignore", ".codyignore", Kind.FILE, null, Platform.CODY_IGNORE, IGNORE_FILE_RENDERER, "Cody", true),
-        new PlatformDescriptor("supermaven_ignore", ".supermavenignore", Kind.FILE, null, Platform.SUPERMAVEN_IGNORE, IGNORE_FILE_RENDERER, "Supermaven", true),
         new PlatformDescriptor("windsurf_granular", ".windsurf/rules", Kind.DIRECTORY, null, Platform.WINDSURF_GRANULAR, GRANULAR_RENDERER, null, false),
         // Inside .windsurf/rules/: the safety tier as a trigger: always_on rule (issue #684). Implicit,
         // like cline_safety, so it has no opt-in key of its own.
         new PlatformDescriptor("windsurf_safety", ".windsurf/rules/+vibetags-safety.md", Kind.FILE, "windsurf_granular", Platform.WINDSURF_SAFETY, WINDSURF_RENDERER, null, false),
         new PlatformDescriptor("continue_granular", ".continue/rules", Kind.DIRECTORY, null, Platform.CONTINUE_GRANULAR, GRANULAR_RENDERER, null, false),
         new PlatformDescriptor("tabnine_granular", ".tabnine/guidelines", Kind.DIRECTORY, null, Platform.TABNINE_GRANULAR, GRANULAR_RENDERER, null, false),
-        new PlatformDescriptor("amazonq_granular", ".amazonq/rules", Kind.DIRECTORY, null, Platform.AMAZONQ_GRANULAR, GRANULAR_RENDERER, null, false),
-        new PlatformDescriptor("ai_rules_granular", ".ai/rules", Kind.DIRECTORY, null, Platform.AI_RULES_GRANULAR, GRANULAR_RENDERER, null, false),
-        new PlatformDescriptor("pearai_granular", ".pearai/rules", Kind.DIRECTORY, null, Platform.PEARAI_GRANULAR, GRANULAR_RENDERER, null, false),
-        new PlatformDescriptor("mentat", ".mentatconfig.json", Kind.FILE, null, Platform.MENTAT, MENTAT_RENDERER, null, false),
-        new PlatformDescriptor("sweep", "sweep.yaml", Kind.FILE, null, Platform.SWEEP, SWEEP_RENDERER, null, false),
-        new PlatformDescriptor("plandex", ".plandex.yaml", Kind.FILE, null, Platform.PLANDEX, PLANDEX_RENDERER, null, false),
-        new PlatformDescriptor("double_ignore", ".doubleignore", Kind.FILE, null, Platform.DOUBLE_IGNORE, IGNORE_FILE_RENDERER, "Double.bot", true),
-        new PlatformDescriptor("interpreter", ".interpreter/profiles/vibetags.yaml", Kind.FILE, null, Platform.INTERPRETER, INTERPRETER_RENDERER, null, false),
         new PlatformDescriptor("codeium_ignore", ".codeiumignore", Kind.FILE, null, Platform.CODEIUM_IGNORE, IGNORE_FILE_RENDERER, "Codeium", true),
         // Ignore files for Roo Code, Continue and Augment Code, each the tool's only exclusion
         // mechanism, and each beside a rules directory VibeTags already writes (see docs/PLATFORMS.md
@@ -183,14 +157,11 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("roo_ignore", ".rooignore", Kind.FILE, null, Platform.ROO_IGNORE, IGNORE_FILE_RENDERER, "Roo Code", true),
         new PlatformDescriptor("continue_ignore", ".continueignore", Kind.FILE, null, Platform.CONTINUE_IGNORE, IGNORE_FILE_RENDERER, "Continue", true),
         new PlatformDescriptor("augment_ignore", ".augmentignore", Kind.FILE, null, Platform.AUGMENT_IGNORE, IGNORE_FILE_RENDERER, "Augment Code", true),
-        // GEMINI.md, the Gemini CLI file. Renders as GEMINI (Platform.rendersAs), so the two print the
-        // same words from one formatter arm (#721, #764).
+        // GEMINI.md, the Gemini CLI file. It printed gemini_instructions.md's words through
+        // Platform.rendersAs until 1.4.0 removed that file; the wording is now its own (#645, #721).
         new PlatformDescriptor("gemini_md", "GEMINI.md", Kind.FILE, null, Platform.GEMINI_MD, GEMINI_RENDERER, null, false),
-        new PlatformDescriptor("antigravity_ignore", ".antigravityignore", Kind.FILE, null, Platform.ANTIGRAVITY_IGNORE, IGNORE_FILE_RENDERER, "Antigravity AI", true),
-        // The legacy single .clinerules file, mutually exclusive with the directory below.
-        new PlatformDescriptor("cline", ".clinerules", Kind.FILE, null, Platform.CLINE, CURSOR_RENDERER, null, false),
-        // Cline's directory form, at the same path as the file. A path is one or the other, so
-        // isOptedIn lets exactly one of the two activate (issue #642).
+        // Cline's directory form (issue #642). The single .clinerules file VibeTags wrote at the same path
+        // was removed in 1.4.0 (#645), and isOptedIn ignores a file there.
         new PlatformDescriptor("cline_granular", ".clinerules", Kind.DIRECTORY, null, Platform.CLINE_GRANULAR, GRANULAR_RENDERER, null, false),
         // Inside that directory: the safety tier, always loaded (issue #648). Implicit, like
         // codex_config under codex, so it has no opt-in key of its own.
@@ -200,7 +171,6 @@ public final class PlatformDescriptors {
         // key, so the sole-file rule treats it like any other opt-in (#673).
         new PlatformDescriptor("junie_agents", ".junie/AGENTS.md", Kind.FILE, null, Platform.JUNIE_AGENTS, JUNIE_RENDERER, null, false),
         new PlatformDescriptor("kiro_granular", ".kiro/steering", Kind.DIRECTORY, null, Platform.KIRO_GRANULAR, GRANULAR_RENDERER, null, false),
-        new PlatformDescriptor("firebase", ".idx/airules.md", Kind.FILE, null, Platform.FIREBASE, CURSOR_RENDERER, null, false),
         new PlatformDescriptor("claude_local", "CLAUDE.local.md", Kind.FILE, null, Platform.CLAUDE_LOCAL, CLAUDE_LOCAL_RENDERER, null, false),
         new PlatformDescriptor("claude_skill", ".claude/skills/vibetags-guardrails/SKILL.md", Kind.FILE, null, Platform.CLAUDE_SKILL, CLAUDE_SKILL_RENDERER, null, false),
         // The cross-client Agent Skills location. The same SKILL.md, read by every client that scans
@@ -216,7 +186,6 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("antigravity_granular", ".agents/rules", Kind.DIRECTORY, null, Platform.ANTIGRAVITY_GRANULAR, GRANULAR_RENDERER, null, false),
         new PlatformDescriptor("aiassistant_granular", ".aiassistant/rules", Kind.DIRECTORY, null, Platform.AIASSISTANT_GRANULAR, GRANULAR_RENDERER, null, false),
         new PlatformDescriptor("augment_granular", ".augment/rules", Kind.DIRECTORY, null, Platform.AUGMENT_GRANULAR, GRANULAR_RENDERER, null, false),
-        new PlatformDescriptor("zencoder_granular", ".zencoder/rules", Kind.DIRECTORY, null, Platform.ZENCODER_GRANULAR, GRANULAR_RENDERER, null, false),
         // Devin Desktop, formerly Windsurf (#671). Its preferred rules directory, beside the Windsurf
         // paths it still reads. Neither collapses .windsurfrules.
         new PlatformDescriptor("devin_granular", ".devin/rules", Kind.DIRECTORY, null, Platform.DEVIN_GRANULAR, GRANULAR_RENDERER, null, false),
@@ -236,12 +205,9 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("repomix_ignore", ".repomixignore", Kind.FILE, null, Platform.REPOMIX_IGNORE, IGNORE_FILE_RENDERER, "Repomix", true),
         new PlatformDescriptor("gitingest_ignore", ".gitingestignore", Kind.FILE, null, Platform.GITINGEST_IGNORE, IGNORE_FILE_RENDERER, "Gitingest", true),
         new PlatformDescriptor("gpt_ignore", ".gptignore", Kind.FILE, null, Platform.GPT_IGNORE, IGNORE_FILE_RENDERER, "GPT context packer", true),
-        new PlatformDescriptor("ghostcoder_ignore", ".ghostcoderignore", Kind.FILE, null, Platform.GHOSTCODER_IGNORE, IGNORE_FILE_RENDERER, "Ghostcoder", true),
-        new PlatformDescriptor("pieces_ignore", ".piecesignore", Kind.FILE, null, Platform.PIECES_IGNORE, IGNORE_FILE_RENDERER, "Pieces for Developers", true),
         // AI pull-request reviewers.
         new PlatformDescriptor("coderabbit", ".coderabbit.yaml", Kind.FILE, null, Platform.CODERABBIT, CODERABBIT_RENDERER, null, false),
         new PlatformDescriptor("pr_agent", ".pr_agent.toml", Kind.FILE, null, Platform.PR_AGENT, PR_AGENT_RENDERER, null, false),
-        new PlatformDescriptor("ellipsis", "ellipsis.yaml", Kind.FILE, null, Platform.ELLIPSIS, ELLIPSIS_RENDERER, null, false),
         // Gemini Code Assist for GitHub: the review style guide is a separate product from the Gemini
         // CLI's GEMINI.md, with its own path.
         new PlatformDescriptor("gemini_styleguide", ".gemini/styleguide.md", Kind.FILE, null, Platform.GEMINI_STYLEGUIDE, GEMINI_STYLEGUIDE_RENDERER, null, false),
@@ -255,7 +221,6 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("greptile_rules", ".greptile/rules.md", Kind.FILE, null, Platform.GREPTILE_RULES, GREPTILE_RULES_RENDERER, null, false),
         new PlatformDescriptor("greptile_config", ".greptile/config.json", Kind.FILE, null, Platform.GREPTILE_CONFIG, GREPTILE_CONFIG_RENDERER, null, true),
         // Editors and modes.
-        new PlatformDescriptor("void", ".void/rules.md", Kind.FILE, null, Platform.VOID, CURSOR_RENDERER, null, false),
         new PlatformDescriptor("roo_modes", ".roomodes", Kind.FILE, null, Platform.ROO_MODES, ROO_MODES_RENDERER, null, false),
         // Machine-readable @AILocked report for CI diff guards. No extension, so hash markers and the
         // ordinary multi-module merge.

@@ -31,11 +31,10 @@ Two considerations are specific to this kind of tool and worth understanding:
 - **Structured output is escaped, not trusted.** Annotation values interpolated into the structured
   formats are escaped per format so a value containing `<`, `"`, `\`, or newlines cannot break out
   of the document structure or forge additional entries: **XML** (`CLAUDE.md`), **JSON**
-  (`.mentatconfig.json`, `.vibetags-locks`), and **double-quoted YAML** (`sweep.yaml`,
-  `.plandex.yaml`, `ellipsis.yaml`). The literal-block-scalar configs (`.coderabbit.yaml`,
-  `.roomodes`, the interpreter profile) embed text as indented literal blocks where there is no
-  structure to break, and the JSON config file that *does* exist statically (`.cody/config.json`)
-  interpolates no annotation values. Output file paths are fixed relative paths,
+  (`.vibetags-locks`, and the spans VibeTags owns inside `greptile.json` and `.greptile/config.json`),
+  and the **TOML** multi-line string in `.pr_agent.toml`. The literal-block-scalar configs
+  (`.coderabbit.yaml`, `.roomodes`) embed text as indented literal blocks where there is no
+  structure to break. Output file paths are fixed relative paths,
   and per-class file names are sanitised to `[A-Za-z0-9-]`, so a hostile class name cannot cause
   path traversal. Writes are staged through a securely-created random temp file (`O_EXCL`) in the
   target directory, so a pre-planted symlink cannot redirect a write. (Regression-tested by

@@ -231,7 +231,6 @@ class AllAnnotationsAllPlatformsEndToEndTest {
         assertTrue(harness.fileExists("CLAUDE.md"), "CLAUDE.md should exist");
         assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md should exist");
         assertTrue(harness.fileExists("QWEN.md"), "QWEN.md should exist");
-        assertTrue(harness.fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
         assertTrue(harness.fileExists("GEMINI.md"), "GEMINI.md should exist");
         assertTrue(harness.fileExists(".github/copilot-instructions.md"), "copilot instructions should exist");
         assertTrue(harness.fileExists("CONVENTIONS.md"), "CONVENTIONS.md should exist");
@@ -239,7 +238,6 @@ class AllAnnotationsAllPlatformsEndToEndTest {
         assertTrue(harness.fileExists("llms-full.txt"), "llms-full.txt should exist");
         assertTrue(harness.fileExists(".windsurfrules"), ".windsurfrules should exist");
         assertTrue(harness.fileExists(".rules"), ".rules (Zed) should exist");
-        assertTrue(harness.fileExists(".interpreter/profiles/vibetags.yaml"), "interpreter profile should exist");
     }
 
     @Test
@@ -293,7 +291,7 @@ class AllAnnotationsAllPlatformsEndToEndTest {
             "Temp",        // @AITemporary
         };
 
-        for (String file : new String[]{".coderabbit.yaml", "ellipsis.yaml", ".pr_agent.toml", ".roomodes"}) {
+        for (String file : new String[]{".coderabbit.yaml", ".pr_agent.toml", ".roomodes"}) {
             String content = harness.readFile(file);
             for (String element : newestAnnotationElements) {
                 assertTrue(content.contains(element), file + " must mention " + element);
@@ -311,12 +309,12 @@ class AllAnnotationsAllPlatformsEndToEndTest {
     }
 
     @Test
-    void interpreterProfileRendersEveryAnnotationTag() throws IOException {
-        // InterpreterRenderer streams 27 annotation buckets into the profile, one distinct
-        // parenthetical tag per formatter. Asserting every tag is present kills the
-        // "removed call to <Formatter>::format" mutants that previously survived because
-        // no test inspected the .interpreter profile body.
-        String profile = harness.readFile(".interpreter/profiles/vibetags.yaml");
+    void codeRabbitConfigRendersEveryAnnotationTag() throws IOException {
+        // GuardrailInstructionBlock streams 27 annotation buckets into the review instructions, one
+        // distinct parenthetical tag per formatter. Asserting every tag is present kills the
+        // "removed call to <Formatter>::format" mutants. The Open Interpreter profile carried this
+        // check until 1.4.0 removed it (#720); its formatter arms are CodeRabbit's now.
+        String profile = harness.readFile(".coderabbit.yaml");
         String[] tags = {
             "(locked):", "(context):", "(excluded):", "(audit):", "(draft):",
             "(privacy):", "(core, sensitivity:", "(performance):", "(contract):",
@@ -328,7 +326,7 @@ class AllAnnotationsAllPlatformsEndToEndTest {
         };
         for (String tag : tags) {
             assertTrue(profile.contains(tag),
-                "interpreter profile must render the " + tag + " annotation tag");
+                ".coderabbit.yaml must render the " + tag + " annotation tag");
         }
     }
 

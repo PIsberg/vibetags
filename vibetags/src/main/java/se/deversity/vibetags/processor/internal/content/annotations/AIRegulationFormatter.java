@@ -43,7 +43,7 @@ public final class AIRegulationFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
-            case GEMINI:
+            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS:
@@ -69,7 +69,7 @@ public final class AIRegulationFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append("` (regulation)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (regulation)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

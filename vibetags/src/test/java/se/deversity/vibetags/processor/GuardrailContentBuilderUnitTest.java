@@ -357,12 +357,12 @@ class GuardrailContentBuilderUnitTest {
     // -------------------------------------------------------------------------------------------
 
     @Test
-    void granularActive_pearaiGranularOnly_coversOrChainFalseBranches() {
-        // activeServices contains pearai_granular but NOT cursor/trae/roo/windsurf_granular,
-        // continue/tabnine/amazonq/ai_rules_granular.  The OR chain evaluates each of those 8
-        // as false before reaching pearai_granular=true, covering the "continue evaluating"
-        // false-branch path for every preceding condition (L196-L203).
-        Set<String> services = Set.of("cursor", "claude", "pearai_granular");
+    void granularActive_kiroGranularOnly_coversOrChainFalseBranches() {
+        // activeServices contains kiro_granular but NOT cursor/trae/roo/windsurf_granular or
+        // continue/tabnine_granular. The OR chain evaluates each of those as false before reaching
+        // kiro_granular=true, covering the "continue evaluating" false-branch path for every
+        // preceding condition.
+        Set<String> services = Set.of("cursor", "claude", "kiro_granular");
 
         AnnotationCollector collector = new AnnotationCollector();
         RoundEnvironment re = mock(RoundEnvironment.class);
@@ -378,20 +378,19 @@ class GuardrailContentBuilderUnitTest {
         assertTrue(result.contentByService.containsKey("cursor"),
                 "cursor content must be present");
         assertFalse(result.elementRules.isEmpty(),
-                "pearai_granular active → appendToGranular must have been called");
+                "kiro_granular active → appendToGranular must have been called");
     }
 
     // -------------------------------------------------------------------------------------------
-    // Service-inactive false branches (windsurf / zed / mentat / sweep / interpreter)
+    // Service-inactive false branches (windsurf / zed)
     // -------------------------------------------------------------------------------------------
 
     @Test
-    void serviceInactive_noWindsurfZedMentatSweepInterpreter_falseBranchesCoveredAcrossAllAppenders() {
-        // activeServices excludes windsurf, zed, mentat, sweep, interpreter.
-        // With all 15 annotation-type elements present, every appendXxx() method is invoked and
-        // every if (windsurfActive) / if (zedActive) / if (mentatActive) / if (sweepActive) /
-        // if (interpreterActive) conditional takes the FALSE path — covering those missed branches
-        // across all per-element appenders AND the post-loop section appenders.
+    void serviceInactive_noWindsurfZed_falseBranchesCoveredAcrossAllAppenders() {
+        // activeServices excludes windsurf and zed. With all 15 annotation-type elements present,
+        // every appendXxx() method is invoked and every if (windsurfActive) / if (zedActive)
+        // conditional takes the FALSE path — covering those missed branches across all
+        // per-element appenders AND the post-loop section appenders.
         Set<String> services = Set.of("cursor", "claude");
         AnnotationCollector collector = buildAllAnnotationTypes();
 
@@ -402,12 +401,6 @@ class GuardrailContentBuilderUnitTest {
                 "windsurf inactive → no windsurf entry in output");
         assertFalse(result.contentByService.containsKey("zed"),
                 "zed inactive → no zed entry in output");
-        assertFalse(result.contentByService.containsKey("mentat"),
-                "mentat inactive → no mentat entry in output");
-        assertFalse(result.contentByService.containsKey("sweep"),
-                "sweep inactive → no sweep entry in output");
-        assertFalse(result.contentByService.containsKey("interpreter"),
-                "interpreter inactive → no interpreter entry in output");
         assertTrue(result.contentByService.containsKey("cursor"),
                 "cursor must still be produced");
     }
@@ -453,34 +446,13 @@ class GuardrailContentBuilderUnitTest {
     }
 
     // -------------------------------------------------------------------------------------------
-    // buildSweepConfig() empty-rules else branch → produces YAML empty-array placeholder
-    // -------------------------------------------------------------------------------------------
-
-    @Test
-    void sweepConfig_emptyRules_appendsYamlEmptyArrayPlaceholder() {
-        // sweepActive=true with an empty collector → sweepRules remains empty →
-        // buildSweepConfig() takes the else branch and appends "  []\n".
-        GuardrailContentBuilder builder = new GuardrailContentBuilder(
-                new AnnotationCollector(), Set.of("sweep"), "Test", "");
-        GuardrailContentBuilder.Result result = assertDoesNotThrow(builder::build);
-        String sweep = result.contentByService.get("sweep");
-        assertNotNull(sweep, "sweep must appear in contentByService when active");
-        assertTrue(sweep.contains("  []\n"),
-                "empty sweep rules must produce YAML empty-array placeholder");
-    }
-
-    // -------------------------------------------------------------------------------------------
-    // appendJsonSection() early return when items.length() == 0
-    // -------------------------------------------------------------------------------------------
-
-    // -------------------------------------------------------------------------------------------
     // OR chain true paths (L197-203): each intermediate service as the sole granular trigger
     // -------------------------------------------------------------------------------------------
 
     @ParameterizedTest
     @ValueSource(strings = {
         "trae_granular", "roo_granular", "windsurf_granular",
-        "continue_granular", "tabnine_granular", "amazonq_granular", "ai_rules_granular"
+        "continue_granular", "tabnine_granular"
     })
     void granularActive_intermediateService_coversShortCircuitTruePath(String granularService) {
         // cursor_granular is NOT present so L196 evaluates false, making each preceding condition
@@ -571,13 +543,13 @@ class GuardrailContentBuilderUnitTest {
 
         collector.collect(re);
 
-        Set<String> services = Set.of("cursor", "cursor_granular", "windsurf", "zed", "mentat", "sweep", "interpreter");
+        Set<String> services = Set.of("cursor", "cursor_granular", "windsurf", "zed");
         GuardrailContentBuilder builder = new GuardrailContentBuilder(collector, services, "Test", "");
         GuardrailContentBuilder.Result result = assertDoesNotThrow(builder::build);
         assertTrue(result.contentByService.containsKey("windsurf"),
                 "windsurf must have output when active");
-        assertTrue(result.contentByService.containsKey("sweep"),
-                "sweep must have output when active");
+        assertTrue(result.contentByService.containsKey("zed"),
+                "zed must have output when active");
         assertFalse(result.elementRules.isEmpty(),
                 "cursor_granular active + testDriven → appendToGranular must populate elementRules");
     }
@@ -714,7 +686,7 @@ class GuardrailContentBuilderUnitTest {
 
     @Test
     void aiexclude_withoutGeminiOrCodex_notEmittedToContentMap() {
-        // L1272: if (contains("aiexclude") && (contains("gemini") || contains("codex")))
+        // L1272: if (contains("aiexclude") && (contains("gemini_md") || contains("codex")))
         // When aiexclude is active but neither gemini nor codex is active, the false branch
         // is taken and contentByService must NOT contain an "aiexclude" entry.
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
@@ -767,27 +739,6 @@ class GuardrailContentBuilderUnitTest {
                 "no metrics → llms-full must not include a Metrics line");
         assertTrue(llmsFull.contains("span.db"),
                 "llms-full must still include the trace name");
-    }
-
-    // -------------------------------------------------------------------------------------------
-    // appendJsonSection() early return when items.length() == 0
-    // -------------------------------------------------------------------------------------------
-
-    @Test
-    void mentatConfig_emptyCollector_appendJsonSectionSkipsAllEmptySections() {
-        // mentatActive=true with an empty collector → every mentat section builder stays
-        // empty → appendJsonSection(sb, key, emptyBuilder) returns early for all 9 sections.
-        GuardrailContentBuilder builder = new GuardrailContentBuilder(
-                new AnnotationCollector(), Set.of("mentat"), "Test", "");
-        GuardrailContentBuilder.Result result = assertDoesNotThrow(builder::build);
-        String mentat = result.contentByService.get("mentat");
-        assertNotNull(mentat, "mentat must appear in contentByService when active");
-        assertFalse(mentat.contains("\"locked_files\""),
-                "empty locked section must not produce a JSON key");
-        assertFalse(mentat.contains("\"audit\""),
-                "empty audit section must not produce a JSON key");
-        assertFalse(mentat.contains("\"draft\""),
-                "empty draft section must not produce a JSON key");
     }
 
     // -------------------------------------------------------------------------------------------

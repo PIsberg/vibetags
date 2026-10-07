@@ -2317,7 +2317,7 @@ public final class ModuleSidecar {
      * (issue #330). Regions with no body for this service are omitted rather than contributing an
      * empty document.
      *
-     * @param serviceKey e.g. {@code "mentat"}
+     * @param serviceKey e.g. {@code "pr_agent"}
      * @param sidecars   all known module sidecars (current + siblings)
      */
     public static List<Map.Entry<String, String>> contributionsFor(String serviceKey,

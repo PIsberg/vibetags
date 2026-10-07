@@ -50,7 +50,7 @@ public final class AISunsetFormatter implements AnnotationFormatter {
                     .append(CommonFormatterHelper.bullet("Ticket", jira))
                     .append(CommonFormatterHelper.bullet("Replacement", replacementName)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (sunset)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

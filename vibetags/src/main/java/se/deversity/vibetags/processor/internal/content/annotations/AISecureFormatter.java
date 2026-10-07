@@ -43,10 +43,7 @@ public final class AISecureFormatter implements AnnotationFormatter {
                   .append(aspect.isEmpty() ? "" : "- **Aspect**: " + aspect + "\n")
                   .append("- **Rule**: Do not weaken security properties. Every change must be reviewed for security impact.\n\n");
                 break;
-            case SWEEP:
-                sb.append("  - \"Security-critical: ").append(Escape.json(className)).append(" [").append(Escape.json(aspect.isEmpty() ? "general" : aspect)).append("]. Do not weaken security.\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (security-critical)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

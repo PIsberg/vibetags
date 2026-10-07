@@ -218,7 +218,8 @@ asserts that a real parser accepts it. A YAML renderer emitting an unquoted valu
 cannot be loaded by the tool it was written for. Ten files carry a structured format
 (`.coderabbit.yaml`, `.codex/config.toml`, `.cody/config.json`, `.interpreter/profiles/vibetags.yaml`,
 `.mentatconfig.json`, `.plandex.yaml`, `.pr_agent.toml`, `.qwen/settings.json`, `ellipsis.yaml`,
-`sweep.yaml`) and all ten parse. (`.qwen/settings.json` is no longer written since #650, so a
+`sweep.yaml`) and all ten parse. Seven of them are no longer written: 1.4.0 removed Cody's (#645)
+and five more (#720). (`.qwen/settings.json` is no longer written since #650, so a
 current run has nine to parse; not re-measured.)
 
 Measured: **48 of 62 platform files written, 10 parsed.** The remainder are opted out or are mode
@@ -235,9 +236,8 @@ instead of silently narrowing what is checked; that is what caught #762 moving t
 `ServiceRegistry`.
 
 Only the entries that are opt-ins are seeded. The two Codex sidecars and the three granular
-safety files are written because another service is active, never because their own path exists,
-and `.clinerules/+vibetags-safety.md` could not be created anyway, since `.clinerules` is already
-seeded as the `cline` file. They are still verified when a run produces them.
+safety files are written because another service is active, never because their own path exists.
+They are still verified when a run produces them.
 
 ## The repos, and why each is here
 

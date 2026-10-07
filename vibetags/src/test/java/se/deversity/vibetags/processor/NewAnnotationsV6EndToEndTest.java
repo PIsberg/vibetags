@@ -70,7 +70,7 @@ class NewAnnotationsV6EndToEndTest {
     static void setUp() throws IOException {
         // Default opt-ins only: the four granular dirs that have an aggregate sibling are
         // deliberately absent, so CLAUDE.md/.cursorrules render in full rather than collapsing to a
-        // scoped-rules index. Granular output is asserted through .ai/rules, which has no aggregate.
+        // scoped-rules index. Granular output is asserted through .kiro/steering, which has no aggregate.
         harness = new ProcessorTestHarness(tempDir);
         harness.addSource("com.example.v6.OrdersApiStub", SOURCE);
         harness.compile();
@@ -176,7 +176,7 @@ class NewAnnotationsV6EndToEndTest {
 
     @Test
     void granularRules_carryEveryNewSection() throws IOException {
-        String rules = Files.readString(tempDir.resolve(".ai/rules/com-example-v6-OrdersApiStub.md"));
+        String rules = Files.readString(tempDir.resolve(".kiro/steering/com-example-v6-OrdersApiStub.md"));
         // The type-level annotation keeps its section title; member-level ones are filed under
         // "### Rules for <kind> <name>" instead, so assert on the rule bodies rather than headings.
         assertTrue(rules.contains("Generated — Edit The Source"), rules);

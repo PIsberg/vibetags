@@ -157,19 +157,19 @@ class GreptileConfigEndToEndTest {
     }
 
     /**
-     * {@code config.json} is far too common a name to merge by name alone. Cody's
-     * {@code .cody/config.json} is also a VibeTags output, one VibeTags renders whole, and must stay
-     * exactly that rather than being routed through the key merge.
+     * {@code config.json} is far too common a name to merge by name alone. A {@code config.json}
+     * outside {@code .greptile/}, here the {@code .cody/config.json} 1.x used to write, is not
+     * Greptile's and must be left exactly as it is.
      */
     @Test
     void anotherConfigJsonIsNotMistakenForGreptiles(@TempDir Path dir) throws IOException {
         ProcessorTestHarness h = optedIn(dir, "{}");
-        h.touchOptIn(".cody/config.json");
+        String other = "{\"customCommands\": []}\n";
+        Files.createDirectories(dir.resolve(".cody"));
+        Files.writeString(dir.resolve(".cody/config.json"), other, StandardCharsets.UTF_8);
         h.compile();
 
-        String cody = h.readFile(".cody/config.json");
-        assertFalse(cody.contains("VIBETAGS-START"), "Cody's config must not grow a span:\n" + cody);
-        assertTrue(cody.contains("customCommands"), "Cody's config must be its rendering:\n" + cody);
+        assertEquals(other, h.readFile(".cody/config.json"), "another config.json must not grow a span or be rewritten");
         assertTrue(h.readFile(CONFIG).contains("# VIBETAGS-START"), "while Greptile's gets its span");
     }
 }

@@ -7,8 +7,8 @@ description: Add support for a new AI coding tool, IDE, PR-reviewer, or context-
 
 Paths and class names below were derived from the codebase at v1.0.0-RC3 (commits `2bc839e`
 Claude Code local/granular/Skill + Copilot granular, `9c61a83` AI PR-reviewers/context-packers/
-Void/Roo, `406f353` Firebase AI — the smallest recent example). If a path below 404s, the
-architecture has drifted since — `grep -rn "FIREBASE" vibetags/src/main/java` from the repo root
+Void/Roo, `406f353` Firebase AI, whose outputs 1.4.0 removed again). If a path below 404s, the
+architecture has drifted since — `grep -rn "GOOSE" vibetags/src/main/java` from the repo root
 will re-locate every dispatch point this skill lists.
 
 ## Step 0a — Verify the path at the vendor, before anything else
@@ -116,15 +116,15 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
      file gets its `rules:` / `reviews:` / `customModes:` repeated once per module: invalid to a
      strict parser, silently truncated to the last module by a lenient one. Declare the last line of
      your shared scaffold, the column your entries sit at, and what you emit when there is nothing
-     to say — `SweepRenderer` (sequence), `CodeRabbitRenderer` (block scalar) and `PlandexRenderer`
-     (conditional buckets → `YamlMergeShape.keyed`) are the three worked examples.
+     to say — `AiderConfRenderer` (sequence), `CodeRabbitRenderer` and `RooModesRenderer` (block
+     scalar) are the worked examples. (A keyed-bucket shape went with Plandex in 1.4.0, #720.)
      `YamlMergeShapeContractTest` fails the build if you skip it or if the declaration drifts from
      what the renderer writes.
    - **JSON or TOML output whose content varies with the annotations** — override
      `wholeFileMerge()` instead. Those files carry no markers, so they are whole-file overwrites and
-     without a merge a reactor publishes whichever module compiled last. `MentatRenderer`
-     (`WholeFileMerge.jsonRules()`) and `PrAgentRenderer` (`WholeFileMerge.tomlInstructions()`) are
-     the worked examples; a static config that does not vary needs nothing.
+     without a merge a reactor publishes whichever module compiled last. `PrAgentRenderer`
+     (`WholeFileMerge.tomlInstructions()`) and `GreptileRenderer` (`WholeFileMerge.jsonLineArrays()`)
+     are the worked examples; a static config that does not vary needs nothing.
      `MultiModuleWholeFileMergeTest` derives the requirement by rendering your service empty and
      populated, so forgetting it fails the build.
 
@@ -156,10 +156,10 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
    - add `boolean xGranular = activeServices.contains("x_granular");` and OR it into the early
      `if (!cursorGranular && ... ) return writtenQNames;` gate
    - inside `elementRules.forEach(...)`, add a write branch building the file's front-matter
-     shape — YAML `globs:`/`description:`/`alwaysApply:` (Cursor/Trae/Continue/PearAI; Cursor and
+     shape — YAML `globs:`/`description:`/`alwaysApply:` (Cursor/Trae/Continue; Cursor and
      Trae read `globs:` as a bare comma-separated string, not a list, #699),
      YAML `trigger: glob` + `globs:` (Devin Desktop and Windsurf), YAML `paths:` (Claude), a single-string `applyTo:` (Copilot), or no front-matter at all
-     (Roo/Tabnine/AmazonQ/Kiro/`.ai/rules`) — then
+     (Roo/Tabnine/Kiro) — then
      `fileWriter.writeFileIfChanged(serviceFiles.get("x_granular").resolve(qName +
      ".<ext>").toString(), md, true);`
    - add the matching line to `cleanupAll()` with the **exact same extension string** — a
@@ -255,7 +255,7 @@ Maven build checks either one. Rebuild the reactor and read the number out of it
 carry deliberate subsets (`examples/INDEX.md` is the ledger), so do not add a new file to all of
 them by reflex. One case does call for it: **a YAML platform with a `mergeShape()` belongs in
 `examples/multimodule` and `examples/gradle-multimodule`**, which already opt into every other one
-(`.coderabbit.yaml`, `sweep.yaml`, `.plandex.yaml`, `.roomodes`). Those are the byte-for-byte drift
+(`.coderabbit.yaml`, `.roomodes`, `.aider.conf.yml`). Those are the byte-for-byte drift
 gate for the merge, and the unit tests do not cover the re-emit path: `.aider.conf.yml` shipped with
 a `strip()`ped `emptyBody` that dedented the sequence to column 0 in a reactor and column 2 in a
 single module, and only building the multi-module example showed it.

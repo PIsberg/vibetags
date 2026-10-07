@@ -118,7 +118,7 @@ class PlatformBreadthStressTest {
      * the name alone picked up seven services for the six-file level.
      */
     private static final Set<String> SWEEP_PATHS = Set.of(
-        ".cursorrules", ALWAYS_LOADED, ".aiexclude", "AGENTS.md", "gemini_instructions.md", "QWEN.md");
+        ".cursorrules", ALWAYS_LOADED, ".aiexclude", "AGENTS.md", "GEMINI.md", "QWEN.md");
 
     /**
      * Opt-ins whose file is a switch rather than a rendered output, left out of the all-files level

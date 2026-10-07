@@ -14,8 +14,8 @@ import se.deversity.vibetags.processor.internal.content.PlatformDescriptors;
  * Formats @AIIgnore annotations for all platforms.
  *
  * <p>The reason is rendered wherever the platform's output is prose, and omitted where it is a
- * path list a tool parses — the {@code *_IGNORE} globs, {@code .aiexclude} and Mentat's
- * JSON have nowhere to put a sentence.
+ * path list a tool parses — the {@code *_IGNORE} globs and {@code .aiexclude} have nowhere to put
+ * a sentence.
  *
  * <p>{@link AIIgnore#reason()} has a default, and the default is not printed: it says "Excluded
  * from AI context", which is what the section heading above the entry already says. Printing it
@@ -34,8 +34,6 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
     @Override
     public void render(TaggedElement element, StringBuilder sb, Platform platform) {
         String className = element.path();
-        String simpleName = element.simpleName();
-        String globPattern = "**/" + simpleName + ".java\n";
 
         // javac never hands back a null String from an annotation member, but a mocked or
         // synthesized instance does, and formatters run against those in tests and in tooling that
@@ -52,7 +50,13 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
         // (issue #762). The platform entry declares it now, so there is no label to forget.
         PlatformDescriptor descriptor = PlatformDescriptors.byPlatform(platform);
         if (descriptor != null && descriptor.globSyntax()) {
-            sb.append(globPattern);
+            // A glob names a file, so only a type may contribute one. A member emitted
+            // "**/<memberName>.java", a glob for a file that does not exist or, worse, for an
+            // unrelated file of that name (#926). The member is still excluded wherever a platform
+            // can name it in prose; AILockedFormatter treats .aiexclude the same way.
+            if (element.kind().isClass() || element.kind().isInterface()) {
+                sb.append("**/").append(element.simpleName()).append(".java\n");
+            }
             return;
         }
 
@@ -78,7 +82,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(suffix).append('\n');
                 break;
-            case GEMINI:
+            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
             case LLMS:
@@ -98,10 +102,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
-            case MENTAT:
-                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\"},\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (excluded): treat as non-existent")
                   .append(suffix).append('\n');
                 break;

@@ -38,7 +38,7 @@ public final class AIAuditFormatter implements AnnotationFormatter {
             case COPILOT:
                 sb.append("- `").append(className).append("`\n  - Required Checks: ").append(checkForJoined).append('\n');
                 break;
-            case GEMINI:
+            case GEMINI_MD:
                 // The blank line that separates two blocks opens each block rather than closing it:
                 // a trailing one doubled the gap before the next heading, which brings its own (#723).
                 sb.append("\nFile: `").append(className).append("`\nCritical Vulnerabilities to Prevent:");
@@ -59,32 +59,11 @@ public final class AIAuditFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append("` — check for: ").append(checkForJoined).append('\n');
                 break;
-            case MENTAT:
-                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"checks\": [").append(buildJsonStringArray(checkFor)).append("]},\n");
-                break;
-            case SWEEP:
-                sb.append("  - \"Security audit required for ").append(Escape.json(className)).append(": ").append(Escape.json(checkForJoined)).append("\"\n");
-                break;
-            case PLANDEX:
-                // checks is a YAML flow sequence — quote+escape each item so a value containing
-                // ']' / ',' / '"' cannot break out of the list. (buildJsonStringArray quotes each
-                // element; YAML double-quoted scalars use the same escapes as JSON.)
-                sb.append("    - path: \"").append(Escape.json(className)).append("\"\n      checks: [").append(buildJsonStringArray(checkFor)).append("]\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (audit): check for ").append(checkForJoined).append('\n');
                 break;
             default:
                 break;
         }
-    }
-
-    private static String buildJsonStringArray(String... values) {
-        StringBuilder sb = new StringBuilder();
-        for (String v : values) {
-            if (sb.length() > 0) sb.append(", ");
-            sb.append('"').append(Escape.json(v)).append('"');
-        }
-        return sb.toString();
     }
 }

@@ -17,8 +17,8 @@ import java.util.Map;
  * stored for marker-based services, so {@code anyContributed} was permanently false for a JSON or
  * TOML output and the writer's {@code no-new-rules} guard skipped every update to an existing file:
  * whatever the first successful write produced was frozen there. On the four-module
- * {@code examples/multimodule}, {@code .mentatconfig.json} held only {@code core}'s guardrails, and
- * every subsequent build reported "no changes".
+ * {@code examples/multimodule}, Mentat's {@code .mentatconfig.json} (removed in 1.4.0, #720) held
+ * only {@code core}'s guardrails, and every subsequent build reported "no changes".
  *
  * <p>Implementations re-assemble the document from every module's rendering. They are format-aware
  * rather than generic because there is no generic answer: JSON arrays have to be unioned inside
@@ -44,17 +44,10 @@ public interface WholeFileMerge {
     @Nullable String merge(List<Map.Entry<String, String>> contributions);
 
     /**
-     * Unions the arrays inside each key of a {@code "rules"} object — the {@code .mentatconfig.json}
-     * shape. A factory rather than a public class so the format handling stays package-private to
-     * {@code content}, where the renderers that produce these documents live.
-     */
-    static WholeFileMerge jsonRules() {
-        return JsonRulesMerge.INSTANCE;
-    }
-
-    /**
      * Unions the lines inside every {@code extra_instructions = """…"""} block — the
-     * {@code .pr_agent.toml} shape.
+     * {@code .pr_agent.toml} shape. A factory rather than a public class so the format handling
+     * stays package-private to {@code content}, where the renderers that produce these documents
+     * live.
      */
     static WholeFileMerge tomlInstructions() {
         return TomlInstructionsMerge.INSTANCE;

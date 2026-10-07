@@ -142,13 +142,10 @@ class ProcessorTestHarness {
         touch(".aiexclude");
         touch("AGENTS.md");
         touch("QWEN.md");
-        touch("gemini_instructions.md");
         touch(".github/copilot-instructions.md");
         touch("llms.txt");
         touch("llms-full.txt");
         touch(".cursorignore");
-        touch(".claudeignore");
-        touch(".copilotignore");
         touch(".qwenignore");
         touch(".codex/config.toml");
         touch(".codex/rules/vibetags.rules");
@@ -160,26 +157,13 @@ class ProcessorTestHarness {
         // New platforms
         touch(".windsurfrules");
         touch(".rules");
-        touch(".cody/config.json");
-        touch(".codyignore");
-        touch(".supermavenignore");
         touch(".continue/rules/.vibetags");
         touch(".tabnine/guidelines/.vibetags");
-        touch(".amazonq/rules/.vibetags");
-        touch(".ai/rules/.vibetags");
         // v0.8.0 platforms
-        touch(".pearai/rules/.vibetags");
-        touch(".mentatconfig.json");
-        touch("sweep.yaml");
-        touch(".plandex.yaml");
-        touch(".doubleignore");
-        touch(".interpreter/profiles/vibetags.yaml");
         touch(".codeiumignore");
         // v0.9.6 platforms
         touch("GEMINI.md");
-        touch(".antigravityignore");
         // v0.9.7 platforms
-        touch(".clinerules");
         touch(".junie/guidelines.md");
         touch(".junie/AGENTS.md");
         touch(".kiro/steering/.vibetags");
@@ -204,10 +188,9 @@ class ProcessorTestHarness {
         touch(".rooignore");
         touch(".continueignore");
         touch(".augmentignore");
-        // Cross-client Agent Skills location, Zencoder scoped rules, Replit Agent context file.
-        // None has an aggregate sibling, so opting them in by default collapses nothing.
+        // Cross-client Agent Skills location and Replit Agent context file. Neither has an
+        // aggregate sibling, so opting them in by default collapses nothing.
         touch(".agents/skills/vibetags-guardrails/SKILL.md");
-        touch(".zencoder/rules/.vibetags");
         touch("replit.md");
         // Devin Desktop (formerly Windsurf): .devin/rules/ has no VibeTags aggregate sibling, so
         // opting it in by default collapses nothing; .devinignore is its ignore file (#671)
@@ -217,14 +200,10 @@ class ProcessorTestHarness {
         touch(".repomixignore");
         touch(".gitingestignore");
         touch(".gptignore");
-        touch(".ghostcoderignore");
-        touch(".piecesignore");
         // AI pull-request reviewers
         touch(".coderabbit.yaml");
         touch(".pr_agent.toml");
-        touch("ellipsis.yaml");
-        // Editors & modes
-        touch(".void/rules.md");
+        // Modes
         touch(".roomodes");
         // Machine-readable @AILocked report
         touch(".vibetags-locks");

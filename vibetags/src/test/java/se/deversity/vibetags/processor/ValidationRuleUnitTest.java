@@ -369,7 +369,7 @@ class ValidationRuleUnitTest {
      *
      * <p>{@code -Avibetags.root} pins the processor's write root to the JUnit temp dir. Without it
      * the processor falls back to the real working directory, so any opt-in file
-     * (CONVENTIONS.md, gemini_instructions.md, .github/copilot-instructions.md, ...) that happens to
+     * (CONVENTIONS.md, GEMINI.md, .github/copilot-instructions.md, ...) that happens to
      * exist there gets silently overwritten with this test's fixture content on every {@code mvn
      * test} — see issue found 2026-08-07.
      */
@@ -428,10 +428,6 @@ class ValidationRuleUnitTest {
     void duplicateYamlKey_ownedKeysAreTheTopLevelKeysEachYamlRendererWrites() {
         assertEquals(Set.of("read"), DuplicateYamlKeyRule.ownedKeys("aider_conf"));
         assertEquals(Set.of("reviews"), DuplicateYamlKeyRule.ownedKeys("coderabbit"));
-        assertEquals(Set.of("version", "pr_review"), DuplicateYamlKeyRule.ownedKeys("ellipsis"));
-        assertEquals(Set.of("rules"), DuplicateYamlKeyRule.ownedKeys("sweep"));
-        assertEquals(Set.of("guardrails"), DuplicateYamlKeyRule.ownedKeys("plandex"));
-        assertEquals(Set.of("instructions"), DuplicateYamlKeyRule.ownedKeys("interpreter"));
         assertEquals(Set.of("customModes"), DuplicateYamlKeyRule.ownedKeys("roo_modes"));
         assertEquals(Set.of(), DuplicateYamlKeyRule.ownedKeys("not-a-service-key"));
     }

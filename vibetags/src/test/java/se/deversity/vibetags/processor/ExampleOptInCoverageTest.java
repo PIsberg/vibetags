@@ -48,12 +48,7 @@ class ExampleOptInCoverageTest {
             + "examples/multimodule-indexed is the fixture for it",
         "locks_report",
         ".vibetags-locks is an enforcement baseline for a CI diff guard rather than a platform "
-            + "file, and examples/multimodule is the committed fixture that carries it",
-        "cline_granular",
-        "Cline's .clinerules/ directory is the same path as the .clinerules file basic/ carries, and "
-            + "a path is a file or a directory, never both. The file stays here because basic/'s "
-            + "committed .clinerules is the drift gate for the single-file renderer; "
-            + "examples/multimodule-indexed carries the directory, checked below");
+            + "file, and examples/multimodule is the committed fixture that carries it");
 
     /**
      * Every exemption above whose reason names the example that covers it, with that example.
@@ -62,8 +57,7 @@ class ExampleOptInCoverageTest {
      */
     private static final Map<String, String> COVERED_ELSEWHERE = Map.of(
         "root_index", "examples/multimodule-indexed",
-        "locks_report", "examples/multimodule",
-        "cline_granular", "examples/multimodule-indexed");
+        "locks_report", "examples/multimodule");
 
     @Test
     void basicExampleOptsIntoEveryPlatform() throws IOException {
@@ -77,9 +71,9 @@ class ExampleOptInCoverageTest {
                 continue;
             }
             Path target = serviceFiles.get(key);
-            // By the kind of entry the service writes, not bare existence: basic/ has a .clinerules
-            // file, and Files.exists let that stand in for the cline_granular directory, so the
-            // check passed for a platform the example did not carry at all (issue #642).
+            // By the kind of entry the service writes, not bare existence: basic/ once had a
+            // .clinerules file, and Files.exists let that stand in for the cline_granular directory,
+            // so the check passed for a platform the example did not carry at all (issue #642).
             if (target != null && !ServiceRegistry.isOptedIn(key, target)) {
                 missing.add(key + " -> " + example.relativize(target).toString().replace('\\', '/'));
             }

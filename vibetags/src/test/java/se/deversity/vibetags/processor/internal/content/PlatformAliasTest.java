@@ -18,18 +18,16 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * {@code SectionCatalog}, and the one time half of a pair was missing, {@code GEMINI.md} printed the
  * default headings with nothing failing (#721). These cases pin the mechanism rather than the
  * wording: a formatter is only ever handed a family, so it cannot tell an alias from the platform
- * it renders as, however its switch is spelled. The wording itself is
- * {@code GeminiAliasHeadingParityTest}'s business.
+ * it renders as, however its switch is spelled.
+ *
+ * <p>No alias exists today. The only one, {@code GEMINI_MD} rendering as {@code GEMINI}, went when
+ * 1.4.0 removed {@code gemini_instructions.md} (#645); {@code SectionCatalogContractTest} pins that
+ * {@code GEMINI.md} kept the wording.
  */
 class PlatformAliasTest {
 
     /** The aliases that exist today. A new one is added here on purpose, with its target. */
-    private static final Set<Platform> ALIASES = EnumSet.of(Platform.GEMINI_MD);
-
-    @Test
-    void geminiMdRendersAsGemini() {
-        assertSame(Platform.GEMINI, Platform.GEMINI_MD.rendersAs());
-    }
+    private static final Set<Platform> ALIASES = EnumSet.noneOf(Platform.class);
 
     @Test
     void everyOtherPlatformRendersAsItself_andNoAliasChains() {

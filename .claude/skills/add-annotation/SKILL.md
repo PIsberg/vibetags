@@ -94,9 +94,9 @@ it inherits `DEFAULT` automatically via `SectionCatalog.header()`'s fallback.
 **D. `AnnotationDescriptors.ALL`** (`vibetags/.../internal/content/AnnotationDescriptors.java`):
 append one `new AnnotationDescriptor(AIYourName.class, "XX", FormatterRegistry.yourName(), e -> {
 ... }, "Section Title", e -> { ... })` entry **at the end**. That one entry is what
-`GranularRenderer`, `AiderConventionsRenderer`, `InterpreterRenderer`,
-`GuardrailInstructionBlock` (CodeRabbit, Ellipsis, PR-Agent, Roo modes, the Gemini styleguide and
-Greptile rules) and `BuildFingerprint` all walk, so none of those five needs an edit:
+`GranularRenderer`, `AiderConventionsRenderer`,
+`GuardrailInstructionBlock` (CodeRabbit, PR-Agent, Roo modes, the Gemini styleguide and
+Greptile rules) and `BuildFingerprint` all walk, so none of those four needs an edit:
 
 - the last two arguments are the granular stanza: its title, and a lambda returning the body
   (`"- **Field**: " + a.field()`, lines joined with a newline) or `null` for no stanza. Without it

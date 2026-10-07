@@ -43,14 +43,6 @@ class PlatformRenderersTest {
     }
 
     @Test
-    void clineRenderer_rendersEmptyModel() {
-        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.CLINE);
-        String output = renderer.render(GuardrailModel.EMPTY, Platform.CLINE, ctx);
-        assertNotNull(output);
-        assertTrue(output.contains("AUTO-GENERATED AI RULES"));
-    }
-
-    @Test
     void claudeLocalRenderer_rendersEmptyModel() {
         ClaudeLocalRenderer renderer = new ClaudeLocalRenderer();
         String output = renderer.render(GuardrailModel.EMPTY, Platform.CLAUDE_LOCAL, ctx);
@@ -65,29 +57,6 @@ class PlatformRenderersTest {
         AiExcludeRenderer renderer = new AiExcludeRenderer();
         String output = renderer.render(GuardrailModel.EMPTY, Platform.AI_EXCLUDE, ctx);
         assertEquals("", output);
-    }
-
-    @Test
-    void firebaseRenderer_rendersEmptyModel() {
-        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.FIREBASE);
-        String output = renderer.render(GuardrailModel.EMPTY, Platform.FIREBASE, ctx);
-        assertTrue(output.contains("AUTO-GENERATED"));
-    }
-
-    @Test
-    void voidRenderer_rendersEmptyModel() {
-        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.VOID);
-        String output = renderer.render(GuardrailModel.EMPTY, Platform.VOID, ctx);
-        assertNotNull(output);
-        assertTrue(output.contains("AUTO-GENERATED"));
-    }
-
-    @Test
-    void codyRenderer_rendersEmptyModel() {
-        CodyRenderer renderer = new CodyRenderer();
-        String output = renderer.render(GuardrailModel.EMPTY, Platform.CODY, ctx);
-        assertNotNull(output);
-        assertTrue(output.contains("vibetags-review"));
     }
 
     @Test
@@ -141,7 +110,7 @@ class PlatformRenderersTest {
     @Test
     void locksReportRenderer_rendersEmptyModel() {
         LocksReportRenderer renderer = new LocksReportRenderer();
-        String output = renderer.render(GuardrailModel.EMPTY, Platform.VOID, ctx);
+        String output = renderer.render(GuardrailModel.EMPTY, Platform.LOCKS_REPORT, ctx);
         assertNotNull(output);
         assertTrue(output.contains("{\"type\":\"format\",\"version\":1}"));
     }
@@ -163,7 +132,7 @@ class PlatformRenderersTest {
                 .build();
 
         LocksReportRenderer renderer = new LocksReportRenderer();
-        String output = renderer.render(model, Platform.VOID, ctx);
+        String output = renderer.render(model, Platform.LOCKS_REPORT, ctx);
 
         assertTrue(output.contains("{\"type\":\"format\",\"version\":1}"));
         assertTrue(output.contains("\"element\":\"com.example.\\\"Class\\\"\\n\""));
@@ -272,6 +241,5 @@ class PlatformRenderersTest {
         assertNotNull(new ZedRenderer().render(fullModel, Platform.ZED, ctx));
         assertNotNull(new RooModesRenderer().render(fullModel, Platform.ROO_MODES, ctx));
         assertNotNull(new ClaudeLocalRenderer().render(fullModel, Platform.CLAUDE_LOCAL, ctx));
-        assertNotNull(PlatformRendererRegistry.getRenderer(Platform.CLINE).render(fullModel, Platform.CLINE, ctx));
     }
 }

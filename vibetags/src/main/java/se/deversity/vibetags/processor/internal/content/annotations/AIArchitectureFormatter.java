@@ -51,7 +51,7 @@ public final class AIArchitectureFormatter implements AnnotationFormatter {
                   .append(CommonFormatterHelper.bullet("Layer", belongsTo))
                   .append(cannotRef.length > 0 ? "- **Cannot Reference**: " + cannotRefStr + "\n" : "").append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (architecture)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

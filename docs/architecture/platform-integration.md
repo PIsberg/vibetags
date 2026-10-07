@@ -20,15 +20,15 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 ### Claude
 
-**Files:** `CLAUDE.md` + `.claudeignore` (deprecated, #667)
+**Files:** `CLAUDE.md` (`.claudeignore` was removed in 1.4.0, #667, #720)
 
 **Behavior:** Claude treats `CLAUDE.md` as foundational context. XML tags appeal to Claude's parsing strengths. Enforces `<rule>` elements strictly.
 
 ### Gemini
 
-**Files:** `.aiexclude` + `gemini_instructions.md`
+**Files:** `.aiexclude` + `GEMINI.md`
 
-**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `gemini_instructions.md` provides detailed persona and audit guidance.
+**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `GEMINI.md` provides detailed persona and audit guidance. (`gemini_instructions.md` did the same until 1.4.0 removed it, #645.)
 
 ### Codex CLI
 
@@ -38,9 +38,9 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 ### GitHub Copilot
 
-**Files:** `.github/copilot-instructions.md` + `.copilotignore` (deprecated, #668)
+**Files:** `.github/copilot-instructions.md` (`.copilotignore` was removed in 1.4.0, #668, #720)
 
-**Behavior:** Copilot uses the instructions file to guide its completions and VibeTags writes `.copilotignore` (standard glob format), a file GitHub's Copilot documentation does not describe; Copilot's documented exclusion is the Content exclusion setting.
+**Behavior:** Copilot uses the instructions file to guide its completions. Copilot's documented exclusion is the Content exclusion setting, which no file controls.
 
 ### Windsurf Cascade & LLM Agents (llms.txt Standard)
 

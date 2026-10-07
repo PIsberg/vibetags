@@ -598,7 +598,7 @@ public final class GuardrailFileWriter {
      * it; anything else before the marker is hand-authored and stays.
      *
      * <p>When the renderer emits no header ({@code frontMatter} is empty), a header the file
-     * carries is a hand-written one — CLAUDE.md, a Junie or Void rules file — and is preserved
+     * carries is a hand-written one — CLAUDE.md, a Junie rules file — and is preserved
      * untouched, as before. When the renderer emits one and the file has none — a role file
      * somebody wrote by hand before the build, or a file an earlier round left headerless — the
      * rendered header is put in front of what is there.

@@ -127,26 +127,6 @@ class AIIgnoreProcessorUnitTest {
             "cursor_ignore service must be active when .cursorignore exists");
     }
 
-    @Test
-    void testIgnoreOutputIsWrittenWhenCopilotIgnoreExists(@TempDir Path tempDir) throws IOException {
-        Files.createFile(tempDir.resolve(".copilotignore"));
-        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
-        java.util.Set<String> active =
-            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
-        assertTrue(active.contains("copilot_ignore"),
-            "copilot_ignore service must be active when .copilotignore exists");
-    }
-
-    @Test
-    void testIgnoreOutputIsWrittenWhenClaudeIgnoreExists(@TempDir Path tempDir) throws IOException {
-        Files.createFile(tempDir.resolve(".claudeignore"));
-        java.util.Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(tempDir);
-        java.util.Set<String> active =
-            ServiceRegistry.resolveActiveServices(noopMessager(), serviceFiles);
-        assertTrue(active.contains("claude_ignore"),
-            "claude_ignore service must be active when .claudeignore exists");
-    }
-
     // --- helper ---
 
     private static Messager noopMessager() {

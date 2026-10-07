@@ -32,7 +32,7 @@ public final class AIParallelTestsFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### TEST ISOLATION: ").append(className).append("\n- **Rule**: Strict test isolation required. No shared mutable state, specific order, or resource conflicts.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (test-isolation)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

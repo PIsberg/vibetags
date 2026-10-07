@@ -71,7 +71,7 @@ class OrphanWarnerTest {
     @Test
     void noAnnotationsMeansNoWarningsHoweverManyPlatformsAreActive() {
         RecordingMessager messager = warn(
-            Set.of("cursor", "claude", "copilot", "qwen", "gemini", "codex"), false, false, false);
+            Set.of("cursor", "claude", "copilot", "qwen", "gemini_md", "codex"), false, false, false);
         assertEquals(List.of(), messager.warnings,
             "a project with neither @AIIgnore nor @AILocked has nothing to be missing a file for");
     }
@@ -86,7 +86,7 @@ class OrphanWarnerTest {
     @Test
     void eachPlatformIsWarnedAboutItsOwnMissingIgnoreFile() {
         RecordingMessager messager = warn(
-            Set.of("cursor", "claude", "copilot", "qwen", "gemini"), false, true, false);
+            Set.of("cursor", "claude", "copilot", "qwen", "gemini_md"), false, true, false);
 
         assertTrue(messager.mentions(".cursorignore"), messager.warnings.toString());
         assertTrue(messager.mentions(".qwenignore"), messager.warnings.toString());
@@ -94,23 +94,23 @@ class OrphanWarnerTest {
     }
 
     /**
-     * The warning tells a user to create a file. Telling them to create a deprecated one (#667,
-     * #668) would have them opt into an output the same build then warns is going away.
+     * The warning tells a user to create a file. Telling them to create one VibeTags no longer
+     * writes (#667, #668, removed in 1.4.0 by #720) would have them opt into nothing at all.
      */
     @Test
-    void noWarningInvitesCreatingADeprecatedOutput() {
+    void noWarningInvitesCreatingARemovedOutput() {
         RecordingMessager messager = warn(
-            Set.of("cursor", "claude", "copilot", "qwen", "gemini", "codex"), true, true, false);
+            Set.of("cursor", "claude", "copilot", "qwen", "gemini_md", "codex"), true, true, false);
 
-        for (String file : DeprecatedServices.files().values()) {
-            assertTrue(!messager.mentions(file + " is missing"),
-                "suggests creating the deprecated " + file + ": " + messager.warnings);
+        for (String file : List.of(".claudeignore", ".copilotignore", ".antigravityignore")) {
+            assertTrue(!messager.mentions(file),
+                "suggests creating " + file + ", which VibeTags no longer writes: " + messager.warnings);
         }
     }
 
     @Test
     void aPlatformThatIsNotActiveIsNotWarnedAbout() {
-        // Only Cursor is opted in, so the absence of .claudeignore is not this project's problem.
+        // Only Cursor is opted in, so the absence of .qwenignore is not this project's problem.
         RecordingMessager messager = warn(Set.of("cursor"), false, true, false);
 
         assertEquals(1, messager.warnings.size(), messager.warnings.toString());
@@ -132,16 +132,16 @@ class OrphanWarnerTest {
     void geminiAndCodexShareOneIgnoreFileAndOneWarning() {
         // Both read .aiexclude. Two warnings naming the same missing file would read as two
         // problems, and creating the file fixes both.
-        assertEquals(1, warn(Set.of("gemini", "codex"), false, true, false).warnings.size());
+        assertEquals(1, warn(Set.of("gemini_md", "codex"), false, true, false).warnings.size());
         assertEquals(1, warn(Set.of("codex"), false, true, false).warnings.size());
-        assertEquals(0, warn(Set.of("gemini", "codex", "aiexclude"), false, true, false).warnings.size());
+        assertEquals(0, warn(Set.of("gemini_md", "codex", "aiexclude"), false, true, false).warnings.size());
     }
 
     @Test
     void lockedWithoutAiexcludeWarnsSeparatelyFromIgnore() {
         // @AILocked leans on .aiexclude as a hard guardrail, so the warning fires on @AILocked
         // alone, with no @AIIgnore anywhere in the project.
-        RecordingMessager messager = warn(Set.of("gemini"), true, false, false);
+        RecordingMessager messager = warn(Set.of("gemini_md"), true, false, false);
 
         assertEquals(1, messager.warnings.size(), messager.warnings.toString());
         assertTrue(messager.mentions("@AILocked"), messager.warnings.toString());
@@ -161,7 +161,7 @@ class OrphanWarnerTest {
     @Test
     void aPresentAiexcludeSilencesTheLockedWarningToo() {
         assertEquals(List.of(),
-            warn(Set.of("gemini", "aiexclude"), true, false, false).warnings);
+            warn(Set.of("gemini_md", "aiexclude"), true, false, false).warnings);
     }
 
     @Test

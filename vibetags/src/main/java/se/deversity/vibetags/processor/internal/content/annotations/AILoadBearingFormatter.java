@@ -60,11 +60,7 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
                   .append(suppressAudit ? "- **Audit**: Not a defect. Do not flag.\n" : "")
                   .append("- **Rule**: Refactor freely, but preserve the invariant.\n\n");
                 break;
-            case SWEEP:
-                sb.append("  - \"Load-bearing: ").append(Escape.json(className)).append(" must preserve: ")
-                  .append(Escape.json(invariant)).append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (load-bearing)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

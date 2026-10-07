@@ -32,7 +32,7 @@ public final class PlatformRendererRegistry {
      * knows the key, and not every key has a renderer at all — {@code root_index} is an opt-in file
      * and nothing else, so this must answer "no shape" rather than throw.
      *
-     * @param serviceKey the service key, e.g. {@code "sweep"}
+     * @param serviceKey the service key, e.g. {@code "coderabbit"}
      * @return the declared shape, or {@code null}
      */
     public static @Nullable YamlMergeShape mergeShapeFor(String serviceKey) {
@@ -69,7 +69,7 @@ public final class PlatformRendererRegistry {
      * the service has no renderer, its file carries markers, or its output holds no per-element
      * content.
      *
-     * @param serviceKey the service key, e.g. {@code "mentat"}
+     * @param serviceKey the service key, e.g. {@code "pr_agent"}
      * @return the declared merge, or {@code null}
      */
     public static @Nullable WholeFileMerge wholeFileMergeFor(String serviceKey) {

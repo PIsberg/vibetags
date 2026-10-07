@@ -71,7 +71,7 @@ class AIGuardrailProcessorIntegrationTest {
 
     @Test
     void testGeminiInstructionsContainsAuditRequirements() throws Exception {
-        String content = harness.readFile("gemini_instructions.md");
+        String content = harness.readFile("GEMINI.md");
 
         assertTrue(content.contains("CONTINUOUS AUDIT REQUIREMENTS"),
             "Should contain continuous audit requirements header");
@@ -103,7 +103,7 @@ class AIGuardrailProcessorIntegrationTest {
         assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md should exist");
         assertTrue(harness.fileExists(".codex/config.toml"), ".codex/config.toml should exist");
         assertTrue(harness.fileExists(".codex/rules/vibetags.rules"), ".codex/rules/vibetags.rules should exist");
-        assertTrue(harness.fileExists("gemini_instructions.md"), "gemini_instructions.md should exist");
+        assertTrue(harness.fileExists("GEMINI.md"), "GEMINI.md should exist");
         assertTrue(harness.fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
         assertTrue(harness.fileExists("QWEN.md"), "QWEN.md should exist");
     }
@@ -161,7 +161,7 @@ class AIGuardrailProcessorIntegrationTest {
         assertFalse(agentsHarness.readFile("AGENTS.md").isEmpty());
         assertFalse(agentsHarness.readFile(".codex/config.toml").isEmpty());
         assertFalse(agentsHarness.readFile(".codex/rules/vibetags.rules").isEmpty());
-        assertFalse(harness.readFile("gemini_instructions.md").isEmpty());
+        assertFalse(harness.readFile("GEMINI.md").isEmpty());
     }
 
     @Test
@@ -195,7 +195,7 @@ class AIGuardrailProcessorIntegrationTest {
 
     @Test
     void testGeminiInstructionsContainsIgnoredElements() throws Exception {
-        String content = harness.readFile("gemini_instructions.md");
+        String content = harness.readFile("GEMINI.md");
         assertTrue(content.contains("IGNORED ELEMENTS"),
             "Should contain IGNORED ELEMENTS section");
         assertTrue(content.contains("GeneratedMetadata"),

@@ -64,7 +64,7 @@ public final class AIContextFormatter implements AnnotationFormatter {
             case QWEN:
                 sb.append("* `").append(className).append('`').append(bulletedFocus).append('\n');
                 break;
-            case GEMINI:
+            case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", inline)).append('\n');
                 break;
             case LLMS:
@@ -83,7 +83,7 @@ public final class AIContextFormatter implements AnnotationFormatter {
             case ZED:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", inline)).append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (context)").append(CommonFormatterHelper.clause(": ", inline)).append('\n');
                 break;
             default:

@@ -43,7 +43,7 @@ public final class AIDomainModelFormatter implements AnnotationFormatter {
                 sb.append("#### DOMAIN MODEL: ").append(className).append("\n- **Policy**: Pure Domain model, framework-free.\n")
                   .append(allow.length > 0 ? "- **Allowed**: " + allowedStr + "\n" : "").append('\n');
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (domain model)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

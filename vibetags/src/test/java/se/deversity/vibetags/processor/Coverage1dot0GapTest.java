@@ -45,9 +45,8 @@ import static org.mockito.Mockito.*;
  * <ul>
  *   <li>RenderingContext.getGeneratedHeader() and isActive()</li>
  *   <li>Platform.fromServiceKey() returning null and getServiceKey()</li>
- *   <li>the FIREBASE platform's renderer (CursorRenderer, by registry fall-through since #764)</li>
  *   <li>GranularRenderer.render() returning null</li>
- *   <li>GuardrailContentBuilder — inactive codex/qwen/cody/aiexclude branches</li>
+ *   <li>GuardrailContentBuilder — inactive codex/qwen/aiexclude branches</li>
  *   <li>ModuleSidecar — computeModuleId/computeModulePath escaping/different-drive cases</li>
  *   <li>WriteCache — cacheKey() fallback with absolute path, flush AtomicMoveNotSupported</li>
  *   <li>Formatter null-guard branches (AISecureFormatter, AIIdempotentFormatter,
@@ -100,7 +99,7 @@ class Coverage1dot0GapTest {
     void platform_fromServiceKey_knownKey_returnsCorrectPlatform() {
         assertEquals(Platform.CURSOR, Platform.fromServiceKey("cursor"));
         assertEquals(Platform.CLAUDE, Platform.fromServiceKey("claude"));
-        assertEquals(Platform.FIREBASE, Platform.fromServiceKey("firebase"));
+        assertEquals(Platform.GOOSE, Platform.fromServiceKey("goose"));
     }
 
     @Test
@@ -112,32 +111,8 @@ class Coverage1dot0GapTest {
     @Test
     void platform_getServiceKey_returnsCorrectString() {
         assertEquals("cursor", Platform.CURSOR.getServiceKey());
-        assertEquals("firebase", Platform.FIREBASE.getServiceKey());
+        assertEquals("goose", Platform.GOOSE.getServiceKey());
         assertEquals("kiro_granular", Platform.KIRO_GRANULAR.getServiceKey());
-    }
-
-    // -----------------------------------------------------------------------
-    // Platform.FIREBASE's renderer
-    // -----------------------------------------------------------------------
-
-    @Test
-    void firebaseRenderer_render_delegatesToCursorRendererAndReturnsNonNull() {
-        PlatformRenderer renderer = PlatformRendererRegistry.getRenderer(Platform.FIREBASE);
-        AnnotationCollector collector = new AnnotationCollector();
-
-        // Add a locked element so there is content
-        RoundEnvironment re = mock(RoundEnvironment.class);
-        Element el = mockClassElement("com.example.Foo");
-        AILocked ann = mock(AILocked.class);
-        when(ann.reason()).thenReturn("test");
-        when(el.getAnnotation(AILocked.class)).thenReturn(ann);
-        doReturn(Set.of(el)).when(re).getElementsAnnotatedWith(AILocked.class);
-        collector.collect(re);
-
-        RenderingContext ctx = new RenderingContext("P", "# h\n", Set.of("firebase"));
-        String result = renderer.render(collector.model(), Platform.FIREBASE, ctx);
-        assertNotNull(result, "the FIREBASE renderer must not return null when annotations exist");
-        assertTrue(result.contains("com.example.Foo"), "Result must contain the annotated class name");
     }
 
     // -----------------------------------------------------------------------
@@ -314,7 +289,7 @@ class Coverage1dot0GapTest {
     }
 
     // -----------------------------------------------------------------------
-    // GuardrailContentBuilder — inactive codex/qwen/cody/aiexclude branches
+    // GuardrailContentBuilder — inactive codex/qwen/aiexclude branches
     // -----------------------------------------------------------------------
 
     @Test
@@ -344,17 +319,6 @@ class Coverage1dot0GapTest {
     }
 
     @Test
-    void guardrailContentBuilder_noCody_codyBranchSkipped() {
-        AnnotationCollector collector = new AnnotationCollector();
-        Set<String> services = Set.of("cursor");
-        GuardrailContentBuilder builder = new GuardrailContentBuilder(
-            collector, services, "Project", "# header\n");
-        GuardrailContentBuilder.Result result = builder.build();
-        assertFalse(result.contentByService.containsKey("cody"),
-            "cody must not appear when cody is not active");
-    }
-
-    @Test
     void guardrailContentBuilder_aiexcludeWithoutGeminiOrCodex_excluded() {
         // aiexclude is active but neither gemini nor codex is present → branch at L213 is false
         AnnotationCollector collector = new AnnotationCollector();
@@ -369,9 +333,9 @@ class Coverage1dot0GapTest {
 
     @Test
     void guardrailContentBuilder_aiexcludeWithGemini_included() {
-        // aiexclude + gemini → the activation branch fires
+        // aiexclude + GEMINI.md → the activation branch fires
         AnnotationCollector collector = new AnnotationCollector();
-        Set<String> services = Set.of("aiexclude", "gemini");
+        Set<String> services = Set.of("aiexclude", "gemini_md");
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
             collector, services, "Project", "# header\n");
         GuardrailContentBuilder.Result result = builder.build();
@@ -423,18 +387,6 @@ class Coverage1dot0GapTest {
             collector, Set.of("qwen_refactor"), "Project", "# header\n").build();
         assertTrue(refactorOnly.contentByService.containsKey("qwen_refactor"),
             "an opted-in qwen_refactor renders without QWEN.md");
-    }
-
-    @Test
-    void guardrailContentBuilder_codyActive_codyContentIncluded() {
-        // cody active → implicit cody entry generated (L205-209)
-        AnnotationCollector collector = new AnnotationCollector();
-        Set<String> services = Set.of("cody");
-        GuardrailContentBuilder builder = new GuardrailContentBuilder(
-            collector, services, "Project", "# header\n");
-        GuardrailContentBuilder.Result result = builder.build();
-        assertTrue(result.contentByService.containsKey("cody"),
-            "cody active → cody must appear in result");
     }
 
     @Test
@@ -782,32 +734,6 @@ class Coverage1dot0GapTest {
         fmt.format(TaggedElements.tagged(el), sb, Platform.LLMS_FULL);
         assertFalse(sb.toString().contains("(aspect:"),
             "LLMS_FULL must omit (aspect: ...) when aspect is empty");
-    }
-
-    @Test
-    void aiSecureFormatter_sweepPlatform_usesGeneralWhenAspectEmpty() {
-        AISecureFormatter fmt = new AISecureFormatter();
-        Element el = mockClassElement("com.example.Sec");
-        AISecure ann = mock(AISecure.class);
-        when(ann.aspect()).thenReturn("");
-        when(el.getAnnotation(AISecure.class)).thenReturn(ann);
-        StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.SWEEP);
-        assertTrue(sb.toString().contains("general"),
-            "SWEEP platform must use 'general' when aspect is empty");
-    }
-
-    @Test
-    void aiSecureFormatter_sweepPlatform_usesAspectWhenProvided() {
-        AISecureFormatter fmt = new AISecureFormatter();
-        Element el = mockClassElement("com.example.Sec");
-        AISecure ann = mock(AISecure.class);
-        when(ann.aspect()).thenReturn("crypto");
-        when(el.getAnnotation(AISecure.class)).thenReturn(ann);
-        StringBuilder sb = new StringBuilder();
-        fmt.format(TaggedElements.tagged(el), sb, Platform.SWEEP);
-        assertTrue(sb.toString().contains("crypto"),
-            "SWEEP platform must use the actual aspect when provided");
     }
 
     @Test

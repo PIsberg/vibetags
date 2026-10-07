@@ -62,13 +62,7 @@ public final class AITestDrivenFormatter implements AnnotationFormatter {
                 sb.append("#### TEST-DRIVEN: ").append(className).append("\n- **Rule**: Changes MUST be accompanied by test updates.\n- **Coverage Goal**: ").append(coverageGoal).append("%\n")
                     .append(CommonFormatterHelper.bullet("Frameworks", frameworksStr)).append('\n');
                 break;
-            case MENTAT:
-                sb.append("    {\"path\": \"").append(Escape.json(className)).append("\", \"coverageGoal\": ").append(coverageGoal).append(", \"frameworks\": \"").append(Escape.json(frameworksStr)).append("\"},\n");
-                break;
-            case SWEEP:
-                sb.append("  - \"Test-driven requirement for ").append(Escape.json(className)).append(": ").append(Escape.json(summary)).append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (test-driven)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

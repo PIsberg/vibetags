@@ -57,9 +57,8 @@ def list_entries(registry: pathlib.Path):
 
     Only "file" and "dir" are opt-ins the caller should create. An "implicit" entry is written
     because another service is active, never because its own path exists, so creating it would
-    be seeding something that is not an opt-in - and for .clinerules/+vibetags-safety.md it is
-    not even possible, since .clinerules is already seeded as the `cline` file. They are still
-    verified when the run produces them. A "switch" is neither created nor verified: touching
+    be seeding something that is not an opt-in. They are still verified when the run produces
+    them. A "switch" is neither created nor verified: touching
     .vibetags-root-index changes how the root aggregate renders, which would silently reshape
     what the sweep is measuring.
     """

@@ -22,12 +22,12 @@ import static org.mockito.Mockito.*;
  *
  * <p>For formatters WITHOUT a null-guard (like AIIgnoreFormatter, AILegacyBridgeFormatter, etc.):
  * the uncovered branch is {@code default: break} in the platform switch. Exercise by calling
- * with a platform not matched by any explicit case (e.g. {@code FIREBASE}, {@code KIRO_GRANULAR}).
+ * with a platform not matched by any explicit case (e.g. {@code REPLIT}, {@code KIRO_GRANULAR}).
  */
 class FormatterNullGuardBatchTest {
 
     // A platform value not matched by most formatters → falls through to default: break
-    private static final Platform DEFAULT_PLATFORM = Platform.FIREBASE;
+    private static final Platform DEFAULT_PLATFORM = Platform.REPLIT;
 
     private static Element mockEl(String fqn) {
         Element e = mock(Element.class);
@@ -70,7 +70,7 @@ class FormatterNullGuardBatchTest {
     // -----------------------------------------------------------------------
     // Default-branch tests: formatters without a null-guard
     // The uncovered branch is "default: break" in the platform switch.
-    // Using Platform.FIREBASE (not matched by most formatters) covers it.
+    // Using Platform.REPLIT (not matched by most formatters) covers it.
     // -----------------------------------------------------------------------
 
     @Test

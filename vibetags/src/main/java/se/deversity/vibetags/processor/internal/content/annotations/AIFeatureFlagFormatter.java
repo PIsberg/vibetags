@@ -41,10 +41,7 @@ public final class AIFeatureFlagFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### FEATURE FLAG: ").append(className).append("\n- **Flag**: ").append(flagDisplay).append(" (default: ").append(defaultValue).append(")\n- **Rule**: Never assume flag is always active. Preserve the flag check.\n\n");
                 break;
-            case SWEEP:
-                sb.append("  - \"Feature flag gate for ").append(Escape.json(className)).append(": ").append(Escape.json(summary)).append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (feature-flag)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

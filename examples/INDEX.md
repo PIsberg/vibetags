@@ -29,8 +29,8 @@ date. "Drift gate" is what CI does to the example's committed generated files af
 ### Which examples carry a YAML merge-shape platform
 
 `multimodule/` and `gradle-multimodule/` are the drift gate for `PlatformRenderer.mergeShape()`,
-so every YAML platform that declares one is opted into both: `.coderabbit.yaml`, `sweep.yaml`,
-`.plandex.yaml`, `.roomodes` and, since 2026-09-12, `.aider.conf.yml`. A YAML platform added to
+so every YAML platform that declares one is opted into both: `.coderabbit.yaml`, `.roomodes` and,
+since 2026-09-12, `.aider.conf.yml`. A YAML platform added to
 `basic/` alone has its shape checked by `YamlMergeShapeContractTest` against a single rendering and
 never against a real reactor merge, which is how `.aider.conf.yml` first shipped re-emitting its
 entry at column 0 in a reactor and column 2 in a single module.
@@ -42,7 +42,7 @@ Which example to read for a given processor feature.
 | Feature | Where |
 |---|---|
 | All 44 annotations in use | `basic`, `multimodule`, `multimodule-indexed`, `all-tiers`, `gradle-multimodule` |
-| Every supported platform's output committed | `basic`, enforced by `ExampleOptInCoverageTest` rather than by convention. It had lapsed: `.gemini/rules` shipped in #320 and no example opted into it until the 2026-09 sweep, so Gemini's granular output and the `GEMINI.md` index collapse had no committed fixture for four releases. One platform is exempt and covered elsewhere: Cline's `.clinerules/` directory shares its path with the `.clinerules` file `basic` carries, so `multimodule-indexed` carries it, and the test checks that it does (#642). |
+| Every supported platform's output committed | `basic`, enforced by `ExampleOptInCoverageTest` rather than by convention. It had lapsed: `.gemini/rules` shipped in #320 and no example opted into it until the 2026-09 sweep, so Gemini's granular output and the `GEMINI.md` index collapse had no committed fixture for four releases. Cline's `.clinerules/` directory was the one exemption until 1.4.0 removed the single `.clinerules` file that shared its path (#645); `basic` carries the directory now. |
 | Enforcing mode (`-Avibetags.enforce`, `.vibetags-baseline`, `-Avibetags.baseline.update`) | `enforcing` |
 | Sidecar merge into a root aggregate | every reactor example |
 | Granular rules grouped by role (`.vibetags-roles`) | `multimodule`, `multimodule-indexed`, `all-tiers`, `gradle-multimodule` |

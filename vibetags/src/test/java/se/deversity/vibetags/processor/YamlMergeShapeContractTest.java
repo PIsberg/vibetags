@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class YamlMergeShapeContractTest {
 
     private static final Set<String> ALL_SERVICES = Set.of(
-        "sweep", "plandex", "interpreter", "coderabbit", "ellipsis", "roo_modes", "aider_conf");
+        "coderabbit", "roo_modes", "aider_conf");
 
     /** Files that are YAML documents but whose name does not say so. */
     private static final Set<String> YAML_FILES_WITHOUT_A_YAML_SUFFIX = Set.of(".roomodes");
@@ -133,7 +133,7 @@ class YamlMergeShapeContractTest {
     void mergingModulesThatAllContributedNothing_keepsTheDeclaredIndent() {
         for (Platform platform : platformsWithAShape()) {
             YamlMergeShape shape = shapeOf(platform);
-            if (shape.keyedBuckets() || shape.emptyBody().isBlank()) {
+            if (shape.emptyBody().isBlank()) {
                 continue;
             }
             String empty = render(platform, GuardrailModel.EMPTY);

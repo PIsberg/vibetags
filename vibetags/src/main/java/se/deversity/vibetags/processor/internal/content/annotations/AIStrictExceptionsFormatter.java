@@ -32,7 +32,7 @@ public final class AIStrictExceptionsFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### STRICT EXCEPTIONS: ").append(className).append("\n- **Rule**: Prohibit catching or throwing generic Exception/Throwable. Use custom, domain-specific exceptions.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (strict-exceptions)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

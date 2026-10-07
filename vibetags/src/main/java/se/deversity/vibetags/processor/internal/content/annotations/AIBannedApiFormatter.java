@@ -61,13 +61,7 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
                   .append(reason.isEmpty() ? "" : "- **Reason**: " + reason + "\n")
                   .append("- **Rule**: These compile but are prohibited at this element.\n\n");
                 break;
-            case SWEEP:
-                sb.append("  - \"Banned in ").append(Escape.json(className)).append(": ")
-                  .append(Escape.json(forbidden))
-                  .append(useInstead.isEmpty() ? "" : ". Use " + Escape.json(useInstead))
-                  .append("\"\n");
-                break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (banned APIs)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

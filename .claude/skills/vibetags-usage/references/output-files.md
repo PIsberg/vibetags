@@ -6,7 +6,7 @@ Part of the `vibetags-usage` skill; [SKILL.md](../SKILL.md) holds setup and the 
 
 | File(s) | Platform |
 |---|---|
-| `CLAUDE.md`, `.claudeignore` (deprecated) | Claude / Claude Code |
+| `CLAUDE.md` | Claude / Claude Code |
 | `CLAUDE.local.md` | Claude Code (local override) |
 | `.claude/rules/*.md` | Claude Code (granular per-class rules) |
 | `.claude/skills/vibetags-guardrails/SKILL.md` | Claude Code (Skill) |
@@ -22,33 +22,21 @@ Part of the `vibetags-usage` skill; [SKILL.md](../SKILL.md) holds setup and the 
 | `.roo/rules/*.md`, `.rooignore` | Zoo Code (fork of the retired Roo Code; reads the same paths) |
 | `CONVENTIONS.md`, `.aiderignore` | Aider |
 | `QWEN.md`, `.qwen/commands/refactor.md`, `.qwenignore` | Qwen |
-| `GEMINI.md`, `.aiexclude`, `gemini_instructions.md` (deprecated) | Gemini |
+| `GEMINI.md`, `.aiexclude` | Gemini |
 | `.gemini/styleguide.md` | Gemini Code Assist (GitHub PR reviewer) |
 | `.greptile/rules.md` | Greptile (AI PR reviewer) |
 | `.greptile/config.json` | Greptile (`@AIIgnore` paths; VibeTags owns only a span inside `ignorePatterns`) |
 | `greptile.json` | Greptile (legacy form; VibeTags owns only a span inside `instructions` and `ignorePatterns`) |
-| `.antigravityignore` | Antigravity AI (deprecated) |
 | `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
-| `.github/copilot-instructions.md`, `.copilotignore` (deprecated) | GitHub Copilot |
+| `.github/copilot-instructions.md` | GitHub Copilot |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular per-class rules) |
 | `.rules` | Zed Editor |
-| `.cody/config.json`, `.codyignore` (deprecated) | Sourcegraph Cody |
-| `.supermavenignore` (deprecated) | Supermaven |
 | `.continue/rules/*.md` | Continue (granular per-class rules) |
 | `.tabnine/guidelines/*.md` | Tabnine (granular per-class rules) |
-| `.amazonq/rules/*.md` | Amazon Q (granular per-class rules; deprecated) |
-| `.ai/rules/*.md` | Universal AI standard (granular; deprecated) |
 | `llms.txt` | Windsurf Cascade / all LLM agents |
 | `llms-full.txt` | Large-context LLMs (Claude, Gemini) |
-| `.pearai/rules/*.md` | PearAI (granular per-class rules; deprecated) |
-| `.mentatconfig.json` | Mentat (deprecated) |
-| `sweep.yaml` | Sweep (GitHub App; deprecated) |
-| `.plandex.yaml` | Plandex (deprecated) |
-| `.doubleignore` | Double.bot (deprecated) |
-| `.interpreter/profiles/vibetags.yaml` | Open Interpreter (deprecated) |
 | `.codeiumignore` | Codeium (Devin Desktop reads it under this legacy name) |
-| `.clinerules` (deprecated) | Cline AI assistant (single file) |
-| `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter; same path as the file, so a project has one or the other) |
+| `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter) |
 | `.clinerules/+vibetags-safety.md` | Cline AI assistant (written with the directory: the always-loaded safety tier, no front matter) |
 | `.junie/AGENTS.md` | JetBrains Junie (checked first; not the root `AGENTS.md`) |
 | `.junie/guidelines.md` | JetBrains Junie (legacy, still supported) |
@@ -60,13 +48,9 @@ Part of the `vibetags-usage` skill; [SKILL.md](../SKILL.md) holds setup and the 
 | `.goosehints` | goose (Block) |
 | `DESIGN.md` | AI design agents (Cursor, Claude, Copilot, etc.) |
 | `TESTING.md` | No tool reads it by name. Routing target: a round that compiles test code writes its non-safety guardrails here instead of into the always-loaded files, which keep the six safety annotations and gain a pointer |
-| `.void/rules.md` | Void Editor (deprecated) |
 | `.coderabbit.yaml` | CodeRabbit (AI PR reviewer) |
 | `.pr_agent.toml` | Qodo/Codium PR-Agent (AI PR reviewer) |
-| `ellipsis.yaml` | Ellipsis (AI PR reviewer; deprecated) |
 | `.roomodes` | Zoo Code (fork of the retired Roo Code; reads the same paths), "VibeTags Architect" custom mode |
 | `.repomixignore` | Repomix (context packer) |
 | `.gitingestignore` | Gitingest (context packer) |
 | `.gptignore` | GPT context packer |
-| `.ghostcoderignore` | Ghostcoder (deprecated) |
-| `.piecesignore` | Pieces for Developers (deprecated) |

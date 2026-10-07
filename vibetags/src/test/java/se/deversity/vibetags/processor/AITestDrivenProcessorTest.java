@@ -360,16 +360,16 @@ class AITestDrivenProcessorTest {
 
     @Test
     void process_withTestDrivenAnnotation_writesTestDrivenSectionToGemini() throws Exception {
-        withSignalFiles(List.of("gemini_instructions.md"), () -> {
+        withSignalFiles(List.of("GEMINI.md"), () -> {
             CapturingProcessor processor = makeCapturingProcessor();
             processor.process(Set.of(), testDrivenRoundEnv("com.example.PricingService.calculatePrice", 100, "JUNIT_5", ""));
             triggerGeneration(processor);
 
-            String content = processor.contentFor("gemini_instructions.md");
+            String content = processor.contentFor("GEMINI.md");
             assertTrue(content.contains("TEST-DRIVEN"),
-                "gemini_instructions.md must have test-driven section");
+                "GEMINI.md must have test-driven section");
             assertTrue(content.contains("com.example.PricingService.calculatePrice"),
-                "gemini_instructions.md must list the annotated element");
+                "GEMINI.md must list the annotated element");
         });
     }
 

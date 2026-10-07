@@ -32,7 +32,7 @@ public final class AIInternationalizedFormatter implements AnnotationFormatter {
             case AIDER_CONVENTIONS:
                 sb.append("#### INTERNATIONALIZED: ").append(className).append("\n- **Rule**: Internationalization required. Do not hardcode user-facing labels or strings.\n\n");
                 break;
-            case INTERPRETER:
+            case CODERABBIT:
                 sb.append("- `").append(className).append("` (i18n)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:

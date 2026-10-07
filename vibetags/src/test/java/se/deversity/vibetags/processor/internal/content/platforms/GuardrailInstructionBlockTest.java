@@ -210,7 +210,7 @@ class GuardrailInstructionBlockTest {
         return collector;
     }
 
-    /** Maps each annotation's collector bucket name (for failure messages) to its INTERPRETER-platform tag. */
+    /** Maps each annotation's collector bucket name (for failure messages) to its prose tag (the CODERABBIT arms). */
     private static Map<String, String> tagsByType() {
         Map<String, String> tags = new LinkedHashMap<>();
         tags.put("locked", "(locked): ");
