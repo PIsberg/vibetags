@@ -109,7 +109,8 @@ public final class TomlValueSpans {
             }
             String text = doc.substring(line.start, line.end).strip();
             // A quoted name is the same name, ["pr_reviewer"] the table [pr_reviewer] (TOML 1.0, Keys).
-            String compact = text.replaceAll("[\\s\"']", "");
+            // A byte order mark in front of the first header is encoding, not part of the name.
+            String compact = text.replaceAll("[\\s\"'\\uFEFF]", "");
             if (compact.startsWith("[[") && compact.startsWith("[[" + table + "]]")) {
                 return Outcome.refused("array-of-tables", "[[" + table + "]] is an array of tables");
             }

@@ -137,6 +137,20 @@ class TomlValueSpansTest {
         assertEquals(2, occurrences(quotedKey, "extra_instructions"), "one key per table:\n" + quotedKey);
     }
 
+    /**
+     * A byte order mark an editor saved in front of the file is encoding, not content, as the writer
+     * already treats it for a marker file. In front of the first table header it hid the header from
+     * the scan, so the table was added a second time below it.
+     */
+    @Test
+    void aByteOrderMarkDoesNotHideTheFirstTable() {
+        String merged = TomlValueSpans.merge("\uFEFF[pr_reviewer]\nnum_code_suggestions = 3\n", BODY).document();
+
+        assertNotNull(merged);
+        assertTrue(merged.startsWith("\uFEFF[pr_reviewer]\nextra_instructions = \"\"\"\n" + span(BODY)), merged);
+        assertEquals(1, occurrences(merged, "[pr_reviewer]"), "the table is not added twice:\n" + merged);
+    }
+
     private static int occurrences(String text, String of) {
         return text.split(java.util.regex.Pattern.quote(of), -1).length - 1;
     }

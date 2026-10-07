@@ -78,7 +78,8 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   was skipped outright, and before that overwritten. A `[` line inside a multi-line string or a
   multi-line array is a value, not a table, so it neither ends a table early nor gets the key added
   a second time, and a quoted name (`["pr_reviewer"]`, `'extra_instructions'`) is the same table
-  or key as the bare one. `TomlValueSpansTest` (10 cases) and
+  or key as the bare one; a UTF-8 byte order mark in front of the first header does not hide it.
+  `TomlValueSpansTest` (11 cases) and
   `aHandWrittenPrAgentConfig_keepsItsSettingsAndGainsTheGuardrails` cover it; the latter failed before
   the change.
 - **`vibetags-cli/README.md`.** The CLI's flags, exit codes and limits were spread over a USAGE.md
