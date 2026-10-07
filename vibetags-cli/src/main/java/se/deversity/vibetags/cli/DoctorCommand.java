@@ -88,7 +88,9 @@ final class DoctorCommand {
 
     /** The build file doctor will grep for wiring, or empty when none is recognised. */
     private Optional<String> detectBuildFile() {
-        for (String candidate : new String[]{"pom.xml", "build.gradle", "build.gradle.kts"}) {
+        // A Gradle multi-project needs no root build file: the settings file alone lists the projects.
+        for (String candidate : new String[]{"pom.xml", "build.gradle", "build.gradle.kts",
+                "settings.gradle.kts", "settings.gradle"}) {
             if (Files.isRegularFile(dir.resolve(candidate))) {
                 out.println("build tool:      " + candidate);
                 return Optional.of(candidate);

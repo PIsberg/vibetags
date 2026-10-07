@@ -173,6 +173,11 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   to the root-only check above, and a Groovy `include 'core',` continued on the next line lost
   every project after the first. The arguments are now read to the closing parenthesis, or across
   every line ending in a comma. Two `DoctorCommandTest` cases failed before the change.
+- **`vibetags doctor` reads a Gradle multi-project with no root build file.** The settings file
+  alone lists the projects and each configures itself, but doctor looked only for
+  `pom.xml` or `build.gradle[.kts]` at the root, reported "no build file found" and exited 1
+  without reading a module. A root `settings.gradle[.kts]` is now the build file when there is no
+  other. `gradleReactorWithNoRootBuildFile_readsEachProject` failed before the change.
 - **Upgrading a pre-marker file keeps the hand-written text below a long legacy block (#936).** The
   end of an XML-shaped legacy block was looked for only in the first 2,000 characters after its
   header, so a block longer than that (a dozen guardrails) read as running to the end of the file,

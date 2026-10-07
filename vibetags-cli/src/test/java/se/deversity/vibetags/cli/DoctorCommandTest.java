@@ -389,6 +389,32 @@ class DoctorCommandTest {
         assertTrue(out().contains("modules:         2 use the annotations, all wired"), out());
     }
 
+    /**
+     * A Gradle multi-project needs no root build file: the settings file lists the projects and each
+     * configures itself. Doctor looked for a build file at the root only, so it reported "no build
+     * file found" and exited 1 without reading a single module.
+     */
+    @Test
+    void gradleReactorWithNoRootBuildFile_readsEachProject() throws Exception {
+        Files.writeString(dir.resolve("settings.gradle.kts"), """
+            rootProject.name = "karta"
+            include(":core", ":cli")
+            """);
+        String wired = """
+            dependencies {
+                compileOnly("se.deversity.vibetags:vibetags-processor:1.4.0")
+                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.4.0")
+            }
+            """;
+        module("core", "build.gradle.kts", wired, true);
+        module("cli", "build.gradle.kts", wired, true);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("modules:         2 use the annotations, all wired"), out());
+        assertFalse(out().contains("no build file found"), out());
+    }
+
     /** The Groovy DSL's form: no parentheses, the list continued after a trailing comma. */
     @Test
     void groovyIncludeContinuedOnTheNextLine_readsEachProject() throws Exception {
