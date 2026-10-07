@@ -1,5 +1,5 @@
 ---
-paths: ["**/Companion.java"]
+paths: ["**/Plain.java"]
 ---
 
 <!-- VIBETAGS-START -->
