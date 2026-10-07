@@ -344,6 +344,38 @@ class GuardrailLifecycleEndToEndTest {
             "the removal failed once; the next build must retry it rather than trust the file");
     }
 
+    /**
+     * The same failure on the other branch of the sweep: a rule file that also holds the
+     * developer's own text is rewritten without its generated block rather than deleted. When that
+     * rewrite failed the exception was swallowed and the cache entry kept vouching for the file, so
+     * the next unchanged build short-circuited and the removed guardrail stayed in the file for good.
+     */
+    @Test
+    void aRuleFileThatCouldNotBeRewritten_isScrubbedByTheNextBuild(@TempDir Path dir) throws Exception {
+        Files.createDirectories(dir.resolve(".claude/rules"));
+        Files.createFile(dir.resolve("CLAUDE.md"));
+        compileContexts(dir, true);
+        Path beta = dir.resolve(".claude/rules/com-example-Beta.md");
+        String note = "Beta is owned by the platform team.";
+        Files.writeString(beta, Files.readString(beta) + "\n" + note + "\n", StandardCharsets.UTF_8);
+        // A build that sees the note and records the file as it now is, as any later build would.
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        compileContexts(dir, true);
+
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        try (AutoCloseable held = blockDeletion(beta)) {
+            compileContexts(dir, false);
+        }
+        assertTrue(Files.readString(beta).contains("beta-focus"), "precondition: the blocked rewrite failed");
+
+        compileContexts(dir, false);
+
+        String after = Files.readString(beta);
+        assertFalse(after.contains("beta-focus"),
+            "the rewrite failed once; the next build must retry it rather than trust the file:\n" + after);
+        assertTrue(after.contains(note), "and the developer's text must survive the retry:\n" + after);
+    }
+
     private static void compileContexts(Path dir, boolean betaAnnotated) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
         h.addSource("com.example.Alpha", "package com.example;\n"

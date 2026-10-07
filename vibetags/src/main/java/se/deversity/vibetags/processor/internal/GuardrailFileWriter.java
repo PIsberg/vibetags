@@ -1042,6 +1042,23 @@ public final class GuardrailFileWriter {
     }
 
     /**
+     * A rule file that keeps text of the developer's, whose generated block could not be taken out
+     * because writing the file back without it failed. Swallowed, the failure left the cache entry
+     * describing the file as the last write left it, so the next unchanged build short-circuited
+     * and the removed guardrail stayed in the file. Answered as {@link #recordFailedRemoval} is:
+     * said once, and the entry replaced so the next build retries.
+     */
+    private void recordFailedScrub(Path file, IOException e) {
+        debug("write.skip file={} reason=io-error detail={}", fileName(file), e.toString());
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: Failed to remove the generated block from " + file + " - " + e.getMessage()
+                + "; the next build retries it.");
+        if (writeCache != null) {
+            writeCache.recordFailure(file);
+        }
+    }
+
+    /**
      * Takes the VibeTags section out of one granular rule file, deleting the file when nothing
      * of its own is left.
      *
@@ -1102,7 +1119,12 @@ public final class GuardrailFileWriter {
                 } else {
                     // Atomic, like every other write: an in-place write interrupted halfway left
                     // the developer's remaining text truncated (#875).
-                    writeContentWithBackup(p, content + "\n");
+                    try {
+                        writeContentWithBackup(p, content + "\n");
+                    } catch (IOException e) {
+                        recordFailedScrub(p, e);
+                        return false;
+                    }
                     if (writeCache != null) writeCache.invalidate(p);
                 }
                 return true;

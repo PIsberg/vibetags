@@ -124,6 +124,14 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **A rule file whose generated block could not be removed is retried by the next build.** When the
+  orphan sweep takes a guardrail out of a granular rule file that also holds the developer's own
+  text, it rewrites the file instead of deleting it. A failed rewrite (a file an editor holds open
+  on Windows, a read-only directory) was swallowed, and the cache entry still vouched for the file,
+  so every later unchanged build short-circuited and the removed guardrail stayed in the file. The
+  failure is now a warning, and the entry is marked failed so the next build retries, as a failed
+  delete already was (#867). `aRuleFileThatCouldNotBeRewritten_isScrubbedByTheNextBuild` failed
+  before the change.
 - **`vibetags doctor` no longer says the annotations "will not compile" when they arrive through
   the processor.** The processor's pom declares `vibetags-annotations` as a compile dependency, so a
   build with `vibetags-processor` as a Maven `<dependency>` (scope `provided` or `compile`) or a
