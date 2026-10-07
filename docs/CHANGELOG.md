@@ -124,6 +124,14 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **The orphan sweep looks past a UTF-8 byte order mark, as the writer already did.** An editor that
+  saves UTF-8 with a BOM puts U+FEFF in front of the file. In a rule file with no front matter it
+  kept the first-line start marker from owning its line, so the sweep took the file for not ours and
+  a removed guardrail stayed in it; in one with front matter the block went, but the header left
+  behind no longer opened the file, so a rule file holding nothing but its globs was kept. The BOM
+  is set aside while the file is judged and written back with what remains.
+  `deletesFile_whenAByteOrderMarkPrecedesTheMarkers` and
+  `aRuleFileSavedWithAByteOrderMark_isStillSweptWhenItsAnnotationGoes` failed before the change.
 - **A hand-written `.pr_agent.toml` or `.codex/config.toml` is no longer overwritten.** TOML has
   nowhere for a marker line, so VibeTags writes both files whole, and it replaced whatever was there:
   a team's PR-Agent settings the first time `.pr_agent.toml` counted as an opt-in, and a project's

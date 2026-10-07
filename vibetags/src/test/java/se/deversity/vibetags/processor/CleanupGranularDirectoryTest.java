@@ -38,6 +38,35 @@ class CleanupGranularDirectoryTest {
         assertFalse(Files.exists(orphan), "Boilerplate-only file must be deleted");
     }
 
+    /**
+     * A byte order mark in front of a first-line start marker kept the marker from owning its line,
+     * so the file read as not ours and the orphaned guardrail stayed in it.
+     */
+    @Test
+    void deletesFile_whenAByteOrderMarkPrecedesTheMarkers(@TempDir Path dir) throws IOException {
+        Path orphan = dir.resolve("com-example-Foo.md");
+        Files.writeString(orphan,
+            "﻿<!-- VIBETAGS-START -->\n# Rules for Foo\n- locked\n<!-- VIBETAGS-END -->\n",
+            StandardCharsets.UTF_8);
+
+        assertEquals(java.util.List.of("com-example-Foo"),
+            newFileWriter().cleanupGranularDirectory(dir, ".md", Set.of()));
+        assertFalse(Files.exists(orphan), "a byte order mark is encoding, not content");
+    }
+
+    @Test
+    void keepsTheByteOrderMark_whenHumanContentRemains(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("com-example-Foo.md");
+        Files.writeString(file,
+            "﻿My note.\n\n<!-- VIBETAGS-START -->\nold rule\n<!-- VIBETAGS-END -->\n",
+            StandardCharsets.UTF_8);
+
+        newFileWriter().cleanupGranularDirectory(dir, ".md", Set.of());
+
+        assertEquals("﻿My note.\n", Files.readString(file, StandardCharsets.UTF_8),
+            "the block goes and the file keeps the encoding it was saved in");
+    }
+
     @Test
     void deletesFile_whenOnlyVibeTagsHashMarkers(@TempDir Path dir) throws IOException {
         Path orphan = dir.resolve("com-example-Bar.md");

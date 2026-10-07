@@ -426,6 +426,28 @@ class GuardrailLifecycleEndToEndTest {
         assertTrue(after.contains(note), "and the developer's text must survive the retry:\n" + after);
     }
 
+    /**
+     * An editor that saves UTF-8 with a byte order mark puts U+FEFF in front of the file. The writer
+     * already looks past it when it updates a block; the sweep did not, so once the block was gone
+     * the generated front matter no longer opened the file, the remainder did not read as
+     * boilerplate, and a rule file holding nothing but its globs stayed behind for good.
+     */
+    @Test
+    void aRuleFileSavedWithAByteOrderMark_isStillSweptWhenItsAnnotationGoes(@TempDir Path dir) throws Exception {
+        Files.createDirectories(dir.resolve(".claude/rules"));
+        Files.createFile(dir.resolve("CLAUDE.md"));
+        compileContexts(dir, true);
+        Path beta = dir.resolve(".claude/rules/com-example-Beta.md");
+        Files.writeString(beta, "﻿" + Files.readString(beta, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+
+        compileContexts(dir, false);
+
+        assertFalse(Files.exists(beta),
+            "a rule file left with nothing of the developer's must be deleted, byte order mark or not:\n"
+                + (Files.exists(beta) ? Files.readString(beta, StandardCharsets.UTF_8) : ""));
+    }
+
     private static void compileContexts(Path dir, boolean betaAnnotated) throws IOException {
         ProcessorTestHarness h = new ProcessorTestHarness(dir, false);
         h.addSource("com.example.Alpha", "package com.example;\n"

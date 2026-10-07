@@ -1120,6 +1120,12 @@ public final class GuardrailFileWriter {
     private boolean scrubGranularFile(Path p) {
         try {
             String content = Files.readString(p, StandardCharsets.UTF_8);
+            // Encoding, not content, as in writeFileIfChanged. Left in, it kept a start marker on
+            // the first line from owning its line, so the block was not found, and it hid the
+            // generated front matter from frontMatterEnd once the block was gone, so a file holding
+            // only that header was kept. Written back when the file is.
+            String bom = content.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
+            content = content.substring(bom.length());
             boolean updated = false;
 
             int mdStart = indexOfBlockStart(content, MARKER_START_MD);
@@ -1168,7 +1174,7 @@ public final class GuardrailFileWriter {
                     // Atomic, like every other write: an in-place write interrupted halfway left
                     // the developer's remaining text truncated (#875).
                     try {
-                        writeContentWithBackup(p, content + "\n");
+                        writeContentWithBackup(p, bom + content + "\n");
                     } catch (IOException e) {
                         recordFailedScrub(p, e);
                         return false;
