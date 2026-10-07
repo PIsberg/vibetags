@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -114,6 +115,26 @@ class TomlValueSpansTest {
         assertTrue(merged.startsWith("[pr_reviewer]\nextra_patterns = [\n  [\"a\", \"b\"],\n]\n"
             + "extra_instructions = \"\"\"\nMine.\n\n" + span(BODY) + "\n\"\"\"\n"), merged);
         assertEquals(2, occurrences(merged, "extra_instructions"), "one key per table:\n" + merged);
+    }
+
+    /**
+     * {@code ["pr_reviewer"]} is the table {@code [pr_reviewer]}, and {@code 'extra_instructions'}
+     * the key {@code extra_instructions}: TOML lets any name be quoted. Neither was recognised, so
+     * the table or the key was added a second time and the document no longer parsed.
+     */
+    @Test
+    void aQuotedTableOrKeyNameIsTheSameName() {
+        String quotedTable = TomlValueSpans.merge("[\"pr_reviewer\"]\nnum_code_suggestions = 3\n", BODY).document();
+        assertNotNull(quotedTable);
+        assertTrue(quotedTable.startsWith("[\"pr_reviewer\"]\nextra_instructions = \"\"\"\n" + span(BODY)), quotedTable);
+        assertFalse(quotedTable.contains("\n[pr_reviewer]"), "the table is not added twice:\n" + quotedTable);
+
+        String quotedKey = TomlValueSpans.merge(
+            "[pr_reviewer]\n'extra_instructions' = \"\"\"\nMine.\n\"\"\"\n", BODY).document();
+        assertNotNull(quotedKey);
+        assertTrue(quotedKey.startsWith("[pr_reviewer]\n'extra_instructions' = \"\"\"\nMine.\n\n" + span(BODY)),
+            quotedKey);
+        assertEquals(2, occurrences(quotedKey, "extra_instructions"), "one key per table:\n" + quotedKey);
     }
 
     private static int occurrences(String text, String of) {

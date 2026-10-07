@@ -41,7 +41,8 @@ public final class TomlValueSpans {
     /** The two tables PR-Agent reads {@code extra_instructions} from, in the order the renderer writes them. */
     private static final String[] TABLES = {"pr_reviewer", "pr_code_suggestions"};
 
-    private static final Pattern KEY_LINE = Pattern.compile("^\\s*extra_instructions\\s*=");
+    /** The key, bare or quoted: {@code "extra_instructions"} and {@code 'extra_instructions'} are the same key. */
+    private static final Pattern KEY_LINE = Pattern.compile("^\\s*([\"']?)extra_instructions\\1\\s*=");
 
     private static final String OPEN = "extra_instructions = \"\"\"";
 
@@ -107,7 +108,8 @@ public final class TomlValueSpans {
                 continue;
             }
             String text = doc.substring(line.start, line.end).strip();
-            String compact = text.replaceAll("\\s", "");
+            // A quoted name is the same name, ["pr_reviewer"] the table [pr_reviewer] (TOML 1.0, Keys).
+            String compact = text.replaceAll("[\\s\"']", "");
             if (compact.startsWith("[[") && compact.startsWith("[[" + table + "]]")) {
                 return Outcome.refused("array-of-tables", "[[" + table + "]] is an array of tables");
             }
