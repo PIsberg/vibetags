@@ -124,6 +124,16 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **`vibetags doctor` no longer says the annotations "will not compile" when they arrive through
+  the processor.** The processor's pom declares `vibetags-annotations` as a compile dependency, so a
+  build with `vibetags-processor` as a Maven `<dependency>` (scope `provided` or `compile`) or a
+  Gradle `compileOnly`/`implementation`/`api` dependency compiles the `@AI*` annotations without
+  naming them. Doctor only looked for the string `vibetags-annotations` in the build file, so it
+  reported a finding and exited 1 for four of the five consumer repositories in the regression
+  sweep, all of which compile. It now prints `annotations dep: yes (through the vibetags-processor
+  dependency)`. A processor reached only through `annotationProcessorPaths` or Gradle's
+  `annotationProcessor`, or with a `test` or `runtime` scope, is still a finding. Four
+  `DoctorCommandTest` cases; the two healthy ones failed before the change.
 - **A field or method annotated `@AIIgnore` no longer becomes a file glob (#926).** Every
   exclusion file (`.cursorignore`, `.aiexclude`, Greptile's `ignorePatterns` and the rest) wrote
   it as `**/<memberName>.java`: a glob for a file that does not exist, or for an unrelated file

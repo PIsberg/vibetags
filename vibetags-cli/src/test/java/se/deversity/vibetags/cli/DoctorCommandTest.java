@@ -180,6 +180,86 @@ class DoctorCommandTest {
         assertTrue(out().contains("vibetags-processor"), out());
     }
 
+    /**
+     * The processor's pom declares vibetags-annotations as a compile dependency, so a build that puts
+     * the processor on the compile classpath compiles the {@code @AI*} annotations without naming
+     * them. Four of the five consumer repositories are wired this way and doctor told every one of
+     * them the annotations "will not compile".
+     */
+    @Test
+    void processorAsProvidedMavenDependency_bringsTheAnnotationsTransitively() throws Exception {
+        Files.writeString(dir.resolve("pom.xml"), """
+            <project>
+              <dependencies>
+                <dependency>
+                  <groupId>se.deversity.vibetags</groupId>
+                  <artifactId>vibetags-processor</artifactId>
+                  <scope>provided</scope>
+                </dependency>
+              </dependencies>
+            </project>
+            """);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("annotations dep: yes (through the vibetags-processor dependency)"), out());
+    }
+
+    @Test
+    void processorAsGradleCompileOnly_bringsTheAnnotationsTransitively() throws Exception {
+        Files.writeString(dir.resolve("build.gradle.kts"), """
+            dependencies {
+                "compileOnly"("se.deversity.vibetags:vibetags-processor:$v")
+                annotationProcessor("se.deversity.vibetags:vibetags-processor:$v")
+            }
+            """);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("annotations dep: yes (through the vibetags-processor dependency)"), out());
+    }
+
+    /** Only the processor path is wired: the annotations reach no compile classpath. */
+    @Test
+    void processorOnlyOnTheProcessorPath_stillMissesTheAnnotations() throws Exception {
+        Files.writeString(dir.resolve("pom.xml"), """
+            <project>
+              <!-- <dependency><artifactId>vibetags-processor</artifactId></dependency> -->
+              <dependencyManagement><dependencies>
+                <dependency><artifactId>vibetags-processor</artifactId></dependency>
+              </dependencies></dependencyManagement>
+              <dependencies>
+                <dependency><artifactId>vibetags-processor</artifactId><scope>test</scope></dependency>
+              </dependencies>
+              <build><plugins><plugin>
+                <dependencies><dependency><artifactId>vibetags-processor</artifactId></dependency></dependencies>
+                <configuration><annotationProcessorPaths>
+                  <path><artifactId>vibetags-processor</artifactId></path>
+                </annotationProcessorPaths></configuration>
+              </plugin></plugins></build>
+            </project>
+            """);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("vibetags-annotations is not in pom.xml"), out());
+    }
+
+    @Test
+    void processorOnlyOnGradleAnnotationProcessor_stillMissesTheAnnotations() throws Exception {
+        Files.writeString(dir.resolve("build.gradle"), """
+            dependencies {
+                // compileOnly "se.deversity.vibetags:vibetags-processor:1"
+                annotationProcessor "se.deversity.vibetags:vibetags-processor:1"
+                testCompileOnly "se.deversity.vibetags:vibetags-processor:1"
+            }
+            """);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("vibetags-annotations is not in build.gradle"), out());
+    }
+
     @Test
     void noOptInFiles_needsAction() throws Exception {
         mavenProjectWiredForVibeTags();

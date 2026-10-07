@@ -17,6 +17,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * {@code vibetags doctor} — reports the project's VibeTags health without compiling anything.
@@ -41,6 +43,19 @@ final class DoctorCommand {
     private List<Path> projectFiles = List.of();
 
     private boolean projectWalked;
+
+    private static final Pattern XML_COMMENT = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
+
+    /** Sections whose {@code <dependency>} entries never reach the compile classpath. */
+    private static final Pattern NOT_ON_CLASSPATH = Pattern.compile(
+        "<(build|dependencyManagement)>.*?</\\1>", Pattern.DOTALL);
+
+    private static final Pattern MAVEN_DEPENDENCY = Pattern.compile(
+        "<dependency>(.*?)</dependency>", Pattern.DOTALL);
+
+    private static final Pattern GRADLE_COMPILE_PROCESSOR = Pattern.compile(
+        "^\\s*\"?(compileOnly|compileOnlyApi|implementation|api)\"?[\\s(].*vibetags-processor",
+        Pattern.MULTILINE);
 
     /**
      * @param classpath jars and class directories to read Kotlin value classes from, for value
@@ -102,10 +117,14 @@ final class DoctorCommand {
         // behind a KSP front end, since KSP cannot load a JSR 269 processor (#496).
         boolean ksp = text.contains("vibetags-ksp");
         boolean processor = ksp || text.contains("vibetags-processor");
-        boolean annotations = text.contains("vibetags-annotations");
+        boolean declared = text.contains("vibetags-annotations");
+        boolean transitive = !declared && processorOnCompileClasspath(buildFile, text);
+        boolean annotations = declared || transitive;
         out.println("processor wired: " + (processor ? (ksp ? "yes (vibetags-ksp)" : "yes")
             : "NO — not found in " + buildFile));
-        out.println("annotations dep: " + (annotations ? "yes" : "NO — not found in " + buildFile));
+        out.println("annotations dep: " + (declared ? "yes"
+            : transitive ? "yes (through the vibetags-processor dependency)"
+            : "NO — not found in " + buildFile));
         if (!processor) {
             problems.add("neither vibetags-processor nor vibetags-ksp is in " + buildFile
                 + " — nothing regenerates the guardrail files (see the README install snippet)");
@@ -114,6 +133,30 @@ final class DoctorCommand {
             problems.add("vibetags-annotations is not in " + buildFile
                 + " — the @AI* annotations will not compile");
         }
+    }
+
+    /**
+     * Whether the build puts vibetags-processor on the main compile classpath, which brings
+     * vibetags-annotations along: the processor's pom declares it as a compile dependency, kept for
+     * builds wired before the two were split. A processor reached only through
+     * {@code annotationProcessorPaths} or Gradle's {@code annotationProcessor} brings nothing to
+     * compile against, nor does a {@code test} or {@code runtime} scope.
+     */
+    private static boolean processorOnCompileClasspath(String buildFile, String text) {
+        if (!buildFile.equals("pom.xml")) {
+            return GRADLE_COMPILE_PROCESSOR.matcher(text).find();
+        }
+        String scanned = NOT_ON_CLASSPATH.matcher(XML_COMMENT.matcher(text).replaceAll("")).replaceAll("");
+        Matcher dependency = MAVEN_DEPENDENCY.matcher(scanned);
+        while (dependency.find()) {
+            String body = dependency.group(1);
+            if (body.contains("<artifactId>vibetags-processor</artifactId>")
+                    && !body.contains("<scope>test</scope>")
+                    && !body.contains("<scope>runtime</scope>")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Set<String> checkActivePlatforms() {
@@ -356,7 +399,7 @@ final class DoctorCommand {
 
     private void scanGroovySource(Path file, String text, List<String> dropped) {
         List<String> lines = text.lines().toList();
-        java.util.regex.Pattern annotation = java.util.regex.Pattern.compile(
+        Pattern annotation = Pattern.compile(
             "@(?:se\\.deversity\\.vibetags\\.annotations\\.)?(" +
                 String.join("|", guardrailsTargeting(java.lang.annotation.ElementType.FIELD)) + ")\\b");
         for (int i = 0; i < lines.size(); i++) {
@@ -364,7 +407,7 @@ final class DoctorCommand {
             if (stripped.startsWith("//") || stripped.startsWith("*") || stripped.startsWith("/*")) {
                 continue;   // an annotation in a comment binds nothing
             }
-            java.util.regex.Matcher m = annotation.matcher(lines.get(i));
+            Matcher m = annotation.matcher(lines.get(i));
             while (m.find()) {
                 String name = m.group(1);
                 Optional<String> declaration = declarationAfter(lines, i, m.end());
