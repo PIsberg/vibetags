@@ -98,6 +98,29 @@ class TomlValueSpansTest {
     }
 
     /**
+     * A line of a multi-line array that opens a nested array starts with {@code [} too, but it is a
+     * value, not a table header. Taken for a header, it ended {@code [pr_reviewer]} before the key
+     * below it, so a second {@code extra_instructions} was added and PR-Agent's TOML parser rejected
+     * the whole file for the duplicate key.
+     */
+    @Test
+    void aNestedArrayLineIsNotATable() {
+        String existing = "[pr_reviewer]\nextra_patterns = [\n  [\"a\", \"b\"],\n]\n"
+            + "extra_instructions = \"\"\"\nMine.\n\"\"\"\n";
+
+        String merged = TomlValueSpans.merge(existing, BODY).document();
+
+        assertNotNull(merged);
+        assertTrue(merged.startsWith("[pr_reviewer]\nextra_patterns = [\n  [\"a\", \"b\"],\n]\n"
+            + "extra_instructions = \"\"\"\nMine.\n\n" + span(BODY) + "\n\"\"\"\n"), merged);
+        assertEquals(2, occurrences(merged, "extra_instructions"), "one key per table:\n" + merged);
+    }
+
+    private static int occurrences(String text, String of) {
+        return text.split(java.util.regex.Pattern.quote(of), -1).length - 1;
+    }
+
+    /**
      * Annotation text, a dependency's included, can carry a marker line. Defused, it cannot end the
      * span early, so a second merge replaces the span instead of keeping the tail and growing it.
      */

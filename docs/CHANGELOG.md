@@ -75,7 +75,9 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   the file lacks, and keeps every other byte. A document it cannot merge without guessing is left
   alone with a warning naming why; the log records `write.skip reason=` with the merge's reason
   (`duplicate-table`, `not-multiline-string`, `unclosed-span` and the rest). Until now such a file
-  was skipped outright, and before that overwritten. `TomlValueSpansTest` (8 cases) and
+  was skipped outright, and before that overwritten. A `[` line inside a multi-line string or a
+  multi-line array is a value, not a table, so it neither ends a table early nor gets the key added
+  a second time. `TomlValueSpansTest` (9 cases) and
   `aHandWrittenPrAgentConfig_keepsItsSettingsAndGainsTheGuardrails` cover it; the latter failed before
   the change.
 - **`vibetags-cli/README.md`.** The CLI's flags, exit codes and limits were spread over a USAGE.md

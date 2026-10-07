@@ -207,7 +207,7 @@ public final class TomlValueSpans {
         return -1;
     }
 
-    /** One line of the document, and whether it starts outside any string or comment. */
+    /** One line of the document, and whether it starts outside any string, comment or array value. */
     private record Line(int start, int end, int next, boolean normal) {
     }
 
@@ -215,11 +215,13 @@ public final class TomlValueSpans {
 
     /**
      * The document's lines, each marked by whether it starts in plain TOML. A {@code [} line inside a
-     * multi-line string is text, not a table, and this is what tells the two apart.
+     * multi-line string is text, not a table, and one inside a multi-line array opens a nested array;
+     * this is what tells both from a table.
      */
     private static List<Line> scan(String doc) {
         List<Line> lines = new ArrayList<>();
         State state = State.NORMAL;
+        int arrayDepth = 0;
         int lineStart = 0;
         boolean lineNormal = true;
         int i = 0;
@@ -233,7 +235,7 @@ public final class TomlValueSpans {
                     state = State.NORMAL;
                 }
                 lineStart = i + 1;
-                lineNormal = state == State.NORMAL;
+                lineNormal = state == State.NORMAL && arrayDepth == 0;
                 i++;
                 continue;
             }
@@ -252,6 +254,10 @@ public final class TomlValueSpans {
                         state = State.BASIC;
                     } else if (c == '\'') {
                         state = State.LITERAL;
+                    } else if (c == '[') {
+                        arrayDepth++;
+                    } else if (c == ']' && arrayDepth > 0) {
+                        arrayDepth--;
                     }
                 }
                 case BASIC -> {
