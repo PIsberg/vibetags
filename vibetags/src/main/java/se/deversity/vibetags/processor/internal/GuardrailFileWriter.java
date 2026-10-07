@@ -74,6 +74,13 @@ public final class GuardrailFileWriter {
     /** The header in its HTML-commented legacy form; matched only where it owns its line. */
     private final String commentedHeaderTrim;
 
+    /**
+     * The header's text without its comment prefix, which is how a whole-file output is recognised
+     * as one VibeTags wrote: {@code .pr_agent.toml} carries the header as its own comment line,
+     * {@code .codex/config.toml} behind a second {@code #}.
+     */
+    private final String generatedMark;
+
     private final Messager messager;
     private final @Nullable Logger log;
     private final @Nullable WriteCache writeCache;
@@ -107,6 +114,7 @@ public final class GuardrailFileWriter {
                                @Nullable WriteCache writeCache, boolean dryRun) {
         this.generatedHeaderTrim = generatedHeader.trim();
         this.commentedHeaderTrim = "<!-- " + this.generatedHeaderTrim + " -->";
+        this.generatedMark = this.generatedHeaderTrim.replaceFirst("^#+\\s*", "");
         this.messager = messager != null ? messager : noopMessager();
         this.log = log;
         this.writeCache = writeCache;
@@ -187,6 +195,9 @@ public final class GuardrailFileWriter {
                     debug("write.skip file={} reason=no-new-rules existingBytes={}", fileName, existingSize);
                     skipUpdateMsg(fileName);
                     return false;
+                }
+                if (!replaceableWholeFile(Files.readString(filePath, StandardCharsets.UTF_8))) {
+                    return refuseHandWrittenWholeFile(fileName);
                 }
                 debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
                     fileName, existingSize, contentByteLen);
@@ -579,9 +590,36 @@ public final class GuardrailFileWriter {
             return false;
         }
 
+        if (!replaceableWholeFile(existing)) {
+            return refuseHandWrittenWholeFile(fileName);
+        }
+
         writeAndCache(filePath, content, content);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
         return true;
+    }
+
+    /**
+     * Whether a file this writer replaces whole (a TOML output, which has nowhere for a marker line)
+     * may be replaced: it is empty, which is how a platform is opted in, or it carries the generated
+     * header, so VibeTags wrote it. Anything else is somebody's configuration. {@code .codex/config.toml}
+     * is written whenever {@code AGENTS.md} is managed, and {@code .pr_agent.toml} is opted into by a
+     * file a team may have configured long before, so each replaced a hand-written configuration on
+     * the first compile, the loss invariant 2 exists to prevent and the reason {@code greptile.json}
+     * is merged rather than written (#639).
+     */
+    private boolean replaceableWholeFile(String existing) {
+        return existing.isBlank() || existing.contains(generatedMark);
+    }
+
+    /** Leaves a hand-written whole-file output alone and says so. Always {@code false}, "nothing written". */
+    private boolean refuseHandWrittenWholeFile(String fileName) {
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: left " + fileName + " untouched because it holds settings VibeTags did not write,"
+                + " and VibeTags writes this file whole. Its guardrails are not being written. To let"
+                + " VibeTags write it, move those settings elsewhere and leave the file empty.");
+        debug("write.skip file={} reason=hand-written-whole-file", fileName);
+        return false;
     }
 
     /**
@@ -1042,6 +1080,35 @@ public final class GuardrailFileWriter {
     }
 
     /**
+     * A rule file that keeps text of the developer's, whose generated block could not be taken out
+     * because writing the file back without it failed. Swallowed, the failure left the cache entry
+     * describing the file as the last write left it, so the next unchanged build short-circuited
+     * and the removed guardrail stayed in the file. Answered as {@link #recordFailedRemoval} is:
+     * said once, and the entry replaced so the next build retries.
+     */
+    private void recordFailedScrub(Path file, IOException e) {
+        debug("write.skip file={} reason=io-error detail={}", fileName(file), e.toString());
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: Failed to remove the generated block from " + file + " - " + e.getMessage()
+                + "; the next build retries it.");
+        if (writeCache != null) {
+            writeCache.recordFailure(file);
+        }
+    }
+
+    /**
+     * Takes the generated block out of one rule file named for removal, as the orphan sweep does for
+     * each file it finds: the file is deleted when nothing of the developer's is left in it, and
+     * rewritten without the block otherwise. A missing file, and a file with no marker pair (so not
+     * ours), are left alone.
+     *
+     * @return {@code true} when the block was removed (in dry-run: would have been)
+     */
+    public boolean removeGeneratedBlock(Path file) {
+        return scrubGranularFile(file);
+    }
+
+    /**
      * Takes the VibeTags section out of one granular rule file, deleting the file when nothing
      * of its own is left.
      *
@@ -1053,6 +1120,12 @@ public final class GuardrailFileWriter {
     private boolean scrubGranularFile(Path p) {
         try {
             String content = Files.readString(p, StandardCharsets.UTF_8);
+            // Encoding, not content, as in writeFileIfChanged. Left in, it kept a start marker on
+            // the first line from owning its line, so the block was not found, and it hid the
+            // generated front matter from frontMatterEnd once the block was gone, so a file holding
+            // only that header was kept. Written back when the file is.
+            String bom = content.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
+            content = content.substring(bom.length());
             boolean updated = false;
 
             int mdStart = indexOfBlockStart(content, MARKER_START_MD);
@@ -1092,17 +1165,20 @@ public final class GuardrailFileWriter {
                 }
 
                 if (isEmptyOrBoilerplate) {
-                    try {
-                        Files.delete(p);
-                    } catch (IOException e) {
-                        recordFailedRemoval(p, e);
+                    // Through deleteIfExists, which logs the removal, drops the cache entry, and
+                    // records a failed delete for the next build to retry.
+                    if (!deleteIfExists(p)) {
                         return false;
                     }
-                    if (writeCache != null) writeCache.invalidate(p);
                 } else {
                     // Atomic, like every other write: an in-place write interrupted halfway left
                     // the developer's remaining text truncated (#875).
-                    writeContentWithBackup(p, content + "\n");
+                    try {
+                        writeContentWithBackup(p, bom + content + "\n");
+                    } catch (IOException e) {
+                        recordFailedScrub(p, e);
+                        return false;
+                    }
                     if (writeCache != null) writeCache.invalidate(p);
                 }
                 return true;

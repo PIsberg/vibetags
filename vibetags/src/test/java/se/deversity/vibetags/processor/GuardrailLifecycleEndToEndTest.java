@@ -287,6 +287,56 @@ class GuardrailLifecycleEndToEndTest {
         }
     }
 
+    /**
+     * A reactor module with no annotation of its own has nothing to say about the shared ignore file.
+     * Its round has no sidecar of its own to merge with the annotated module's, so it renders an
+     * empty exclusion list, and ignore files were rewritten from any round: compiling the
+     * unannotated module after the annotated one emptied the file.
+     */
+    @Test
+    void anUnannotatedReactorModule_leavesTheSharedIgnoreFileAlone(@TempDir Path root) throws Exception {
+        setUpReactor(root);
+        Files.createFile(root.resolve(".cursorignore"));
+        compileModule(root, "module-core", "com.example.core.Tables", ignored("com.example.core", "Tables"));
+        assertTrue(Files.readString(root.resolve(".cursorignore")).contains("**/Tables.java"),
+            "precondition: the annotated module writes its exclusion");
+
+        compileModule(root, "module-cli", "com.example.cli.Cli", "package com.example.cli;\npublic class Cli {}\n");
+
+        String ignore = Files.readString(root.resolve(".cursorignore"));
+        assertTrue(ignore.contains("**/Tables.java"),
+            "a module with no annotations must not empty another module's exclusions:\n" + ignore);
+    }
+
+    /**
+     * The other half: in a reactor, where the write is the merge of every module's sidecar, the last
+     * {@code @AIIgnore} leaving must still take its glob out of the shared file, although no module
+     * contributes an exclusion any more.
+     */
+    @Test
+    void removingTheLastIgnoreInAReactor_clearsItFromTheSharedIgnoreFile(@TempDir Path root) throws Exception {
+        setUpReactor(root);
+        Files.createFile(root.resolve(".cursorignore"));
+        compileModule(root, "module-core", "com.example.core.Tables",
+            ignored("com.example.core", "Tables") + "@AILocked(reason = \"Still annotated\")\nclass Keeper {}\n");
+        compileModule(root, "module-cli", "com.example.cli.Cli", locked("com.example.cli", "Cli", "CLI entry point"));
+        assertTrue(Files.readString(root.resolve(".cursorignore")).contains("**/Tables.java"),
+            "precondition: the exclusion is written");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        compileModule(root, "module-core", "com.example.core.Tables",
+            "package com.example.core;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "public class Tables {}\n"
+                + "@AILocked(reason = \"Still annotated\")\n"
+                + "class Keeper {}\n");
+
+        String ignore = Files.readString(root.resolve(".cursorignore"));
+        assertFalse(ignore.contains("**/Tables.java"),
+            "the removed exclusion must leave the shared ignore file:\n" + ignore);
+    }
+
     /** Opting out in a reactor: the merged file stays gone even as other modules keep compiling. */
     @Test
     void optingOutInAReactor_survivesEveryOtherModulesCompile(@TempDir Path root) throws Exception {
@@ -342,6 +392,60 @@ class GuardrailLifecycleEndToEndTest {
 
         assertFalse(Files.exists(beta),
             "the removal failed once; the next build must retry it rather than trust the file");
+    }
+
+    /**
+     * The same failure on the other branch of the sweep: a rule file that also holds the
+     * developer's own text is rewritten without its generated block rather than deleted. When that
+     * rewrite failed the exception was swallowed and the cache entry kept vouching for the file, so
+     * the next unchanged build short-circuited and the removed guardrail stayed in the file for good.
+     */
+    @Test
+    void aRuleFileThatCouldNotBeRewritten_isScrubbedByTheNextBuild(@TempDir Path dir) throws Exception {
+        Files.createDirectories(dir.resolve(".claude/rules"));
+        Files.createFile(dir.resolve("CLAUDE.md"));
+        compileContexts(dir, true);
+        Path beta = dir.resolve(".claude/rules/com-example-Beta.md");
+        String note = "Beta is owned by the platform team.";
+        Files.writeString(beta, Files.readString(beta) + "\n" + note + "\n", StandardCharsets.UTF_8);
+        // A build that sees the note and records the file as it now is, as any later build would.
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        compileContexts(dir, true);
+
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+        try (AutoCloseable held = blockDeletion(beta)) {
+            compileContexts(dir, false);
+        }
+        assertTrue(Files.readString(beta).contains("beta-focus"), "precondition: the blocked rewrite failed");
+
+        compileContexts(dir, false);
+
+        String after = Files.readString(beta);
+        assertFalse(after.contains("beta-focus"),
+            "the rewrite failed once; the next build must retry it rather than trust the file:\n" + after);
+        assertTrue(after.contains(note), "and the developer's text must survive the retry:\n" + after);
+    }
+
+    /**
+     * An editor that saves UTF-8 with a byte order mark puts U+FEFF in front of the file. The writer
+     * already looks past it when it updates a block; the sweep did not, so once the block was gone
+     * the generated front matter no longer opened the file, the remainder did not read as
+     * boilerplate, and a rule file holding nothing but its globs stayed behind for good.
+     */
+    @Test
+    void aRuleFileSavedWithAByteOrderMark_isStillSweptWhenItsAnnotationGoes(@TempDir Path dir) throws Exception {
+        Files.createDirectories(dir.resolve(".claude/rules"));
+        Files.createFile(dir.resolve("CLAUDE.md"));
+        compileContexts(dir, true);
+        Path beta = dir.resolve(".claude/rules/com-example-Beta.md");
+        Files.writeString(beta, "﻿" + Files.readString(beta, StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+        ProcessorTestHarness.awaitFilesystemTick(dir);
+
+        compileContexts(dir, false);
+
+        assertFalse(Files.exists(beta),
+            "a rule file left with nothing of the developer's must be deleted, byte order mark or not:\n"
+                + (Files.exists(beta) ? Files.readString(beta, StandardCharsets.UTF_8) : ""));
     }
 
     private static void compileContexts(Path dir, boolean betaAnnotated) throws IOException {
@@ -407,6 +511,15 @@ class GuardrailLifecycleEndToEndTest {
         return locked(pkg, type, reason)
             + "@AILocked(reason = \"" + siblingReason + "\")\n"
             + "class " + sibling + " {}\n";
+    }
+
+    /** An {@code @AIIgnore} type, with the {@code AILocked} import a caller may append a sibling for. */
+    private static String ignored(String pkg, String type) {
+        return "package " + pkg + ";\n"
+            + "import se.deversity.vibetags.annotations.AIIgnore;\n"
+            + "import se.deversity.vibetags.annotations.AILocked;\n"
+            + "@AIIgnore(reason = \"generated\")\n"
+            + "public class " + type + " {}\n";
     }
 
     private static String locked(String pkg, String type, String reason) {

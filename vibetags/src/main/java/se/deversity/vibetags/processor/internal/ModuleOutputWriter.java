@@ -135,8 +135,11 @@ public final class ModuleOutputWriter {
                     content = merged;
                 }
             }
-            // Ignore-files always overwrite; other files only carry the "hasNewRules" flag when this
-            // module actually had annotations, or has just lost its last ones (mirrors WritePlan).
+            // Other files only carry the "hasNewRules" flag when this module actually had annotations,
+            // or has just lost its last ones (as in WritePlan). Ignore files are rewritten from any
+            // round, which WritePlan allows only for merged content, for the same reason: the content
+            // here was merged across this module's source sets just above, so an unannotated test
+            // round writes the main round's exclusions back rather than an empty block.
             boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
             writer.writeFileIfChanged(filePath.toString(), content, hasAnnotations || isIgnoreFile);
             written++;

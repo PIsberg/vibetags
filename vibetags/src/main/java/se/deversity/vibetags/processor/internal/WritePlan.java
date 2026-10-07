@@ -17,10 +17,12 @@ import java.util.Set;
  * now has one home. {@code WritePlanSharingTest} fails if either method goes back to deciding for
  * itself.
  *
- * <p>{@code hasNewRules} is an OR, and the order of the terms matters less than that: an ignore file
- * is always rewritten, a file some module contributed to is rewritten, and so is one this source set
- * has just withdrawn from (#781). A first attempt at sharing this predicate wrote an AND with the
- * ignore test negated, and exclusion lists stopped being rewritten.
+ * <p>{@code hasNewRules} is an OR, and the order of the terms matters less than that: a file some
+ * module contributed to is rewritten, so is one this source set has just withdrawn from (#781), and
+ * so is an ignore file when the content is the multi-module merge. A first attempt at sharing this
+ * predicate wrote an AND with the ignore test negated, and exclusion lists stopped being rewritten.
+ * The ignore term used to hold without the merge too, and then an unannotated test-compile of a
+ * single-module project, which never sees the main sources, emptied the main round's exclusions.
  */
 public final class WritePlan {
 
@@ -71,8 +73,13 @@ public final class WritePlan {
             boolean contributed = multiModule
                 ? allSidecars.stream().anyMatch(s -> s.getBodies().containsKey(service))
                 : anyAnnotationsFound;
+            // An ignore file is rewritten from any round only when what is written is the merge of
+            // every module's sidecar: then a round that found nothing still writes the reactor's
+            // view, which is what retires the last exclusion once no module contributes one. Without
+            // the merge the content is this round's own rendering, and an empty round (a test-compile,
+            // a module with no annotations) wrote it over everybody's exclusions.
             boolean hasNewRules = contributed || retiredServices.contains(service)
-                || ServiceRegistry.isIgnoreService(service);
+                || (multiModule && ServiceRegistry.isIgnoreService(service));
             writes.add(new Write(service, path, entry.getValue(), hasNewRules));
         }
         return new WritePlan(writes, unmapped);

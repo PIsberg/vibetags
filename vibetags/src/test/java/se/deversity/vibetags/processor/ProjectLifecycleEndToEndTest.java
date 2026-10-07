@@ -432,6 +432,39 @@ class ProjectLifecycleEndToEndTest {
     }
 
     /**
+     * The departure removes the module's generated block, not the file under it. A rule file the
+     * developer added notes to below the markers is theirs as much as ours, and the orphan sweep
+     * already keeps such text (invariant 2); the departed-module removal deleted the whole file by
+     * name, notes included.
+     */
+    @Test
+    void moduleRemovedFromTheReactor_keepsTheHandWrittenTextInItsRuleFile(@TempDir Path root)
+            throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node"));
+        compileModule(root, "module-cli", "com.example.cli.Cli",
+            locked("com.example.cli", "Cli", "CLI entry point"));
+
+        Path cliRule = root.resolve(".claude/rules/com-example-cli-Cli.md");
+        String note = "Run the CLI smoke test before touching argument parsing.";
+        Files.writeString(cliRule, Files.readString(cliRule) + "\n" + note + "\n", StandardCharsets.UTF_8);
+
+        deleteRecursively(root.resolve("module-cli"));
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        compileModule(root, "module-core", "com.example.core.IrNode",
+            locked("com.example.core", "IrNode", "Core IR node, revised"));
+
+        assertTrue(Files.exists(cliRule) && Files.readString(cliRule).contains(note),
+            "hand-written text outside the markers must survive the module's departure");
+        assertFalse(Files.readString(cliRule).contains("CLI entry point"),
+            "and the departed module's generated guardrail must still leave it:\n" + Files.readString(cliRule));
+    }
+
+    /**
      * And the removal must not cost the survivors their short-circuit. A departed module's rule
      * files are deleted by name, outside the marker-aware writer, and the write cache went on
      * tracking them: a cached entry whose file is missing reads as "an output still to be

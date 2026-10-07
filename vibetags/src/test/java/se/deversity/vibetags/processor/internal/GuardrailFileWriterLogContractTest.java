@@ -100,11 +100,66 @@ class GuardrailFileWriterLogContractTest {
     }
 
     @Test
+    @DisplayName("a rule file whose generated block could not be removed logs reason=io-error")
+    void failedScrubLogsIoError(@TempDir Path dir) throws Exception {
+        Path rule = dir.resolve("com-example-Gone.md");
+        Files.writeString(rule, GuardrailFileWriter.MARKER_START_MD + "\n" + HEADER + "rule\n"
+            + GuardrailFileWriter.MARKER_END_MD + "\n\nThe developer's note.\n");
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        try (AutoCloseable held = blockRewrite(rule)) {
+            assertEquals(List.of(), writer.cleanupGranularDirectory(dir, ".md", java.util.Set.of()),
+                "a removal that failed is not reported as one");
+        }
+        assertTrue(logged("write.skip file=com-example-Gone.md reason=io-error"),
+            "the failed rewrite names its reason: " + events());
+    }
+
+    /**
+     * Makes replacing {@code file} fail until closed: an open handle on Windows, which does not
+     * share delete access with a rename over the file, and a read-only directory elsewhere.
+     */
+    private static AutoCloseable blockRewrite(Path file) throws IOException {
+        if (System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win")) {
+            return new java.io.FileInputStream(file.toFile());
+        }
+        Path parent = file.getParent();
+        java.util.Set<java.nio.file.attribute.PosixFilePermission> before = Files.getPosixFilePermissions(parent);
+        Files.setPosixFilePermissions(parent, java.nio.file.attribute.PosixFilePermissions.fromString("r-xr-xr-x"));
+        AutoCloseable restore = () -> Files.setPosixFilePermissions(parent, before);
+        if (Files.isWritable(parent)) {
+            try {
+                restore.close();
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+            org.junit.jupiter.api.Assumptions.abort("a read-only directory does not block a rewrite here");
+        }
+        return restore;
+    }
+
+    @Test
+    @DisplayName("a hand-written whole-file output is skipped with reason=hand-written-whole-file")
+    void handWrittenWholeFileSkipsWithItsReason(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve(".pr_agent.toml");
+        String handWritten = "[pr_reviewer]\nnum_code_suggestions = 3\n";
+        Files.writeString(file, handWritten);
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        assertFalse(writer.writeFileIfChanged(file.toString(), HEADER + "[pr_reviewer]\n", true),
+            "a configuration VibeTags did not write is not replaced");
+        assertEquals(handWritten, Files.readString(file));
+        assertTrue(logged("write.skip file=.pr_agent.toml reason=hand-written-whole-file"),
+            "the skip names its own reason: " + events());
+    }
+
+    @Test
     @DisplayName("a non-marker file with matching size but differing bytes logs reason=bytes-differ")
     void exactSizeMismatchLogsBytesDiffer(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("settings.toml");
-        String initial = "key = \"value1\"\n";
-        String updated = "key = \"value2\"\n";
+        // Behind the writer's header: a whole-file output without it is hand-written and left alone.
+        String initial = HEADER + "key = \"value1\"\n";
+        String updated = HEADER + "key = \"value2\"\n";
         Files.writeString(file, initial);
         GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
 

@@ -27,7 +27,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class GuardrailFileWriterEdgeCaseTest {
 
     /**
-     * The departed-module path removes rule files through {@code deleteIfExists}. A removal that
+     * Rule-file removals, the sweep's and the departed-module path's, delete through
+     * {@code deleteIfExists}. A removal that
      * fails has to leave the write cache unable to vouch for the file, or the next unchanged build
      * short-circuits and never retries it (#867).
      */
@@ -101,9 +102,10 @@ class GuardrailFileWriterEdgeCaseTest {
     void nonMarkerFile_sameSizeDiffBytes_hasNewRulesTrue_writes(@TempDir Path tmp) throws IOException {
         GuardrailFileWriter writer = new GuardrailFileWriter("# VibeTags\n", null, null, null);
         Path file = tmp.resolve("config.json");
-        // Both strings are 14 UTF-8 bytes — same size, different content.
-        String existing = "{\"v\": \"old\"}\n";
-        String newContent = "{\"v\": \"new\"}\n";
+        // Same size, different content; both behind the writer's header, which is what marks a
+        // whole-file output as one it may replace.
+        String existing = "# VibeTags\n{\"v\": \"old\"}\n";
+        String newContent = "# VibeTags\n{\"v\": \"new\"}\n";
         Files.writeString(file, existing);
         assertTrue(writer.writeFileIfChanged(file.toString(), newContent, true),
             "same-size different-bytes JSON file with hasNewRules=true must be written");

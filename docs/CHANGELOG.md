@@ -124,6 +124,50 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **The orphan sweep looks past a UTF-8 byte order mark, as the writer already did.** An editor that
+  saves UTF-8 with a BOM puts U+FEFF in front of the file. In a rule file with no front matter it
+  kept the first-line start marker from owning its line, so the sweep took the file for not ours and
+  a removed guardrail stayed in it; in one with front matter the block went, but the header left
+  behind no longer opened the file, so a rule file holding nothing but its globs was kept. The BOM
+  is set aside while the file is judged and written back with what remains.
+  `deletesFile_whenAByteOrderMarkPrecedesTheMarkers` and
+  `aRuleFileSavedWithAByteOrderMark_isStillSweptWhenItsAnnotationGoes` failed before the change.
+- **A hand-written `.pr_agent.toml` or `.codex/config.toml` is no longer overwritten.** TOML has
+  nowhere for a marker line, so VibeTags writes both files whole, and it replaced whatever was there:
+  a team's PR-Agent settings the first time `.pr_agent.toml` counted as an opt-in, and a project's
+  Codex configuration (model, MCP servers) the first time `AGENTS.md` was managed, which writes
+  `.codex/config.toml` implicitly. Each is now replaced only when it is empty or carries the
+  generated header; otherwise it is left exactly as it is, with a warning that says why it carries no
+  guardrails and how to hand it over. The log records `write.skip reason=hand-written-whole-file`.
+  `aHandWrittenCodexConfig_isNotOverwritten` and `aHandWrittenPrAgentConfig_isNotOverwritten`
+  failed before the change.
+- **A test-compile with no annotations no longer empties the ignore files.** Ignore files
+  (`.cursorignore`, `.aiderignore` and the rest) were rewritten from every round, even one that
+  found no annotation. In a single-module Maven or Gradle build, the test-compile round sees only
+  the test sources; when they carry no annotation it rendered an empty exclusion list and wrote it
+  over the main round's, so every `mvn test` or `mvn package` left the ignore files with an empty
+  block. A reactor module with no annotations, compiled after the one that has them, did the same
+  to the shared root file. Now an ignore file is rewritten from an empty round only when the
+  content is the merge of every module's sidecar, which is what still retires the last
+  `@AIIgnore` of a reactor. `anUnannotatedTestRoundKeepsTheMainSourcesIgnoreGlobs` and
+  `anUnannotatedReactorModule_leavesTheSharedIgnoreFileAlone` failed before the change;
+  `removingTheLastIgnoreInAReactor_clearsItFromTheSharedIgnoreFile` pins the case the narrower rule
+  keeps, and fails if the ignore term is dropped outright.
+- **A module leaving the reactor no longer deletes the hand-written text in its rule files.** The
+  departed module's granular rule files were deleted by name, so a note the developer had added
+  below the markers went with them, the one thing invariant 2 says never happens. The orphan sweep
+  already removed only the generated block; the departure now does the same, deleting the file
+  only when nothing of the developer's is left, and leaving a same-named file with no markers
+  alone. `moduleRemovedFromTheReactor_keepsTheHandWrittenTextInItsRuleFile` failed before the
+  change.
+- **A rule file whose generated block could not be removed is retried by the next build.** When the
+  orphan sweep takes a guardrail out of a granular rule file that also holds the developer's own
+  text, it rewrites the file instead of deleting it. A failed rewrite (a file an editor holds open
+  on Windows, a read-only directory) was swallowed, and the cache entry still vouched for the file,
+  so every later unchanged build short-circuited and the removed guardrail stayed in the file. The
+  failure is now a warning, and the entry is marked failed so the next build retries, as a failed
+  delete already was (#867). `aRuleFileThatCouldNotBeRewritten_isScrubbedByTheNextBuild` failed
+  before the change.
 - **`vibetags doctor` no longer says the annotations "will not compile" when they arrive through
   the processor.** The processor's pom declares `vibetags-annotations` as a compile dependency, so a
   build with `vibetags-processor` as a Maven `<dependency>` (scope `provided` or `compile`) or a
