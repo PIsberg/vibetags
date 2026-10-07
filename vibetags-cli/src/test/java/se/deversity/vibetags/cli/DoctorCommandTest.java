@@ -260,6 +260,106 @@ class DoctorCommandTest {
         assertTrue(out().contains("vibetags-annotations is not in build.gradle"), out());
     }
 
+    // ------------------------------------------------------------------------------------------
+    // Reactors (#929): the root build file is not where a module's wiring lives
+    // ------------------------------------------------------------------------------------------
+
+    /** A module directory with a build file and one source that imports the annotations. */
+    private void module(String name, String buildFile, String buildText, boolean usesAnnotations) throws Exception {
+        Path m = Files.createDirectories(dir.resolve(name));
+        Files.writeString(m.resolve(buildFile), buildText);
+        Path src = Files.createDirectories(m.resolve("src/main/java/com/example"));
+        Files.writeString(src.resolve("Thing.java"), usesAnnotations
+            ? "package com.example;\nimport se.deversity.vibetags.annotations.AILocked;\n@AILocked public class Thing {}\n"
+            : "package com.example;\npublic class Thing {}\n");
+    }
+
+    private static final String MANAGED_ONLY_ROOT = """
+        <project>
+          <modules>
+            <module>core</module>
+            <module>cli</module>
+          </modules>
+          <dependencyManagement><dependencies>
+            <dependency><artifactId>vibetags-processor</artifactId><version>1.4.0</version></dependency>
+          </dependencies></dependencyManagement>
+        </project>
+        """;
+
+    private static final String MODULE_WIRED = """
+        <project>
+          <dependencies>
+            <dependency><artifactId>vibetags-processor</artifactId><scope>provided</scope></dependency>
+          </dependencies>
+        </project>
+        """;
+
+    /**
+     * Codekarta's shape: the root only manages the processor and every module declares it. Doctor
+     * read the root alone and reported the annotations missing for a project that compiles.
+     */
+    @Test
+    void mavenReactorWhoseModulesDeclareTheProcessor_isHealthy() throws Exception {
+        Files.writeString(dir.resolve("pom.xml"), MANAGED_ONLY_ROOT);
+        module("core", "pom.xml", MODULE_WIRED, true);
+        module("cli", "pom.xml", MODULE_WIRED, true);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("modules:         2 use the annotations, all wired"), out());
+    }
+
+    /** One module that uses the annotations and declares nothing: named, by module. */
+    @Test
+    void mavenReactorWithAnUnwiredModule_namesIt() throws Exception {
+        Files.writeString(dir.resolve("pom.xml"), MANAGED_ONLY_ROOT);
+        module("core", "pom.xml", MODULE_WIRED, true);
+        module("cli", "pom.xml", "<project/>", true);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("module cli: vibetags-annotations is not in cli/pom.xml"), out());
+        assertTrue(out().contains("module cli: neither vibetags-processor nor vibetags-ksp"), out());
+        assertFalse(out().contains("module core:"), "a wired module is not a finding: " + out());
+    }
+
+    /**
+     * The mirror problem: a processor that is only managed wires nothing, though the string is in
+     * the root pom. A module with no annotations in its sources needs nothing either way.
+     */
+    @Test
+    void mavenReactorWithTheProcessorOnlyManaged_isNotWired() throws Exception {
+        Files.writeString(dir.resolve("pom.xml"), MANAGED_ONLY_ROOT);
+        module("core", "pom.xml", "<project/>", true);
+        module("cli", "pom.xml", "<project/>", false);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(1, doctor(), out());
+        assertTrue(out().contains("module core: neither vibetags-processor nor vibetags-ksp"), out());
+        assertFalse(out().contains("module cli:"), "cli imports no annotation, so needs none: " + out());
+    }
+
+    @Test
+    void gradleBuildWithIncludedSubprojects_readsEachOne() throws Exception {
+        Files.writeString(dir.resolve("settings.gradle.kts"), """
+            rootProject.name = "karta"
+            include(":core", ":tools:cli")
+            """);
+        Files.writeString(dir.resolve("build.gradle.kts"), "plugins { java }\n");
+        String wired = """
+            dependencies {
+                compileOnly("se.deversity.vibetags:vibetags-processor:1.4.0")
+                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.4.0")
+            }
+            """;
+        module("core", "build.gradle.kts", wired, true);
+        module("tools/cli", "build.gradle.kts", wired, true);
+        Files.writeString(dir.resolve("CLAUDE.md"), "");
+
+        assertEquals(0, doctor(), out());
+        assertTrue(out().contains("modules:         2 use the annotations, all wired"), out());
+    }
+
     @Test
     void noOptInFiles_needsAction() throws Exception {
         mavenProjectWiredForVibeTags();

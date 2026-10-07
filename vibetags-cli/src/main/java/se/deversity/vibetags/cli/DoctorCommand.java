@@ -113,6 +113,11 @@ final class DoctorCommand {
             return;
         }
         String text = read.get();
+        List<String> modules = modulesOf(buildFile, text);
+        if (!modules.isEmpty()) {
+            checkReactorWiring(buildFile, text, modules);
+            return;
+        }
         // A KSP build wires vibetags-ksp in the processor's place: it runs the same processor
         // behind a KSP front end, since KSP cannot load a JSR 269 processor (#496).
         boolean ksp = text.contains("vibetags-ksp");
@@ -132,6 +137,158 @@ final class DoctorCommand {
         if (!annotations) {
             problems.add("vibetags-annotations is not in " + buildFile
                 + " — the @AI* annotations will not compile");
+        }
+    }
+
+    private static final Pattern MAVEN_MODULE = Pattern.compile("<module>\\s*([^<]+?)\\s*</module>");
+
+    private static final Pattern DEPENDENCY_MANAGEMENT = Pattern.compile(
+        "<dependencyManagement>.*?</dependencyManagement>", Pattern.DOTALL);
+
+    private static final Pattern GRADLE_INCLUDE = Pattern.compile("^\\s*include\\b(.*)$", Pattern.MULTILINE);
+
+    private static final Pattern QUOTED = Pattern.compile("[\"']([^\"']+)[\"']");
+
+    /** Directories a reactor's build file lists, relative to {@code dir}, nested aggregators included. */
+    private List<String> modulesOf(String buildFile, String text) {
+        List<String> found = new ArrayList<>();
+        if (buildFile.equals("pom.xml")) {
+            collectMavenModules("", text, found, 0);
+            return found;
+        }
+        for (String settings : new String[]{"settings.gradle.kts", "settings.gradle"}) {
+            Optional<String> read = tryRead(dir.resolve(settings));
+            if (read.isPresent()) {
+                Matcher include = GRADLE_INCLUDE.matcher(stripLineComments(read.get()));
+                while (include.find()) {
+                    Matcher name = QUOTED.matcher(include.group(1));
+                    while (name.find()) {
+                        // ":tools:cli" is the directory tools/cli
+                        String path = String.join("/", java.util.Arrays.stream(name.group(1).split(":"))
+                            .filter(segment -> !segment.isBlank()).toList());
+                        if (!path.isBlank() && !found.contains(path)) {
+                            found.add(path);
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        return found;
+    }
+
+    /** Maven {@code <modules>}, profile-scoped ones included, followed into nested aggregators. */
+    private void collectMavenModules(String base, String pom, List<String> found, int depth) {
+        if (depth > 8) {
+            return;
+        }
+        Matcher module = MAVEN_MODULE.matcher(XML_COMMENT.matcher(pom).replaceAll(""));
+        while (module.find()) {
+            String path = (base.isEmpty() ? "" : base + "/") + module.group(1).replace('\\', '/')
+                .replaceFirst("/pom\\.xml$", "");
+            if (found.contains(path)) {
+                continue;
+            }
+            found.add(path);
+            tryRead(dir.resolve(path).resolve("pom.xml"))
+                .ifPresent(child -> collectMavenModules(path, child, found, depth + 1));
+        }
+    }
+
+    private static String stripLineComments(String gradle) {
+        return gradle.replaceAll("(?m)//.*$", "");
+    }
+
+    /**
+     * A reactor is wired module by module (#929): the root pom often only manages the processor,
+     * and its modules declare it. Each module whose sources import the annotations needs the
+     * processor wired, in its own build file or inherited from the root, and the annotations on its
+     * compile classpath. A module that imports none needs neither, and a processor that is only
+     * managed wires nothing.
+     */
+    private void checkReactorWiring(String rootFile, String rootText, List<String> modules) {
+        boolean maven = rootFile.equals("pom.xml");
+        String rootEffective = maven ? effectiveMaven(rootText) : stripLineComments(rootText);
+        boolean rootProcessor = mentionsProcessor(rootEffective);
+        boolean rootAnnotations = maven
+            ? NOT_ON_CLASSPATH.matcher(rootEffective).replaceAll("").contains("vibetags-annotations")
+                || processorOnCompileClasspath(rootFile, rootText)
+            : rootEffective.contains("vibetags-annotations") || processorOnCompileClasspath(rootFile, rootEffective);
+        out.println("reactor:         " + modules.size() + " module(s) listed in "
+            + (maven ? rootFile : "the Gradle settings file"));
+
+        int using = 0;
+        int unwired = 0;
+        boolean anyProcessor = rootProcessor;
+        for (String module : modules) {
+            Path moduleDir = dir.resolve(module);
+            Optional<String> moduleFile = Optional.empty();
+            for (String candidate : new String[]{"pom.xml", "build.gradle.kts", "build.gradle"}) {
+                if (Files.isRegularFile(moduleDir.resolve(candidate))) {
+                    moduleFile = Optional.of(candidate);
+                    break;
+                }
+            }
+            String moduleText = moduleFile.flatMap(f -> tryRead(moduleDir.resolve(f))).orElse("");
+            String effective = moduleFile.map(f -> f.equals("pom.xml")
+                ? effectiveMaven(moduleText) : stripLineComments(moduleText)).orElse("");
+            boolean processor = mentionsProcessor(effective);
+            anyProcessor |= processor;
+            if (!importsAnnotations(moduleDir)) {
+                continue;
+            }
+            using++;
+            String shown = module + "/" + moduleFile.orElse(maven ? "pom.xml" : "build.gradle");
+            boolean annotations = rootAnnotations || effective.contains("vibetags-annotations")
+                || moduleFile.map(f -> processorOnCompileClasspath(f, moduleText)).orElse(false);
+            if (!processor && !rootProcessor) {
+                problems.add("module " + module + ": neither vibetags-processor nor vibetags-ksp is in " + shown
+                    + " or the root " + rootFile + " — nothing regenerates its guardrails");
+            }
+            if (!annotations) {
+                problems.add("module " + module + ": vibetags-annotations is not in " + shown
+                    + " — its @AI* annotations will not compile");
+            }
+            if ((!processor && !rootProcessor) || !annotations) {
+                unwired++;
+            }
+        }
+        if (using == 0) {
+            out.println("modules:         none imports the annotations");
+            if (!anyProcessor) {
+                problems.add("neither vibetags-processor nor vibetags-ksp is wired in " + rootFile
+                    + " or any module — nothing regenerates the guardrail files (see the README install snippet)");
+            }
+            return;
+        }
+        out.println("modules:         " + using + " use the annotations, "
+            + (unwired == 0 ? "all wired" : unwired + " not wired"));
+    }
+
+    /** A Maven build file with comments and managed dependencies removed: what actually wires. */
+    private static String effectiveMaven(String pom) {
+        return DEPENDENCY_MANAGEMENT.matcher(XML_COMMENT.matcher(pom).replaceAll("")).replaceAll("");
+    }
+
+    private static boolean mentionsProcessor(String effective) {
+        return effective.contains("vibetags-processor") || effective.contains("vibetags-ksp");
+    }
+
+    /** Whether any Java, Kotlin or Groovy source under the module's {@code src} imports the annotations. */
+    private static boolean importsAnnotations(Path moduleDir) {
+        Path src = moduleDir.resolve("src");
+        if (!Files.isDirectory(src)) {
+            return false;
+        }
+        try (java.util.stream.Stream<Path> files = Files.walk(src)) {
+            return files.filter(Files::isRegularFile)
+                .filter(f -> {
+                    String name = String.valueOf(f.getFileName());
+                    return name.endsWith(".java") || name.endsWith(".kt") || name.endsWith(".groovy");
+                })
+                .anyMatch(f -> tryRead(f).map(t -> t.contains("se.deversity.vibetags.annotations")).orElse(false));
+        } catch (IOException | java.io.UncheckedIOException e) {
+            return true;
         }
     }
 

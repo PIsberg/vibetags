@@ -124,6 +124,15 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **`vibetags doctor` checks a reactor module by module (#929).** It read only the root build file,
+  so a Maven reactor whose root only manages `vibetags-processor` and whose modules declare it was
+  told the annotations "will not compile" and exited 1, while a processor that was only managed
+  counted as wired. Doctor now follows the root's `<modules>` (profile-scoped and nested ones
+  included) or the Gradle settings file's `include(...)`, and checks each module whose sources
+  import the annotations, against its own build file and what it inherits from the root. Each
+  unwired module is named; a module with no annotations needs nothing. Four `DoctorCommandTest`
+  cases failed before the change; codekarta, the consumer in the issue, now reports `6 use the
+  annotations, all wired` and exits 0.
 - **Upgrading a pre-marker file keeps the hand-written text below a long legacy block (#936).** The
   end of an XML-shaped legacy block was looked for only in the first 2,000 characters after its
   header, so a block longer than that (a dozen guardrails) read as running to the end of the file,
