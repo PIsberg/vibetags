@@ -124,6 +124,12 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **Upgrading a pre-marker file keeps the hand-written text below a long legacy block (#936).** The
+  end of an XML-shaped legacy block was looked for only in the first 2,000 characters after its
+  header, so a block longer than that (a dozen guardrails) read as running to the end of the file,
+  and everything below it was dropped. The block now ends at its first `</project_guardrails>`,
+  wherever it is, plus the `<rule>` lines a block closes with; a block without one keeps the
+  bounded search. `aLongLegacyBlock_keepsTheHandWrittenSectionBelowIt` failed before the change.
 - **The orphan sweep looks past a UTF-8 byte order mark, as the writer already did.** An editor that
   saves UTF-8 with a BOM puts U+FEFF in front of the file. In a rule file with no front matter it
   kept the first-line start marker from owning its line, so the sweep took the file for not ours and

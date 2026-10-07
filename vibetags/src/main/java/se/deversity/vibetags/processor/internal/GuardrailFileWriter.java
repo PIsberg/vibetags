@@ -874,6 +874,42 @@ public final class GuardrailFileWriter {
             || indexOfMarkerLine(content, generatedHeaderTrim, 0) >= 0;
     }
 
+    /** How far into a legacy block a closing tag is looked for when it has no {@code </project_guardrails>}. */
+    private static final int LEGACY_RULE_WINDOW = 2000;
+
+    /**
+     * Index just past the end of an XML-shaped legacy block that starts {@code rest}, or {@code -1}
+     * when it is not one.
+     *
+     * <p>The block ends at its first {@code </project_guardrails>}, wherever that is, plus the
+     * {@code <rule>} lines a block closes with. Looking only in the first 2,000 characters made a
+     * longer block (a dozen guardrails) read as running to the end of the file, and the hand-written
+     * text below it was dropped in the upgrade (#936). A block with no {@code </project_guardrails>}
+     * keeps the bounded search for its last {@code </rule>}.
+     */
+    private static int legacyXmlBlockEnd(String rest) {
+        String closer = "</project_guardrails>";
+        int idx = rest.indexOf(closer);
+        if (idx < 0) {
+            String window = rest.length() > LEGACY_RULE_WINDOW ? rest.substring(0, LEGACY_RULE_WINDOW) : rest;
+            int rule = window.lastIndexOf("</rule>");
+            return rule < 0 ? -1 : rule + "</rule>".length();
+        }
+        int end = idx + closer.length();
+        while (true) {
+            int lineStart = end;
+            while (lineStart < rest.length() && Character.isWhitespace(rest.charAt(lineStart))) {
+                lineStart++;
+            }
+            int lineEnd = rest.indexOf('\n', lineStart);
+            String line = (lineEnd < 0 ? rest.substring(lineStart) : rest.substring(lineStart, lineEnd)).strip();
+            if (!line.startsWith("<rule>") || !line.endsWith("</rule>")) {
+                return end;
+            }
+            end = lineEnd < 0 ? rest.length() : lineEnd;
+        }
+    }
+
     /**
      * Strips a legacy (pre-marker) VibeTags block, preserving genuine human content.
      */
@@ -903,13 +939,7 @@ public final class GuardrailFileWriter {
         boolean hasHumanPrefix = !rawPrefix.isEmpty() && !gluedTitle;
         String prefix = hasHumanPrefix ? rawPrefix : "";
 
-        // For XML-structured files: find the last VibeTags closing tag within 2 000 chars
-        String searchWindow = rest.length() > 2000 ? rest.substring(0, 2000) : rest;
-        int blockEnd = -1;
-        for (String closer : new String[]{"</rule>", "</project_guardrails>"}) {
-            int idx = searchWindow.lastIndexOf(closer);
-            if (idx >= 0) blockEnd = Math.max(blockEnd, idx + closer.length());
-        }
+        int blockEnd = legacyXmlBlockEnd(rest);
 
         String humanContent;
         if (blockEnd > 0) {
