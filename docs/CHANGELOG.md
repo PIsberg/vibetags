@@ -124,6 +124,18 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **A test-compile with no annotations no longer empties the ignore files.** Ignore files
+  (`.cursorignore`, `.aiderignore` and the rest) were rewritten from every round, even one that
+  found no annotation. In a single-module Maven or Gradle build, the test-compile round sees only
+  the test sources; when they carry no annotation it rendered an empty exclusion list and wrote it
+  over the main round's, so every `mvn test` or `mvn package` left the ignore files with an empty
+  block. A reactor module with no annotations, compiled after the one that has them, did the same
+  to the shared root file. Now an ignore file is rewritten from an empty round only when the
+  content is the merge of every module's sidecar, which is what still retires the last
+  `@AIIgnore` of a reactor. `anUnannotatedTestRoundKeepsTheMainSourcesIgnoreGlobs` and
+  `anUnannotatedReactorModule_leavesTheSharedIgnoreFileAlone` failed before the change;
+  `removingTheLastIgnoreInAReactor_clearsItFromTheSharedIgnoreFile` pins the case the narrower rule
+  keeps, and fails if the ignore term is dropped outright.
 - **A module leaving the reactor no longer deletes the hand-written text in its rule files.** The
   departed module's granular rule files were deleted by name, so a note the developer had added
   below the markers went with them, the one thing invariant 2 says never happens. The orphan sweep

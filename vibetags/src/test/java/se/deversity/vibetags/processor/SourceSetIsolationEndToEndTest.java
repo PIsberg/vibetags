@@ -211,6 +211,54 @@ class SourceSetIsolationEndToEndTest {
     }
 
     /**
+     * A test-compile round with no annotation of its own must leave the ignore files alone. They are
+     * the one family the write plan rewrites from an empty round, so a round that never saw the
+     * main sources replaced their exclusions with its own empty view.
+     */
+    @Test
+    void anUnannotatedTestRoundKeepsTheMainSourcesIgnoreGlobs() throws IOException {
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        Files.createFile(reactorRoot.resolve(".cursorignore"));
+        Files.createFile(reactorRoot.resolve(".aiderignore"));
+        Files.writeString(reactorRoot.resolve("pom.xml"), "<project/>", StandardCharsets.UTF_8);
+        String ignoredMain = """
+            package com.example.core;
+
+            import se.deversity.vibetags.annotations.AIIgnore;
+
+            @AIIgnore(reason = "generated parser tables")
+            public class ParserTables {
+            }
+            """;
+        String plainTest = """
+            package com.example.core;
+
+            public class ParserTablesTest {
+            }
+            """;
+
+        ProcessorTestHarness main = new ProcessorTestHarness(reactorRoot, false);
+        main.writeSourceFile("src/main/java/com/example/core/ParserTables.java", ignoredMain);
+        main.compile();
+        VibeTagsLogger.shutdown();
+        for (String file : new String[]{".cursorignore", ".aiderignore"}) {
+            assertTrue(main.readFile(file).contains("ParserTables.java"),
+                "precondition: the main round writes the exclusion to " + file + ":\n" + main.readFile(file));
+        }
+
+        ProcessorTestHarness test = new ProcessorTestHarness(reactorRoot, false);
+        test.writeSourceFile("src/test/java/com/example/core/ParserTablesTest.java", plainTest);
+        test.compile();
+        VibeTagsLogger.shutdown();
+
+        for (String file : new String[]{".cursorignore", ".aiderignore"}) {
+            String content = Files.readString(reactorRoot.resolve(file), StandardCharsets.UTF_8);
+            assertTrue(content.contains("ParserTables.java"),
+                file + " must keep the main source's exclusion after an unannotated test-compile:\n" + content);
+        }
+    }
+
+    /**
      * Two source sets rendering CLAUDE.md are one document, not two stacked ones (issue #839).
      * Stacked, the test round's body repeats the header, the wrapper, every section's rule and the
      * closing rule, which on this repository was 955 of the 1,755 bytes the test round added to a

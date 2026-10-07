@@ -23,15 +23,36 @@ class WritePlanTest {
     private static final Path ROOT = Path.of("root");
 
     @Test
-    void anIgnoreFileCountsAsNewRulesEvenWhenNothingContributed() {
-        // The first attempt at sharing this predicate wrote contributed AND not-ignore where both
-        // writers had contributed OR ignore, and exclusion lists stopped being rewritten; the e2e
-        // TestingMdSafety case caught it on four CI jobs.
-        WritePlan plan = WritePlan.of(content("cursor_ignore", "claude"), files("cursor_ignore", "claude"),
+    void anIgnoreFileWithoutTheMergeFollowsTheRoundsOwnAnnotations() {
+        // Ignore files used to count as new rules from any round, so an unannotated test-compile of
+        // a single-module project, which never sees the main sources, emptied the main round's
+        // exclusions (SourceSetIsolationEndToEndTest.anUnannotatedTestRoundKeepsTheMainSourcesIgnoreGlobs).
+        WritePlan empty = WritePlan.of(content("cursor_ignore", "claude"), files("cursor_ignore", "claude"),
             List.of(), false, false, Set.of());
+        assertFalse(write(empty, "cursor_ignore").hasNewRules(), "an empty round adds no rules to an ignore file");
+        assertFalse(write(empty, "claude").hasNewRules(), "an empty round adds no rules to CLAUDE.md");
 
-        assertTrue(write(plan, "cursor_ignore").hasNewRules(), "an ignore file is always rewritten");
-        assertFalse(write(plan, "claude").hasNewRules(), "an empty round adds no rules to CLAUDE.md");
+        WritePlan annotated = WritePlan.of(content("cursor_ignore"), files("cursor_ignore"),
+            List.of(), false, true, Set.of());
+        assertTrue(write(annotated, "cursor_ignore").hasNewRules(), "a round with annotations rewrites it");
+
+        WritePlan emptied = WritePlan.of(content("cursor_ignore"), files("cursor_ignore"),
+            List.of(), false, false, Set.of("cursor_ignore"));
+        assertTrue(write(emptied, "cursor_ignore").hasNewRules(),
+            "and so does a source set that has just withdrawn its last exclusion (#781)");
+    }
+
+    @Test
+    void anIgnoreFileFromTheMergeIsRewrittenThoughNoModuleContributed() {
+        // The first attempt at sharing this predicate wrote contributed AND not-ignore, and exclusion
+        // lists stopped being rewritten; the e2e TestingMdSafety case caught it on four CI jobs. In a
+        // reactor the last exclusion leaving is exactly "nobody contributed", and the merge is what
+        // writes that (GuardrailLifecycleEndToEndTest.removingTheLastIgnoreInAReactor_...).
+        WritePlan plan = WritePlan.of(content("cursor_ignore", "claude"), files("cursor_ignore", "claude"),
+            List.of(), true, false, Set.of());
+
+        assertTrue(write(plan, "cursor_ignore").hasNewRules(), "a merged ignore file is always rewritten");
+        assertFalse(write(plan, "claude").hasNewRules(), "a file nobody contributed to is not");
     }
 
     @Test
