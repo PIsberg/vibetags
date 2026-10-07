@@ -141,7 +141,7 @@ class GuardrailFileWriterLogContractTest {
     @Test
     @DisplayName("a hand-written whole-file output is skipped with reason=hand-written-whole-file")
     void handWrittenWholeFileSkipsWithItsReason(@TempDir Path dir) throws IOException {
-        Path file = dir.resolve(".pr_agent.toml");
+        Path file = dir.resolve("config.toml");
         String handWritten = "[pr_reviewer]\nnum_code_suggestions = 3\n";
         Files.writeString(file, handWritten);
         GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
@@ -149,8 +149,23 @@ class GuardrailFileWriterLogContractTest {
         assertFalse(writer.writeFileIfChanged(file.toString(), HEADER + "[pr_reviewer]\n", true),
             "a configuration VibeTags did not write is not replaced");
         assertEquals(handWritten, Files.readString(file));
-        assertTrue(logged("write.skip file=.pr_agent.toml reason=hand-written-whole-file"),
+        assertTrue(logged("write.skip file=config.toml reason=hand-written-whole-file"),
             "the skip names its own reason: " + events());
+    }
+
+    @Test
+    @DisplayName("a .pr_agent.toml the span merge cannot read is skipped with the merge's reason")
+    void unmergeablePrAgentConfigSkipsWithTheMergesReason(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve(".pr_agent.toml");
+        String handWritten = "[pr_reviewer]\nextra_instructions = \"one line\"\n";
+        Files.writeString(file, handWritten);
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, logger);
+
+        assertFalse(writer.writeFileIfChanged(file.toString(),
+            HEADER + "[pr_reviewer]\nextra_instructions = \"\"\"\nrule\n\"\"\"\n", true));
+        assertEquals(handWritten, Files.readString(file));
+        assertTrue(logged("write.skip file=.pr_agent.toml reason=not-multiline-string"),
+            "the skip names why the merge refused: " + events());
     }
 
     @Test

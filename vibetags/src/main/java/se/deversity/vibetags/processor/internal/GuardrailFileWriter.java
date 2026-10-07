@@ -196,8 +196,9 @@ public final class GuardrailFileWriter {
                     skipUpdateMsg(fileName);
                     return false;
                 }
-                if (!replaceableWholeFile(Files.readString(filePath, StandardCharsets.UTF_8))) {
-                    return refuseHandWrittenWholeFile(fileName);
+                String sameSize = Files.readString(filePath, StandardCharsets.UTF_8);
+                if (!replaceableWholeFile(sameSize)) {
+                    return writeHandWrittenWholeFile(filePath, fileName, content, sameSize, existingAttrs);
                 }
                 debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
                     fileName, existingSize, contentByteLen);
@@ -591,7 +592,7 @@ public final class GuardrailFileWriter {
         }
 
         if (!replaceableWholeFile(existing)) {
-            return refuseHandWrittenWholeFile(fileName);
+            return writeHandWrittenWholeFile(filePath, fileName, content, existing, existingAttrs);
         }
 
         writeAndCache(filePath, content, content);
@@ -610,6 +611,50 @@ public final class GuardrailFileWriter {
      */
     private boolean replaceableWholeFile(String existing) {
         return existing.isBlank() || existing.contains(generatedMark);
+    }
+
+    /** The PR-Agent configuration, the one whole-file output with a span merge for a hand-written copy (#933). */
+    private static final String PR_AGENT_FILE = ".pr_agent.toml";
+
+    /**
+     * A whole-file output somebody wrote by hand. {@code .pr_agent.toml} gets the guardrails spliced
+     * into its {@code extra_instructions} strings by {@link TomlValueSpans}, every other byte kept, as
+     * {@code greptile.json} does (#639); a document the merge cannot read without guessing is left
+     * alone with a warning. Any other such file is left alone. The cache records {@code content}, the
+     * rendering, so an edit outside the span still invalidates it, as for a marker file.
+     */
+    private boolean writeHandWrittenWholeFile(Path filePath, String fileName, String content, String existing,
+                                              @Nullable BasicFileAttributes existingAttrs) throws IOException {
+        if (!PR_AGENT_FILE.equals(fileName)) {
+            return refuseHandWrittenWholeFile(fileName);
+        }
+        String body = TomlValueSpans.bodyFrom(content);
+        if (body == null) {
+            if (log != null) {
+                log.warn("write.skip file={} reason=unreadable-rendering bytes={}", fileName, content.length());
+            }
+            return false;
+        }
+        TomlValueSpans.Outcome outcome = TomlValueSpans.merge(existing, body);
+        String merged = outcome.document();
+        if (merged == null) {
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: left " + fileName + " untouched because " + outcome.detail()
+                    + ". Its guardrails are not being updated until that is fixed.");
+            debug("write.skip file={} reason={} detail={}", fileName,
+                String.valueOf(outcome.skipReason()), String.valueOf(outcome.detail()));
+            return false;
+        }
+        if (merged.equals(existing)) {
+            debug("write.skip file={} reason=identical-bytes bytes={} markers=toml-values", fileName, merged.length());
+            noteCurrent(filePath, content, existingAttrs);
+            return false;
+        }
+        debug("write.update file={} reason=toml-values-differ oldBytes={} newBytes={} markers=toml-values",
+            fileName, existing.length(), merged.length());
+        writeAndCache(filePath, merged, content);
+        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
+        return true;
     }
 
     /** Leaves a hand-written whole-file output alone and says so. Always {@code false}, "nothing written". */
@@ -874,6 +919,42 @@ public final class GuardrailFileWriter {
             || indexOfMarkerLine(content, generatedHeaderTrim, 0) >= 0;
     }
 
+    /** How far into a legacy block a closing tag is looked for when it has no {@code </project_guardrails>}. */
+    private static final int LEGACY_RULE_WINDOW = 2000;
+
+    /**
+     * Index just past the end of an XML-shaped legacy block that starts {@code rest}, or {@code -1}
+     * when it is not one.
+     *
+     * <p>The block ends at its first {@code </project_guardrails>}, wherever that is, plus the
+     * {@code <rule>} lines a block closes with. Looking only in the first 2,000 characters made a
+     * longer block (a dozen guardrails) read as running to the end of the file, and the hand-written
+     * text below it was dropped in the upgrade (#936). A block with no {@code </project_guardrails>}
+     * keeps the bounded search for its last {@code </rule>}.
+     */
+    private static int legacyXmlBlockEnd(String rest) {
+        String closer = "</project_guardrails>";
+        int idx = rest.indexOf(closer);
+        if (idx < 0) {
+            String window = rest.length() > LEGACY_RULE_WINDOW ? rest.substring(0, LEGACY_RULE_WINDOW) : rest;
+            int rule = window.lastIndexOf("</rule>");
+            return rule < 0 ? -1 : rule + "</rule>".length();
+        }
+        int end = idx + closer.length();
+        while (true) {
+            int lineStart = end;
+            while (lineStart < rest.length() && Character.isWhitespace(rest.charAt(lineStart))) {
+                lineStart++;
+            }
+            int lineEnd = rest.indexOf('\n', lineStart);
+            String line = (lineEnd < 0 ? rest.substring(lineStart) : rest.substring(lineStart, lineEnd)).strip();
+            if (!line.startsWith("<rule>") || !line.endsWith("</rule>")) {
+                return end;
+            }
+            end = lineEnd < 0 ? rest.length() : lineEnd;
+        }
+    }
+
     /**
      * Strips a legacy (pre-marker) VibeTags block, preserving genuine human content.
      */
@@ -903,13 +984,7 @@ public final class GuardrailFileWriter {
         boolean hasHumanPrefix = !rawPrefix.isEmpty() && !gluedTitle;
         String prefix = hasHumanPrefix ? rawPrefix : "";
 
-        // For XML-structured files: find the last VibeTags closing tag within 2 000 chars
-        String searchWindow = rest.length() > 2000 ? rest.substring(0, 2000) : rest;
-        int blockEnd = -1;
-        for (String closer : new String[]{"</rule>", "</project_guardrails>"}) {
-            int idx = searchWindow.lastIndexOf(closer);
-            if (idx >= 0) blockEnd = Math.max(blockEnd, idx + closer.length());
-        }
+        int blockEnd = legacyXmlBlockEnd(rest);
 
         String humanContent;
         if (blockEnd > 0) {

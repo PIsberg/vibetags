@@ -38,7 +38,7 @@ Do not weaken security properties of these elements. Flag any change for securit
 Detailed per-element guardrails live in scoped rule files that Gemini CLI does not load on its own. A line `a.b`: `C`, `D` names a.b.C and a.b.D. Unless an entry carries an explicit path, its file is .gemini/rules/{path, every non-alphanumeric character replaced by '-'}.md. Before modifying an element listed below, open its file with read_file and apply the guardrails there:
 
 - `se.deversity.vibetags.processor`: `AIGuardrailProcessor`, `VibeTagsLogger`, `model`
-- `se.deversity.vibetags.processor.internal`: `AnnotationCollector`, `BuildFingerprint`, `EnforcementBaseline`, `GranularRulesWriter`, `GuardrailFileWriter`, `JsonValueSpans`, `ModuleSidecar`, `ServiceRegistry`, `SourceDigest`, `TransitiveManifest`, `WriteCache`, `content`
+- `se.deversity.vibetags.processor.internal`: `AnnotationCollector`, `BuildFingerprint`, `EnforcementBaseline`, `GranularRulesWriter`, `GuardrailFileWriter`, `JsonValueSpans`, `ModuleSidecar`, `ServiceRegistry`, `SourceDigest`, `TomlValueSpans`, `TransitiveManifest`, `WriteCache`, `content`
 - `se.deversity.vibetags.processor.internal.content`: `PlatformRenderer`
 - `se.deversity.vibetags.processor.internal.validation`: `ValidationRule`
 - `se.deversity.vibetags.processor`: `MultiModuleYamlValidityTest`, `WriteCacheAsyncTest`

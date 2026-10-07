@@ -69,6 +69,15 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Added
 
+- **A hand-written `.pr_agent.toml` gets the guardrails without losing its settings (#933).** The
+  file is now merged the way `greptile.json` is (#639): VibeTags owns a delimited span inside the
+  `extra_instructions` strings of `[pr_reviewer]` and `[pr_code_suggestions]`, adds a table or key
+  the file lacks, and keeps every other byte. A document it cannot merge without guessing is left
+  alone with a warning naming why; the log records `write.skip reason=` with the merge's reason
+  (`duplicate-table`, `not-multiline-string`, `unclosed-span` and the rest). Until now such a file
+  was skipped outright, and before that overwritten. `TomlValueSpansTest` (8 cases) and
+  `aHandWrittenPrAgentConfig_keepsItsSettingsAndGainsTheGuardrails` cover it; the latter failed before
+  the change.
 - **`vibetags-cli/README.md`.** The CLI's flags, exit codes and limits were spread over a USAGE.md
   section and the usage text in `Main`. The new README puts them in one place, with examples for
   each command and check. The output it shows comes from running the CLI against scratch
@@ -124,6 +133,37 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
 
 ### Fixed
 
+- **A reactor root's Markdown aggregate states the scoped-rules index once (#930).** Each module
+  rendered its own `## Scoped Rules Index` heading and its 378-byte note, and the merge stacked them,
+  so they repeated once per module: 20% of blindbean's `GEMINI.md` and 24% of codekarta's. The merge
+  now writes the heading and note once, after the module blocks, with every module's lines under
+  them. It does so only when every module's section has the shape the renderer emits and the notes
+  agree; otherwise, as with two processor versions in one reactor, the stacked form is kept. The
+  sidecar format is unchanged. `examples/multimodule-indexed`'s `copilot-instructions.md` loses its
+  second copy. `aReactorRootStatesTheIndexPreambleOnce` failed before the change.
+- **The scoped-rules index names a role file once per package (#931).** An element routed onto a
+  role file by `.vibetags-roles` kept a line of its own with the file repeated:
+  async-test-lib's root `GEMINI.md` had 83 such lines, 8,744 bytes, pointing at 5 files. Elements
+  of one package in one role file now share a line,
+  `<elements in="a.b" rules=".claude/rules/api.md">C, D</elements>` in `CLAUDE.md` and
+  `` - `a.b`: `C`, `D` → `.gemini/rules/api.md` `` in the Markdown aggregates. A role-file entry
+  for a single element keeps its one-element form, which is shorter. `examples/all-tiers` changes
+  accordingly. `elementsSharingARoleFile_shareOneIndexLine` failed before the change.
+- **`vibetags doctor` checks a reactor module by module (#929).** It read only the root build file,
+  so a Maven reactor whose root only manages `vibetags-processor` and whose modules declare it was
+  told the annotations "will not compile" and exited 1, while a processor that was only managed
+  counted as wired. Doctor now follows the root's `<modules>` (profile-scoped and nested ones
+  included) or the Gradle settings file's `include(...)`, and checks each module whose sources
+  import the annotations, against its own build file and what it inherits from the root. Each
+  unwired module is named; a module with no annotations needs nothing. Four `DoctorCommandTest`
+  cases failed before the change; codekarta, the consumer in the issue, now reports `6 use the
+  annotations, all wired` and exits 0.
+- **Upgrading a pre-marker file keeps the hand-written text below a long legacy block (#936).** The
+  end of an XML-shaped legacy block was looked for only in the first 2,000 characters after its
+  header, so a block longer than that (a dozen guardrails) read as running to the end of the file,
+  and everything below it was dropped. The block now ends at its first `</project_guardrails>`,
+  wherever it is, plus the `<rule>` lines a block closes with; a block without one keeps the
+  bounded search. `aLongLegacyBlock_keepsTheHandWrittenSectionBelowIt` failed before the change.
 - **The orphan sweep looks past a UTF-8 byte order mark, as the writer already did.** An editor that
   saves UTF-8 with a BOM puts U+FEFF in front of the file. In a rule file with no front matter it
   kept the first-line start marker from owning its line, so the sweep took the file for not ours and

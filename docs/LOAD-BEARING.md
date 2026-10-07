@@ -50,8 +50,10 @@ Generated content is written between markers so a file can hold hand-authored co
 - **HTML comments** (CLAUDE.md, llms.txt, llms-full.txt): `<!-- VIBETAGS-START -->` / `<!-- VIBETAGS-END -->`
 - **Hash comments** (.cursorrules, .aiexclude, ignore files): `# VIBETAGS-START` / `# VIBETAGS-END`
 - **No markers** (`.pr_agent.toml`, `.codex/config.toml`): complete overwrite, but only of a file
-  that is empty or carries the generated header. A configuration somebody wrote by hand is left
-  untouched, with a build warning (`GuardrailFileRecoveryEndToEndTest`)
+  that is empty or carries the generated header. A hand-written `.pr_agent.toml` gets a delimited
+  span inside its two `extra_instructions` strings instead, every other byte kept (`TomlValueSpans`,
+  #933); any other hand-written configuration is left untouched, with a build warning
+  (`GuardrailFileRecoveryEndToEndTest`)
 
 A marker inside a fenced code block (```` ``` ```` or `~~~`) is an example, not a delimiter: a
 file that documents VibeTags can show the pair in a fence, and the block is looked for outside it
@@ -78,7 +80,7 @@ Every supported AI platform (Cursor, Claude, Gemini, Codex, Copilot, Windsurf, g
 
 ### Aggregate ↔ granular de-duplication (scoped-rules index)
 
-Five platforms have both an always-loaded aggregate file and a glob-scoped granular directory: `CLAUDE.md`↔`.claude/rules/`, `.cursorrules`↔`.cursor/rules/`, `.windsurfrules`↔`.windsurf/rules/`, `.github/copilot-instructions.md`↔`.github/instructions/`, `GEMINI.md`↔`.gemini/rules/`. When **both** are opted in, the aggregate renderer collapses to a **scoped-rules index**: only the always-loaded safety buckets stay inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`), plus an index naming each element once, grouped one line per package so the package is not repeated per element (`<elements in="a.b">C, D</elements>` is `a.b.C` and `a.b.D`, #839; `GranularIndexSection`); every other bucket moves to the granular files. An element whose scoped file holds only safety-tier stanzas gets no line, because everything in that file is already inline (#839); its file is still written. The scoped file's name is derived from the element path (every non-alphanumeric character becomes `-`), stated once in the index note rather than repeated per entry; only an element a `.vibetags-roles` config routes onto a shared role file carries an explicit path. The index note for `GEMINI.md` does not say the scoped files load on their own, because Gemini CLI never reads `.gemini/rules/`; it tells the agent to open the file with `read_file` (#669).
+Five platforms have both an always-loaded aggregate file and a glob-scoped granular directory: `CLAUDE.md`↔`.claude/rules/`, `.cursorrules`↔`.cursor/rules/`, `.windsurfrules`↔`.windsurf/rules/`, `.github/copilot-instructions.md`↔`.github/instructions/`, `GEMINI.md`↔`.gemini/rules/`. When **both** are opted in, the aggregate renderer collapses to a **scoped-rules index**: only the always-loaded safety buckets stay inline (`@AILocked`, `@AICore`, `@AIPrivacy`, `@AIIgnore`, `@AIAudit`, `@AISecure`), plus an index naming each element once, grouped one line per package so the package is not repeated per element (`<elements in="a.b">C, D</elements>` is `a.b.C` and `a.b.D`, #839; `GranularIndexSection`); every other bucket moves to the granular files. An element whose scoped file holds only safety-tier stanzas gets no line, because everything in that file is already inline (#839); its file is still written. The scoped file's name is derived from the element path (every non-alphanumeric character becomes `-`), stated once in the index note rather than repeated per entry; only an element a `.vibetags-roles` config routes onto a shared role file carries an explicit path, written once for every element of one package in that file (`<elements in="a.b" rules=".claude/rules/api.md">C, D</elements>`, #931). In a reactor root's Markdown aggregate the index heading and its note are written once, after the module blocks, with every module's lines under them, rather than once per module (#930). The index note for `GEMINI.md` does not say the scoped files load on their own, because Gemini CLI never reads `.gemini/rules/`; it tells the agent to open the file with `read_file` (#669).
 
 Gating is per platform via `GranularIndexSection.governingGranularKey` — `CLAUDE_LOCAL` maps to `claude_granular` (so `CLAUDE.local.md` mirrors `CLAUDE.md`), while renderers that reuse the Cursor/Claude format but read no scoped directory (goose, Replit, Junie, the Claude skill) map to `null` and always render in full. Single-opt-in output is unchanged. The owner set is computed once in `GuardrailContentBuilder.build()` and passed on `RenderingContext.granularOwners()`.
 
@@ -220,7 +222,8 @@ and this section seem to disagree, the enforcing test decides.
 - **Hand-authored content outside the markers must never be lost.** Generated content is written
   strictly between `VIBETAGS-START` / `VIBETAGS-END` (HTML or hash form per file type). TOML
   configs VibeTags owns outright are whole-file overwrites, of a file that is empty or carries the
-  generated header and never of a hand-written one; `greptile.json` and
+  generated header and never of a hand-written one, and a hand-written `.pr_agent.toml` gets a span
+  inside its `extra_instructions` strings (#933); `greptile.json` and
   `.greptile/config.json`, which users configure by hand, get a delimited span inside their shared
   string values instead and every other byte is kept (#639, #651).
 - **`AGENTS.md` is a write target only when it is the sole AI config file present,** or when it

@@ -163,12 +163,15 @@ final class GranularIndexSection {
         }
         sb.append("  <scoped_rules>\n")
             .append("    <note>Detailed per-element guardrails for the elements below live in scoped rule files that load automatically when the matching source file is opened.")
-            .append(" An elements entry lists names under a shared prefix: in=\"a.b\" listing C, D means a.b.C and a.b.D.")
-            .append(Escape.xml(conventionNote(platform)))
+            .append(" An elements entry lists names under a shared prefix: in=\"a.b\" listing C, D means a.b.C and a.b.D.")            .append(Escape.xml(conventionNote(platform)))
             .append(" Consult the file before modifying an element.</note>\n");
         for (IndexLine line : indexLines(platform, owners, context)) {
             if (line.prefix != null) {
-                sb.append("    <elements in=\"").append(Escape.xml(line.prefix)).append("\">");
+                sb.append("    <elements in=\"").append(Escape.xml(line.prefix));
+                if (line.rules != null) {
+                    sb.append("\" rules=\"").append(Escape.xml(line.rules));
+                }
+                sb.append("\">");
                 for (int i = 0; i < line.names.size(); i++) {
                     sb.append(i == 0 ? "" : ", ").append(Escape.xml(line.names.get(i)));
                 }
@@ -213,6 +216,9 @@ final class GranularIndexSection {
                 for (int i = 0; i < line.names.size(); i++) {
                     sb.append(i == 0 ? "`" : ", `").append(line.names.get(i)).append('`');
                 }
+                if (line.rules != null) {
+                    sb.append(" → `").append(line.rules).append('`');
+                }
                 sb.append('\n');
                 continue;
             }
@@ -228,8 +234,9 @@ final class GranularIndexSection {
      * The index as lines, grouping every conventionally named owner under the text before its simple
      * name, so a shared package is written once rather than once per element (issue #839). A group
      * sits where its first owner would have, and {@code prefix + "." + name} is that owner again, so
-     * nothing is lost. An owner whose file is not at the conventional path keeps a line of its own
-     * with the explicit pointer, as does one whose name has no prefix to share.
+     * nothing is lost. Owners whose file is not at the conventional path, a role file, are grouped by
+     * package and file and the line carries the file once (#931); an owner whose name has no prefix
+     * to share keeps a line of its own.
      *
      * <p>Grouping per line rather than hoisting one base over the whole index is what keeps the
      * source-set merges working: a line is self-contained, so the main and test rounds' lines can be
@@ -240,21 +247,34 @@ final class GranularIndexSection {
         Map<String, IndexLine> groups = new LinkedHashMap<>();
         for (TaggedElement owner : owners) {
             String path = scopedPath(platform, owner, context);
-            boolean conventional = path.equals(conventionalPath(platform, owner));
-            String prefix = conventional ? prefixOf(owner) : null;
+            String rules = path.equals(conventionalPath(platform, owner)) ? null : path;
+            String prefix = prefixOf(owner);
             if (prefix == null) {
-                IndexLine single = new IndexLine(null, conventional ? null : path);
+                IndexLine single = new IndexLine(null, rules);
                 single.names.add(owner.toString());
                 lines.add(single);
                 continue;
             }
-            IndexLine group = groups.get(prefix);
+            // Grouped by file as well as by package: owners a .vibetags-roles config routes onto one
+            // role file share its pointer, which is then written once per package (#931).
+            String key = prefix + '\u0000' + (rules == null ? "" : rules);
+            IndexLine group = groups.get(key);
             if (group == null) {
-                group = new IndexLine(prefix, null);
-                groups.put(prefix, group);
+                group = new IndexLine(prefix, rules);
+                groups.put(key, group);
                 lines.add(group);
             }
             group.names.add(owner.simpleName());
+        }
+        // A role-file group of one is written in full, as before #931: grouping it saves nothing and
+        // only lengthens the line.
+        for (int i = 0; i < lines.size(); i++) {
+            IndexLine line = lines.get(i);
+            if (line.prefix != null && line.rules != null && line.names.size() == 1) {
+                IndexLine single = new IndexLine(null, line.rules);
+                single.names.add(line.prefix + "." + line.names.get(0));
+                lines.set(i, single);
+            }
         }
         return lines;
     }
