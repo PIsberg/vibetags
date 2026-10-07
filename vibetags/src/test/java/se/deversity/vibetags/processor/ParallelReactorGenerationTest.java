@@ -50,9 +50,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Tag("e2e")
 // The seam is one static field: the race test owns it for its whole run, so this class's tests run
 // one at a time (the suite otherwise runs methods concurrently, and a sibling clearing the seam left
-// module-core unheld). No other class sets it, and it acts only on the module-core thread.
+// module-core unheld). InterruptedGenerationTest sets it too, so both hold SEAM_LOCK; each acts only
+// on a thread of its own name.
 @Execution(ExecutionMode.SAME_THREAD)
+@org.junit.jupiter.api.parallel.ResourceLock(ParallelReactorGenerationTest.SEAM_LOCK)
 class ParallelReactorGenerationTest {
+
+    /** Held by every test class that sets {@code AIGuardrailProcessor.afterSidecarRead}. */
+    static final String SEAM_LOCK = "AIGuardrailProcessor.afterSidecarRead";
 
     private static final String CORE_THREAD = "module-core";
 
