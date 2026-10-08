@@ -107,6 +107,11 @@ printf '%-40s %-12s %-12s%s\n' "groovy (examples/groovy)" "$groovy" "$groovy_now
 scala="$(sed -n "s|.*org.scala-lang:scala-library:\([^']*\)'.*|\1|p" "$ROOT/examples/scala/build.gradle")"
 scala_now="$(curl -sf https://repo1.maven.org/maven2/org/scala-lang/scala-library/maven-metadata.xml | grep -o '<version>2\.13\.[0-9]*</version>' | sed 's/<[^>]*>//g' | tail -n1)"
 printf '%-40s %-12s %-12s%s\n' "scala 2.13 line (examples/scala)" "$scala" "$scala_now" "$([ "$scala" != "$scala_now" ] && echo '  <- update')"
+# The Maven publish.yml deploys on: the 3.9 line until central-publishing-maven-plugin handles 3.10
+# (#945). A bump also needs MAVEN_SHA512 beside it; the skill says where to take it from.
+maven="$(sed -n "s/^ *MAVEN_VERSION: *'\([^']*\)'.*/\1/p" "$ROOT/.github/workflows/publish.yml")"
+maven_now="$(curl -sf https://repo1.maven.org/maven2/org/apache/maven/apache-maven/maven-metadata.xml | grep -o '<version>3\.9\.[0-9]*</version>' | sed 's/<[^>]*>//g' | tail -n1)"
+printf '%-40s %-12s %-12s%s\n' "maven 3.9 line (publish.yml)" "$maven" "$maven_now" "$([ "$maven" != "$maven_now" ] && echo '  <- update')"
 echo
 echo "pre-commit hook revs: run 'python -m pre_commit autoupdate' (no dry-run exists); the checkstyle"
 echo "hook needs Docker to verify, so revert its rev unless you can run it."

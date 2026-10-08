@@ -135,6 +135,13 @@ so what consumers download is self-contained.
   Scorecard's Binary-Artifacts check to accept them.
 - **pre-commit hooks**: `gherynos/pre-commit-java` (Checkstyle), `gitleaks/gitleaks` (secret
   scanning), and `pre-commit/pre-commit-hooks` (end-of-file and trailing-whitespace fixers).
+- **Maven itself, for publishing.** `publish.yml` deploys on the Maven its job `env` names
+  (`MAVEN_VERSION`, with `MAVEN_SHA512` the SHA-512 Apache publishes for that distribution), not on
+  the runner image's. It stays on the 3.9 line until `central-publishing-maven-plugin` handles
+  Maven 3.10 (#945). The `Central Bundle Shape` job in `build.yml` reads the pin from there and
+  builds every published module's bundle with it, so a bump that breaks bundling is a red pull
+  request rather than a rejected release. Dependabot does not see the pin;
+  `tools/bump-dependencies.sh` reports it. The rest of CI runs on the image's Maven.
 
 ## Bumping
 
@@ -173,6 +180,7 @@ Checked 2026-08-04 against `maven-metadata.xml` on repo1.maven.org, not against 
 | `maven-compiler-plugin` | 4.0.0-beta-4 | Beta. |
 | `maven-surefire-plugin` | 3.6.0-M1 | Milestone. |
 | `maven-jar-plugin`, `maven-source-plugin` | 4.0.0-beta-1 | Beta. |
+| Maven, for `publish.yml` | 3.10.0 | `central-publishing-maven-plugin` 0.11.0 zips Maven 3.10's local-repository files into the bundle and Central rejects it (#945). Checked 2026-10-08. |
 
 Re-run the check with, from `vibetags/`:
 

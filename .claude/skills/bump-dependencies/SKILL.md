@@ -18,7 +18,8 @@ tools/bump-dependencies.sh            # read-only; add --include-prereleases to 
 ```
 
 The script prints one line per property with its Maven Central latest, then the toolchains
-pinned outside the parent (Gradle wrapper, Kotlin, Groovy, Scala 2.13). It exits 2 if the
+pinned outside the parent (Gradle wrapper, Kotlin, Groovy, Scala 2.13, and the Maven
+`publish.yml` deploys on). It exits 2 if the
 parent gains a `*.version` property the script has no Maven Central path for: add the path
 to its `PINS` table in the same change, so the report can never silently go stale.
 
@@ -32,6 +33,10 @@ to its `PINS` table in the same change, so the report can never silently go stal
   reason to skip them, it is a reason to run the full gates below.
 - Kotlin: `examples/kotlin` uses kapt and `examples/kotlin-ksp` compiles the same sources through
   KSP; a Kotlin or KSP bump is verified by both examples' Gradle builds, nothing less.
+- Maven for publishing stays on the 3.9 line until `central-publishing-maven-plugin` handles
+  Maven 3.10 (#945); under 3.10 the plugin builds bundles Central rejects. The report only offers
+  3.9.x. The `Central Bundle Shape` check on the PR is what verifies a bump of either the pin or the
+  plugin; a green `build-maven` says nothing about publishing.
 
 ## Step 3 - Apply, including the mirrors
 
@@ -46,6 +51,7 @@ Edit the property in `vibetags-parent/pom.xml`. Then the places that cannot inhe
 | Kotlin | `examples/kotlin/build.gradle.kts` (`jvm` and `kapt`), `examples/kotlin-ksp/build.gradle.kts` (`jvm`), the snippets in `README.md` and `examples/kotlin/README.md` |
 | `ksp.version` (KSP API and engine) | the KSP Gradle plugin in `examples/kotlin-ksp/build.gradle.kts` and `examples/kotlin-ksp/README.md`; `kotlin-stdlib.version` and `kotlinx-coroutines.version` in the parent follow what `symbol-processing-api` declares, so re-read its pom |
 | Groovy, Scala | `examples/groovy/build.gradle`, `examples/scala/build.gradle` (Scala stays on the 2.13 line: the example is about Java-only support) |
+| Maven for publishing | `MAVEN_VERSION` and `MAVEN_SHA512` in the job `env` of `.github/workflows/publish.yml`, nowhere else (`build.yml` reads both from there). Take the SHA-512 from `https://archive.apache.org/dist/maven/maven-3/<v>/binaries/apache-maven-<v>-bin.tar.gz.sha512` and compare it with `sha512sum` of the archive downloaded from Maven Central, which is where the workflow fetches it |
 | pre-commit hook revs | `python -m pre_commit autoupdate`; the `checkstyle` hook runs in Docker, so unless Docker is available revert its rev and say so - an unverifiable bump is not a verified one |
 
 Never touch `<revision>`: that is the VibeTags release version, owned by `tools/set-version.sh`

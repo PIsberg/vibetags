@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Publishing runs on a pinned Maven 3.9 again, and every pull request now builds the bundles it
+  uploads** (#945). The first publish of 1.4.0 put nothing on Central: GitHub's ubuntu-24.04 runner
+  image had moved to Maven 3.10, and `central-publishing-maven-plugin` 0.11.0, the newest release,
+  zips Maven 3.10's `maven-metadata-local.xml` and `_remote.repositories` into the bundle, which
+  Central rejects (`Bundle has content that does NOT have a .pom file`). `publish.yml` now installs
+  Maven 3.9.16, checks its SHA-512 and refuses to deploy on any other Maven. A new
+  `Central Bundle Shape` job in `build.yml` builds the bundle of every published module with that
+  Maven, without uploading it, and fails on any file Central would reject; until now a bundle was
+  first built after the release was tagged. A resumed release (`workflow_dispatch` with the
+  release's tag and `modules=all`) now also attaches the signed artifacts, when the release is the
+  latest one. `docs/RELEASING.md` describes how to finish a release that published nothing.
+
 ## [1.4.0] - 2026-10-08
 
 **Breaking, in a minor release.** 1.4.0 stops writing every output that
