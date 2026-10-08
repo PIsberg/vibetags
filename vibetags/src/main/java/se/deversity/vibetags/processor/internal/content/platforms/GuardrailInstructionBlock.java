@@ -24,7 +24,7 @@ import se.deversity.vibetags.processor.internal.content.RenderingContext;
  * <p>Formatting is delegated to the per-annotation formatters using {@link Platform#CODERABBIT}
  * (a free-text, single-line-per-element style every formatter supports), so the block stays in
  * lock-step with the rest of the generated guardrails without duplicating the per-annotation prose
- * here. Those arms were {@code INTERPRETER}'s until 1.4.0 removed the Open Interpreter profile
+ * here. Those arms were {@code INTERPRETER}'s until 1.4 removed the Open Interpreter profile
  * (#720); CodeRabbit is the first of the files that print this block, and none of them has arms of
  * its own.
  */

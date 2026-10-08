@@ -69,7 +69,7 @@ class SectionCatalogContractTest {
     @DisplayName("GEMINI.md keeps Gemini's own wording after gemini_instructions.md went (#645)")
     void geminiMdKeepsGeminisWording() {
         // The wording was registered under Platform.GEMINI, gemini_instructions.md's platform, and
-        // GEMINI_MD reached it as an alias until 1.4.0 removed that file. Registered anywhere but
+        // GEMINI_MD reached it as an alias until 1.4 removed that file. Registered anywhere but
         // GEMINI_MD now, GEMINI.md prints the shared headings, which is #721's shape. Cursor prints
         // the shared defaults, and Gemini overrides 37 of them.
         long differing = java.util.Arrays.stream(SectionCatalog.Key.values())

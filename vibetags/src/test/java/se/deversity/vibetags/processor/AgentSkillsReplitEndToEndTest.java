@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end tests for the cross-client Agent Skills location and Replit Agent's {@code replit.md}.
- * Zencoder's scoped rules were tested here too until 1.4.0 removed them (#720).
+ * Zencoder's scoped rules were tested here too until 1.4 removed them (#720).
  */
 @Tag("e2e")
 class AgentSkillsReplitEndToEndTest {

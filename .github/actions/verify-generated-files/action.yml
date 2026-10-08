@@ -67,7 +67,7 @@ runs:
         # and .gemini/rules/ (tier-1 invariant 6). The audit bucket is a safety bucket, so it
         # stays inline, and since #721 under Gemini's own "CONTINUOUS AUDIT REQUIREMENTS"
         # heading, the one full mode prints, rather than the shared "MANDATORY SECURITY AUDITS".
-        # The full render was checked in gemini_instructions.md until 1.4.0 removed that file
+        # The full render was checked in gemini_instructions.md until #645 removed that file
         # (#645); NewPlatformsV3EndToEndTest pins it for GEMINI.md now.
         # Both halves are asserted: safety inline AND per-element detail moved out. Nothing
         # in CI pinned that pair before the example opted in.
@@ -135,7 +135,7 @@ runs:
         done
         grep -q 'Tied to legacy database schema' .windsurfrules || { echo "FAIL .windsurfrules lost the inline locked reason the safety files defer to"; exit 1; }
         echo "OK Devin Desktop always-on safety files defer to .windsurfrules"
-        # Cline's .clinerules/ directory, the replacement for the single .clinerules file 1.4.0 removed
+        # Cline's .clinerules/ directory, the replacement for the single .clinerules file #645 removed
         # (#645). A rule without paths: front matter loads on every request; the safety file carries the
         # locked reason with no front matter, so Cline loads it every time (#648).
         [ "$(sed -n 2p .clinerules/com-example-payment-PaymentProcessor.md)" = 'paths: ["**/PaymentProcessor.java"]' ] || { echo "FAIL .clinerules rule lacks paths: front matter (#642)"; exit 1; }

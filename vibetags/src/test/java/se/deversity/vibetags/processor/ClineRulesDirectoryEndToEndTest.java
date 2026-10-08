@@ -81,7 +81,7 @@ class ClineRulesDirectoryEndToEndTest {
      * The migration Cline performs itself. Creating a workspace rule from Cline's UI while a
      * {@code .clinerules} file exists runs {@code ensureLocalClineDirExists}, which turns the file
      * into a directory and moves its content, VibeTags block included, into
-     * {@code .clinerules/default-rules.md}. VibeTags 1.x wrote that file and 1.4.0 no longer does
+     * {@code .clinerules/default-rules.md}. VibeTags 1.x wrote that file and 1.4 no longer does
      * (#645), so the block is whatever the last 1.x build left. The next build sees a directory and
      * the directory service takes over. Nothing the user wrote may be lost across that switch, and
      * the aggregate block Cline carried along must not stay behind as a stale second copy of every
@@ -101,7 +101,7 @@ class ClineRulesDirectoryEndToEndTest {
         ProcessorTestHarness h = withLockedClass(root);
         h.compile();
         assertEquals(asFile, Files.readString(clinerules, StandardCharsets.UTF_8),
-            "a .clinerules file is no longer a VibeTags output (#645), so 1.4.0 leaves it as it was");
+            "a .clinerules file is no longer a VibeTags output (#645), so 1.4 leaves it as it was");
         VibeTagsLogger.shutdown();
 
         // What Cline's ensureLocalClineDirExists does, step for step.

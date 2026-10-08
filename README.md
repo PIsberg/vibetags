@@ -52,7 +52,7 @@
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>1.3.8</version>
+            <version>1.4.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -76,7 +76,7 @@
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>1.3.8</version>
+                        <version>1.4.0</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -94,7 +94,7 @@ touch CLAUDE.md .cursorrules AGENTS.md   # Claude, Cursor, Codex CLI — add whi
 Or let the companion CLI do it (and `vibetags doctor` checks your setup afterwards):
 
 ```bash
-jbang se.deversity.vibetags:vibetags-cli:1.3.8 init --platforms claude,cursor
+jbang se.deversity.vibetags:vibetags-cli:1.4.0 init --platforms claude,cursor
 ```
 
 **3. Annotate your first class:**
@@ -123,8 +123,8 @@ mvn compile
 
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.3.8')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.3.8')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.4.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.4.0')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -170,8 +170,8 @@ plugins {
 }
 
 dependencies {
-    implementation(platform("se.deversity.vibetags:vibetags-bom:1.3.8"))
-    kapt(platform("se.deversity.vibetags:vibetags-bom:1.3.8"))
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.4.0"))
+    kapt(platform("se.deversity.vibetags:vibetags-bom:1.4.0"))
 
     compileOnly("se.deversity.vibetags:vibetags-annotations")
     kapt("se.deversity.vibetags:vibetags-processor")
@@ -236,8 +236,8 @@ plugins {
 }
 
 dependencies {
-    implementation(platform("se.deversity.vibetags:vibetags-bom:1.3.8"))
-    ksp(platform("se.deversity.vibetags:vibetags-bom:1.3.8"))
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.4.0"))
+    ksp(platform("se.deversity.vibetags:vibetags-bom:1.4.0"))
 
     compileOnly("se.deversity.vibetags:vibetags-annotations")
     ksp("se.deversity.vibetags:vibetags-ksp")
@@ -466,7 +466,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Devin Desktop** (formerly Windsurf: `.devin/rules/*.md`, the preferred directory, with `trigger: glob` front matter, and `.windsurf/rules/*.md`, the fallback; the Devin CLI docs say both are loaded, so opt into one, [details](docs/PLATFORMS.md#windsurf-is-now-devin-desktop))
 
 Twenty-two outputs whose tool retired them or never read them were removed in 1.4.0 (#645, #720);
-[docs/PLATFORMS.md](docs/PLATFORMS.md#outputs-removed-in-140) lists each with its replacement.
+[docs/PLATFORMS.md](docs/PLATFORMS.md#outputs-removed-in-14) lists each with its replacement.
 
 > † **`AGENTS.md` is only generated when it is the sole AI config file** in the project. Because
 > `AGENTS.md` is a near-universal agent file that teams often keep as a thin pointer to another
@@ -537,8 +537,8 @@ without
 installing anything:
 
 ```bash
-jbang se.deversity.vibetags:vibetags-cli:1.3.8 init --list
-jbang se.deversity.vibetags:vibetags-cli:1.3.8 doctor
+jbang se.deversity.vibetags:vibetags-cli:1.4.0 init --list
+jbang se.deversity.vibetags:vibetags-cli:1.4.0 doctor
 ```
 
 The platform list and marker rules are read from `vibetags-processor` at runtime, so the CLI
@@ -573,7 +573,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
         <dependency>
             <groupId>se.deversity.vibetags</groupId>
             <artifactId>vibetags-bom</artifactId>
-            <version>1.3.8</version>
+            <version>1.4.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -598,7 +598,7 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
                     <path>
                         <groupId>se.deversity.vibetags</groupId>
                         <artifactId>vibetags-processor</artifactId>
-                        <version>1.3.8</version>
+                        <version>1.4.0</version>
                     </path>
                 </annotationProcessorPaths>
             </configuration>
@@ -614,8 +614,8 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 **Gradle:**
 ```groovy
 dependencies {
-    implementation platform('se.deversity.vibetags:vibetags-bom:1.3.8')
-    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.3.8')
+    implementation platform('se.deversity.vibetags:vibetags-bom:1.4.0')
+    annotationProcessor platform('se.deversity.vibetags:vibetags-bom:1.4.0')
 
     compileOnly 'se.deversity.vibetags:vibetags-annotations'
     annotationProcessor 'se.deversity.vibetags:vibetags-processor'
@@ -629,15 +629,15 @@ dependencies {
 <dependency>
     <groupId>se.deversity.vibetags</groupId>
     <artifactId>vibetags-annotations</artifactId>
-    <version>1.3.8</version>
+    <version>1.4.0</version>
 </dependency>
 <!-- vibetags-processor goes in <annotationProcessorPaths> as shown above -->
 ```
 
 **Gradle:**
 ```groovy
-compileOnly 'se.deversity.vibetags:vibetags-annotations:1.3.8'
-annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.3.8'
+compileOnly 'se.deversity.vibetags:vibetags-annotations:1.4.0'
+annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.4.0'
 ```
 
 > **Backwards compatibility:** Existing 0.5.x setups that depended on `vibetags-processor:<version>` directly continue to work — the processor pulls `vibetags-annotations` transitively. New projects should prefer the split pattern above.

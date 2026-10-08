@@ -249,7 +249,7 @@ use (160 and 315 public repositories respectively, GitHub code search, 2026-09-1
   Opting into `config.json` alone is a valid configuration: `touch .greptile/config.json` gets you
   the exclusions and no guardrail prose, and creates no `rules.md`. The merge is keyed on the folder
   as well as the file name, since `config.json` is far too common a name to key on alone (Cody's
-  `.cody/config.json` was a VibeTags output, rendered whole, until 1.4.0). In a reactor, each module's
+  `.cody/config.json` was a VibeTags output, rendered whole, until 1.4). In a reactor, each module's
   `ignorePatterns` span lists every module's exclusions. Greptile treats `ignorePatterns` as a
   setting that a child `.greptile/` folder overrides rather than adds to, so a module folder that
   sets its own replaces the root's for that subtree.
@@ -294,10 +294,10 @@ implicitly by `QWEN.md`, adding a `/refactor` command to projects that never ask
 an ordinary file-presence opt-in: regenerated when it exists, never created.
 `QwenRefactorCommandOptInEndToEndTest` pins it.
 
-### Outputs removed in 1.4.0
+### Outputs removed in 1.4
 
 These were deprecated in 1.3.5 (#641, and #664 to #677 and #845 after it), with a compiler warning
-on every build that opted into one naming the file and its replacement, and 1.4.0 no longer writes
+on every build that opted into one naming the file and its replacement, and 1.4 no longer writes
 them. Each named a tool that had been retired, or a file its vendor did not document; every row was
 confirmed at the vendor, not taken from a round-up. Their keys are gone from the
 opt-in list, so an existing file is neither regenerated nor warned about: it is left byte-identical
@@ -376,7 +376,7 @@ read them. The file also reaches past Cursor: Cline's loader reads it, so a warn
 projects to drop a file another tool still uses. A new project on Cursor should opt into
 `.cursor/rules/`; with `.cursorrules` present as well, `.cursorrules` collapses to the scoped-rules
 index and keeps only the safety tier inline. The file gets a deprecation warning when Cursor says it
-no longer reads it, through the `DeprecatedServices` table 1.4.0 removed with its last row (#720),
+no longer reads it, through the `DeprecatedServices` table 1.4 removed with its last row (#720),
 restored from git history.
 
 ### Cursor and Trae read `globs:` as a comma-separated string
@@ -479,7 +479,7 @@ unknown.
 
 Cline reads `.clinerules` as either a single file or a directory of rule files. VibeTags writes the
 directory, the `cline_granular` service. It wrote the single file too, as the `cline` service, until
-1.4.0 removed it (#645). A service activates only on the kind of entry it writes, so a leftover
+1.4 removed it (#645). A service activates only on the kind of entry it writes, so a leftover
 `.clinerules` file opts into nothing and is left as it is.
 
 The directory's rule files carry `paths:` front matter, the same shape Claude Code uses. That is read

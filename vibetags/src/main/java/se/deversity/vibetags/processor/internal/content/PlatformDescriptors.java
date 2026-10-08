@@ -158,10 +158,10 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("continue_ignore", ".continueignore", Kind.FILE, null, Platform.CONTINUE_IGNORE, IGNORE_FILE_RENDERER, "Continue", true),
         new PlatformDescriptor("augment_ignore", ".augmentignore", Kind.FILE, null, Platform.AUGMENT_IGNORE, IGNORE_FILE_RENDERER, "Augment Code", true),
         // GEMINI.md, the Gemini CLI file. It printed gemini_instructions.md's words through
-        // Platform.rendersAs until 1.4.0 removed that file; the wording is now its own (#645, #721).
+        // Platform.rendersAs until 1.4 removed that file; the wording is now its own (#645, #721).
         new PlatformDescriptor("gemini_md", "GEMINI.md", Kind.FILE, null, Platform.GEMINI_MD, GEMINI_RENDERER, null, false),
         // Cline's directory form (issue #642). The single .clinerules file VibeTags wrote at the same path
-        // was removed in 1.4.0 (#645), and isOptedIn ignores a file there.
+        // was removed in 1.4 (#645), and isOptedIn ignores a file there.
         new PlatformDescriptor("cline_granular", ".clinerules", Kind.DIRECTORY, null, Platform.CLINE_GRANULAR, GRANULAR_RENDERER, null, false),
         // Inside that directory: the safety tier, always loaded (issue #648). Implicit, like
         // codex_config under codex, so it has no opt-in key of its own.

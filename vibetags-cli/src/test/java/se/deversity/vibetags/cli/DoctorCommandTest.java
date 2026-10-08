@@ -281,7 +281,7 @@ class DoctorCommandTest {
             <module>cli</module>
           </modules>
           <dependencyManagement><dependencies>
-            <dependency><artifactId>vibetags-processor</artifactId><version>1.4.0</version></dependency>
+            <dependency><artifactId>vibetags-processor</artifactId><version>1.0.0</version></dependency>
           </dependencies></dependencyManagement>
         </project>
         """;
@@ -348,8 +348,8 @@ class DoctorCommandTest {
         Files.writeString(dir.resolve("build.gradle.kts"), "plugins { java }\n");
         String wired = """
             dependencies {
-                compileOnly("se.deversity.vibetags:vibetags-processor:1.4.0")
-                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.4.0")
+                compileOnly("se.deversity.vibetags:vibetags-processor:1.0.0")
+                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.0.0")
             }
             """;
         module("core", "build.gradle.kts", wired, true);
@@ -377,8 +377,8 @@ class DoctorCommandTest {
         Files.writeString(dir.resolve("build.gradle.kts"), "plugins { java }\n");
         String wired = """
             dependencies {
-                compileOnly("se.deversity.vibetags:vibetags-processor:1.4.0")
-                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.4.0")
+                compileOnly("se.deversity.vibetags:vibetags-processor:1.0.0")
+                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.0.0")
             }
             """;
         module("core", "build.gradle.kts", wired, true);
@@ -402,8 +402,8 @@ class DoctorCommandTest {
             """);
         String wired = """
             dependencies {
-                compileOnly("se.deversity.vibetags:vibetags-processor:1.4.0")
-                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.4.0")
+                compileOnly("se.deversity.vibetags:vibetags-processor:1.0.0")
+                annotationProcessor("se.deversity.vibetags:vibetags-processor:1.0.0")
             }
             """;
         module("core", "build.gradle.kts", wired, true);
@@ -426,8 +426,8 @@ class DoctorCommandTest {
         Files.writeString(dir.resolve("build.gradle"), "plugins { id 'java' }\n");
         String wired = """
             dependencies {
-                compileOnly 'se.deversity.vibetags:vibetags-processor:1.4.0'
-                annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.4.0'
+                compileOnly 'se.deversity.vibetags:vibetags-processor:1.0.0'
+                annotationProcessor 'se.deversity.vibetags:vibetags-processor:1.0.0'
             }
             """;
         module("core", "build.gradle", wired, true);

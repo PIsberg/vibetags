@@ -12,8 +12,8 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * End-to-end tests for the platforms added in v0.8.0 that 1.4.0 still writes: Codeium. PearAI,
- * Mentat, Sweep, Plandex, Double.bot and Open Interpreter were removed in 1.4.0 (#720).
+ * End-to-end tests for the platforms added in v0.8.0 that 1.4 still writes: Codeium. PearAI,
+ * Mentat, Sweep, Plandex, Double.bot and Open Interpreter were removed in 1.4 (#720).
  */
 @Tag("e2e")
 class NewPlatformsV2EndToEndTest {

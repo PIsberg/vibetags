@@ -235,7 +235,7 @@ public final class ServiceRegistry {
      * <p>The one definition of that distinction, for everything that has to know which kind of entry
      * a service path is without looking at the disk: opt-in resolution below, the CLI {@code init}
      * command, and the tests that count and fixture the outputs. The file name cannot answer it:
-     * {@code .clinerules} is the {@code cline_granular} directory, and until 1.4.0 the same path was
+     * {@code .clinerules} is the {@code cline_granular} directory, and until 1.4 the same path was
      * also the single-file {@code cline} service (#645).
      *
      * <p>It used to read the {@code _granular} suffix, which is a naming convention and not a
@@ -301,7 +301,7 @@ public final class ServiceRegistry {
      *
      * <p>This used to be a bare {@code Files.exists}, and the shape of that bug is worth keeping
      * written down. Cline reads {@code .clinerules} as a directory of rule files (its current
-     * documented shape) and as a single file (the shape VibeTags wrote until 1.4.0, which its loader
+     * documented shape) and as a single file (the shape VibeTags wrote until 1.4, which its loader
      * still reads). A user following the current docs created the directory, {@code exists()} was true
      * for it, the single-file service activated, and the writer was handed a directory to write a
      * regular file over.

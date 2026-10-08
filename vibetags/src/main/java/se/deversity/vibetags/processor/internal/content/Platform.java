@@ -110,7 +110,7 @@ public enum Platform {
      *
      * <p>An alias is a second file that a tool's sibling reads in the same words. There is none
      * today: the only one was {@code GEMINI_MD}, which rendered as {@code GEMINI}
-     * ({@code gemini_instructions.md}) until 1.4.0 removed that file and moved its wording to
+     * ({@code gemini_instructions.md}) until 1.4 removed that file and moved its wording to
      * {@code GEMINI_MD} itself (#645). Before this was a property, every alias was a pair of
      * {@code case} labels in each formatter and a second registration in {@code SectionCatalog}, and
      * a missed one printed the default wording with nothing failing (#721, #764), so the seam stays

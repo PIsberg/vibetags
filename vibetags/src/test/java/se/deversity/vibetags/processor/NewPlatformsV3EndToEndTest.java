@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * End-to-end tests for platforms added in v0.9.6: GEMINI.md (Google Gemini official markdown).
- * .antigravityignore (Antigravity AI) was removed in 1.4.0 (#720).
+ * .antigravityignore (Antigravity AI) was removed in 1.4 (#720).
  */
 class NewPlatformsV3EndToEndTest {
 

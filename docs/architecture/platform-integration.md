@@ -20,7 +20,7 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 ### Claude
 
-**Files:** `CLAUDE.md` (`.claudeignore` was removed in 1.4.0, #667, #720)
+**Files:** `CLAUDE.md` (`.claudeignore` was removed in 1.4, #667, #720)
 
 **Behavior:** Claude treats `CLAUDE.md` as foundational context. XML tags appeal to Claude's parsing strengths. Enforces `<rule>` elements strictly.
 
@@ -28,7 +28,7 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 **Files:** `.aiexclude` + `GEMINI.md`
 
-**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `GEMINI.md` provides detailed persona and audit guidance. (`gemini_instructions.md` did the same until 1.4.0 removed it, #645.)
+**Behavior:** `.aiexclude` is a binary blocklist (hard guardrail). `GEMINI.md` provides detailed persona and audit guidance. (`gemini_instructions.md` did the same until 1.4 removed it, #645.)
 
 ### Codex CLI
 
@@ -38,7 +38,7 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 ### GitHub Copilot
 
-**Files:** `.github/copilot-instructions.md` (`.copilotignore` was removed in 1.4.0, #668, #720)
+**Files:** `.github/copilot-instructions.md` (`.copilotignore` was removed in 1.4, #668, #720)
 
 **Behavior:** Copilot uses the instructions file to guide its completions. Copilot's documented exclusion is the Content exclusion setting, which no file controls.
 

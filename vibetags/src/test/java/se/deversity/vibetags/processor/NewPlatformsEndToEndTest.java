@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * End-to-end tests for platforms added in v0.7.0:
  * Windsurf, Zed, and the granular rule directories
  * for Windsurf, Continue and Tabnine. Amazon Q's and the universal .ai/rules/ directories were
- * removed in 1.4.0 (#720).
+ * removed in 1.4 (#720).
  */
 @Tag("e2e")
 class NewPlatformsEndToEndTest {

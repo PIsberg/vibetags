@@ -168,7 +168,7 @@ class MergeAcrossModulesLogContractTest {
      * The owned lines of a {@code greptile.json} in the exact shape {@code GreptileRenderer} emits,
      * which is the only one {@code JsonLineArraysMerge} accepts. Built from one template rather than
      * hand-written per test, so a fixture typo cannot masquerade as a declined merge. (Mentat's
-     * {@code .mentatconfig.json} played this part until 1.4.0 removed it, #720.)
+     * {@code .mentatconfig.json} played this part until 1.4 removed it, #720.)
      */
     private static String greptileDoc(String lockedPath) {
         return """

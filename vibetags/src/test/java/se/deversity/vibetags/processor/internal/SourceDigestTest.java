@@ -62,7 +62,7 @@ class SourceDigestTest {
 
     @Test
     void anOptInThatChangesKindMovesTheKey() throws IOException {
-        // A .clinerules file opts into nothing since 1.4.0 (#645); the cline_granular directory at
+        // A .clinerules file opts into nothing since 1.4 (#645); the cline_granular directory at
         // the same path does, so swapping one for the other must move the key.
         project();
         Files.createFile(root.resolve(".clinerules"));

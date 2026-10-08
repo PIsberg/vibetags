@@ -103,7 +103,7 @@ final class InitCommand {
             }
             if (Files.exists(path)) {
                 // The entry is there as the other kind: a .clinerules file where cline_granular writes a
-                // directory, left over from the single-file service 1.4.0 removed (#645). Reporting it
+                // directory, left over from the single-file service #645 removed. Reporting it
                 // active would tell the user they got the form they asked for.
                 err.println("error: refusing " + key + " — " + dir.relativize(path) + " already exists as a "
                     + (Files.isDirectory(path) ? "directory" : "file") + ", but " + key + " writes a "

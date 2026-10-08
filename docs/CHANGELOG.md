@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Breaking, in a minor release: the next release is 1.4.0.** It stops writing every output that
+## [1.4.0] - 2026-10-08
+
+**Breaking, in a minor release.** 1.4.0 stops writing every output that
 1.3.5 and later deprecated (#641, #664 to #677, #845), each with a compiler warning naming the file
 and its replacement. The warning said the next *major* version; the removal ships in 1.4.0
 instead, by the owner's decision. A build that never saw that warning is unaffected. See Removed.
@@ -6341,7 +6343,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.3.8...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/PIsberg/vibetags/compare/v1.3.8...v1.4.0
 [1.3.8]: https://github.com/PIsberg/vibetags/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/PIsberg/vibetags/compare/v1.3.6...v1.3.7
 [1.3.6]: https://github.com/PIsberg/vibetags/compare/v1.3.5...v1.3.6

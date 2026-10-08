@@ -313,7 +313,7 @@ class AllAnnotationsAllPlatformsEndToEndTest {
         // GuardrailInstructionBlock streams 27 annotation buckets into the review instructions, one
         // distinct parenthetical tag per formatter. Asserting every tag is present kills the
         // "removed call to <Formatter>::format" mutants. The Open Interpreter profile carried this
-        // check until 1.4.0 removed it (#720); its formatter arms are CodeRabbit's now.
+        // check until 1.4 removed it (#720); its formatter arms are CodeRabbit's now.
         String profile = harness.readFile(".coderabbit.yaml");
         String[] tags = {
             "(locked):", "(context):", "(excluded):", "(audit):", "(draft):",
