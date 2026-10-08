@@ -75,7 +75,11 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   the file lacks, and keeps every other byte. A document it cannot merge without guessing is left
   alone with a warning naming why; the log records `write.skip reason=` with the merge's reason
   (`duplicate-table`, `not-multiline-string`, `unclosed-span` and the rest). Until now such a file
-  was skipped outright, and before that overwritten. `TomlValueSpansTest` (8 cases) and
+  was skipped outright, and before that overwritten. A `[` line inside a multi-line string or a
+  multi-line array is a value, not a table, so it neither ends a table early nor gets the key added
+  a second time, and a quoted name (`["pr_reviewer"]`, `'extra_instructions'`) is the same table
+  or key as the bare one; a UTF-8 byte order mark in front of the first header does not hide it.
+  `TomlValueSpansTest` (11 cases) and
   `aHandWrittenPrAgentConfig_keepsItsSettingsAndGainsTheGuardrails` cover it; the latter failed before
   the change.
 - **`vibetags-cli/README.md`.** The CLI's flags, exit codes and limits were spread over a USAGE.md
@@ -158,6 +162,23 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   unwired module is named; a module with no annotations needs nothing. Four `DoctorCommandTest`
   cases failed before the change; codekarta, the consumer in the issue, now reports `6 use the
   annotations, all wired` and exits 0.
+- **A nested type's scoped rule loads for the file its code is in.** The glob was built from the
+  type's own simple name, so `Ledger.Entry` got `**/Entry.java`: no such file exists, and the rule
+  never loaded when `Ledger.java` was opened, or an unrelated `Entry.java` elsewhere loaded it. A
+  member of a nested type files under that type and had the same glob. The glob now names the
+  outermost enclosing type's file, `**/Ledger.java`. The file a nested type is in reaches the build
+  fingerprint, so moving `Entry` into a file of its own regenerates the glob; for every other
+  element the fingerprint is unchanged. `NestedTypeRuleGlobTest` failed before the change.
+- **`vibetags doctor` reads a Gradle `include` that spans lines.** Only the line holding `include`
+  was read, so `include(` with one project per line below it listed no module and doctor fell back
+  to the root-only check above, and a Groovy `include 'core',` continued on the next line lost
+  every project after the first. The arguments are now read to the closing parenthesis, or across
+  every line ending in a comma. Two `DoctorCommandTest` cases failed before the change.
+- **`vibetags doctor` reads a Gradle multi-project with no root build file.** The settings file
+  alone lists the projects and each configures itself, but doctor looked only for
+  `pom.xml` or `build.gradle[.kts]` at the root, reported "no build file found" and exited 1
+  without reading a module. A root `settings.gradle[.kts]` is now the build file when there is no
+  other. `gradleReactorWithNoRootBuildFile_readsEachProject` failed before the change.
 - **Upgrading a pre-marker file keeps the hand-written text below a long legacy block (#936).** The
   end of an XML-shaped legacy block was looked for only in the first 2,000 characters after its
   header, so a block longer than that (a dozen guardrails) read as running to the end of the file,
@@ -227,6 +248,12 @@ instead, by the owner's decision. A build that never saw that warning is unaffec
   output that can name it. A module whose only `@AIIgnore` is on a member contributes nothing to
   an ignore file, rather than a header with no globs under it. `MemberLevelAIIgnoreGlobTest`
   failed 2 of 2 before the change.
+- **A nested type annotated `@AIIgnore` or `@AILocked` no longer becomes a file glob either.** It
+  was written as `**/<NestedName>.java`, a file that does not exist, while its code is in the
+  outermost type's file: an unrelated file of that name was hidden and the code meant to be was
+  not. Only a top-level type contributes a glob now; the nested type is still excluded or locked
+  in every prose output. Hiding the whole outer file instead would hide code nobody marked.
+  `aNestedTypeIsNotWrittenAsAFileGlob` failed before the change, for both annotations.
 - **A module that gave up waiting for the generation lock released it for other processes on
   Linux (#923).** Every waiter opened its own channel on `.vibetags-generate.lock` and polled
   `tryLock()`. The JDK takes `fcntl` locks on Linux, which belong to the process, so when a waiter

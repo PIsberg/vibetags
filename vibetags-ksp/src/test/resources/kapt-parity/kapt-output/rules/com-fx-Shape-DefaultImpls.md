@@ -1,5 +1,5 @@
 ---
-paths: ["**/DefaultImpls.java"]
+paths: ["**/Shape.java"]
 ---
 
 <!-- VIBETAGS-START -->

@@ -1,5 +1,5 @@
 ---
-paths: ["**/TaxCalculatorStrategy.java"]
+paths: ["**/NewAnnotationsShowcase.java"]
 ---
 
 <!-- VIBETAGS-START -->

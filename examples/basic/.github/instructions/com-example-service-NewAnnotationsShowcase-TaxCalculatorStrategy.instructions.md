@@ -1,5 +1,5 @@
 ---
-applyTo: "**/TaxCalculatorStrategy.java"
+applyTo: "**/NewAnnotationsShowcase.java"
 ---
 
 <!-- VIBETAGS-START -->

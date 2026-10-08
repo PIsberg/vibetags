@@ -1,5 +1,5 @@
 ---
-paths: ["**/Inner.java"]
+paths: ["**/Plain.java"]
 ---
 
 <!-- VIBETAGS-START -->

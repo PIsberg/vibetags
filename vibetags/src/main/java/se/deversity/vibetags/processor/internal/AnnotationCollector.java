@@ -666,6 +666,7 @@ public final class AnnotationCollector {
                    ElementNaming.simpleNameOf(e),
                    ElementNaming.elementDisplayName(e),
                    ElementNaming.granularQName(e))
+            .fileStem(ElementNaming.fileStem(e))
             .kind(tagOf(e))
             // Captured here because it needs the javac element model, which is only valid while the
             // round is live; the enforcing mode reads it later as plain data (issue #284). Skipped

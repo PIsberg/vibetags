@@ -1,6 +1,6 @@
 ---
 trigger: glob
-globs: **/TaxCalculatorStrategy.java
+globs: **/NewAnnotationsShowcase.java
 ---
 
 <!-- VIBETAGS-START -->

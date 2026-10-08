@@ -1,6 +1,6 @@
 ---
 alwaysApply: false
-globs: **/ImmutableProductPrice.java
+globs: **/NewAnnotationsShowcase.java
 description: "AI rules for com.example.service.NewAnnotationsShowcase.ImmutableProductPrice"
 ---
 

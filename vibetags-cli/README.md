@@ -180,7 +180,7 @@ Exit code 1. Every finding says what to do about it.
 
 | Check | Finding when |
 |---|---|
-| Build file | No `pom.xml`, `build.gradle` or `build.gradle.kts` in the project root. |
+| Build file | No `pom.xml`, `build.gradle` or `build.gradle.kts` in the project root, and no Gradle settings file either: a multi-project whose root holds only `settings.gradle[.kts]` is read through it. |
 | Processor wiring | Neither `vibetags-processor` nor `vibetags-ksp` appears in the build file, so nothing regenerates the guardrail files. |
 | Annotations dependency | `vibetags-annotations` does not appear in the build file and does not arrive through the processor, so `@AI*` annotations will not compile. The processor's pom brings the annotations along, so a `vibetags-processor` Maven `<dependency>` (not `test` or `runtime` scope) or Gradle `compileOnly`/`implementation`/`api` dependency counts, and doctor prints `annotations dep: yes (through the vibetags-processor dependency)`. A processor only on `annotationProcessorPaths` or Gradle's `annotationProcessor` does not. |
 | Reactor modules | The root build file lists modules (Maven `<modules>`, profile-scoped and nested ones included; Gradle `include(...)` in the settings file), and a module whose sources import `se.deversity.vibetags.annotations` lacks the processor or the annotations, in its own build file or inherited from the root. Each such module is named. A module that imports no annotation needs neither, and a processor that is only in `<dependencyManagement>` wires nothing. Doctor prints `reactor: N module(s) listed` and `modules: K use the annotations, all wired` in place of the two single-file lines (#929). |

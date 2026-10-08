@@ -1,5 +1,5 @@
 ---
-paths: ["**/Ok.java"]
+paths: ["**/Result2.java"]
 ---
 
 <!-- VIBETAGS-START -->

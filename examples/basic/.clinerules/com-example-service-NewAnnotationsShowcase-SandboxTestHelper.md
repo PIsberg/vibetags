@@ -1,5 +1,5 @@
 ---
-paths: ["**/SandboxTestHelper.java"]
+paths: ["**/NewAnnotationsShowcase.java"]
 ---
 
 <!-- VIBETAGS-START -->

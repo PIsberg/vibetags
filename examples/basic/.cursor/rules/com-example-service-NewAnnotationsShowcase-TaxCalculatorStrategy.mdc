@@ -1,6 +1,6 @@
 ---
 description: "AI rules for com.example.service.NewAnnotationsShowcase.TaxCalculatorStrategy"
-globs: **/TaxCalculatorStrategy.java
+globs: **/NewAnnotationsShowcase.java
 alwaysApply: false
 ---
 

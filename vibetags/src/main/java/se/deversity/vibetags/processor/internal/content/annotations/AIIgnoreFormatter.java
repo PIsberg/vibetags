@@ -50,11 +50,12 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
         // (issue #762). The platform entry declares it now, so there is no label to forget.
         PlatformDescriptor descriptor = PlatformDescriptors.byPlatform(platform);
         if (descriptor != null && descriptor.globSyntax()) {
-            // A glob names a file, so only a type may contribute one. A member emitted
-            // "**/<memberName>.java", a glob for a file that does not exist or, worse, for an
-            // unrelated file of that name (#926). The member is still excluded wherever a platform
-            // can name it in prose; AILockedFormatter treats .aiexclude the same way.
-            if (element.kind().isClass() || element.kind().isInterface()) {
+            // A glob names a file, so only a top-level type may contribute one. A member or a nested
+            // type emitted "**/<simpleName>.java", a glob for a file that does not exist or, worse,
+            // for an unrelated file of that name, and never for the file its code is in (#926). It
+            // is still excluded wherever a platform can name it in prose; AILockedFormatter treats
+            // .aiexclude the same way.
+            if (element.ownsSourceFile()) {
                 sb.append("**/").append(element.simpleName()).append(".java\n");
             }
             return;
