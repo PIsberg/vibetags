@@ -20,7 +20,7 @@ public final class OrphanWarner {
         if (hasIgnore) {
             warn(messager, log, active.contains("cursor") && !active.contains("cursor_ignore"),
                 "VibeTags: @AIIgnore used but .cursorignore is missing for Cursor support. Consider creating it.");
-            // No Claude or Copilot warning: VibeTags writes no ignore file for either since 1.4.0 (#720).
+            // No Claude or Copilot warning: VibeTags writes no ignore file for either since 1.4 (#720).
             // Claude Code's documented mechanism is Read deny rules (#667) and Copilot excludes content
             // in settings (#668); CLAUDE.md carries @AIIgnore inline in its always-loaded safety tier.
             warn(messager, log, active.contains("qwen") && !active.contains("qwen_ignore"),

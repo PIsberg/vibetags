@@ -133,9 +133,9 @@ Then compile, and the processor fills each file in. What `init` guarantees:
 
 - **It refuses a path that exists as the wrong kind.** `cline_granular` writes `.clinerules` as a
   directory, so asking for it when a `.clinerules` file is there, left over from the single-file
-  service 1.4.0 removed, is refused rather than replacing the file.
+  service 1.4 removed, is refused rather than replacing the file.
 - **It refuses to write outside the project root**, for example through a symlinked `.github`.
-- **A key removed in 1.4.0 is rejected as unknown** (#645, #720), like any other key it does not know.
+- **A key removed in 1.4 is rejected as unknown** (#645, #720), like any other key it does not know.
 
 ## `doctor`: check a project
 

@@ -535,7 +535,7 @@ class GuardrailLifecycleEndToEndTest {
         Files.createDirectories(root.resolve("module-cli"));
         Files.createFile(root.resolve("CLAUDE.md"));
         // A JSON document VibeTags shares with the user (#639): it owns spans inside it, so it is
-        // seeded with an object. Mentat's .mentatconfig.json was the JSON format here until 1.4.0
+        // seeded with an object. Mentat's .mentatconfig.json was the JSON format here until 1.4
         // removed it (#720).
         Files.writeString(root.resolve("greptile.json"), "{}\n");
         Files.createFile(root.resolve(".pr_agent.toml"));

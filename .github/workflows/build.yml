@@ -345,7 +345,7 @@ jobs:
           # collapses the aggregates, which is what examples/multimodule-indexed/ covers.)
           # TESTING.md is opted in: core's test source set is what gives the reactor a routed
           # round, so the merge of TESTING.md across modules is covered here and not only by the
-          # in-process fixtures. 38 since 1.4.0 removed twenty outputs this reactor opted into
+          # in-process fixtures. 38 since #720 removed twenty outputs this reactor opted into
           # (#645, #720).
           expected=38
           actual=$(grep 'Active services' vibetags.log | tail -1 | sed 's/.*services (\([0-9]*\)).*/\1/')
@@ -1119,8 +1119,8 @@ jobs:
           # that would be buying a clean number with two minutes of CI, so the family is named and
           # skipped instead. Everything else, "stated nowhere" included, still fails here.
           #
-          # Until 1.4.0 the deprecation warning (#641) was excluded here too and asserted present.
-          # 1.4.0 removed every deprecated output (#645, #720), so nothing prints it and nothing
+          # Until #645 and #720 the deprecation warning (#641) was excluded here too and asserted
+          # present. They removed every deprecated output, so nothing prints it and nothing
           # here may.
           #
           # The log goes to RUNNER_TEMP so it can never dirty the tree the drift gate just checked.

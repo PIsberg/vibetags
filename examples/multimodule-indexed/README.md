@@ -35,7 +35,7 @@ notes — collapses to a one-line module pointer and loads from `core/.claude/ru
 
 `.aiexclude` is opted in at the root so `@AIIgnore` and `@AILocked` have a hard exclusion to write
 to beside `GEMINI.md`; without it the processor warns that `.aiexclude` is missing. (`.claudeignore`
-and `.copilotignore` played this part until 1.4.0 removed them, #720.)
+and `.copilotignore` played this part until 1.4 removed them, #720.)
 
 `.clinerules/` is opted in at the root as a **directory**, Cline's granular form. `examples/basic`
 carries it too, as a single module; this reactor is the fixture for the cross-module case. Both

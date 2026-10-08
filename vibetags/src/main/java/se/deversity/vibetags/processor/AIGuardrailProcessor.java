@@ -792,7 +792,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * short-circuit, because the file they warn about may still be on disk.
      *
      * <p>That includes the ones {@code generateFiles()} raises ahead of its own short-circuit: the
-     * two module-identity warnings (and, before 1.4.0, a deprecated-output warning, #720). Every
+     * two module-identity warnings (and, before #720, a deprecated-output warning). Every
      * no-op rebuild printed those before the early exit existed, and skipping them made a
      * {@code -Werror} build fail cold and pass on the rebuild (#859).
      */

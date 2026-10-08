@@ -232,7 +232,7 @@ class GranularIndexEndToEndTest {
      * <p>The inline safety sections are documented to read identically to full mode, and every other
      * aggregate with its own wording keeps it when it collapses. {@code GEMINI.md} did not: its
      * wording was registered only under the {@code gemini_instructions.md} platform (removed in
-     * 1.4.0, #645), so the
+     * 1.4, #645), so the
      * collapsed file fell back to the shared Cursor headings ({@code MANDATORY SECURITY AUDITS})
      * under the shared {@code # AUTO-GENERATED AI RULES} title, and a project that added
      * {@code .gemini/rules/} saw the safety tier it already had renamed under it.
@@ -325,7 +325,7 @@ class GranularIndexEndToEndTest {
      * directly under the last bullet, and after an audit block every heading that did carry its
      * newline got two blank lines, as did the first heading under the generated header. Asserted on
      * both shapes that print this wording: the full and the collapsed {@code GEMINI.md}. The full
-     * {@code gemini_instructions.md} printed it too until 1.4.0 removed it (#645).
+     * {@code gemini_instructions.md} printed it too until 1.4 removed it (#645).
      */
     @Test
     void geminiRenders_setEverySectionOffByExactlyOneBlankLine(@TempDir Path dir) throws IOException {

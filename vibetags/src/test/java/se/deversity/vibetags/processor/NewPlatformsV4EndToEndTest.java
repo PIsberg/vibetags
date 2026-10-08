@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>Editors &amp; modes: {@code .roomodes}</li>
  * </ul>
  * {@code .ghostcoderignore}, {@code .piecesignore}, {@code ellipsis.yaml} and {@code .void/rules.md}
- * were removed in 1.4.0 (#720).
+ * were removed in 1.4 (#720).
  */
 @Tag("e2e")
 class NewPlatformsV4EndToEndTest {

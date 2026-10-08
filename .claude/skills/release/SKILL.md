@@ -265,7 +265,7 @@ then confirm each against the vendor's own documentation, never a cross-tool rou
 
 Report per tool: still documented, renamed, retired, or **could not check**. A retired or
 undocumented output is deprecated with a compiler warning for at least one release, never removed
-in a minor release. 1.4.0 removed the last deprecated output and with it `DeprecatedServices`, the
+in a minor release. #720 removed the last deprecated output and with it `DeprecatedServices`, the
 table that raised the warning (#720); restore it from git history for the next one. If this step finds something, say so in the release notes; if it
 could not run, say that instead of calling it clean.
 

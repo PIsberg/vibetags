@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * TOML output the answer was permanently "no", so the writer's {@code no-new-rules} guard skipped
  * every update to an existing file. Whatever the first successful write produced stayed there for
  * good: on the four-module {@code examples/multimodule}, Mentat's {@code .mentatconfig.json}
- * (removed in 1.4.0, #720) and {@code .pr_agent.toml} carried only {@code core}'s guardrails, and every later build logged
+ * (removed in 1.4, #720) and {@code .pr_agent.toml} carried only {@code core}'s guardrails, and every later build logged
  * "no changes".
  *
  * <p>Second, even once they refresh, the content is one module's. There is no marker region to

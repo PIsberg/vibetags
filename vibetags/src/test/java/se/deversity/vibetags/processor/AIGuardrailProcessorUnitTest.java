@@ -162,10 +162,10 @@ class AIGuardrailProcessorUnitTest {
         assertTrue(note.contains(".cursorrules"), "Note should list .cursorrules");
         assertTrue(note.contains("AGENTS.md"), "Note should list codex file");
         assertTrue(note.contains("GEMINI.md"), "Note should list the Gemini file");
-        assertFalse(note.contains("gemini_instructions.md"), "Note must not offer the file removed in 1.4.0 (#645)");
+        assertFalse(note.contains("gemini_instructions.md"), "Note must not offer the file removed in 1.4 (#645)");
         assertTrue(note.contains("copilot-instructions.md"), "Note should list copilot file");
         assertTrue(note.contains(".cursorignore"), "Note should list cursor ignore file");
-        assertFalse(note.contains(".copilotignore"), "Note must not offer .copilotignore, removed in 1.4.0 (#720)");
+        assertFalse(note.contains(".copilotignore"), "Note must not offer .copilotignore, removed in 1.4 (#720)");
     }
 
     @Test
@@ -253,7 +253,7 @@ class AIGuardrailProcessorUnitTest {
      * Creates every service's path in the form that service writes: a directory holding a signal
      * file for a granular service, an empty file for everything else.
      *
-     * <p>Until 1.4.0 one path was two services, the {@code cline} file and the {@code cline_granular}
+     * <p>Until 1.4 one path was two services, the {@code cline} file and the {@code cline_granular}
      * directory, and creating both threw {@code FileAlreadyExistsException} (issue #642). The file
      * service is gone (#645); the existence check stays so a future shared path cannot throw again.
      */

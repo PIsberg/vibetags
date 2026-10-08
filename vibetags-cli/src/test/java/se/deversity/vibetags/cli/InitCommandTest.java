@@ -131,7 +131,7 @@ class InitCommandTest {
     }
 
     /**
-     * A {@code .clinerules} file left over from the single-file service removed in 1.4.0 (#645) is
+     * A {@code .clinerules} file left over from the single-file service removed by #645 is
      * not the {@code cline_granular} directory. It is not "already active", and saying otherwise
      * tells the user they got the form they asked for.
      */
@@ -157,7 +157,7 @@ class InitCommandTest {
         assertTrue(out().contains("cline_granular -> .clinerules  [active]"), out());
     }
 
-    /** The outputs removed in 1.4.0 (#645, #720) are no longer offered, so init cannot opt a project back in. */
+    /** The outputs removed by #645 and #720 are no longer offered, so init cannot opt a project back in. */
     @Test
     void list_offersNoOutputRemovedIn1_4_0() {
         run("init", "--list");
@@ -172,7 +172,7 @@ class InitCommandTest {
             assertFalse(out().contains(file), "still lists " + file + ":\n" + out());
         }
         assertTrue(out().contains("gemini_md -> GEMINI.md"), "the replacements are still offered:\n" + out());
-        assertFalse(out().contains("deprecated"), "nothing is deprecated after 1.4.0:\n" + out());
+        assertFalse(out().contains("deprecated"), "nothing is deprecated after #720:\n" + out());
     }
 
     @Test

@@ -236,7 +236,7 @@ class AIGuardrailProcessorProcessTest {
         Set<String> active = Set.of("copilot");
         processor.checkOrphanedAnnotations(messager, active, false, true, false);
 
-        // VibeTags writes no .copilotignore (#668, removed in 1.4.0 by #720): Copilot excludes
+        // VibeTags writes no .copilotignore (#668, removed in 1.4 by #720): Copilot excludes
         // content in settings, so a Copilot project is not told to create the file.
         assertTrue(warnings.stream().noneMatch(w -> w.contains(".copilotignore")),
             "Should not suggest .copilotignore: " + warnings);

@@ -95,7 +95,7 @@ class OrphanWarnerTest {
 
     /**
      * The warning tells a user to create a file. Telling them to create one VibeTags no longer
-     * writes (#667, #668, removed in 1.4.0 by #720) would have them opt into nothing at all.
+     * writes (#667, #668, removed in 1.4 by #720) would have them opt into nothing at all.
      */
     @Test
     void noWarningInvitesCreatingARemovedOutput() {

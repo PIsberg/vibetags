@@ -56,7 +56,7 @@ Nothing here is decoration. Each module exists because some assertion needs a sh
 | `tests` | Carries no annotations at all, so mirroring is the only thing that can put rules in it |
 
 Every module carries at least one safety-tier guardrail on purpose. Several renderers emitted safety
-families only (`.plandex.yaml` until 1.4.0), so a module whose annotations are all advisory is simply
+families only (`.plandex.yaml` until 1.4), so a module whose annotations are all advisory is simply
 absent from those files. Without a safety-tier witness per module the YAML check below reports a
 merge failure that never happened.
 

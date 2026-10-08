@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Every output deprecated in 1.3.5 (#641) and after it is removed in 1.4.0: the four of #645
+ * Every output deprecated in 1.3.5 (#641) and after it is removed in 1.4: the four of #645
  * ({@code gemini_instructions.md}, {@code .cody/config.json} with {@code .codyignore},
  * {@code .supermavenignore} and the single {@code .clinerules} file) and the seventeen of #720.
  * The deprecation warning was the notice; this pins what removal means to a consumer who never
@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the file is the user's, and VibeTags does not touch a path it no longer manages.
  */
 @Tag("e2e")
-@DisplayName("Outputs removed in 1.4.0 (#645, #720)")
+@DisplayName("Outputs removed in 1.4 (#645, #720)")
 class RemovedPlatformOutputsTest {
 
     /** The service keys the removal took out. */
@@ -166,7 +166,7 @@ class RemovedPlatformOutputsTest {
         for (Diagnostic<? extends JavaFileObject> d : diagnostics) {
             String message = d.getMessage(null);
             assertFalse(message.contains("deprecated") && message.contains("opted-in"),
-                "no output is deprecated after 1.4.0:\n" + message);
+                "no output is deprecated after 1.4:\n" + message);
         }
     }
 

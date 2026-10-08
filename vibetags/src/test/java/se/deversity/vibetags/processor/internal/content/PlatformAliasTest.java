@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * it renders as, however its switch is spelled.
  *
  * <p>No alias exists today. The only one, {@code GEMINI_MD} rendering as {@code GEMINI}, went when
- * 1.4.0 removed {@code gemini_instructions.md} (#645); {@code SectionCatalogContractTest} pins that
+ * 1.4 removed {@code gemini_instructions.md} (#645); {@code SectionCatalogContractTest} pins that
  * {@code GEMINI.md} kept the wording.
  */
 class PlatformAliasTest {

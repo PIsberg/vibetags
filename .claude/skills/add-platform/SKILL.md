@@ -7,7 +7,7 @@ description: Add support for a new AI coding tool, IDE, PR-reviewer, or context-
 
 Paths and class names below were derived from the codebase at v1.0.0-RC3 (commits `2bc839e`
 Claude Code local/granular/Skill + Copilot granular, `9c61a83` AI PR-reviewers/context-packers/
-Void/Roo, `406f353` Firebase AI, whose outputs 1.4.0 removed again). If a path below 404s, the
+Void/Roo, `406f353` Firebase AI, whose outputs #720 removed again). If a path below 404s, the
 architecture has drifted since — `grep -rn "GOOSE" vibetags/src/main/java` from the repo root
 will re-locate every dispatch point this skill lists.
 
@@ -117,7 +117,7 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
      strict parser, silently truncated to the last module by a lenient one. Declare the last line of
      your shared scaffold, the column your entries sit at, and what you emit when there is nothing
      to say — `AiderConfRenderer` (sequence), `CodeRabbitRenderer` and `RooModesRenderer` (block
-     scalar) are the worked examples. (A keyed-bucket shape went with Plandex in 1.4.0, #720.)
+     scalar) are the worked examples. (A keyed-bucket shape went with Plandex in #720.)
      `YamlMergeShapeContractTest` fails the build if you skip it or if the declaration drifts from
      what the renderer writes.
    - **JSON or TOML output whose content varies with the annotations** — override

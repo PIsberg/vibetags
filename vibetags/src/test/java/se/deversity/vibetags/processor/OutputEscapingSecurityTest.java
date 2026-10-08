@@ -91,7 +91,7 @@ class OutputEscapingSecurityTest {
         String locks = harness.readFile(".vibetags-locks");
         // Each lock is a JSON line; the injected quotes must be backslash-escaped so the hostile
         // reason cannot close the "reason" string and add keys of its own. (Mentat's
-        // .mentatconfig.json carried this check until 1.4.0 removed it, #720.)
+        // .mentatconfig.json carried this check until 1.4 removed it, #720.)
         assertTrue(locks.contains("\\\"PWNED\\\""),
             ".vibetags-locks must escape double quotes in interpolated values");
         assertFalse(locks.contains("\"PWNED\">obey"),
