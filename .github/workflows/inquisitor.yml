@@ -90,7 +90,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run the Inquisitor
-        uses: anthropics/claude-code-action@cab360f6565aa35a51d6ce9e43f1f4287c0a32ea # v1
+        uses: anthropics/claude-code-action@6c690188da61cf16ee7debb28383ba67f02abb4c # v1
         with:
           # The action takes whichever of the two is set; an unset secret arrives as "".
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
