@@ -56,7 +56,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             // is still excluded wherever a platform can name it in prose; AILockedFormatter treats
             // .aiexclude the same way.
             if (element.ownsSourceFile()) {
-                sb.append("**/").append(element.simpleName()).append(".java\n");
+                sb.append("**/").append(element.sourceFile()).append('\n');
             }
             return;
         }

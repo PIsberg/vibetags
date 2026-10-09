@@ -970,6 +970,8 @@ jobs:
           # files must name the annotated Kotlin elements, stub signatures included.
           grep -qF "com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)" CLAUDE.md
           grep -qF "com.example.kotlin.CustomerVault" .cursorrules
+          # A granular rule is scoped to the .kt file, not to a .java file that does not exist (#939).
+          grep -qF 'applyTo: "**/PaymentService.kt"' .github/instructions/com-example-kotlin-PaymentService.instructions.md
           # Issue #681, pinned in both directions (docs/JVM-LANGUAGES.md, Kotlin). kapt leaves a
           # function whose JVM name is mangled by a value class out of its Java stub, so the
           # @AILocked on AccountLedger.balanceFor reaches no processor and must appear in no
@@ -1027,7 +1029,9 @@ jobs:
             echo "::error::examples/kotlin-ksp failed to build (exit $status)."
             exit "$status"
           fi
-          for f in CLAUDE.md .cursorrules; do
+          # The granular rules too (#939): one class per file here, so KSP's real file and kapt's
+          # <Type>.kt agree, and any other difference is a front-end disagreement.
+          for f in CLAUDE.md .cursorrules $(cd ../kotlin && ls .github/instructions/*.md); do
             if ! cmp -s "$f" "../kotlin/$f"; then
               echo "::error::examples/kotlin-ksp/$f differs from the kapt example's: KSP and kapt disagree."
               diff "../kotlin/$f" "$f" || true

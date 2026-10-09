@@ -32,6 +32,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Granular rules and ignore globs name the Kotlin or Groovy file the code is in** (#939). The
+  glob was always `**/<Type>.java`, so in a Kotlin or Groovy module a rule's `paths:`, `globs:` or
+  `applyTo:` named a file that does not exist, and no path-scoped platform loaded it. The KSP front
+  end now names the real source file (`**/Types.kt` for every class of `Types.kt`). Under kapt and
+  Groovy's stub generation javac sees a `.java` stub, which still says what it came from:
+  `@kotlin.Metadata` gives `<Type>.kt` (and `<Name>.kt` for a file facade `<Name>Kt`), and
+  `groovy.lang.GroovyObject` gives `<Type>.groovy`; a stub does not name its file, so a class in a
+  differently named file still misses (docs/JVM-LANGUAGES.md). A Java type declared in another
+  type's file is now scoped to that file instead of a nonexistent `<Type>.java`, and, like a nested
+  type (#940), no longer writes an ignore glob that would hide the whole file. The file name
+  reaches `BuildFingerprint` (invariant 12). `examples/kotlin` and `examples/kotlin-ksp` opt into
+  `.github/instructions/`, so CI regenerates Kotlin rule files and compares the two front ends.
+  `GranularSourceFileGlobTest` and `StubParityTest` pin it.
 - **A release becomes Latest only once Maven Central serves it** (#946). The release was created
   with `--latest` before `publish.yml` ran, so when the first 1.4.0 publish failed the release page
   advertised a Latest release whose five poms answered 404. The release skill now creates it with

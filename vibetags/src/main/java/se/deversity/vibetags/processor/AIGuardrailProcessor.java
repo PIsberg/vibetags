@@ -591,6 +591,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // Which sources this round was handed, for the same reason and under the same
             // constraint: an element can only be mapped back to its file while its round is live.
             sourceLedger.observe(sources);
+            collector.recordSourceFiles(sources);
 
             // The annotation types javac reports as present this round. Lets AnnotationCollector
             // skip getElementsAnnotatedWith() for the ~33 annotation types that are absent (each
