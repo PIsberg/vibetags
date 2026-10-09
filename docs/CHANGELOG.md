@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **PMD and CPD now run only on the JDK 21 leg of `build-maven`, as the docs said they did**
+  (#947). `build.yml` skipped them on the other JDKs with `-Dmaven.pmd.skip=true`, a property no
+  plugin reads (`maven-pmd-plugin` binds `pmd.skip` and `cpd.skip`), so both ran on JDK 25 and 26,
+  where PMD reports findings that are artefacts of the newer JDK. The workflow now passes
+  `-Dpmd.skip=true -Dcpd.skip=true`, and `BuildToolchainParityTest` fails any workflow or CI script
+  that passes a skip property outside the set the plugins read.
 - **Publishing runs on a pinned Maven 3.9 again, and every pull request now builds the bundles it
   uploads** (#945). The first publish of 1.4.0 put nothing on Central: GitHub's ubuntu-24.04 runner
   image had moved to Maven 3.10, and `central-publishing-maven-plugin` 0.11.0, the newest release,
