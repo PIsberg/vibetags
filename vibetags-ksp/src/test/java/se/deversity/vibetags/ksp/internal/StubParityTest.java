@@ -45,6 +45,8 @@ class StubParityTest {
     private static final Pattern LOCATED = Pattern.compile(
         "\"element\":\"([^\"]+)\",\"kind\":\"[A-Z_]+\",\"file\":\"([^\"]+)\",\"startLine\":(\\d+),\"endLine\":(\\d+)");
     private static final Pattern PARAMETER = Pattern.compile("com\\.fx[^ `\"]*#[A-Za-z0-9_$]+");
+    /** A granular rule's front-matter glob line, which names a file the two front ends know differently. */
+    private static final Pattern RULE_PATHS = Pattern.compile("(?m)^paths: \\[.*]$");
 
     private static Path root;
     private static KspHarness.Result result;
@@ -99,6 +101,12 @@ class StubParityTest {
      * {@code .vibetags-locks} ({@code file}, {@code startLine}, {@code endLine}): kapt's point into
      * its generated stubs and KSP's into the {@code .kt} sources (#757), so both sides are compared
      * with them stripped, and {@link #kspLocksPointAtTheKotlinSource} checks KSP's own.
+     *
+     * <p>A granular rule's {@code paths:} glob is the same kind of field (#939). KSP names the
+     * {@code .kt} file the type is declared in; kapt sees only a stub, so the best it can name is
+     * {@code <Type>.kt}, and the recording, made before #939, names {@code <Type>.java}. The line is
+     * compared with both sides blanked, and {@link #kspRulesAreScopedToTheKotlinFileTheTypeIsIn}
+     * checks KSP's own.
      */
     @Test
     void generatedFilesAreByteIdenticalToKapt() throws IOException {
@@ -115,8 +123,37 @@ class StubParityTest {
         }
         assertEquals(kaptRules, kspRules, "the set of granular rule files");
         for (String rule : kaptRules) {
-            assertEquals(recorded("rules/" + rule), Files.readString(root.resolve(".claude/rules/" + rule)), rule);
+            assertEquals(withoutPaths(recorded("rules/" + rule)),
+                withoutPaths(Files.readString(root.resolve(".claude/rules/" + rule))), rule);
         }
+    }
+
+    /**
+     * KSP knows the file each type is declared in, so a rule loads when that file is opened: every
+     * type of {@code com.fx} is in {@code Types.kt}, and each sub-package has one file (#939). Under
+     * the old {@code **}{@code /<Type>.java} glob not one of these rules matched a file that exists.
+     */
+    @Test
+    void kspRulesAreScopedToTheKotlinFileTheTypeIsIn() throws IOException {
+        int checked = 0;
+        try (Stream<Path> rules = Files.list(root.resolve(".claude/rules"))) {
+            for (Path rule : rules.toList()) {
+                String name = rule.getFileName().toString();
+                String file = name.startsWith("com-fx-nested-") ? "Other.kt"
+                    : name.startsWith("com-fx-vc-") ? "ValueClasses.kt"
+                    : name.startsWith("com-fx-wc-") ? "Wildcards.kt"
+                    : "Types.kt";
+                Matcher paths = RULE_PATHS.matcher(Files.readString(rule));
+                assertTrue(paths.find(), () -> name + " has no paths: front matter");
+                assertEquals("paths: [\"**/" + file + "\"]", paths.group(), name);
+                checked++;
+            }
+        }
+        assertTrue(checked > 20, "only " + checked + " rule files were checked");
+    }
+
+    private static String withoutPaths(String rule) {
+        return RULE_PATHS.matcher(rule).replaceAll("paths: [...]");
     }
 
     /** The granular rule files kapt wrote, as recorded under {@code kapt-output/rules}. */

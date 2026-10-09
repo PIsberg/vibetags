@@ -55,12 +55,14 @@ import se.deversity.vibetags.processor.model.TransitiveRule;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
 import java.lang.annotation.Annotation;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -247,6 +249,13 @@ public final class AnnotationCollector {
 
     private @Nullable GuardrailModel publishedMemo;
 
+    /**
+     * The name of each top-level type's source file, as the round that held it reported it. Read
+     * when a type is materialized, after its round has closed, which is why it is captured while
+     * the round is live (#939).
+     */
+    private final Map<Element, String> sourceFileNames = new HashMap<>();
+
     /** Creates every bucket up front, in registry order, so no caller can ever see a missing one. */
     public AnnotationCollector() {
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
@@ -293,6 +302,21 @@ public final class AnnotationCollector {
             memo = null;
             publishedMemo = null;
             granularMemo = null;
+        }
+    }
+
+    /**
+     * Records the source file name of each of the round's top-level types, which is what a glob for
+     * its code names (#939). Must run while the round is live.
+     */
+    public void recordSourceFiles(RoundSources sources) {
+        for (Element root : sources.roots()) {
+            if (root instanceof TypeElement) {
+                String name = sources.fileNameOf(root);
+                if (name != null) {
+                    sourceFileNames.put(root, name);
+                }
+            }
         }
     }
 
@@ -366,6 +390,7 @@ public final class AnnotationCollector {
         // The round that filled it is over; leaving it would let a later caller mistake the
         // previous round's answers for its own.
         thisRound.clear();
+        sourceFileNames.clear();
         lockedPositions.clear();
         transitiveRules.clear();
         anyAnnotationsFound = false;
@@ -618,9 +643,10 @@ public final class AnnotationCollector {
     private GuardrailModel snapshot() {
         Map<Element, TaggedElement.Builder> builders = new LinkedHashMap<>();
         final boolean signatures = captureSignatures;
+        final Map<Element, String> fileNames = sourceFileNames;
         buckets.forEach((type, elements) -> {
             for (Element e : elements) {
-                record(builders.computeIfAbsent(e, k -> newBuilder(k, signatures)), e, type);
+                record(builders.computeIfAbsent(e, k -> newBuilder(k, signatures, fileNames)), e, type);
             }
         });
 
@@ -628,11 +654,11 @@ public final class AnnotationCollector {
         GuardrailModel.Builder model = GuardrailModel.builder();
         buckets.forEach((type, elements) -> {
             for (Element e : elements) {
-                model.add(type, materialize(e, builders, tagged, signatures));
+                model.add(type, materialize(e, builders, tagged, signatures, fileNames));
             }
         });
         lockedPositions.forEach((e, position) ->
-            model.lockedPosition(materialize(e, builders, tagged, signatures), position));
+            model.lockedPosition(materialize(e, builders, tagged, signatures, fileNames), position));
         model.transitiveRules(transitiveRules);
         return model.build();
     }
@@ -644,15 +670,16 @@ public final class AnnotationCollector {
     private static TaggedElement materialize(Element e,
                                              Map<Element, TaggedElement.Builder> builders,
                                              Map<Element, TaggedElement> tagged,
-                                             boolean signatures) {
+                                             boolean signatures,
+                                             Map<Element, String> fileNames) {
         TaggedElement done = tagged.get(e);
         if (done != null) {
             return done;
         }
-        TaggedElement.Builder builder = builders.computeIfAbsent(e, k -> newBuilder(k, signatures));
+        TaggedElement.Builder builder = builders.computeIfAbsent(e, k -> newBuilder(k, signatures, fileNames));
         Element ownerElement = ElementNaming.owningElement(e);
         if (!ownerElement.equals(e)) {
-            builder.owner(materialize(ownerElement, builders, tagged, signatures));
+            builder.owner(materialize(ownerElement, builders, tagged, signatures, fileNames));
         }
         TaggedElement result = builder.build();
         tagged.put(e, result);
@@ -660,13 +687,18 @@ public final class AnnotationCollector {
     }
 
     /** The name forms and kind for {@code e}, computed once here and never derived again. */
-    private static TaggedElement.Builder newBuilder(Element e, boolean signatures) {
-        return TaggedElement.builder(ElementNaming.elementPath(e))
+    private static TaggedElement.Builder newBuilder(Element e, boolean signatures, Map<Element, String> fileNames) {
+        TaggedElement.Builder builder = TaggedElement.builder(ElementNaming.elementPath(e))
             .names(e.toString(),
                    ElementNaming.simpleNameOf(e),
                    ElementNaming.elementDisplayName(e),
                    ElementNaming.granularQName(e))
-            .fileStem(ElementNaming.fileStem(e))
+            .fileStem(ElementNaming.fileStem(e));
+        TypeElement outermost = e instanceof TypeElement ? ElementNaming.outermostType(e) : null;
+        if (outermost != null) {
+            builder.sourceFile(ElementNaming.sourceFileName(outermost, fileNames.get(outermost)));
+        }
+        return builder
             .kind(tagOf(e))
             // Captured here because it needs the javac element model, which is only valid while the
             // round is live; the enforcing mode reads it later as plain data (issue #284). Skipped

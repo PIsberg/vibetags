@@ -40,6 +40,7 @@ public final class TaggedElement {
     private final String displayName;
     private final String granularQName;
     private final String fileStem;
+    private final String sourceFile;
     private final ElementTag kind;
     private final Map<Class<? extends Annotation>, Annotation> annotations;
     private final Map<String, String> typeMembers;
@@ -59,6 +60,7 @@ public final class TaggedElement {
         this.displayName = b.displayName;
         this.granularQName = b.granularQName;
         this.fileStem = b.fileStem.isEmpty() ? b.simpleName : b.fileStem;
+        this.sourceFile = b.sourceFile.isEmpty() ? this.fileStem + ".java" : b.sourceFile;
         this.kind = b.kind;
         this.annotations = b.annotations.isEmpty()
             ? Map.of()
@@ -122,12 +124,27 @@ public final class TaggedElement {
     }
 
     /**
-     * Whether this is a top-level type, the one element a {@code **}{@code /<Name>.java} glob names
-     * the file of. A member is not a file, and neither is a nested type: its code is in its
-     * outermost type's file (#926).
+     * For a type, the name of the source file its code is in, extension included, which is what a
+     * glob for it names: {@code Ledger.java} for {@code Ledger} and {@code Ledger.Entry},
+     * {@code Invoice.kt} for a Kotlin class, {@code Report.groovy} for a Groovy one (#939). Recorded
+     * by the collector from what the round said about the file; when nothing was recorded, and for
+     * any element that is not a type, {@link #fileStem()} with {@code .java}.
+     */
+    public String sourceFile() {
+        return sourceFile;
+    }
+
+    /**
+     * Whether this is the type its source file is named after, the one element a file glob may
+     * stand for. A member is not a file, and neither is a nested type (#926), nor a second
+     * top-level type declared in another type's file: a glob for any of them hides, or would hide,
+     * every unmarked line of that file too (#940).
      */
     public boolean ownsSourceFile() {
-        return (kind.isClass() || kind.isInterface()) && fileStem.equals(simpleName);
+        int dot = sourceFile.lastIndexOf('.');
+        String fileName = dot < 0 ? sourceFile : sourceFile.substring(0, dot);
+        return (kind.isClass() || kind.isInterface()) && fileStem.equals(simpleName)
+            && fileName.equals(simpleName);
     }
 
     /** What kind of element this is. */
@@ -198,6 +215,7 @@ public final class TaggedElement {
         private String displayName = "";
         private String granularQName = "";
         private String fileStem = "";
+        private String sourceFile = "";
         private ElementTag kind = ElementTag.OTHER;
         private final Map<Class<? extends Annotation>, Annotation> annotations = new LinkedHashMap<>();
         private final Map<String, String> typeMembers = new LinkedHashMap<>();
@@ -222,6 +240,16 @@ public final class TaggedElement {
          */
         public Builder fileStem(String fileStem) {
             this.fileStem = fileStem;
+            return this;
+        }
+
+        /**
+         * Records the name of the source file a type's code is in; see
+         * {@link TaggedElement#sourceFile()}. Left unset, or empty, it is the file stem with
+         * {@code .java}.
+         */
+        public Builder sourceFile(String sourceFile) {
+            this.sourceFile = sourceFile;
             return this;
         }
 

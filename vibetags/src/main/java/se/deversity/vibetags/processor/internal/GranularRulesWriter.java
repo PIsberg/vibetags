@@ -405,11 +405,12 @@ public final class GranularRulesWriter {
     }
 
     private static String defaultGlob(TaggedElement owner) {
-        // A nested type's code is in its outermost type's file; no file is named after the nested
-        // type itself, so a glob built from its simple name never loaded the rule.
+        // The file the owner's code is in, in its own language: a nested type's outermost type's
+        // file, Invoice.kt for a Kotlin class seen through a kapt stub, the real .kt file under KSP
+        // (#939). A glob for any other name never loaded the rule.
         return owner.kind() == ElementTag.PACKAGE
             ? "**/" + owner.simpleName() + "/**/*.java"
-            : "**/" + owner.fileStem() + ".java";
+            : "**/" + owner.sourceFile();
     }
 
     private static String arr(List<String> globs) {

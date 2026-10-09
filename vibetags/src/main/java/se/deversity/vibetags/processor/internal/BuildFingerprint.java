@@ -162,6 +162,11 @@ public final class BuildFingerprint {
             if (!owner.fileStem().equals(owner.simpleName())) {
                 sb.append('@').append(owner.fileStem());
             }
+            // And the file's name when it is not <stem>.java: a Kotlin or Groovy owner, or a second
+            // top-level type in another type's file (#939). Same rule, same pinned values for Java.
+            if (!owner.sourceFile().equals(owner.fileStem() + ".java")) {
+                sb.append('!').append(owner.sourceFile());
+            }
             sb.append('=').append(attrs.of(e)).append(';');
         }
         sb.append('}');
