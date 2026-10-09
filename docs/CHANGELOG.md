@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`.codex/config.toml` is no longer written** (#934). VibeTags wrote it whenever `AGENTS.md` was
+  managed, with fixed content and no guardrail: `model = "o3-mini"` and
+  `approval_policy = "on-request"` under a `[project]` table. Codex reads both keys only at the top
+  level and documents no `[project]` table (its configuration reference, read 2026-10-09), so the
+  file did nothing while reading as a model pin VibeTags imposed on every consumer. The owner chose
+  to stop writing it without a deprecation release, since there was no behaviour to protect. An
+  existing copy is left byte-identical; delete it or keep it as your own Codex configuration.
+  `.codex/rules/vibetags.rules` is still written. The `Platform.CODEX_CONFIG` constant and its
+  descriptor are gone, the README count drops to 46 config files, and this repository and
+  `examples/multimodule` and `examples/gradle-multimodule` lose their copies.
+  `CodexConfigRemovedTest` pins it.
+
 ### Documentation
 
 - **What `@AIIgnore` on a nested type or a member hides, and from whom** (#940). It writes no

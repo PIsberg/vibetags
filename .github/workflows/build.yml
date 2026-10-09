@@ -1193,8 +1193,8 @@ jobs:
           # Codex is the one service dropped unless AGENTS.md is the sole AI config file, which it
           # is not here. Opted in and still empty is the correct outcome, and asserting it keeps
           # the sole documented exception to "file presence is the opt-in" honest.
-          test ! -s .codex/config.toml \
-            || { echo "::error::.codex/config.toml has content but AGENTS.md is not the sole config"; exit 1; }
+          test ! -s .codex/rules/vibetags.rules \
+            || { echo "::error::.codex/rules/vibetags.rules has content but AGENTS.md is not the sole config"; exit 1; }
           echo "All $expected services active; Codex correctly dropped."
 
       - name: Verify Every Annotation Survives The Gradle Reactor Merge

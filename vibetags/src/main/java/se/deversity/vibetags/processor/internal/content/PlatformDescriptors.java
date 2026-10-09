@@ -121,8 +121,8 @@ public final class PlatformDescriptors {
         new PlatformDescriptor("cursor_ignore", ".cursorignore", Kind.FILE, null, Platform.CURSOR_IGNORE, IGNORE_FILE_RENDERER, "Cursor", true),
         new PlatformDescriptor("qwen_ignore", ".qwenignore", Kind.FILE, null, Platform.QWEN_IGNORE, IGNORE_FILE_RENDERER, "Qwen", true),
         // The Codex sidecar: the one documented exception to invariant 1. Implicit, activated by
-        // codex rather than by its own presence, so it has no opt-in key.
-        new PlatformDescriptor("codex_config", ".codex/config.toml", Kind.FILE, "codex", Platform.CODEX_CONFIG, CODEX_RENDERER, null, false),
+        // codex rather than by its own presence, so it has no opt-in key. .codex/config.toml went
+        // with it until #934: fixed content, no guardrail, and a [project] table Codex does not read.
         new PlatformDescriptor("codex_rules", ".codex/rules/vibetags.rules", Kind.FILE, "codex", Platform.CODEX_RULES, CODEX_RENDERER, null, false),
         // Qwen's /refactor command, opted into by its own presence and not implied by QWEN.md (#655).
         // .qwen/settings.json is deliberately not mapped (#650): it is Qwen Code's own project settings
@@ -164,7 +164,7 @@ public final class PlatformDescriptors {
         // was removed in 1.4 (#645), and isOptedIn ignores a file there.
         new PlatformDescriptor("cline_granular", ".clinerules", Kind.DIRECTORY, null, Platform.CLINE_GRANULAR, GRANULAR_RENDERER, null, false),
         // Inside that directory: the safety tier, always loaded (issue #648). Implicit, like
-        // codex_config under codex, so it has no opt-in key of its own.
+        // codex_rules under codex, so it has no opt-in key of its own.
         new PlatformDescriptor("cline_safety", ".clinerules/+vibetags-safety.md", Kind.FILE, "cline_granular", Platform.CLINE_SAFETY, CLINE_SAFETY_RENDERER, null, false),
         new PlatformDescriptor("junie", ".junie/guidelines.md", Kind.FILE, null, Platform.JUNIE, JUNIE_RENDERER, null, false),
         // Junie's current file, checked before .junie/guidelines.md. Not the root AGENTS.md: a separate

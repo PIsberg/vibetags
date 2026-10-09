@@ -133,7 +133,7 @@ public final class ServiceRegistry {
      * keep {@code AGENTS.md} only as a thin pointer to another tool's file (e.g. {@code CLAUDE.md}).
      * To avoid clobbering such a pointer, {@code AGENTS.md} is treated as a write target only when
      * it is the <em>sole</em> AI config file present. If any other service opted in, {@code codex}
-     * is dropped here, which also disables the Codex sidecar config it would otherwise drive.
+     * is dropped here, which also disables the Codex rules sidecar it would otherwise drive.
      *
      * <p><strong>Marker escape hatch.</strong> The sole-file rule exists to protect hand-authored
      * pointers, not to forbid a generated {@code AGENTS.md} outright — a Claude + Codex project

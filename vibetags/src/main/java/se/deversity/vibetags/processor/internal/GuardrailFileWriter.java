@@ -76,8 +76,7 @@ public final class GuardrailFileWriter {
 
     /**
      * The header's text without its comment prefix, which is how a whole-file output is recognised
-     * as one VibeTags wrote: {@code .pr_agent.toml} carries the header as its own comment line,
-     * {@code .codex/config.toml} behind a second {@code #}.
+     * as one VibeTags wrote: {@code .pr_agent.toml} carries the header as its own comment line.
      */
     private final String generatedMark;
 
@@ -603,11 +602,11 @@ public final class GuardrailFileWriter {
     /**
      * Whether a file this writer replaces whole (a TOML output, which has nowhere for a marker line)
      * may be replaced: it is empty, which is how a platform is opted in, or it carries the generated
-     * header, so VibeTags wrote it. Anything else is somebody's configuration. {@code .codex/config.toml}
-     * is written whenever {@code AGENTS.md} is managed, and {@code .pr_agent.toml} is opted into by a
-     * file a team may have configured long before, so each replaced a hand-written configuration on
-     * the first compile, the loss invariant 2 exists to prevent and the reason {@code greptile.json}
-     * is merged rather than written (#639).
+     * header, so VibeTags wrote it. Anything else is somebody's configuration. {@code .pr_agent.toml}
+     * is opted into by a file a team may have configured long before, so it replaced a hand-written
+     * configuration on the first compile, the loss invariant 2 exists to prevent and the reason
+     * {@code greptile.json} is merged rather than written (#639). {@code .codex/config.toml}, written
+     * whenever {@code AGENTS.md} was managed, did the same until it stopped being an output (#934).
      */
     private boolean replaceableWholeFile(String existing) {
         return existing.isBlank() || existing.contains(generatedMark);

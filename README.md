@@ -24,7 +24,7 @@
 
 **VibeTags** is a compile-time Java annotation processor that generates AI platform-specific guardrail files from source annotations — zero runtime overhead, all from a single `mvn compile`.
 
-> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **29 AI platforms**, written as **47 config files** and **16 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
+> <a name="project-facts"></a>**At a glance:** **44 annotations** → guardrails for **29 AI platforms**, written as **46 config files** and **16 scoped-rule directories**. These numbers are the single source of truth for the project's scope; other docs link back here rather than restating them. A platform is a tool, not a file — Cursor is one platform with both `.cursorrules` and `.cursorignore`. (All four counts verified by `ProjectFactsConsistencyTest`.)
 
 ## Why VibeTags?
 
@@ -428,7 +428,7 @@ Generated configuration files work out-of-the-box with the [**AI platforms**](#p
 - **Aider** (`CONVENTIONS.md`, `.aider.conf.yml`, `.aiderignore`)
 - **Claude** (`CLAUDE.md`, `CLAUDE.local.md`, `.claude/skills/vibetags-guardrails/SKILL.md`). `.claudeignore` was removed in 1.4.0 ([#720](https://github.com/PIsberg/vibetags/issues/720)): Claude Code's docs never mention it; its own mechanism is `Read` deny rules in `.claude/settings.json`
 - **Cline** (the `.clinerules/*.md` directory Cline documents, with an always-loaded `.clinerules/+vibetags-safety.md`). The single `.clinerules` file was removed in 1.4.0 ([#645](https://github.com/PIsberg/vibetags/issues/645))
-- **Codex CLI** (`AGENTS.md`†, `.codex/config.toml`, `.codex/rules/*.rules`)
+- **Codex CLI** (`AGENTS.md`†, `.codex/rules/*.rules`). `.codex/config.toml` is no longer written ([#934](https://github.com/PIsberg/vibetags/issues/934)): it carried no guardrail, and Codex does not read its `[project]` table
 - **Codeium** (`.codeiumignore`, which Devin Desktop still reads under this legacy name)
 - **Cursor** (`.cursorrules` or **Granular** `.cursor/rules/*.mdc`)
 - **Devin Desktop** (formerly Windsurf: `.windsurfrules`, the legacy single file it still reads, and `.devinignore`)

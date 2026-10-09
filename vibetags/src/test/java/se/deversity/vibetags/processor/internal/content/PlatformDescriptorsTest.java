@@ -46,7 +46,6 @@ class PlatformDescriptorsTest {
         "qwen|QWEN.md|opt-in|file",
         "cursor_ignore|.cursorignore|opt-in|file",
         "qwen_ignore|.qwenignore|opt-in|file",
-        "codex_config|.codex/config.toml|implicit|file",
         "codex_rules|.codex/rules/vibetags.rules|implicit|file",
         "qwen_refactor|.qwen/commands/refactor.md|opt-in|file",
         "llms|llms.txt|opt-in|file",

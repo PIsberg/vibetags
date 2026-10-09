@@ -351,7 +351,7 @@ class AIGuardrailProcessorProcessTest {
         Set<String> expectedKeys = Set.of(
             "cursor", "claude", "aiexclude", "codex", "copilot", "qwen",
             "cursor_ignore", "qwen_ignore",
-            "codex_config", "codex_rules", "qwen_refactor",
+            "codex_rules", "qwen_refactor",
             "llms", "llms_full", "aider_conventions", "aider_ignore",
             "cursor_granular", "roo_granular", "trae_granular",
             // v0.7.0 platforms
@@ -424,7 +424,6 @@ class AIGuardrailProcessorProcessTest {
         assertEquals(root.resolve("QWEN.md"),                           map.get("qwen"));
         assertEquals(root.resolve(".cursorignore"),                     map.get("cursor_ignore"));
         assertEquals(root.resolve(".qwenignore"),                       map.get("qwen_ignore"));
-        assertEquals(root.resolve(".codex/config.toml"),                map.get("codex_config"));
         assertEquals(root.resolve(".codex/rules/vibetags.rules"),       map.get("codex_rules"));
         assertEquals(root.resolve(".qwen/commands/refactor.md"),        map.get("qwen_refactor"));
         assertEquals(root.resolve("llms.txt"),                          map.get("llms"));
@@ -780,7 +779,7 @@ class AIGuardrailProcessorProcessTest {
 
     @Test
     void writeFileIfChanged_tomlFile_completeOverwrite(@TempDir Path tempDir) throws IOException {
-        Path tomlFile = tempDir.resolve(".codex/config.toml");
+        Path tomlFile = tempDir.resolve("settings.toml");
         Files.createDirectories(tomlFile.getParent());
         Files.writeString(tomlFile, OWN_HEADER + "model = \"old\"");
 

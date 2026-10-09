@@ -43,7 +43,6 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.agents/skills/vibetags-guardrails/SKILL.md` | Agent Skills (cross-client) | YAML front-matter + Markdown |
 | `.aiexclude` | Gemini | Glob patterns |
 | `AGENTS.md` | Codex CLI | Markdown |
-| `.codex/config.toml` | Codex CLI | TOML config |
 | `.codex/rules/vibetags.rules` | Codex CLI | Starlark rules |
 | `.github/copilot-instructions.md` | GitHub Copilot | Markdown |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular) | YAML front-matter + Markdown |
@@ -272,8 +271,12 @@ table or key the file lacks is added. When the file cannot be merged without gue
 the key defined twice, a value that is not a `"""` string, a start marker with no end, the table set
 through a dotted key or an array of tables), VibeTags writes nothing and says why in a build warning.
 
-`.codex/config.toml` is not merged: a hand-written one is left exactly as it is, with a warning.
-Whether VibeTags should write that file at all is open (#934).
+`.codex/config.toml` is not written at all since #934. It held fixed content with no guardrail in
+it, `model = "o3-mini"` and `approval_policy = "on-request"` under a `[project]` table, and Codex reads
+`model` and `approval_policy` only as top-level keys and documents no `[project]` table
+([configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference), read
+2026-10-09), so the file did nothing while reading as a model pin. An existing copy is left exactly
+as it is; delete it, or keep it as your own Codex configuration. `CodexConfigRemovedTest` pins this.
 
 ### `.qwen/settings.json` is not written
 

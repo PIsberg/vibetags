@@ -41,7 +41,7 @@ mvn compile
 
 To deactivate, delete the file — it will never come back.
 
-**AGENTS.md sole-file fallback.** `AGENTS.md` (the `codex` service) doubles as a near-universal agent-instructions file and is frequently kept only as a thin pointer to another tool's file, so `resolveActiveServices()` treats it as a write target **only when it is the sole AI config file present** — otherwise `codex` is dropped, which also disables the Codex sidecar config (`.codex/config.toml`, `.codex/rules/`). Escape hatch: a file that already contains a `VIBETAGS-START`/`VIBETAGS-END` pair was written by VibeTags in the first place, so it stays an active write target alongside other config files.
+**AGENTS.md sole-file fallback.** `AGENTS.md` (the `codex` service) doubles as a near-universal agent-instructions file and is frequently kept only as a thin pointer to another tool's file, so `resolveActiveServices()` treats it as a write target **only when it is the sole AI config file present** — otherwise `codex` is dropped, which also disables the Codex rules sidecar (`.codex/rules/`). Escape hatch: a file that already contains a `VIBETAGS-START`/`VIBETAGS-END` pair was written by VibeTags in the first place, so it stays an active write target alongside other config files.
 
 ### Marker-based updates
 
@@ -49,7 +49,7 @@ Generated content is written between markers so a file can hold hand-authored co
 
 - **HTML comments** (CLAUDE.md, llms.txt, llms-full.txt): `<!-- VIBETAGS-START -->` / `<!-- VIBETAGS-END -->`
 - **Hash comments** (.cursorrules, .aiexclude, ignore files): `# VIBETAGS-START` / `# VIBETAGS-END`
-- **No markers** (`.pr_agent.toml`, `.codex/config.toml`): complete overwrite, but only of a file
+- **No markers** (`.pr_agent.toml`): complete overwrite, but only of a file
   that is empty or carries the generated header. A hand-written `.pr_agent.toml` gets a delimited
   span inside its two `extra_instructions` strings instead, every other byte kept (`TomlValueSpans`,
   #933); any other hand-written configuration is left untouched, with a build warning
@@ -209,8 +209,9 @@ and this section seem to disagree, the enforcing test decides.
 
 - **File presence is the opt-in.** The processor regenerates only files that already exist, and
   deleting one deactivates that platform permanently. Never "helpfully" create an output file.
-  Two documented exceptions. Activating `codex` also writes the Codex sidecar (`.codex/config.toml`,
-  `.codex/rules/vibetags.rules`), creating `.codex/` if absent. And an opted-in granular directory is
+  Two documented exceptions. Activating `codex` also writes the Codex sidecar
+  (`.codex/rules/vibetags.rules`), creating `.codex/rules/` if absent; `.codex/config.toml` went with
+  it until #934. And an opted-in granular directory is
   filled as needed: the per-element rule files, plus the always-loaded `+vibetags-safety.md` in
   Cline's `.clinerules/` (#648), because that directory has no aggregate beside it to carry the
   safety buckets, and in Devin Desktop's `.devin/rules/` and `.windsurf/rules/` (#684), whose rule
@@ -227,7 +228,7 @@ and this section seem to disagree, the enforcing test decides.
   `.greptile/config.json`, which users configure by hand, get a delimited span inside their shared
   string values instead and every other byte is kept (#639, #651).
 - **`AGENTS.md` is a write target only when it is the sole AI config file present,** or when it
-  already carries a marker pair. Otherwise `codex` is dropped, and so is the Codex sidecar config.
+  already carries a marker pair. Otherwise `codex` is dropped, and so is the Codex rules sidecar.
   Three opt-ins do not count as company, because no AI tool reads them as instructions:
   `.vibetags-root-index` (a marker, #788), `TESTING.md` (a routing target) and `.vibetags-locks`
   (a JSON Lines report for the CI guard, #800).

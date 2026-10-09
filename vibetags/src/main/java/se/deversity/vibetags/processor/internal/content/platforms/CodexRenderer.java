@@ -60,9 +60,6 @@ public final class CodexRenderer implements PlatformRenderer {
 
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
-        if (platform == Platform.CODEX_CONFIG) {
-            return "# " + context.getGeneratedHeader().trim() + "\n[project]\nmodel = \"o3-mini\"\napproval_policy = \"on-request\"\n";
-        }
         if (platform == Platform.CODEX_RULES) {
             return "# " + context.getGeneratedHeader().trim() + "\n# VibeTags: Starlark Command Permissions\n\n" +
                 "prefix_rule(\"ls\", \"allow\")\n" +

@@ -27,7 +27,7 @@ Part of the `vibetags-usage` skill; [SKILL.md](../SKILL.md) holds setup and the 
 | `.greptile/rules.md` | Greptile (AI PR reviewer) |
 | `.greptile/config.json` | Greptile (`@AIIgnore` paths; VibeTags owns only a span inside `ignorePatterns`) |
 | `greptile.json` | Greptile (legacy form; VibeTags owns only a span inside `instructions` and `ignorePatterns`) |
-| `AGENTS.md`, `.codex/config.toml`, `.codex/rules/` | Codex CLI |
+| `AGENTS.md`, `.codex/rules/` | Codex CLI |
 | `.github/copilot-instructions.md` | GitHub Copilot |
 | `.github/instructions/*.instructions.md` | GitHub Copilot (granular per-class rules) |
 | `.rules` | Zed Editor |

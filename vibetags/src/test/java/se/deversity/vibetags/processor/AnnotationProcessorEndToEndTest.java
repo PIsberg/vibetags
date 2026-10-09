@@ -47,7 +47,6 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(harness.fileExists("CLAUDE.md"), "CLAUDE.md should exist");
         assertTrue(harness.fileExists(".aiexclude"), ".aiexclude should exist");
         assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md should exist");
-        assertTrue(harness.fileExists(".codex/config.toml"), ".codex/config.toml should exist");
         assertTrue(harness.fileExists(".codex/rules/vibetags.rules"), ".codex/rules/vibetags.rules should exist");
         assertTrue(harness.fileExists("GEMINI.md"), "GEMINI.md should exist");
         assertTrue(harness.fileExists(".github/copilot-instructions.md"), ".github/copilot-instructions.md should exist");
@@ -192,8 +191,8 @@ class AnnotationProcessorEndToEndTest {
         assertTrue(harness.fileExists("AGENTS.md"), "AGENTS.md placeholder should still exist");
         assertTrue(harness.readFile("AGENTS.md").isEmpty(),
             "AGENTS.md must be left untouched when other AI config files are present");
-        assertTrue(harness.readFile(".codex/config.toml").isEmpty(),
-            "Codex sidecar config must be skipped along with AGENTS.md");
+        assertTrue(harness.readFile(".codex/rules/vibetags.rules").isEmpty(),
+            "the Codex rules sidecar must be skipped along with AGENTS.md");
     }
 
     @Test
@@ -225,7 +224,6 @@ class AnnotationProcessorEndToEndTest {
         // AGENTS.md and the Codex sidecar are skipped when other AI files exist (sole-file rule),
         // so they are exercised via the dedicated sole-opt-in harness instead.
         assertFalse(agentsHarness.readFile("AGENTS.md").isEmpty());
-        assertFalse(agentsHarness.readFile(".codex/config.toml").isEmpty());
         assertFalse(agentsHarness.readFile(".codex/rules/vibetags.rules").isEmpty());
         assertFalse(harness.readFile("GEMINI.md").isEmpty());
         assertFalse(harness.readFile(".github/copilot-instructions.md").isEmpty());
@@ -288,10 +286,9 @@ class AnnotationProcessorEndToEndTest {
     }
 
     @Test
-    void testCodexConfigHasCorrectSettings() throws IOException {
-        String content = agentsHarness.readFile(".codex/config.toml");
-        assertTrue(content.contains("model = \"o3-mini\""));
-        assertTrue(content.contains("approval_policy = \"on-request\""));
+    void testCodexConfigIsNoLongerWritten() {
+        assertFalse(agentsHarness.fileExists(".codex/config.toml"),
+            ".codex/config.toml pinned a model under a [project] table Codex does not read (#934)");
     }
 
     @Test

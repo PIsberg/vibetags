@@ -46,7 +46,6 @@ public enum Platform {
     PR_AGENT("pr_agent"),
     // Editors & modes
     ROO_MODES("roo_modes"),
-    CODEX_CONFIG("codex_config"),
     CODEX_RULES("codex_rules"),
     QWEN_REFACTOR("qwen_refactor"),
     LOCKS_REPORT("locks_report"),
