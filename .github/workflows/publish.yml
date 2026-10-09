@@ -7,11 +7,13 @@ on:
   # bundle already uploaded — Central's validation is occasionally slow rather than stuck — and
   # without this the only way to finish the release was to cut another tag. deploy-to-central.sh
   # treats an already-published version as success, so re-running over the modules that did land
-  # is safe and skips them.
+  # is safe and skips them. A dispatch runs this file as it is on the branch it is dispatched from
+  # and builds the source of `ref`, so a fix to this workflow on main also finishes a release whose
+  # tag predates the fix.
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Tag or SHA to build and publish — the tag of the release being resumed'
+        description: 'Tag or SHA to build and publish: the tag of the release being resumed. With modules=all and the tag of the latest release, the signed artifacts are attached to it too'
         required: true
       modules:
         description: 'Which modules to deploy: all, or a comma-separated subset of annotations,processor,ksp,bom,cli'
@@ -27,6 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write   # attach signed artifacts to the GitHub release
+    # The Maven every deploy below runs on, in place of the runner image's. The image's Maven became
+    # 3.10 with its 20261004 release, and central-publishing-maven-plugin 0.11.0 cannot bundle under
+    # it: it zipped Maven 3.10's maven-metadata-local.xml and _remote.repositories beside the
+    # artifacts, and Central rejected the release ("Bundle has content that does NOT have a .pom
+    # file"). Stay on 3.9 until a plugin release handles 3.10 (#945). The central-bundle job in
+    # build.yml reads both values from here and builds every module's bundle with them on each pull
+    # request.
+    env:
+      MAVEN_VERSION: '3.9.16'
+      # SHA-512 of apache-maven-<MAVEN_VERSION>-bin.tar.gz, the value Apache publishes beside it.
+      MAVEN_SHA512: '831a8591fe20c8243b1dbe7d71e3244f31d1665b0804b2e825e38cbbe5ce0cafb8338851f90780735568773e0a6cd07bbec107cda0b896b008b861075358b6f6'
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -74,6 +87,29 @@ jobs:
           server-id: central
           server-username: CENTRAL_TOKEN_USERNAME
           server-password: CENTRAL_TOKEN_PASSWORD
+
+      # Inline, not a script: a resumed release checks out the tag it resumes, and that tag can
+      # predate any script added for this. The central-bundle job in build.yml runs the same block,
+      # which PublishMavenPinWiringTest checks.
+      - name: Install the pinned Maven
+        run: |
+          archive="apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$archive" \
+            "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/${MAVEN_VERSION}/${archive}"
+          echo "${MAVEN_SHA512}  $RUNNER_TEMP/$archive" | sha512sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
+
+      # Before anything is signed or uploaded. A deploy on another Maven is the failure the pin
+      # exists to prevent, so this refuses to start one rather than trusting the PATH.
+      - name: Refuse to deploy on any Maven but the pinned one
+        run: |
+          version="$(mvn --version)"
+          printf '%s\n' "$version"
+          case "$version" in
+            "Apache Maven ${MAVEN_VERSION} "*) ;;
+            *) echo "::error::mvn on PATH is not Maven ${MAVEN_VERSION}; not deploying with it"; exit 1 ;;
+          esac
 
       - name: Import GPG key
         run: |
@@ -141,12 +177,36 @@ jobs:
 
       # Attach the GPG-signed jars/poms (and their .asc signatures) to the
       # GitHub release so Scorecard's Signed-Releases check can verify them.
-      # Release events only. A manual resume has no release payload to attach to, and its
-      # target/ directories hold just the subset of modules it was asked to deploy.
+      # A release event attaches to its own release. A resume attaches only when it deployed
+      # every module, so every target/ directory below was built, and only when `ref` is the tag
+      # of the latest release: the action updates the release it attaches to without passing
+      # make_latest, GitHub's update defaults that to true, and the action creates a release for a
+      # tag that has none. REF arrives through env for the reason given at "Resolve which modules".
+      - name: Find the release to attach the signed artifacts to
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REF: ${{ github.event.inputs.ref }}
+          SELECTED: ${{ steps.selection.outputs.selected }}
+        run: |
+          if [ "$EVENT" = "release" ]; then
+            echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          elif [ "$SELECTED" != "all" ]; then
+            echo "Not attaching: only '$SELECTED' was deployed, so not every module's jars were built."
+          elif [ "$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)" = "$REF" ]; then
+            echo "tag=$REF" >> "$GITHUB_OUTPUT"
+            echo "Attaching to the release for $REF, the latest release."
+          else
+            echo "Not attaching: '$REF' is not the tag of the latest release. Upload its assets with gh release upload."
+          fi
+
       - name: Attach signed artifacts to the GitHub release
-        if: github.event_name == 'release'
+        if: steps.release.outputs.tag != ''
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
+          tag_name: ${{ steps.release.outputs.tag }}
           files: |
             vibetags-annotations/target/*.jar
             vibetags-annotations/target/*.jar.asc

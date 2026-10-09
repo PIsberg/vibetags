@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This document describes what happens during CI builds in `.github/workflows/`. Thirteen workflows: seven run on push, pull request, schedule, or release; mutation testing runs only when someone asks for it; the weekly perf ring runs on its own schedule; the demo recording runs when the code it demonstrates changes; the Copilot review lane requests an advisory reviewer on every PR and skips loudly when Copilot has no quota; and the two Anthropic-backed workflows (Inquisitor, Instruction Evals) run on pull requests but skip themselves, loudly, when the `ANTHROPIC_API_KEY` secret is absent.
+This document describes what happens during CI builds in `.github/workflows/`. Thirteen workflows: seven run on push, pull request, schedule, or release; mutation testing runs only when someone asks for it; the weekly perf ring runs on its own schedule; the demo recording runs when the code it demonstrates changes; the Copilot review lane requests an advisory reviewer on every PR and skips loudly when Copilot has no quota; and the two Anthropic-backed workflows (Inquisitor, Instruction Evals) run on pull requests but skip themselves, loudly, when neither the `ANTHROPIC_API_KEY` nor the `CLAUDE_CODE_OAUTH_TOKEN` secret is set.
 
 ## Overview
 
@@ -10,7 +10,7 @@ This document describes what happens during CI builds in `.github/workflows/`. T
 | CodeQL | `codeql.yml` | Push/PR to `main`, weekly cron (Mondays 00:00 UTC) |
 | Dependency Review | `dependency-review.yml` | Pull requests |
 | Scorecard | `scorecards.yml` | Push to `main`, branch-protection-rule, weekly cron (Tuesdays 07:20 UTC) |
-| Publish to Maven Central | `publish.yml` | GitHub Release `created` |
+| Publish to Maven Central | `publish.yml` | GitHub Release `created`; manual (`workflow_dispatch`) to resume a release |
 | Fuzz Smoke (Jazzer) | `fuzz.yml` | Push/PR to `main` |
 | Mutation Testing (PIT) | `mutation.yml` | Manual only (`workflow_dispatch`) |
 | Demo GIF | `demo.yml` | Push to `main` touching the processor or the demo, manual |
@@ -313,6 +313,35 @@ fingerprint; the script's header states that limitation. On failure the fresh SV
 the `regenerated-diagrams` artifact so the committer can take them without reproducing the
 toolchain.
 
+### Job: `central-bundle`
+
+Builds the Maven Central bundle of every module `publish.yml` deploys, without uploading it, and
+checks its layout. Central validates a bundle only once `publish.yml` uploads it, after the release
+is tagged, and nothing built a bundle any earlier. That is how the runner image's move to Maven
+3.10 surfaced: Central rejected the first module of a tagged release
+(`Bundle has content that does NOT have a .pom file`), because `central-publishing-maven-plugin`
+0.11.0 had zipped Maven 3.10's `maven-metadata-local.xml` and `_remote.repositories` beside the
+artifacts (#945).
+
+1. Harden runner, checkout, JDK 21.
+2. **Read the Maven version publish.yml pins**: `MAVEN_VERSION` and `MAVEN_SHA512` from
+   `publish.yml`, so this job tests the Maven a release runs on and has no pin of its own to drift.
+3. **Install the pinned Maven**: the same `run:` block as `publish.yml`'s step of that name, which
+   `PublishMavenPinWiringTest` checks. It downloads the distribution from Maven Central, verifies its
+   SHA-512 and puts it first on `PATH`.
+4. **Check the bundle checker against known layouts**: `.github/scripts/check-central-bundle.test.sh`
+   runs `check-central-bundle.sh` against zips built to a known shape, including the layout Maven
+   3.10 produced, which it must reject.
+5. **Build each published module's Central bundle and check it**:
+   `.github/scripts/build-central-bundles.sh` takes the modules from `publish.yml`'s
+   `deploy-to-central.sh` calls, in their order, and runs `mvn clean deploy -P central-publish` in each
+   with the upload pointed at `http://127.0.0.1:9` and throwaway credentials. The plugin stages and
+   zips the real bundle and then fails to upload it; the script requires that failure, then checks
+   the zip: every file directly in `<group>/<artifact>/<version>/` and named for the component, the
+   `.pom` present (and for a jar the main, `-sources` and `-javadoc` jars), and an `.md5` and `.sha1`
+   beside every file. It skips tests and static analysis, which add no file to a bundle, and does
+   not check signatures or POM content, which only the real publish has.
+
 ---
 
 ## 2. CodeQL (`codeql.yml`)
@@ -350,14 +379,26 @@ that published some modules and not others. A deploy can fail after its bundle i
 uploaded, because Central's validation is sometimes slow rather than stuck; before the manual
 trigger existed, the only way to finish such a release was to cut another tag. The dispatch
 takes `ref` (the tag being resumed) and `modules` (`all`, or a comma-separated subset of
-`annotations,processor,ksp,bom,cli`).
+`annotations,processor,ksp,bom,cli`). It runs this workflow as it is on the branch it is dispatched
+from and builds the source of `ref`, so a fix to the workflow merged to `main` also finishes a
+release whose tag predates the fix: `gh workflow run publish.yml --ref main -f ref=v<version>`.
 
 - Job: `publish-maven-central`, JDK 21, `permissions: contents: write` (to attach release assets).
+  Job-level `env` pins the Maven every deploy runs on: `MAVEN_VERSION` and `MAVEN_SHA512` (of
+  `apache-maven-<version>-bin.tar.gz`). It is 3.9, not the runner image's 3.10, because
+  `central-publishing-maven-plugin` 0.11.0 bundles Maven 3.10's local-repository files and Central
+  rejects the result (#945). The `central-bundle` job in `build.yml` reads both values from here.
 - **Resolve which modules to deploy** — validates `modules` against `[a-z,]` and writes one
   output per module. The input reaches the script through `env`, never through `${{ }}` inside
   `run:`, because an interpolated expression becomes script text in the one job that holds the GPG
   key and the Central token.
 - Sets up Maven with `server-id: central` and exports `CENTRAL_TOKEN_USERNAME` / `CENTRAL_TOKEN_PASSWORD` for the deploy steps.
+- **Install the pinned Maven**: downloads `apache-maven-${MAVEN_VERSION}-bin.tar.gz` from Maven
+  Central, checks it against `MAVEN_SHA512` and puts its `bin/` first on `PATH`. Inline rather than a
+  script, because a resume checks out a tag that can predate any script; `PublishMavenPinWiringTest`
+  checks that the `central-bundle` job runs the same block.
+- **Refuse to deploy on any Maven but the pinned one**: fails unless `mvn --version` reports
+  `MAVEN_VERSION`, before anything is signed or uploaded.
 - **Import GPG key** — pipes `secrets.GPG_PRIVATE_KEY` into `gpg --batch --import`, then prints key fingerprints.
 - **Five deploy steps, each gated on its module being selected**, each calling
   `.github/scripts/deploy-to-central.sh <module-dir> <artifact> [maven args]`. The script runs
@@ -373,9 +414,14 @@ takes `ref` (the tag being resumed) and `modules` (`all`, or a comma-separated s
      leaving every documented way of depending on the published jars broken.
   5. **CLI** — last; it consumes the processor as a library, nobody's build depends on it, and its
      fast filesystem-only tests run here as a final gate.
-- **Attach signed artifacts to the GitHub release** — release events only; uploads each module's
-  jars and `.asc` signatures (the BOM's `.pom.asc`) so Scorecard's `Signed-Releases` check can
-  verify them. A manual resume has no release to attach to.
+- **Find the release to attach the signed artifacts to**, then **Attach signed artifacts to the
+  GitHub release**: uploads each module's jars and `.asc` signatures (the BOM's `.pom.asc`) so
+  Scorecard's `Signed-Releases` check can verify them. A release event attaches to its own release.
+  A resume attaches only with `modules=all`, so every module's `target/` was built, and only when
+  `ref` is the tag of the latest release: `softprops/action-gh-release` updates the release it
+  attaches to without passing `make_latest`, which GitHub's update defaults to true, and it creates a
+  release for a tag that has none. Otherwise the step says so and the assets go up by hand with
+  `gh release upload`.
 
 Required repository secrets: `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`, `CENTRAL_TOKEN_USERNAME`, `CENTRAL_TOKEN_PASSWORD`. CI also references `CODECOV_TOKEN` from `build.yml`.
 

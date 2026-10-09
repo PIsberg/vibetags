@@ -280,7 +280,9 @@ gh pr create --base main --title "chore: prepare release v<version>" --body "…
 
 Write the PR body from the new CHANGELOG section. Then **stop and hand back to the
 user**: they merge the PR once CI is green. Do not merge it yourself, and do not
-create the release before the PR is merged — the release tags `main`.
+create the release before the PR is merged — the release tags `main`. Green has to include
+`Central Bundle Shape`: it is the only check that builds the bundles Central will validate, and
+Central sees them only after the tag exists.
 
 ## Step 7 — Create the GitHub release (after the PR is merged)
 
@@ -319,14 +321,25 @@ For a release candidate, use `--prerelease` instead of `--latest`.
 ## Step 8 — Watch the publish and report
 
 Creating the release triggers `.github/workflows/publish.yml`, which signs and deploys
-`vibetags-annotations`, `vibetags-processor`, and `vibetags-bom` to Maven Central:
+`vibetags-annotations`, `vibetags-processor`, `vibetags-ksp`, `vibetags-bom` and
+`vibetags-cli` to Maven Central, in that order:
 
 ```bash
-gh run watch "$(gh run list --workflow=publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+RUN_ID="$(gh run list --workflow=publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+gh run watch "$RUN_ID" --exit-status
+gh run view "$RUN_ID" --json status,conclusion --jq '.status + "/" + .conclusion'
 ```
+
+`gh run watch` has returned while a run was still in progress, so take the final state from
+`gh run view` (it must read `completed/success`), and then confirm every module on
+repo1.maven.org with the loop in docs/RELEASING.md, "A release published nothing, or only some
+modules", step 4. A green run is the claim; the five poms answering 200 are the proof.
 
 Report the outcome plainly. On success, tell the user that Maven Central search and
 the README badge lag by roughly 15-30 minutes, and point them at
 https://central.sonatype.com/publishing/deployments to watch the deployment. On
-failure, surface the actual job log — `docs/RELEASING.md` has a troubleshooting
-section covering GPG failures, 401s from the Portal, and stuck validations.
+failure, surface the actual job log. A failed validation publishes nothing and leaves the
+version free, so the release is finished from the same tag, never re-cut: the fix goes to
+`main` through a PR, then `gh workflow run publish.yml --ref main -f ref=$TAG -f modules=all`,
+which is irreversible and the user's call. `docs/RELEASING.md` has that procedure and a
+troubleshooting section covering GPG failures, 401s from the Portal, and stuck validations.

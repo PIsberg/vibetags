@@ -1830,5 +1830,54 @@ jobs:
           path: docs/diagrams/codekarta/
           if-no-files-found: ignore
 
+  # Builds the Maven Central bundle of every module publish.yml deploys, without uploading it, and
+  # checks its layout. Central validates a bundle only after publish.yml has uploaded it, which is
+  # after the release is tagged, and nothing else here built one: that is how the runner image's
+  # move to Maven 3.10 (#945) was first seen as a rejected release rather than a red check. It uses
+  # the Maven publish.yml pins, read from that file, so it tests the toolchain a release runs on.
+  central-bundle:
+    name: Central Bundle Shape
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@351661ca32ac09a36dc5ee2d536e3128f2a3c8ed # v2.22.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Read the Maven version publish.yml pins
+        run: |
+          for key in MAVEN_VERSION MAVEN_SHA512; do
+            value="$(sed -n "s/^ *${key}: *'\([^']*\)'.*/\1/p" .github/workflows/publish.yml)"
+            if [ -z "$value" ] || [ "$(printf '%s\n' "$value" | wc -l)" -ne 1 ]; then
+              echo "::error::publish.yml must set ${key} exactly once, as ${key}: '<value>'"
+              exit 1
+            fi
+            echo "${key}=${value}" >> "$GITHUB_ENV"
+          done
+
+      - name: Install the pinned Maven
+        run: |
+          archive="apache-maven-${MAVEN_VERSION}-bin.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$archive" \
+            "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/${MAVEN_VERSION}/${archive}"
+          echo "${MAVEN_SHA512}  $RUNNER_TEMP/$archive" | sha512sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-${MAVEN_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Check the bundle checker against known layouts
+        run: bash .github/scripts/check-central-bundle.test.sh
+
+      - name: Build each published module's Central bundle and check it
+        run: bash .github/scripts/build-central-bundles.sh
+
   # Mutation testing moved to .github/workflows/mutation.yml and runs on demand only
   # (workflow_dispatch). It was the longest job here and nothing gated on its result.

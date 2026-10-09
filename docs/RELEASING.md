@@ -361,19 +361,27 @@ gh release edit $TAG --notes-file /tmp/r.md
 
 ### 7. Automatic Publishing
 
-Creating a release triggers the [Publish workflow](../.github/workflows/publish.yml), which runs two parallel jobs:
+Creating a release triggers the [Publish workflow](../.github/workflows/publish.yml). Its one job,
+**Publish to Maven Central**, signs the artifacts with GPG (`-P sign-artifacts`) and deploys
+`vibetags-annotations`, `vibetags-processor`, `vibetags-ksp`, `vibetags-bom` and `vibetags-cli`, in
+that order, to the Central Portal via the `central-publishing-maven-plugin`. The plugin
+auto-publishes without manual approval (`autoPublish=true`). Order matters: annotations must be
+deployed before the processor (which depends on them). GitHub Packages publishing was removed; only
+Central is published to.
 
-1. **Publish to GitHub Packages** — deploys the artifact to `maven.pkg.github.com/PIsberg/vibetags` using the `-P github` profile.
-2. **Publish to Maven Central** — signs the artifacts with GPG (`-P sign-artifacts`) and deploys the artifacts (`vibetags-annotations`, `vibetags-processor`, `vibetags-ksp`, `vibetags-bom`, `vibetags-cli`) to the Central Portal via the `central-publishing-maven-plugin`. The plugin auto-publishes without manual approval (`autoPublish=true`). Order matters: annotations must be deployed before the processor (which depends on them).
+Every deploy runs on the Maven pinned in the job's `env` (`MAVEN_VERSION`, `MAVEN_SHA512`), not the
+runner image's: Maven 3.10 makes the plugin bundle files Central rejects (#945). Central sees a
+bundle only after the tag exists, so the `Central Bundle Shape` check in `build.yml` builds every
+module's bundle with that Maven on each pull request. It must be green on the release PR.
 
-Monitor the workflow run under the **Actions** tab. Both jobs must succeed.
+Monitor the workflow run under the **Actions** tab; the job must succeed. If it fails, see
+[A release published nothing, or only some modules](#a-release-published-nothing-or-only-some-modules).
 
 ### 8. Verify the Release
 
 After the workflow completes:
 
 - **Maven Central**: Search for `se.deversity.vibetags` at [central.sonatype.com](https://central.sonatype.com/search). It may take 15-30 minutes to appear in search and sync to mirrors.
-- **GitHub Packages**: Check [GitHub Packages](https://github.com/PIsberg/vibetags/packages).
 - **Maven Central badge**: The badge in `README.md` should update within a few hours.
 - **Deployments dashboard**: Monitor at [https://central.sonatype.com/publishing/deployments](https://central.sonatype.com/publishing/deployments).
 
@@ -416,15 +424,52 @@ For SNAPSHOT versions (e.g., `0.6.0-SNAPSHOT`):
 - Common issues: missing Javadoc JAR, missing sources JAR, missing GPG signatures, POM metadata mismatch.
 - The `central-publishing-maven-plugin` with `autoPublish=true` handles close/release automatically. If validation fails, fix the issue and redeploy.
 
+### A release published nothing, or only some modules
+
+A failed validation publishes nothing, so the version is still free on Central: finish the release
+from the same tag. Never delete and re-cut the tag, and do not release the next version to get
+around it.
+
+1. Read the failing step's log. Central's validation errors follow `Deployment <id> failed`.
+   `Bundle has content that does NOT have a .pom file: <group>/<artifact>` means the bundle held a
+   file outside its `<group>/<artifact>/<version>/` directory. That was the 2026-10-08 failure:
+   the runner image's Maven had become 3.10, and the plugin zipped its `maven-metadata-local.xml`
+   (#945). Counting `Pre Bundling - deleted` lines in the log shows which Maven built the bundles:
+   the plugin logs one per module after cleaning up Maven 3.9's staging metadata, and none under
+   Maven 3.10.
+2. Fix the cause on `main` through a pull request. The `Central Bundle Shape` check builds every
+   module's bundle and must pass on it.
+3. Resume from the tag. The dispatch runs `publish.yml` as it is on `main` against the tag's source,
+   so the fix applies although the tag predates it:
+   ```bash
+   gh workflow run publish.yml --ref main -f ref=v<version> -f modules=all
+   ```
+   `deploy-to-central.sh` treats a module that already landed as success, so `modules=all` is safe
+   after a partial publish. With `modules=all`, and `ref` the tag of the latest release, the run also
+   attaches the signed artifacts to the release; for any other release, upload them with
+   `gh release upload`.
+4. Check every module on `repo1.maven.org`, not just the run's status:
+   ```bash
+   for a in annotations processor ksp bom cli; do
+     curl -s -o /dev/null -w "vibetags-$a: %{http_code}\n" \
+       "https://repo1.maven.org/maven2/se/deversity/vibetags/vibetags-$a/<version>/vibetags-$a-<version>.pom"
+   done
+   ```
+
 ### Maven Central badge not updating
 - The badge updates once Sonatype syncs to Maven Central mirrors (typically 15-30 min, up to 2 hours).
 - Verify the artifact is accessible at `https://central.sonatype.com/artifact/se.deversity.vibetags/vibetags-processor`.
 
 ### Local `mvn deploy` tries to publish to Central unintentionally
-- The `central-publishing-maven-plugin` is always active. To skip Central deployment during local development, use the `github` profile:
-  ```bash
-  mvn deploy -P github -DskipTests
-  ```
+- The `central-publishing-maven-plugin` runs only under `-P central-publish`, which `publish.yml`
+  passes. Without it, `mvn deploy` falls back to `maven-deploy-plugin` and the
+  `<distributionManagement>` in `vibetags-parent/pom.xml`: a `-SNAPSHOT` goes to Central's snapshot
+  repository when `~/.m2/settings.xml` has credentials for `central`, and a release version goes to
+  the OSSRH staging URL, which Sonatype has retired (it answered 404 when checked on 2026-10-08).
+  The `github` profile this entry used to recommend no longer exists.
+- To see the bundle a release would upload without uploading it, run
+  `bash .github/scripts/build-central-bundles.sh` from the repository root, as the
+  `Central Bundle Shape` check does.
 - To build and install locally without any remote deployment:
   ```bash
   mvn install -DskipTests
@@ -446,33 +491,31 @@ For SNAPSHOT versions (e.g., `0.6.0-SNAPSHOT`):
 ### Maven build (`pom.xml`)
 
 ```
-vibetags/pom.xml
+vibetags-parent/pom.xml, inherited by every published module
 ├── <build><plugins>
-│   ├── maven-source-plugin       → Generates -sources.jar (required by Central)
-│   ├── maven-javadoc-plugin      → Generates -javadoc.jar (required by Central)
-│   └── central-publishing-maven-plugin → Uploads to Central Portal
+│   └── flatten-maven-plugin      → Resolves ${revision}, drops the parent from the deployed POM
+│       (each jar module binds maven-source-plugin and maven-javadoc-plugin itself:
+│        -sources.jar and -javadoc.jar, both required by Central)
 ├── <distributionManagement>
 │   ├── <snapshotRepository id="central"> → https://central.sonatype.com/repository/maven-snapshots/
-│   └── <repository id="central">        → Central Portal staging
+│   └── <repository id="central">        → retired OSSRH staging URL; releases use the profile below
 └── <profiles>
-    ├── sign-artifacts     → Activates maven-gpg-plugin (signs all artifacts)
-    └── github             → Overrides distributionManagement to GitHub Packages
+    ├── central-publish    → central-publishing-maven-plugin: bundles the module, uploads it to the Central Portal
+    └── sign-artifacts     → Activates maven-gpg-plugin (signs all artifacts)
 ```
 
 ### CI workflow (`.github/workflows/publish.yml`)
 
 ```
-Release created on GitHub
-├── publish-github-packages
-│   ├── server-id: github
-│   ├── activates profile: github
-│   └── deploys to: maven.pkg.github.com/PIsberg/vibetags
+Release created on GitHub, or a manual dispatch with ref=<tag> to resume one
 └── publish-maven-central
+    ├── env MAVEN_VERSION, MAVEN_SHA512 → installs that Maven, refuses to deploy on any other (#945)
     ├── server-id: central
-    ├── activates profile: sign-artifacts
     ├── imports GPG key from secrets
-    ├── signs all artifacts (jar, sources, javadoc, pom)
-    └── deploys to: central.sonatype.com (auto-published)
+    ├── per module, in order: deploy-to-central.sh → mvn clean deploy -P central-publish,sign-artifacts
+    │   (annotations, processor, ksp, bom, cli; signs jar, sources, javadoc, pom)
+    ├── deploys to: central.sonatype.com (auto-published)
+    └── attaches the signed jars and .asc files to the GitHub release
 ```
 
 ### Key differences from the legacy OSSRH process
@@ -498,8 +541,8 @@ the table is now the only place it lives.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `build.yml` | Push to `main`/`feature/*`, PRs | Multi-JDK build, tests, coverage, load tests |
-| `publish.yml` | Release created | Deploys to GitHub Packages + Maven Central (parallel) |
+| `build.yml` | Push to `main`/`master`, every PR | Multi-JDK build, tests, coverage, load tests, Central bundle shape |
+| `publish.yml` | Release created; manual dispatch to resume one | Deploys the five modules to Maven Central |
 | `codeql.yml` | Push to `main`, PRs, weekly | Security scanning |
 | `scorecards.yml` | Push to `main` | Supply chain security assessment |
 | `dependency-review.yml` | PRs | Blocks PRs with known vulnerable deps |
