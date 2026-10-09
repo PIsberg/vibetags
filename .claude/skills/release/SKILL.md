@@ -79,8 +79,9 @@ tools/set-version.sh <version>
 That rewrites `<revision>` in `vibetags-parent/pom.xml` — which every managed pom
 inherits its version from, so `vibetags-annotations/pom.xml`, `vibetags/pom.xml`,
 `vibetags-bom/pom.xml` and `load-tests/pom.xml` need no edit at all — plus the
-places that cannot inherit it: both `build.gradle` files, the copy-pasteable
-snippets in the `<description>` blocks, and the standalone example/demo poms.
+places that cannot inherit it: both `build.gradle` files and the standalone
+example/demo poms. The install snippets in the published poms' `<description>` blocks
+quote `${revision}` and need no edit.
 
 Then confirm nothing was missed, rather than assuming. Install the annotations at the new
 version first, or the test cannot run at all — `vibetags` now depends on
@@ -100,7 +101,7 @@ believed it was benchmarking the branch.
 It also updates the consumers, which track a *released* BOM version: `examples/basic/pom.xml`,
 `examples/basic/build.gradle`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`,
 `examples/all-tiers/pom.xml`, `tools/demo/pom.xml`, the Kotlin/Groovy/Scala example builds,
-`vibetags-cli/pom.xml`, `README.md` and `.claude/skills/vibetags-usage/SKILL.md`. It prints
+`README.md` and `.claude/skills/vibetags-usage/SKILL.md`. It prints
 every file it touched, so read that list rather than assuming this one is current.
 
 Do not hand-edit those files first. This section used to say the script left the consumers

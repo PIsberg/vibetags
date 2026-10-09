@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Maven install snippet in the published `vibetags-annotations` and `vibetags-bom` poms
+  names the release it ships in** (#948). Every release from 1.3.1 to 1.4.0 published a
+  `<description>` telling Maven users to depend on 1.3.0: `tools/set-version.sh` rewrote the Gradle
+  lines beside it but not the escaped `&lt;version&gt;` form. The snippets in those two poms and
+  the CLI's jbang line now quote `${revision}`, which `flatten-maven-plugin` resolves in the
+  published pom, so `set-version.sh` no longer edits them, and `BuildVersionParityTest` fails if a
+  published description quotes any version but the current one.
 - **PMD and CPD now run only on the JDK 21 leg of `build-maven`, as the docs said they did**
   (#947). `build.yml` skipped them on the other JDKs with `-Dmaven.pmd.skip=true`, a property no
   plugin reads (`maven-pmd-plugin` binds `pmd.skip` and `cpd.skip`), so both ran on JDK 25 and 26,

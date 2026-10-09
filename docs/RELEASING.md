@@ -245,14 +245,16 @@ cd vibetags && mvn test -Dtest=BuildVersionParityTest
 That is the whole bump. The version lives in **one** place — `<revision>` in
 `vibetags-parent/pom.xml` — and every pom that inherits from the parent takes its own version,
 its sibling dependencies and its BOM entries from it. `vibetags-annotations/pom.xml`,
-`vibetags/pom.xml`, `vibetags-bom/pom.xml` and `load-tests/pom.xml` are not edited at all.
+`vibetags/pom.xml`, `vibetags-bom/pom.xml` and `load-tests/pom.xml` are not edited at all. The
+install snippets in the `<description>` of `vibetags-annotations`, `vibetags-bom` and
+`vibetags-cli` quote `${revision}`, which `flatten-maven-plugin` resolves in the published pom, and
+`BuildVersionParityTest` fails if a description quotes any other version (#948).
 
 The script also rewrites the places that *cannot* inherit a Maven property:
 
 | File | Why it needs rewriting |
 |---|---|
 | `vibetags-annotations/build.gradle`, `vibetags/build.gradle` | Gradle cannot inherit from a Maven POM, and both publish under this version |
-| `vibetags-annotations/pom.xml`, `vibetags-bom/pom.xml` | Prose only — the `<description>` shows consumers a copy-pasteable snippet containing a literal version |
 | `examples/basic/pom.xml`, `examples/basic/build.gradle`, `examples/kotlin/build.gradle.kts`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`, `tools/demo/pom.xml` | Standalone on purpose so a user can lift them into their own project; CI builds them against the artifacts this repo just installed, so they track the current version |
 
 Still by hand, because they are prose rather than build files:
