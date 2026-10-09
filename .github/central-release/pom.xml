@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+      The release reactor: every module publish.yml puts on Maven Central, built in one Maven
+      invocation so that central-publishing-maven-plugin uploads them as ONE Portal deployment.
+
+      Central counts each published deployment as a release against the organization's monthly
+      allowance of 7 (#863). Deployed one module at a time, a vibetags version cost 5 of them; October
+      2026's release took the org from 1 to 6. In a reactor the plugin defers every module's files and
+      uploads a single bundle after the last one, so a version costs 1, and a validation failure in
+      one module no longer leaves the modules before it public and the rest missing.
+
+      Not a parent and not published: nothing inherits from this pom, it does not carry the
+      central-publish profile, and maven.deploy.skip keeps the default deploy plugin off it. Its
+      version is its own and never changes; the modules take theirs from vibetags-parent.
+    -->
+    <groupId>se.deversity.vibetags</groupId>
+    <artifactId>vibetags-central-release</artifactId>
+    <version>0-unpublished</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <maven.install.skip>true</maven.install.skip>
+    </properties>
+
+    <!-- The order publish.yml always used: the BOM before the CLI, so the artifact every install
+         snippet resolves through is never the one left out. Maven reorders by dependency anyway;
+         this order decides only between modules that do not depend on each other. -->
+    <modules>
+        <module>../../vibetags-annotations</module>
+        <module>../../vibetags</module>
+        <module>../../vibetags-ksp</module>
+        <module>../../vibetags-bom</module>
+        <module>../../vibetags-cli</module>
+    </modules>
+</project>

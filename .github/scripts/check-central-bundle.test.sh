@@ -7,6 +7,8 @@
 # and _remote.repositories on Linux, plus .locks/ on Windows). Central rejected that bundle on
 # 2026-10-08, after the release was tagged; this suite is what says the checker rejects it first.
 #
+# A release is one bundle holding every module (#863), so the cases from 10 on hold two components.
+#
 # Usage: check-central-bundle.test.sh [path-to-check-central-bundle.sh]
 set -u
 
@@ -16,8 +18,11 @@ trap 'rm -rf "$TMP"' EXIT
 
 G=se.deversity.vibetags
 A=vibetags-example
+B=vibetags-other
 V=9.8.7
 DIR="se/deversity/vibetags/$A/$V"
+DIRB="se/deversity/vibetags/$B/$V"
+JAR="$G:$A:$V:jar"
 
 pass=0
 fail=0
@@ -33,17 +38,19 @@ bundle() {
   (cd "$root" && jar --create --no-manifest --file "$TMP/$name.zip" .)
 }
 
-# component <file>...: each file of the component directory, with its .md5 and .sha1
+# component <dir> <file>...: each file of the component directory, with its .md5 and .sha1
 component() {
-  local f
+  local dir="$1" f
+  shift
   for f in "$@"; do
-    printf '%s\n' "$DIR/$f" "$DIR/$f.md5" "$DIR/$f.sha1"
+    printf '%s\n' "$dir/$f" "$dir/$f.md5" "$dir/$f.sha1"
   done
 }
 
-check() { # name packaging expected_exit expected_text
-  local name="$1" packaging="$2" want="$3" needle="$4" out rc
-  out="$(bash "$SCRIPT" "$TMP/$name.zip" "$G" "$A" "$V" "$packaging" 2>&1)"; rc=$?
+check() { # name expected_exit expected_text component_spec...
+  local name="$1" want="$2" needle="$3" out rc
+  shift 3
+  out="$(bash "$SCRIPT" "$TMP/$name.zip" "$@" 2>&1)"; rc=$?
   if [ "$rc" -eq "$want" ] && printf '%s' "$out" | grep -qF -- "$needle"; then
     echo "PASS  $name: $needle (exit $rc)"
     pass=$((pass + 1))
@@ -54,53 +61,70 @@ check() { # name packaging expected_exit expected_text
   fi
 }
 
-mapfile -t jar_component < <(component "$A-$V.jar" "$A-$V.pom" "$A-$V-sources.jar" \
+mapfile -t jar_component < <(component "$DIR" "$A-$V.jar" "$A-$V.pom" "$A-$V-sources.jar" \
   "$A-$V-javadoc.jar" "$A-$V-cyclonedx.json")
 signatures=("$DIR/$A-$V.jar.asc" "$DIR/$A-$V.pom.asc")
 
 # 1. the layout Maven 3.9 gives, signed as publish.yml signs it
 bundle clean "${jar_component[@]}" "${signatures[@]}"
-check clean jar 0 "OK"
+check clean 0 "OK" "$JAR"
 
 # 2. a pom-packaged component, the BOM's shape
-mapfile -t pom_component < <(component "$A-$V.pom")
+mapfile -t pom_component < <(component "$DIR" "$A-$V.pom")
 bundle bom "${pom_component[@]}" "$DIR/$A-$V.pom.asc"
-check bom pom 0 "OK"
+check bom 0 "OK" "$G:$A:$V:pom"
 
 # 3. what Maven 3.10's resolver left in the staging directory, which Central rejected
 bundle maven310 "${jar_component[@]}" \
   "se/deversity/vibetags/$A/maven-metadata-local.xml" \
   ".locks/artifact~$G~$A~jar~$V.lock" \
   "$DIR/_remote.repositories" "$DIR/_remote.repositories.md5" "$DIR/_remote.repositories.sha1"
-check maven310 jar 1 "se/deversity/vibetags/$A/maven-metadata-local.xml: outside $DIR/"
-check maven310 jar 1 ".locks/artifact~$G~$A~jar~$V.lock: outside $DIR/"
-check maven310 jar 1 "$DIR/_remote.repositories: not named $A-$V"
+check maven310 1 "se/deversity/vibetags/$A/maven-metadata-local.xml: outside every component directory" "$JAR"
+check maven310 1 ".locks/artifact~$G~$A~jar~$V.lock: outside every component directory" "$JAR"
+check maven310 1 "$DIR/_remote.repositories: not named $A-$V" "$JAR"
 
 # 4. no .pom, the component Central's message names
-mapfile -t no_pom < <(component "$A-$V.jar" "$A-$V-sources.jar" "$A-$V-javadoc.jar")
+mapfile -t no_pom < <(component "$DIR" "$A-$V.jar" "$A-$V-sources.jar" "$A-$V-javadoc.jar")
 bundle no-pom "${no_pom[@]}"
-check no-pom jar 1 "$DIR/$A-$V.pom: missing"
+check no-pom 1 "$DIR/$A-$V.pom: missing" "$JAR"
 
 # 5. a jar component without its javadoc jar
-mapfile -t no_javadoc < <(component "$A-$V.jar" "$A-$V.pom" "$A-$V-sources.jar")
+mapfile -t no_javadoc < <(component "$DIR" "$A-$V.jar" "$A-$V.pom" "$A-$V-sources.jar")
 bundle no-javadoc "${no_javadoc[@]}"
-check no-javadoc jar 1 "$DIR/$A-$V-javadoc.jar: missing"
+check no-javadoc 1 "$DIR/$A-$V-javadoc.jar: missing" "$JAR"
 
 # 6. a file without its SHA-1
-mapfile -t no_sha1 < <(component "$A-$V.pom" "$A-$V-sources.jar" "$A-$V-javadoc.jar")
+mapfile -t no_sha1 < <(component "$DIR" "$A-$V.pom" "$A-$V-sources.jar" "$A-$V-javadoc.jar")
 bundle no-sha1 "${no_sha1[@]}" "$DIR/$A-$V.jar" "$DIR/$A-$V.jar.md5"
-check no-sha1 jar 1 "$DIR/$A-$V.jar: no .sha1 beside it"
+check no-sha1 1 "$DIR/$A-$V.jar: no .sha1 beside it" "$JAR"
 
 # 7. the right files under another version's directory
 bundle other-version "se/deversity/vibetags/$A/9.8.8/$A-$V.pom"
-check other-version pom 1 "se/deversity/vibetags/$A/9.8.8/$A-$V.pom: outside $DIR/"
+check other-version 1 "se/deversity/vibetags/$A/9.8.8/$A-$V.pom: outside every component directory" "$G:$A:$V:pom"
 
 # 8. a file in a subdirectory of the component directory
 bundle nested "${pom_component[@]}" "$DIR/extra/$A-$V.txt"
-check nested pom 1 "$DIR/extra/$A-$V.txt: in a subdirectory of $DIR/"
+check nested 1 "$DIR/extra/$A-$V.txt: in a subdirectory of $DIR/" "$G:$A:$V:pom"
 
 # 9. an unknown packaging is a usage error, not a verdict on the bundle
-check clean war 2 "packaging must be jar or pom"
+check clean 2 "packaging must be jar or pom" "$G:$A:$V:war"
+
+# 10. a release bundle: a jar component and a pom component side by side
+mapfile -t other_pom < <(component "$DIRB" "$B-$V.pom")
+bundle release "${jar_component[@]}" "${other_pom[@]}"
+check release 0 "OK" "$JAR" "$G:$B:$V:pom"
+check release 0 "2 components" "$JAR" "$G:$B:$V:pom"
+
+# 11. a component in the bundle that the release does not list
+check release 1 "$DIRB/$B-$V.pom: outside every component directory" "$JAR"
+
+# 12. a listed component with nothing in the bundle, a module the release silently dropped
+bundle lone "${jar_component[@]}"
+check lone 1 "$DIRB/$B-$V.pom: missing" "$JAR" "$G:$B:$V:pom"
+
+# 13. a component spec that is not group:artifact:version:packaging
+check clean 2 "group:artifact:version:packaging" "$G:$A:$V"
+check clean 2 "usage"
 
 echo
 echo "passed=$pass failed=$fail"

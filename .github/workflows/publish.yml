@@ -3,13 +3,12 @@ name: Publish to Maven Central
 on:
   release:
     types: [ created ]
-  # Resume a release that published some modules and not others. A deploy can fail with the
-  # bundle already uploaded — Central's validation is occasionally slow rather than stuck — and
-  # without this the only way to finish the release was to cut another tag. deploy-to-central.sh
-  # treats an already-published version as success, so re-running over the modules that did land
-  # is safe and skips them. A dispatch runs this file as it is on the branch it is dispatched from
-  # and builds the source of `ref`, so a fix to this workflow on main also finishes a release whose
-  # tag predates the fix.
+  # Resume a release that did not publish. A deploy can fail with the bundle already uploaded —
+  # Central's validation is occasionally slow rather than stuck — and without this the only way to
+  # finish the release was to cut another tag. The deploy passes ignorePublishedComponents, so the
+  # bundle leaves out every module Central already has and re-running is safe. A dispatch runs this
+  # file as it is on the branch it is dispatched from and builds the source of `ref`, so a fix to
+  # this workflow on main also finishes a release whose tag predates the fix.
   workflow_dispatch:
     inputs:
       ref:
@@ -52,7 +51,8 @@ jobs:
           # Empty on a release event, which keeps the default checkout of the tag.
           ref: ${{ github.event.inputs.ref || '' }}
 
-      # `all` on a release event, so the selection below is a no-op there.
+      # `all` on a release event, so the selection below is a no-op there. Otherwise it becomes a
+      # Maven -pl list of artifactIds, which keeps the one-deployment shape for a subset too.
       #
       # SELECTED arrives through env, never through ${{ }} inside the script. An expression
       # interpolated into `run:` is substituted into the script *text* before bash sees it, so a
@@ -69,13 +69,18 @@ jobs:
             *[!a-z,]*) echo "::error::modules must be 'all' or a comma-separated subset of annotations,processor,ksp,bom,cli"; exit 1 ;;
           esac
           echo "selected=$SELECTED" >> "$GITHUB_OUTPUT"
-          for m in annotations processor ksp bom cli; do
-            if [ "$SELECTED" = "all" ] || echo ",$SELECTED," | grep -q ",$m,"; then
-              echo "$m=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "$m=false" >> "$GITHUB_OUTPUT"
+          projects=""
+          if [ "$SELECTED" != "all" ]; then
+            for m in annotations processor ksp bom cli; do
+              if echo ",$SELECTED," | grep -q ",$m,"; then
+                projects="${projects:+$projects,}:vibetags-$m"
+              fi
+            done
+            if [ -z "$projects" ]; then
+              echo "::error::'$SELECTED' names none of annotations,processor,ksp,bom,cli"; exit 1
             fi
-          done
+          fi
+          echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "Deploying: $SELECTED"
 
       - name: Set up JDK 21
@@ -118,62 +123,26 @@ jobs:
         env:
           GPG_TTY: /dev/tty
 
-      - name: Sign and deploy annotations to Maven Central
-        if: steps.selection.outputs.annotations == 'true'
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-annotations vibetags-annotations \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+      # One Central deployment for the whole release (#863). Central counts each published
+      # deployment against the organization's monthly allowance of 7 releases, and deploying one
+      # module at a time made a vibetags version cost 5: October 2026's release took the org from 1 to 6. The release
+      # reactor in .github/central-release builds every module in one Maven invocation;
+      # central-publishing-maven-plugin defers each module's files and uploads a single bundle after
+      # the last, so a version costs 1, and Central publishes all of it or none of it rather than
+      # leaving the first modules public when a later one fails validation. The reactor's module
+      # order keeps the BOM ahead of the CLI. ignorePublishedComponents leaves out of the bundle any
+      # module Central already has, so a resumed release does not fail on it. Tests are skipped: the
+      # release commit passed every one on every JDK before it was tagged.
+      - name: Sign and deploy every module to Maven Central as one deployment
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-
-      - name: Build, sign, and deploy processor to Maven Central
-        if: steps.selection.outputs.processor == 'true'
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          PROJECTS: ${{ steps.selection.outputs.projects }}
         run: |
-          bash .github/scripts/deploy-to-central.sh vibetags vibetags-processor -DskipTests \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-
-      # After the processor, which the KSP front end depends on and resolves from the local
-      # repository the processor step installed into; before the BOM, which manages it. Tests are
-      # skipped for the same reason as the processor's: the release commit already passed them.
-      - name: Build, sign, and deploy KSP front end to Maven Central
-        if: steps.selection.outputs.ksp == 'true'
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-ksp vibetags-ksp -DskipTests \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-
-      # The BOM goes out before the CLI, and the order is the point. Every install snippet in
-      # the README resolves through the BOM, so it is the artifact a consumer cannot do without;
-      # the CLI is a convenience tool nobody's build depends on. It used to be last, and when a
-      # CLI deploy timed out waiting on Central the BOM was skipped with it — leaving annotations
-      # and processor published, every documented way of depending on them broken, and the release
-      # notes already out. Put the thing consumers need ahead of the thing they do not.
-      - name: Sign and deploy BOM to Maven Central
-        if: steps.selection.outputs.bom == 'true'
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-bom vibetags-bom \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-
-      # After the processor: the CLI consumes it as a library, so the deploy build resolves
-      # the sibling from the local repository the earlier step installed into. Its tests run
-      # here as a last gate — they are fast and filesystem-only.
-      - name: Build, sign, and deploy CLI to Maven Central
-        if: steps.selection.outputs.cli == 'true'
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-cli vibetags-cli \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          bash .github/scripts/deploy-to-central.sh .github/central-release vibetags \
+            -DskipTests -DignorePublishedComponents=true ${PROJECTS:+-pl "$PROJECTS"} \
+            -Dgpg.passphrase="$GPG_PASSPHRASE"
 
       # Attach the GPG-signed jars/poms (and their .asc signatures) to the
       # GitHub release so Scorecard's Signed-Releases check can verify them.

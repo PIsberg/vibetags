@@ -48,6 +48,14 @@ class BuildToolchainParityTest {
     private static final Map<String, String> EXEMPT = Map.of();
 
     /**
+     * Directories Maven is invoked from that compile the modules as a reactor, and so need their own
+     * {@code .mvn/jvm.config} as much as a module does. {@code publish.yml} deploys from the release
+     * reactor; without the file there, every module fails to compile with "An unknown compilation
+     * problem occurred", which is Error Prone missing its exports (seen 2026-10-09).
+     */
+    private static final List<String> REACTORS = List.of(".github/central-release");
+
+    /**
      * The modules that compile Java and therefore owe the full stack, derived from the tree.
      *
      * <p>Derived, not listed, and that is the whole point of #805. This was
@@ -196,7 +204,9 @@ class BuildToolchainParityTest {
         assertTrue(expected.contains("--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"),
             reference + " no longer looks like the Error Prone export set; update this test deliberately.");
 
-        for (String module : compilingModules()) {
+        List<String> invocationDirs = new ArrayList<>(compilingModules());
+        invocationDirs.addAll(REACTORS);
+        for (String module : invocationDirs) {
             Path config = repoRoot().resolve(module + "/.mvn/jvm.config");
             assertTrue(Files.isRegularFile(config),
                 config + " is missing. Without it Error Prone does not fail in " + module

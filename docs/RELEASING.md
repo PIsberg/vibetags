@@ -219,9 +219,15 @@ Going over starts a grace period, and an organization that stays over is rate li
   went up as XML too. `<checksums>required</checksums>` in the `central-publish` profile and
   `<outputFormat>json</outputFormat>` in each module's CycloneDX plugin are what keep it at 84;
   `CentralPublishingBudgetTest` pins both.
-- Actual usage is on the [usage page](https://central.sonatype.com/publishing/usage?org=deversity)
-  (owner login). Whether Central counts each of `publish.yml`'s five deployments as a release
-  is not known yet; the page says.
+- **A vibetags version is 1 Central release.** Central counts each published deployment as a
+  release: the 1.4.0 publish, five deployments, logged "6 of 7 used" after the fifth, with one
+  async-test-lib deployment before it that month (#863). `publish.yml` now deploys the release
+  reactor in `.github/central-release`, and the publishing plugin uploads every module as one
+  deployment. `CentralPublishingBudgetTest` fails if a second deploy call or a module missing
+  from the reactor comes back.
+- **The allowance is per organization.** async-test-lib publishes under the same `se.deversity`
+  namespace and draws on the same 7, so the tag count above is a floor. Actual usage is on the
+  [usage page](https://central.sonatype.com/publishing/usage?org=deversity) (owner login).
 
 ### 1. Prepare the release
 
@@ -439,15 +445,15 @@ around it.
    (#945). Counting `Pre Bundling - deleted` lines in the log shows which Maven built the bundles:
    the plugin logs one per module after cleaning up Maven 3.9's staging metadata, and none under
    Maven 3.10.
-2. Fix the cause on `main` through a pull request. The `Central Bundle Shape` check builds every
-   module's bundle and must pass on it.
+2. Fix the cause on `main` through a pull request. The `Central Bundle Shape` check builds the
+   release bundle and must pass on it.
 3. Resume from the tag. The dispatch runs `publish.yml` as it is on `main` against the tag's source,
    so the fix applies although the tag predates it:
    ```bash
    gh workflow run publish.yml --ref main -f ref=v<version> -f modules=all
    ```
-   `deploy-to-central.sh` treats a module that already landed as success, so `modules=all` is safe
-   after a partial publish. With `modules=all`, and `ref` the tag of the latest release, the run also
+   The deploy passes `-DignorePublishedComponents=true`, so the plugin leaves out of the bundle
+   every module Central already has, and `modules=all` is safe after a partial publish. With `modules=all`, and `ref` the tag of the latest release, the run also
    attaches the signed artifacts to the release; for any other release, upload them with
    `gh release upload`.
 4. Check every module on `repo1.maven.org`, not just the run's status:
@@ -514,9 +520,9 @@ Release created on GitHub, or a manual dispatch with ref=<tag> to resume one
     ├── env MAVEN_VERSION, MAVEN_SHA512 → installs that Maven, refuses to deploy on any other (#945)
     ├── server-id: central
     ├── imports GPG key from secrets
-    ├── per module, in order: deploy-to-central.sh → mvn clean deploy -P central-publish,sign-artifacts
-    │   (annotations, processor, ksp, bom, cli; signs jar, sources, javadoc, pom)
-    ├── deploys to: central.sonatype.com (auto-published)
+    ├── deploy-to-central.sh .github/central-release → mvn clean deploy -P central-publish,sign-artifacts
+    │   (one reactor: annotations, processor, ksp, bom, cli; signs jar, sources, javadoc, pom)
+    ├── deploys to: central.sonatype.com as ONE deployment (auto-published, #863)
     └── attaches the signed jars and .asc files to the GitHub release
 ```
 

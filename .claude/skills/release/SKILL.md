@@ -50,6 +50,11 @@ The cadence is **at most 3 releases a month**. If this would be the fourth or la
 and tell the user the count, and continue only on an explicit go-ahead for a fix a consumer
 is blocked on. Say which it was in the release PR body.
 
+Central counts each published deployment as a release, and `publish.yml` deploys a version
+as one (#863), so a vibetags release costs 1 of the 7. The 7 are per organization: an
+async-test-lib release counts too, so tell the user the tag count is a floor and the usage
+page (https://central.sonatype.com/publishing/usage?org=deversity) has the real number.
+
 ## Step 2 — Preflight
 
 Refuse to continue and tell the user what is wrong if any of these fail:

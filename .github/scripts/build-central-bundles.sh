@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
-# Build the Maven Central bundle of every module publish.yml deploys, without publishing anything,
-# and check each one with check-central-bundle.sh.
+# Build the Maven Central bundle publish.yml deploys, without publishing anything, and check it with
+# check-central-bundle.sh. A release is one bundle: publish.yml deploys the release reactor in
+# .github/central-release, and the plugin uploads every module's files as a single deployment
+# (#863). This builds that same reactor.
 #
 # Only Central ever validated a bundle, and publish.yml only uploads after the release is tagged.
 # On 2026-10-08 that is how a release learned that the runner image's new Maven (3.10) made
@@ -14,7 +16,8 @@
 # every build here; what decides the result is the bundle it left behind.
 #
 # Tests (including their compilation) and static analysis are skipped: neither adds a file to a
-# bundle, no published module attaches a test jar, and build-maven runs both.
+# bundle, no published module attaches a test jar, and build-maven runs both. The build runs in the
+# repository it is given, so its install step puts the release version in the local repository.
 #
 # Usage: build-central-bundles.sh                     (from anywhere in the repository)
 #   MVN=<path>          the Maven to run, default `mvn` on PATH
@@ -38,10 +41,10 @@ cat > "$work/settings.xml" <<'EOF'
 </settings>
 EOF
 
-modules="$(sed -n 's|^ *bash \.github/scripts/deploy-to-central\.sh \([^ ]*\) .*|\1|p' \
-  "$root/.github/workflows/publish.yml")"
+reactor="$root/.github/central-release"
+modules="$(sed -n 's|^ *<module>\.\./\.\./\([^<]*\)</module>.*|\1|p' "$reactor/pom.xml")"
 if [ -z "$modules" ]; then
-  echo "::error::found no deploy-to-central.sh call in publish.yml, so there is nothing to check"
+  echo "::error::found no <module>../../<dir></module> in $reactor/pom.xml, so there is nothing to check"
   exit 1
 fi
 
@@ -58,36 +61,49 @@ fi
 # The first <name> element of a pom: the project's own, in a flattened pom with no parent.
 first() { sed -n "/^ *<$1>/{s|^ *<$1>\([^<]*\)</$1>.*|\1|p;q;}" "$2"; }
 
-failed=0
 for module in $modules; do
-  bundle="$root/$module/target/central-publishing/central-bundle.zip"
-  pom="$root/$module/.flattened-pom.xml"
-  log="$work/$module.log"
-  rm -f "$bundle" "$pom"   # a bundle left by an earlier build must not be the one checked
-
-  echo "::group::$module: mvn clean deploy, uploading to http://127.0.0.1:9"
-  (cd "$root/$module" && "$MVN" -B clean deploy -P central-publish -Dmaven.test.skip=true \
-      -Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true -Dcheckstyle.skip=true \
-      -DcentralBaseUrl=http://127.0.0.1:9 -s "$work/settings.xml" -gs "$work/settings.xml") \
-    > "$log" 2>&1
-  status=$?
-  tail -n 25 "$log"
-  echo "::endgroup::"
-
-  if [ "$status" -eq 0 ]; then
-    echo "::error::$module: the deploy reported success while pointed at http://127.0.0.1:9; read its log before trusting anything it did"
-    failed=1
-  elif [ ! -f "$bundle" ] || [ ! -f "$pom" ]; then
-    echo "::error::$module: the build failed before the plugin wrote a bundle"
-    tail -n 80 "$log"
-    failed=1
-  elif ! grep -qF "Using Central baseUrl: http://127.0.0.1:9" "$log"; then
-    echo "::error::$module: the publishing plugin did not take the local base URL"
-    failed=1
-  else
-    packaging="$(first packaging "$pom")"
-    bash "$check" "$bundle" "$(first groupId "$pom")" "$(first artifactId "$pom")" \
-      "$(first version "$pom")" "${packaging:-jar}" || failed=1
-  fi
+  # A bundle or pom left by an earlier build must not be the one checked.
+  rm -f "$root/$module/target/central-publishing/central-bundle.zip" "$root/$module/.flattened-pom.xml"
 done
-exit "$failed"
+
+log="$work/release.log"
+echo "::group::release reactor: mvn clean deploy, uploading to http://127.0.0.1:9"
+(cd "$reactor" && "$MVN" -B clean deploy -P central-publish -Dmaven.test.skip=true \
+    -Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true -Dcheckstyle.skip=true \
+    -DcentralBaseUrl=http://127.0.0.1:9 -s "$work/settings.xml" -gs "$work/settings.xml") \
+  > "$log" 2>&1
+status=$?
+tail -n 40 "$log"
+echo "::endgroup::"
+
+if [ "$status" -eq 0 ]; then
+  echo "::error::the deploy reported success while pointed at http://127.0.0.1:9; read its log before trusting anything it did"
+  exit 1
+fi
+if ! grep -qF "Using Central baseUrl: http://127.0.0.1:9" "$log"; then
+  echo "::error::the publishing plugin did not take the local base URL"
+  tail -n 80 "$log"
+  exit 1
+fi
+
+# The plugin stages every module into the first one's target/ and zips it once, after the last.
+bundles=()
+specs=()
+for module in $modules; do
+  pom="$root/$module/.flattened-pom.xml"
+  if [ ! -f "$pom" ]; then
+    echo "::error::$module: the build failed before it wrote $pom"
+    tail -n 80 "$log"
+    exit 1
+  fi
+  packaging="$(first packaging "$pom")"
+  specs+=("$(first groupId "$pom"):$(first artifactId "$pom"):$(first version "$pom"):${packaging:-jar}")
+  candidate="$root/$module/target/central-publishing/central-bundle.zip"
+  [ -f "$candidate" ] && bundles+=("$candidate")
+done
+if [ "${#bundles[@]}" -ne 1 ]; then
+  echo "::error::expected the release reactor to write one central-bundle.zip, found ${#bundles[@]}: ${bundles[*]:-none}. More than one is more than one Central release (#863)."
+  tail -n 80 "$log"
+  exit 1
+fi
+bash "$check" "${bundles[0]}" "${specs[@]}"

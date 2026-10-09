@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A release is one Maven Central deployment instead of five** (#863). Central counts each
+  published deployment as a release against the organization's allowance of 7 a month, and
+  `publish.yml` deployed each module separately, so 1.4.0 used 5 of them. It now deploys a release
+  reactor (`.github/central-release/pom.xml`) and `central-publishing-maven-plugin` uploads all five
+  modules as one bundle after the last, so a version costs 1, and a module that fails Central's
+  validation no longer leaves the modules before it published. A resumed release passes
+  `-DignorePublishedComponents=true`, which leaves out modules Central already has. The
+  `Central Bundle Shape` check builds the same reactor and checks the single bundle against every
+  module's coordinates, and `CentralPublishingBudgetTest` fails on a second deploy call or a
+  published module missing from the reactor.
 - **The Maven install snippet in the published `vibetags-annotations` and `vibetags-bom` poms
   names the release it ships in** (#948). Every release from 1.3.1 to 1.4.0 published a
   `<description>` telling Maven users to depend on 1.3.0: `tools/set-version.sh` rewrote the Gradle
