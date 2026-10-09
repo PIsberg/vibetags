@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **What `@AIIgnore` on a nested type or a member hides, and from whom** (#940). It writes no
+  glob to `.cursorignore`, `.qwenignore`, `.aiexclude` or Greptile's `ignorePatterns`, because only a
+  top-level type owns a file, so a tool that reads only the ignore file still sees that code in its
+  outer type's file. Excluding the outer file would hide its unmarked code too; the owner kept the
+  under-exclusion, `docs/ANNOTATIONS.md` now states the limit, and `MemberLevelAIIgnoreGlobTest`
+  pins that the outer file is not excluded.
+
 ### Fixed
 
 - **A release becomes Latest only once Maven Central serves it** (#946). The release was created
