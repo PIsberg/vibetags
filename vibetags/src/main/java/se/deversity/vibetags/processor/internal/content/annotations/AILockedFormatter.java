@@ -35,7 +35,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 // such file) or a silent over-exclusion: a field named ALL hid an unrelated ALL.java
                 // from the assistant. The lock still reaches every platform that can name it.
                 if (element.ownsSourceFile()) {
-                    sb.append("**/").append(element.simpleName()).append(".java\n");
+                    sb.append("**/").append(element.sourceFile()).append('\n');
                 }
                 break;
             case CODEX:

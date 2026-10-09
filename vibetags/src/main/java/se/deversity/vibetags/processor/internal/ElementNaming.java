@@ -1,5 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
+import org.jspecify.annotations.Nullable;
+
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -60,6 +62,89 @@ public final class ElementNaming {
             }
         }
         return outermost.equals(e) ? "" : outermost.getSimpleName().toString();
+    }
+
+    /** The outermost type enclosing {@code e}, {@code e} itself for a top-level type, or {@code null} for a package. */
+    public static @Nullable TypeElement outermostType(Element e) {
+        TypeElement outermost = null;
+        for (Element at = e; at != null && at.getKind() != ElementKind.PACKAGE
+                && at.getKind() != ElementKind.MODULE; at = at.getEnclosingElement()) {
+            if (at instanceof TypeElement type) {
+                outermost = type;
+            }
+        }
+        return outermost;
+    }
+
+    /**
+     * The name of the source file the top-level type {@code outermost} is written in, extension
+     * included, which is what a glob for its code has to name (#939).
+     *
+     * <p>{@code recorded} is the name the round reported for the file javac or the front end read,
+     * when it could say. Under KSP that is the Kotlin file itself ({@code Billing.kt}), and it is
+     * used as it is. Under kapt and Groovy's stub generation it is a generated {@code .java} stub,
+     * so the stub's markers decide: kapt keeps {@code @kotlin.Metadata} on every class, and a
+     * Groovy class implements {@code groovy.lang.GroovyObject} (a trait carries
+     * {@code @groovy.transform.Trait}). A stub does not say what its source file was called, so the
+     * type's own name stands in for it, which is the convention both languages follow for a file
+     * declaring one class; a Kotlin file facade ({@code BillingKt}, metadata kind 2) drops its
+     * {@code Kt}. Otherwise the recorded name, which for Java can differ from the type's own name
+     * (a second top-level type in {@code Ledger.java}), and failing that {@code <Type>.java}.
+     */
+    public static String sourceFileName(TypeElement outermost, @Nullable String recorded) {
+        String stem = outermost.getSimpleName().toString();
+        int kotlinKind = kotlinMetadataKind(outermost);
+        if (kotlinKind > 0) {
+            if (recorded != null && recorded.endsWith(".kt")) {
+                return recorded;
+            }
+            if (kotlinKind == KOTLIN_FILE_FACADE && stem.endsWith("Kt") && stem.length() > 2) {
+                stem = stem.substring(0, stem.length() - 2);
+            }
+            return stem + ".kt";
+        }
+        if (isGroovy(outermost)) {
+            return recorded != null && recorded.endsWith(".groovy") ? recorded : stem + ".groovy";
+        }
+        return recorded != null ? recorded : stem + ".java";
+    }
+
+    /** {@code kotlin.Metadata}'s {@code k} for a file facade: the class holding a file's top-level functions. */
+    private static final int KOTLIN_FILE_FACADE = 2;
+
+    /** The {@code k} of {@code type}'s {@code @kotlin.Metadata}, 1 when it is not set, 0 when there is none. */
+    private static int kotlinMetadataKind(TypeElement type) {
+        for (var mirror : type.getAnnotationMirrors()) {
+            Element annotation = mirror.getAnnotationType().asElement();
+            if (annotation instanceof TypeElement t && "kotlin.Metadata".contentEquals(t.getQualifiedName())) {
+                for (var entry : mirror.getElementValues().entrySet()) {
+                    if (entry.getKey().getSimpleName().contentEquals("k")
+                        && entry.getValue().getValue() instanceof Number kind) {
+                        return kind.intValue();
+                    }
+                }
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    /** Whether {@code type} is a Groovy class or trait as groovyc's Java stub declares it. */
+    private static boolean isGroovy(TypeElement type) {
+        for (TypeMirror iface : type.getInterfaces()) {
+            if (iface instanceof DeclaredType declared
+                && declared.asElement() instanceof TypeElement t
+                && "groovy.lang.GroovyObject".contentEquals(t.getQualifiedName())) {
+                return true;
+            }
+        }
+        for (var mirror : type.getAnnotationMirrors()) {
+            if (mirror.getAnnotationType().asElement() instanceof TypeElement t
+                && "groovy.transform.Trait".contentEquals(t.getQualifiedName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -21,8 +21,8 @@ date. "Drift gate" is what CI does to the example's committed generated files af
 | [`gradle-shared-buildfile/`](gradle-shared-buildfile/) | Gradle | 2 | 2 | `CLAUDE.md` only | both module identities survive |
 | [`gradle-flat/`](gradle-flat/) | Gradle | 2 | 2 | `CLAUDE.md` only | module ids are names, not path hashes |
 | [`gradle-composite/`](gradle-composite/) | Gradle, `includeBuild` | 2 builds | 2 | `CLAUDE.md` only | both builds land in one root file |
-| [`kotlin/`](kotlin/) | Gradle + kapt | 1 | 4 | byte for byte, whole directory | Kotlin elements appear, stub signatures included; inherited rules from a pre-extracted manifest render under their origin, the `manifest.max` cap drops exactly the advisory rule |
-| [`kotlin-ksp/`](kotlin-ksp/) | Gradle + KSP | 1 | 4 (`kotlin/`'s sources) | byte for byte against `kotlin/`'s committed files | the dropped value-class guardrail is warned about |
+| [`kotlin/`](kotlin/) | Gradle + kapt | 1 | 4 | byte for byte, whole directory | Kotlin elements appear, stub signatures included; inherited rules from a pre-extracted manifest render under their origin, the `manifest.max` cap drops exactly the advisory rule; a `.github/instructions/` rule is scoped to its `.kt` file (#939) |
+| [`kotlin-ksp/`](kotlin-ksp/) | Gradle + KSP | 1 | 4 (`kotlin/`'s sources) | byte for byte against `kotlin/`'s committed files, `.github/instructions/` included | the dropped value-class guardrail is warned about |
 | [`groovy/`](groovy/) | Gradle | 1 | 3 | byte for byte, whole directory | annotated class and method appear; the `@AIPrivacy` field does NOT (groovyc stubs carry no fields) |
 | [`scala/`](scala/) | Gradle | 1 | 2 | byte for byte, whole directory | annotated Java class appears, Scala class does not |
 
@@ -56,6 +56,7 @@ Which example to read for a given processor feature.
 | Codex sidecar | `gradle-multimodule` (`.codex/rules/`) |
 | `AGENTS.md` fallback | `basic` |
 | kapt over Kotlin sources | `kotlin` |
+| Granular rules for Kotlin sources (`.kt` globs, #939) | `kotlin` (kapt), `kotlin-ksp` (KSP), compared with each other |
 | Groovy joint-compilation stubs, field drop gated | `groovy` |
 | scalac's missing JSR 269 support, gated not claimed | `scala` |
 | Processor options exercised by a build file | `root`, `module`, `check`, `enforce`, `baseline.update`, `cache`, `log.level`, `log.path`, `project` |

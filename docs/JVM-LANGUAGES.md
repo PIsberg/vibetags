@@ -56,8 +56,8 @@ the elements kapt's stubs would have contained, and runs the same processor over
 below about what is lost applies to both front ends, because the KSP front end reproduces kapt's
 element set rather than Kotlin's: element paths are identities, and a project that switches front
 ends must keep them. `StubParityTest` in `vibetags-ksp` holds that against a recorded kapt build
-(110 annotated elements, every generated file byte for byte), and the `examples/kotlin-ksp` CI step
-holds it against `examples/kotlin`. The differences are in [USAGE.md](../USAGE.md#kotlin-ksp-configuration).
+(110 annotated elements, every generated file byte for byte except the one line that names a source
+file, below), and the `examples/kotlin-ksp` CI step holds it against `examples/kotlin`. The differences are in [USAGE.md](../USAGE.md#kotlin-ksp-configuration).
 
 ### What was measured
 
@@ -66,6 +66,25 @@ field, constructor, method and parameter**. `@AIPrivacy` on a Kotlin property re
 `vibetagscorpus.CorpusShowcase.billingEmail`, in the safety bucket, inline in the Tier-1 aggregate
 where it belongs. Claude, Gemini and Codex all produced output, and both granular rule directories
 were written.
+
+### Which file a rule's glob names
+
+A granular rule file is scoped to the file its type's code is in, and so is an ignore-file line for
+an `@AIIgnore` type (#939). Until #939 that glob was `**/<Type>.java` for every language, which in a
+Kotlin module names a file that does not exist: Claude Code, Cursor, Copilot and the other
+path-scoped platforms never loaded the rule.
+
+- **KSP** sees the real source, so the glob is the file the type is declared in: `**/Types.kt` for
+  every class of `Types.kt`, and for its file facade. `StubParityTest` checks it on every rule of
+  its fixture.
+- **kapt** hands the processor a generated `.java` stub. The stub keeps `@kotlin.Metadata`, so the
+  processor knows the code is Kotlin, but not what the file was called; it names `<Type>.kt`, the
+  Kotlin convention for a file holding one class, and `<Name>.kt` for a file facade `<Name>Kt`. A
+  class in a file named otherwise, or a facade renamed with `@file:JvmName`, gets a glob that
+  misses. Moving to KSP fixes it, and changes that one line of each rule file.
+
+`examples/kotlin` and `examples/kotlin-ksp` opt into Copilot's `.github/instructions/`, so CI
+regenerates Kotlin rule files on every pull request and compares the two front ends' copies.
 
 ### What is lost, and why
 
@@ -347,6 +366,12 @@ tasks.withType(GroovyCompile).configureEach {
     options.compilerArgs << "-Avibetags.root=${projectDir.absolutePath}"
 }
 ```
+
+A Groovy class's stub implements `groovy.lang.GroovyObject` (a trait carries
+`@groovy.transform.Trait`), so its rule and ignore globs name `<Type>.groovy` rather than the stub's
+`.java` (#939). As with kapt, the stub does not say what the file was called, so a class in a file
+named otherwise gets a glob that misses. A Groovy interface implements neither and keeps
+`<Type>.java`.
 
 ### Field-level annotations are dropped
 

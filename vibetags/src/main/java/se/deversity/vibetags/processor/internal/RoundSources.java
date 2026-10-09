@@ -49,6 +49,7 @@ public final class RoundSources {
     private boolean resolved;
     private @Nullable Elements elements;
     private final Map<Element, @Nullable Path> fileByElement = new IdentityHashMap<>();
+    private final Map<Element, String> nameByElement = new IdentityHashMap<>();
     private final Set<Path> files = new LinkedHashSet<>();
     private boolean everyRootOnDisk = true;
 
@@ -71,6 +72,16 @@ public final class RoundSources {
     public @Nullable Path fileOf(Element element) {
         resolve();
         return fileByElement.get(element);
+    }
+
+    /**
+     * The name of the file {@code element} was declared in, extension included ({@code Ledger.java},
+     * {@code Billing.kt} under the KSP front end), or {@code null} when no API can say. Unlike
+     * {@link #fileOf} it answers for an in-memory source too: the name is all a glob needs (#939).
+     */
+    public @Nullable String fileNameOf(Element element) {
+        resolve();
+        return nameByElement.get(element);
     }
 
     /**
@@ -108,13 +119,13 @@ public final class RoundSources {
         Trees trees = null;
         boolean treesAsked = false;
         for (Element element : roots) {
-            Path file = null;
+            URI uri = null;
             boolean answered = false;
             if (elements != null) {
                 try {
                     JavaFileObject object = elements.getFileObjectOf(element);
                     if (object != null) {
-                        file = onDisk(object.toUri());
+                        uri = object.toUri();
                         answered = true;
                     }
                 } catch (RuntimeException | Error unavailable) {
@@ -126,7 +137,12 @@ public final class RoundSources {
                     trees = SourcePositionResolver.treesFor(env);
                     treesAsked = true;
                 }
-                file = viaTrees(trees, element);
+                uri = viaTrees(trees, element);
+            }
+            Path file = uri == null ? null : onDisk(uri);
+            String name = uri == null ? null : lastSegment(uri);
+            if (name != null) {
+                nameByElement.put(element, name);
             }
             fileByElement.put(element, file);
             if (file == null) {
@@ -137,16 +153,29 @@ public final class RoundSources {
         }
     }
 
-    private static @Nullable Path viaTrees(@Nullable Trees trees, Element element) {
+    private static @Nullable URI viaTrees(@Nullable Trees trees, Element element) {
         if (trees == null) {
             return null;
         }
         try {
             TreePath path = trees.getPath(element);
-            return path == null ? null : onDisk(path.getCompilationUnit().getSourceFile().toUri());
+            return path == null ? null : path.getCompilationUnit().getSourceFile().toUri();
         } catch (RuntimeException unavailable) {
             return null; // malformed URI or unexpected tree state
         }
+    }
+
+    /** The last segment of {@code uri}'s path, for any scheme, or {@code null} when it has none. */
+    private static @Nullable String lastSegment(URI uri) {
+        String path = uri.getPath();
+        if (path == null) {
+            path = uri.getSchemeSpecificPart();
+        }
+        if (path == null) {
+            return null;
+        }
+        String name = path.substring(path.lastIndexOf('/') + 1);
+        return name.isEmpty() ? null : name;
     }
 
     /** A {@code file:} URI as an absolute, normalized path, or {@code null} for an in-memory source. */
