@@ -1877,7 +1877,19 @@ jobs:
       - name: Check the bundle checker against known layouts
         run: bash .github/scripts/check-central-bundle.test.sh
 
+      # Central rejects a file without a signature that verifies (#949). Pull requests have no
+      # access to the release key, so sign with one made for this run and discarded with the
+      # runner: it proves sign-artifacts signs every file the bundle holds, not that Central knows
+      # the key.
+      - name: Create a throwaway signing key
+        run: |
+          gpg --batch --passphrase '' --quick-gen-key \
+            'VibeTags bundle check <bundle-check@example.invalid>' default default 1d
+          gpg --list-secret-keys --keyid-format LONG
+
       - name: Build each published module's Central bundle and check it
+        env:
+          SIGN: 'true'
         run: bash .github/scripts/build-central-bundles.sh
 
   # Mutation testing moved to .github/workflows/mutation.yml and runs on demand only

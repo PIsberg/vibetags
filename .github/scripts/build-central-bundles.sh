@@ -22,6 +22,9 @@
 # Usage: build-central-bundles.sh                     (from anywhere in the repository)
 #   MVN=<path>          the Maven to run, default `mvn` on PATH
 #   MAVEN_VERSION=<v>   if set, refuse to run unless that Maven is version <v>
+#   SIGN=true           also activate sign-artifacts, as publish.yml does, and require every file's
+#                       .asc to verify (#949). Needs a secret key in the default gpg keyring with no
+#                       passphrase; the Central Bundle Shape job makes a throwaway one.
 set -uo pipefail
 
 MVN="${MVN:-mvn}"
@@ -67,8 +70,15 @@ for module in $modules; do
 done
 
 log="$work/release.log"
-echo "::group::release reactor: mvn clean deploy, uploading to http://127.0.0.1:9"
-(cd "$reactor" && "$MVN" -B clean deploy -P central-publish -Dmaven.test.skip=true \
+profiles=central-publish
+check_opts=()
+if [ "${SIGN:-}" = true ]; then
+  profiles=central-publish,sign-artifacts
+  check_opts=(--signed)
+fi
+
+echo "::group::release reactor: mvn clean deploy -P $profiles, uploading to http://127.0.0.1:9"
+(cd "$reactor" && "$MVN" -B clean deploy -P "$profiles" -Dmaven.test.skip=true \
     -Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true -Dcheckstyle.skip=true \
     -DcentralBaseUrl=http://127.0.0.1:9 -s "$work/settings.xml" -gs "$work/settings.xml") \
   > "$log" 2>&1
@@ -106,4 +116,4 @@ if [ "${#bundles[@]}" -ne 1 ]; then
   tail -n 80 "$log"
   exit 1
 fi
-bash "$check" "${bundles[0]}" "${specs[@]}"
+bash "$check" "${check_opts[@]}" "${bundles[0]}" "${specs[@]}"

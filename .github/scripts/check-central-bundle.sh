@@ -16,26 +16,57 @@
 #   - every file is named <artifactId>-<version>[-<classifier>].<extension>
 #   - every listed component has its .pom, and a jar component its main, -sources and -javadoc jars
 #   - every file that is not a checksum or a signature has its .md5 and .sha1
+#   - every component's pom names its own coordinates and carries the elements Central requires:
+#     name, description, url, a license, a developer, and the SCM connection and url
+#     (check-central-pom.py, #949)
+#   - with --signed, every file that is not a checksum or a signature has an .asc beside it that
+#     gpg verifies against it, with whatever keyring GNUPGHOME selects (#949)
 #
 # A release is one bundle holding every published module (#863), so the bundle is checked against
 # the whole list: a module the release dropped is a missing .pom, and a module nobody listed is a
 # file outside every component directory.
 #
-# Signatures are not checked: the bundles built for pull requests are unsigned, and publish.yml
-# signs. Neither is the POM's content (name, licenses, scm), which Central also validates.
+# What it cannot see: whether Central knows the signing key. The Central Bundle Shape job signs
+# with a throwaway key, so a real key that is missing from the keyservers is still caught only by
+# the real publish.
 #
-# Usage: check-central-bundle.sh <bundle.zip> <groupId>:<artifactId>:<version>:<jar|pom>...
-# Exit:  0 the layout is valid, 1 it is not (every problem is listed), 2 usage or unreadable bundle
+# Usage: check-central-bundle.sh [--signed] <bundle.zip> <groupId>:<artifactId>:<version>:<jar|pom>...
+# Exit:  0 the bundle is valid, 1 it is not (every problem is listed), 2 usage, unreadable bundle,
+#        or a tool it needs (jar, Python, and gpg for --signed) is missing
 set -uo pipefail
 
-usage="usage: $0 <bundle.zip> <groupId>:<artifactId>:<version>:<jar|pom>..."
+usage="usage: $0 [--signed] <bundle.zip> <groupId>:<artifactId>:<version>:<jar|pom>..."
+signed=false
+if [ "${1:-}" = --signed ]; then
+  signed=true
+  shift
+fi
 if [ "$#" -lt 2 ]; then
   echo "$usage" >&2
   exit 2
 fi
 bundle="$1"
 shift
+here="$(cd "$(dirname "$0")" && pwd)"
 
+# A Python that runs, not just one on PATH: on Windows `python3` can be the Store's stub.
+python=""
+for candidate in python3 python; do
+  if "$candidate" -c 'import sys' >/dev/null 2>&1; then
+    python="$candidate"
+    break
+  fi
+done
+if [ -z "$python" ]; then
+  echo "no working python3 or python on PATH; the pom check needs one" >&2
+  exit 2
+fi
+if $signed && ! command -v gpg >/dev/null 2>&1; then
+  echo "--signed needs gpg on PATH" >&2
+  exit 2
+fi
+
+specs=()       # each component as given
 dirs=()        # each component's directory in the bundle
 stems=()       # each component's <artifactId>-<version>
 packagings=()  # each component's packaging
@@ -51,6 +82,7 @@ for spec in "$@"; do
     jar|pom) ;;
     *) echo "packaging must be jar or pom, not '$packaging' (in '$spec')" >&2; exit 2 ;;
   esac
+  specs+=("$spec")
   dirs+=("$(printf '%s' "$group" | tr . /)/$artifact/$version")
   stems+=("$artifact-$version")
   packagings+=("$packaging")
@@ -94,6 +126,17 @@ has() {
   return 1
 }
 
+# The bundle's content, for the pom and signature checks.
+extracted="$(mktemp -d)"
+trap 'rm -rf "$extracted"' EXIT
+if ! (cd "$extracted" && jar xf "$bundle"); then
+  # jar resolves a relative path against its own working directory
+  if ! (cd "$extracted" && jar xf "$(cd "$(dirname "$bundle")" && pwd)/$(basename "$bundle")"); then
+    echo "cannot extract $bundle" >&2
+    exit 2
+  fi
+fi
+
 for i in "${!dirs[@]}"; do
   dir="${dirs[$i]}" stem="${stems[$i]}"
   required=("$stem.pom")
@@ -110,6 +153,22 @@ for f in "${files[@]}"; do
   for sum in md5 sha1; do
     has "$f.$sum" || problems+=("$f: no .$sum beside it")
   done
+  if $signed; then
+    if ! has "$f.asc"; then
+      problems+=("$f: no .asc beside it")
+    elif ! gpg --batch --verify "$extracted/$f.asc" "$extracted/$f" >/dev/null 2>&1; then
+      problems+=("$f: its .asc does not verify")
+    fi
+  fi
+done
+
+for i in "${!dirs[@]}"; do
+  pom="${dirs[$i]}/${stems[$i]}.pom"
+  has "$pom" || continue   # already reported missing
+  IFS=: read -r group artifact version _ <<< "${specs[$i]}"
+  while IFS= read -r line; do
+    [ -n "$line" ] && problems+=("${line%$'\r'}")
+  done < <("$python" "$here/check-central-pom.py" "$extracted/$pom" "$pom" "$group" "$artifact" "$version")
 done
 
 if [ "${#problems[@]}" -gt 0 ]; then

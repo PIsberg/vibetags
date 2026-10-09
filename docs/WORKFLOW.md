@@ -331,8 +331,11 @@ artifacts (#945).
    SHA-512 and puts it first on `PATH`.
 4. **Check the bundle checker against known layouts**: `.github/scripts/check-central-bundle.test.sh`
    runs `check-central-bundle.sh` against zips built to a known shape, including the layout Maven
-   3.10 produced, which it must reject.
-5. **Build each published module's Central bundle and check it**:
+   3.10 produced, poms missing each element Central requires, and signatures that are missing or
+   do not verify, all of which it must reject.
+5. **Create a throwaway signing key**: a passphrase-less key that expires in a day, so the bundle
+   can be signed the way `publish.yml` signs it without the release key (#949).
+6. **Build each published module's Central bundle and check it**:
    `.github/scripts/build-central-bundles.sh` runs `mvn clean deploy -P central-publish` on the
    release reactor `publish.yml` deploys (`.github/central-release`), with the upload pointed at
    `http://127.0.0.1:9` and throwaway credentials. The plugin stages every module into one bundle,
@@ -340,8 +343,12 @@ artifacts (#945).
    exactly one `central-bundle.zip`, then checks it against every module's coordinates: every file
    directly in a listed `<group>/<artifact>/<version>/` and named for that component, each
    component's `.pom` present (and for a jar the main, `-sources` and `-javadoc` jars), and an
-   `.md5` and `.sha1` beside every file. It skips tests and static analysis, which add no file to a bundle, and does
-   not check signatures or POM content, which only the real publish has.
+   `.md5` and `.sha1` beside every file. With `SIGN=true` it also activates `sign-artifacts` and
+   requires an `.asc` beside every file that `gpg --verify` accepts, and every component's pom must
+   name its own coordinates and carry the elements Central requires: name, description, url, a
+   license, a developer, and the SCM connection and url (`check-central-pom.py`, #949). It skips
+   tests and static analysis, which add no file to a bundle. What only the real publish can show is
+   whether Central knows the release key.
 
 ---
 

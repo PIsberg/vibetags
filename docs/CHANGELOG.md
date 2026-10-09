@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `Central Bundle Shape` check now signs the bundle and reads its poms** (#949). It checked
+  only the layout, so a missing signature or a pom without, say, `<scm>` would still have passed
+  every pull-request check and been rejected after the release was tagged. The job now signs with
+  a throwaway key and requires an `.asc` beside every file that `gpg --verify` accepts, and
+  `check-central-pom.py` fails a pom that does not name its own coordinates or lacks a name,
+  description, url, license, developer, or SCM connection and url, the list on Central's
+  requirements page.
 - **A release is one Maven Central deployment instead of five** (#863). Central counts each
   published deployment as a release against the organization's allowance of 7 a month, and
   `publish.yml` deployed each module separately, so 1.4.0 used 5 of them. It now deploys a release
