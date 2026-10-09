@@ -7,8 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`.codex/config.toml` is no longer written** (#934). VibeTags wrote it whenever `AGENTS.md` was
+  managed, with fixed content and no guardrail: `model = "o3-mini"` and
+  `approval_policy = "on-request"` under a `[project]` table. Codex reads both keys only at the top
+  level and documents no `[project]` table (its configuration reference, read 2026-10-09), so the
+  file did nothing while reading as a model pin VibeTags imposed on every consumer. The owner chose
+  to stop writing it without a deprecation release, since there was no behaviour to protect. An
+  existing copy is left byte-identical; delete it or keep it as your own Codex configuration.
+  `.codex/rules/vibetags.rules` is still written. The `Platform.CODEX_CONFIG` constant and its
+  descriptor are gone, the README count drops to 46 config files, and this repository and
+  `examples/multimodule` and `examples/gradle-multimodule` lose their copies.
+  `CodexConfigRemovedTest` pins it.
+
+### Documentation
+
+- **What `@AIIgnore` on a nested type or a member hides, and from whom** (#940). It writes no
+  glob to `.cursorignore`, `.qwenignore`, `.aiexclude` or Greptile's `ignorePatterns`, because only a
+  top-level type owns a file, so a tool that reads only the ignore file still sees that code in its
+  outer type's file. Excluding the outer file would hide its unmarked code too; the owner kept the
+  under-exclusion, `docs/ANNOTATIONS.md` now states the limit, and `MemberLevelAIIgnoreGlobTest`
+  pins that the outer file is not excluded.
+
 ### Fixed
 
+- **A release becomes Latest only once Maven Central serves it** (#946). The release was created
+  with `--latest` before `publish.yml` ran, so when the first 1.4.0 publish failed the release page
+  advertised a Latest release whose five poms answered 404. The release skill now creates it with
+  `--latest=false`, and `publish.yml` waits until repo1.maven.org serves all five poms before it
+  runs `gh release edit --latest`. A resume deploys only the modules repo1 does not serve yet, and
+  skips the deploy when that is none. `ReleaseLatestAfterCentralTest` pins both halves. The README's
+  install snippets still move in the release PR, so they lead Central by the length of the publish.
+- **The `Central Bundle Shape` check now signs the bundle and reads its poms** (#949). It checked
+  only the layout, so a missing signature or a pom without, say, `<scm>` would still have passed
+  every pull-request check and been rejected after the release was tagged. The job now signs with
+  a throwaway key and requires an `.asc` beside every file that `gpg --verify` accepts, and
+  `check-central-pom.py` fails a pom that does not name its own coordinates or lacks a name,
+  description, url, license, developer, or SCM connection and url, the list on Central's
+  requirements page.
+- **A release is one Maven Central deployment instead of five** (#863). Central counts each
+  published deployment as a release against the organization's allowance of 7 a month, and
+  `publish.yml` deployed each module separately, so 1.4.0 used 5 of them. It now deploys a release
+  reactor (`.github/central-release/pom.xml`) and `central-publishing-maven-plugin` uploads all five
+  modules as one bundle after the last, so a version costs 1, and a module that fails Central's
+  validation no longer leaves the modules before it published. A resumed release passes
+  `-DignorePublishedComponents=true`, which leaves out modules Central already has. The
+  `Central Bundle Shape` check builds the same reactor and checks the single bundle against every
+  module's coordinates, and `CentralPublishingBudgetTest` fails on a second deploy call or a
+  published module missing from the reactor.
+- **The Maven install snippet in the published `vibetags-annotations` and `vibetags-bom` poms
+  names the release it ships in** (#948). Every release from 1.3.1 to 1.4.0 published a
+  `<description>` telling Maven users to depend on 1.3.0: `tools/set-version.sh` rewrote the Gradle
+  lines beside it but not the escaped `&lt;version&gt;` form. The snippets in those two poms and
+  the CLI's jbang line now quote `${revision}`, which `flatten-maven-plugin` resolves in the
+  published pom, so `set-version.sh` no longer edits them, and `BuildVersionParityTest` fails if a
+  published description quotes any version but the current one.
+- **PMD and CPD now run only on the JDK 21 leg of `build-maven`, as the docs said they did**
+  (#947). `build.yml` skipped them on the other JDKs with `-Dmaven.pmd.skip=true`, a property no
+  plugin reads (`maven-pmd-plugin` binds `pmd.skip` and `cpd.skip`), so both ran on JDK 25 and 26,
+  where PMD reports findings that are artefacts of the newer JDK. The workflow now passes
+  `-Dpmd.skip=true -Dcpd.skip=true`, and `BuildToolchainParityTest` fails any workflow or CI script
+  that passes a skip property outside the set the plugins read.
 - **Publishing runs on a pinned Maven 3.9 again, and every pull request now builds the bundles it
   uploads** (#945). The first publish of 1.4.0 put nothing on Central: GitHub's ubuntu-24.04 runner
   image had moved to Maven 3.10, and `central-publishing-maven-plugin` 0.11.0, the newest release,

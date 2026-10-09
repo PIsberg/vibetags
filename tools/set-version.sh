@@ -10,15 +10,15 @@
 # The version lives in ONE place: <revision> in vibetags-parent/pom.xml. Every pom that
 # inherits from the parent — vibetags-annotations, vibetags, vibetags-bom, load-tests —
 # takes its own version, its sibling dependencies and its BOM entries from it, so this
-# script does not touch them at all.
+# script does not touch them at all. That includes the install snippets in the <description>
+# of vibetags-annotations, vibetags-bom and vibetags-cli: they quote ${revision}, which
+# flatten-maven-plugin resolves in the published pom. This script used to rewrite them, missed
+# the escaped &lt;version&gt; form, and shipped "1.3.0" in every release from 1.3.1 to 1.4.0 (#948).
 #
 # What it still has to rewrite by hand, and why:
 #
 #   vibetags-annotations/build.gradle  Gradle cannot inherit from a Maven POM.
 #   vibetags/build.gradle              Same. Both publish under this version.
-#   vibetags-annotations/pom.xml       Prose only: the <description> shows consumers a
-#   vibetags-bom/pom.xml               copy-pasteable snippet with a literal version in it.
-#   vibetags-cli/pom.xml               Same: the jbang one-liner in its <description>.
 #   examples/basic/pom.xml                    Standalone on purpose, so a user can lift them into
 #   examples/basic/build.gradle               their own project. Their vibetags.bom.version is a
 #   examples/multimodule/pom.xml        literal, and CI builds them against the artifacts
@@ -208,9 +208,6 @@ for rel in \
 done
 
 for rel in \
-    vibetags-annotations/pom.xml \
-    vibetags-bom/pom.xml \
-    vibetags-cli/pom.xml \
     examples/basic/pom.xml \
     examples/enforcing/pom.xml \
     examples/basic/build.gradle \

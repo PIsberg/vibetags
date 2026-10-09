@@ -50,7 +50,7 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
 - **Byte-identical output to an existing renderer**? → write no class at all: add the platform
   as a fall-through `case` beside that renderer in `PlatformRendererRegistry.findRenderer`, with a
   comment line saying what the file is (see `FIREBASE`, `GOOSE`, `REPLIT` beside `CURSOR`, #764).
-- **Implicitly-activated sidecar of another service** (`codex_config`/`codex_rules` under
+- **Implicitly-activated sidecar of another service** (`codex_rules` under
   `codex`, `cline_safety` under `cline_granular`)? → do **not** add
   its own key to `ServiceRegistry.OPT_IN_KEYS`; wire it into the special-case block at the bottom
   of `GuardrailContentBuilder.build()` instead.
@@ -130,8 +130,8 @@ sweep (#611); `.aiignore`, `.cursorindexingignore`, `.clineignore` and `.continu
 
 4. **`vibetags/.../internal/content/PlatformDescriptors.java`, again** — declare
    `private static final XRenderer X_RENDERER = new XRenderer();` beside the other singletons and
-   name it in your entry. Several entries may name one renderer (`CODEX`, `CODEX_CONFIG` and
-   `CODEX_RULES` all name `CODEX_RENDERER`); granular platforms name the existing
+   name it in your entry. Several entries may name one renderer (`CODEX` and `CODEX_RULES`
+   both name `CODEX_RENDERER`); granular platforms name the existing
    `GRANULAR_RENDERER`. `PlatformRendererRegistry` reads the table and has no switch to edit.
 
    A renderer must never read `PlatformDescriptors` from a static initializer: building the table

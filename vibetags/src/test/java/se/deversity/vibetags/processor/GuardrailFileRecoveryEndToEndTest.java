@@ -312,7 +312,8 @@ class GuardrailFileRecoveryEndToEndTest {
      * A TOML output has nowhere to put a marker line, so VibeTags writes it whole. That is right
      * for a file VibeTags wrote and destructive for one a person did: a project that already
      * configures Codex in {@code .codex/config.toml} had it replaced the first time {@code AGENTS.md}
-     * was managed, which writes that file implicitly.
+     * was managed, which wrote that file implicitly. Since #934 VibeTags does not write it at all;
+     * this stays as the regression test for the data loss.
      */
     @Test
     void aHandWrittenCodexConfig_isNotOverwritten(@TempDir Path dir) throws Exception {
@@ -326,7 +327,7 @@ class GuardrailFileRecoveryEndToEndTest {
         VibeTagsLogger.shutdown();
 
         assertTrue(Files.readString(dir.resolve("AGENTS.md")).contains(REASON),
-            "precondition: AGENTS.md is managed, which is what writes .codex/config.toml");
+            "precondition: AGENTS.md is managed, which is what used to write .codex/config.toml");
         assertEquals(config, Files.readString(dir.resolve(".codex/config.toml"), StandardCharsets.UTF_8),
             "a Codex configuration VibeTags did not write must be left exactly as it is");
     }

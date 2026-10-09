@@ -58,20 +58,21 @@ jobs:
           if [ "${{ matrix.java }}" = "21" ]; then
             mvn install -B
           else
-            mvn install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+            mvn install -B -Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true
           fi
 
       - name: Build VibeTags Library (Maven)
         # PMD, SpotBugs and CPD are JDK-independent source/bytecode analysis, so run them
         # once (on JDK 21) instead of repeating identical work on every matrix JDK. Error Prone
         # stays on every JDK — it is a compiler plugin and is genuinely JDK-sensitive (see the
-        # JDK 26 UnsafeFinalization workaround in vibetags/pom.xml). -Dmaven.pmd.skip also skips CPD.
+        # JDK 26 UnsafeFinalization workaround in vibetags/pom.xml). PMD and CPD have separate skip
+        # properties, pmd.skip and cpd.skip; maven.pmd.skip, used here until #947, is read by nothing.
         run: |
           cd vibetags
           if [ "${{ matrix.java }}" = "21" ]; then
             mvn clean install -B
           else
-            mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+            mvn clean install -B -Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true
           fi
 
       - name: Install VibeTags BOM (Maven)
@@ -88,7 +89,7 @@ jobs:
           if [ "${{ matrix.java }}" = "21" ]; then
             mvn clean install -B
           else
-            mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+            mvn clean install -B -Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true
           fi
 
       # The KSP front end: its tests run real KSP2 in-process over Kotlin sources, including the
@@ -100,7 +101,7 @@ jobs:
           if [ "${{ matrix.java }}" = "21" ]; then
             mvn clean install -B
           else
-            mvn clean install -B -Dmaven.pmd.skip=true -Dspotbugs.skip=true
+            mvn clean install -B -Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true
           fi
 
       # doctor is the only thing that reports the groovyc field drop that examples/groovy
@@ -1018,7 +1019,7 @@ jobs:
       - name: Build Kotlin KSP Example Project (Gradle + KSP, parity with kapt)
         if: matrix.java == '21'
         run: |
-          (cd vibetags-ksp && mvn install -B -DskipTests -Dmaven.pmd.skip=true -Dspotbugs.skip=true)
+          (cd vibetags-ksp && mvn install -B -DskipTests -Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true)
           cd examples/kotlin-ksp
           ./gradlew clean build --no-daemon 2>&1 | tee "$RUNNER_TEMP/kotlin-ksp.txt"
           status=${PIPESTATUS[0]}
@@ -1192,8 +1193,8 @@ jobs:
           # Codex is the one service dropped unless AGENTS.md is the sole AI config file, which it
           # is not here. Opted in and still empty is the correct outcome, and asserting it keeps
           # the sole documented exception to "file presence is the opt-in" honest.
-          test ! -s .codex/config.toml \
-            || { echo "::error::.codex/config.toml has content but AGENTS.md is not the sole config"; exit 1; }
+          test ! -s .codex/rules/vibetags.rules \
+            || { echo "::error::.codex/rules/vibetags.rules has content but AGENTS.md is not the sole config"; exit 1; }
           echo "All $expected services active; Codex correctly dropped."
 
       - name: Verify Every Annotation Survives The Gradle Reactor Merge
@@ -1876,7 +1877,19 @@ jobs:
       - name: Check the bundle checker against known layouts
         run: bash .github/scripts/check-central-bundle.test.sh
 
+      # Central rejects a file without a signature that verifies (#949). Pull requests have no
+      # access to the release key, so sign with one made for this run and discarded with the
+      # runner: it proves sign-artifacts signs every file the bundle holds, not that Central knows
+      # the key.
+      - name: Create a throwaway signing key
+        run: |
+          gpg --batch --passphrase '' --quick-gen-key \
+            'VibeTags bundle check <bundle-check@example.invalid>' default default 1d
+          gpg --list-secret-keys --keyid-format LONG
+
       - name: Build each published module's Central bundle and check it
+        env:
+          SIGN: 'true'
         run: bash .github/scripts/build-central-bundles.sh
 
   # Mutation testing moved to .github/workflows/mutation.yml and runs on demand only

@@ -219,9 +219,15 @@ Going over starts a grace period, and an organization that stays over is rate li
   went up as XML too. `<checksums>required</checksums>` in the `central-publish` profile and
   `<outputFormat>json</outputFormat>` in each module's CycloneDX plugin are what keep it at 84;
   `CentralPublishingBudgetTest` pins both.
-- Actual usage is on the [usage page](https://central.sonatype.com/publishing/usage?org=deversity)
-  (owner login). Whether Central counts each of `publish.yml`'s five deployments as a release
-  is not known yet; the page says.
+- **A vibetags version is 1 Central release.** Central counts each published deployment as a
+  release: the 1.4.0 publish, five deployments, logged "6 of 7 used" after the fifth, with one
+  async-test-lib deployment before it that month (#863). `publish.yml` now deploys the release
+  reactor in `.github/central-release`, and the publishing plugin uploads every module as one
+  deployment. `CentralPublishingBudgetTest` fails if a second deploy call or a module missing
+  from the reactor comes back.
+- **The allowance is per organization.** async-test-lib publishes under the same `se.deversity`
+  namespace and draws on the same 7, so the tag count above is a floor. Actual usage is on the
+  [usage page](https://central.sonatype.com/publishing/usage?org=deversity) (owner login).
 
 ### 1. Prepare the release
 
@@ -245,14 +251,16 @@ cd vibetags && mvn test -Dtest=BuildVersionParityTest
 That is the whole bump. The version lives in **one** place — `<revision>` in
 `vibetags-parent/pom.xml` — and every pom that inherits from the parent takes its own version,
 its sibling dependencies and its BOM entries from it. `vibetags-annotations/pom.xml`,
-`vibetags/pom.xml`, `vibetags-bom/pom.xml` and `load-tests/pom.xml` are not edited at all.
+`vibetags/pom.xml`, `vibetags-bom/pom.xml` and `load-tests/pom.xml` are not edited at all. The
+install snippets in the `<description>` of `vibetags-annotations`, `vibetags-bom` and
+`vibetags-cli` quote `${revision}`, which `flatten-maven-plugin` resolves in the published pom, and
+`BuildVersionParityTest` fails if a description quotes any other version (#948).
 
 The script also rewrites the places that *cannot* inherit a Maven property:
 
 | File | Why it needs rewriting |
 |---|---|
 | `vibetags-annotations/build.gradle`, `vibetags/build.gradle` | Gradle cannot inherit from a Maven POM, and both publish under this version |
-| `vibetags-annotations/pom.xml`, `vibetags-bom/pom.xml` | Prose only — the `<description>` shows consumers a copy-pasteable snippet containing a literal version |
 | `examples/basic/pom.xml`, `examples/basic/build.gradle`, `examples/kotlin/build.gradle.kts`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`, `tools/demo/pom.xml` | Standalone on purpose so a user can lift them into their own project; CI builds them against the artifacts this repo just installed, so they track the current version |
 
 Still by hand, because they are prose rather than build files:
@@ -320,7 +328,7 @@ Go to [GitHub Releases](https://github.com/PIsberg/vibetags/releases) and click 
 2. **Target**: `main`
 3. **Title**: `VibeTags vX.Y.Z`
 4. **Description**: Copy the relevant section from `CHANGELOG.md` (or let GitHub auto-generate from the release.yml template).
-5. Check **Set as latest release** if applicable.
+5. Leave **Set as latest release** unchecked: `publish.yml` sets it once Central serves every module.
 6. Click **Publish release**.
 
 #### Image-path gotcha — must rewrite relative paths
@@ -337,8 +345,14 @@ gh release create $TAG \
   --target main \
   --title "VibeTags $TAG" \
   --notes-file /tmp/release-notes-${TAG}.md \
-  --latest
+  --latest=false
 ```
+
+`--latest=false`, not `--latest`. `publish.yml` marks the release Latest once all five poms
+answer 200 on repo1.maven.org, so a publish that fails leaves the release page pointing at the
+previous version rather than one nobody can resolve (#946). The README's install snippets move in
+the release PR, so between its merge and the end of the publish they name a version Central does
+not serve yet; normally that is the half hour the publish takes.
 
 > **Do not inline the extraction, in any form.** `awk '/^## \[1.2.3\]/,/^## \[/'` returns the
 > header line and nothing else: when a range's start and end patterns both match the same
@@ -437,15 +451,15 @@ around it.
    (#945). Counting `Pre Bundling - deleted` lines in the log shows which Maven built the bundles:
    the plugin logs one per module after cleaning up Maven 3.9's staging metadata, and none under
    Maven 3.10.
-2. Fix the cause on `main` through a pull request. The `Central Bundle Shape` check builds every
-   module's bundle and must pass on it.
+2. Fix the cause on `main` through a pull request. The `Central Bundle Shape` check builds the
+   release bundle and must pass on it.
 3. Resume from the tag. The dispatch runs `publish.yml` as it is on `main` against the tag's source,
    so the fix applies although the tag predates it:
    ```bash
    gh workflow run publish.yml --ref main -f ref=v<version> -f modules=all
    ```
-   `deploy-to-central.sh` treats a module that already landed as success, so `modules=all` is safe
-   after a partial publish. With `modules=all`, and `ref` the tag of the latest release, the run also
+   The deploy passes `-DignorePublishedComponents=true`, so the plugin leaves out of the bundle
+   every module Central already has, and `modules=all` is safe after a partial publish. With `modules=all`, and `ref` the tag of the latest release, the run also
    attaches the signed artifacts to the release; for any other release, upload them with
    `gh release upload`.
 4. Check every module on `repo1.maven.org`, not just the run's status:
@@ -512,9 +526,9 @@ Release created on GitHub, or a manual dispatch with ref=<tag> to resume one
     ├── env MAVEN_VERSION, MAVEN_SHA512 → installs that Maven, refuses to deploy on any other (#945)
     ├── server-id: central
     ├── imports GPG key from secrets
-    ├── per module, in order: deploy-to-central.sh → mvn clean deploy -P central-publish,sign-artifacts
-    │   (annotations, processor, ksp, bom, cli; signs jar, sources, javadoc, pom)
-    ├── deploys to: central.sonatype.com (auto-published)
+    ├── deploy-to-central.sh .github/central-release → mvn clean deploy -P central-publish,sign-artifacts
+    │   (one reactor: annotations, processor, ksp, bom, cli; signs jar, sources, javadoc, pom)
+    ├── deploys to: central.sonatype.com as ONE deployment (auto-published, #863)
     └── attaches the signed jars and .asc files to the GitHub release
 ```
 

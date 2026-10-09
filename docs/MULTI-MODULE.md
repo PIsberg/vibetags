@@ -89,10 +89,9 @@ two JSON documents is not JSON. They parse only VibeTags' own output, whose shap
 renderer in the same package, and return `null` rather than guessing when a document is not that
 shape, leaving the caller with the previous behaviour.
 
-The static config (`.codex/config.toml`) declares no
-merge: their content does not vary with the annotations, so every module renders the same bytes.
-It still benefits from the refresh fix — without it, upgrading VibeTags never updated them in a
-reactor.
+A marker-free output whose content never varies would need no merge, only the refresh fix, or
+upgrading VibeTags would never update it in a reactor. `.codex/config.toml` was the only one, and it
+stopped being an output in #934.
 
 `MultiModuleWholeFileMergeTest` derives the rule rather than listing it: it renders every marker-free
 service with an empty model and a populated one, and fails any whose output differs but which

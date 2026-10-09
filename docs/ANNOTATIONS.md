@@ -95,7 +95,8 @@ rather than to VibeTags:
 **Annotation semantics:**
 
 - `@AILocked` — code is visible but must not be modified by AI
-- `@AIIgnore` — code is excluded from AI context entirely (treat as non-existent); unlike `@AILocked`, the AI should not even be aware of it
+- `@AIIgnore` — code is excluded from AI context entirely (treat as non-existent); unlike `@AILocked`, the AI should not even be aware of it.
+  **Known limit for glob-only tools.** The ignore files (`.cursorignore`, `.qwenignore`, `.aiexclude`, Greptile's `ignorePatterns`) take file globs, and only a top-level type owns a file. `@AIIgnore` on a top-level type writes `**/<Type>.java`; on a nested type or a member it writes no glob at all, and the element is excluded in the prose outputs (`CLAUDE.md`, `.cursorrules` and the rest) only. A tool that reads nothing but the ignore file, such as Cursor's indexer or Gemini reading `.aiexclude`, therefore still sees that code in its outer type's file. Excluding the outer file instead would also hide every unmarked line of the outer type; under-exclusion was chosen as the lesser harm (#940). The same holds for `@AILocked` and `.aiexclude`. To hide such code from those tools as well, move it into a top-level type of its own.
 - `@AIPrivacy` — element handles PII; AI must never include its runtime values in logs, test fixtures, mock data, or API suggestions (GDPR/HIPAA/PCI-DSS use cases)
 - `@AICore` — marks well-tested, sensitive core logic (e.g., months to stabilize); AI is instructed to treat changes with extreme care
 - `@AIPerformance` — enforces strict time/space complexity on hot-path code; AI must not introduce O(n²) or worse solutions

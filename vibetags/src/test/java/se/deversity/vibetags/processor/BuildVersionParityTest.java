@@ -298,6 +298,48 @@ class BuildVersionParityTest {
                 + "from being left on an old release:\n  " + String.join("\n  ", problems));
     }
 
+    /**
+     * The {@code <description>} of a published pom is what Central and every IDE show a consumer,
+     * and three of them carry a copy-pasteable install snippet. Every version such a snippet quotes
+     * must be the release the pom ships in.
+     *
+     * <p>{@code vibetags-annotations} and {@code vibetags-bom} told Maven users to depend on 1.3.0
+     * in every release from 1.3.1 to 1.4.0 (#948): {@code tools/set-version.sh} rewrote the Gradle
+     * lines beside it but not the escaped {@code &lt;version&gt;} form, and
+     * {@link ReleaseScriptCoverageTest} only notices a file stating the <em>current</em> version.
+     */
+    @Test
+    void publishedDescriptionsQuoteOnlyTheCurrentRelease() {
+        Map<String, String> props = properties();
+        String revision = props.get("revision");
+        Pattern versionLiteral = Pattern.compile("(?<![\\w.])\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.]+)?(?![\\w.])");
+        List<String> problems = new ArrayList<>();
+        int quoted = 0;
+        for (String file : MANAGED_POMS) {
+            if (file.startsWith("load-tests/")) {
+                continue; // never published
+            }
+            Matcher block = Pattern.compile("<description>(.*?)</description>", Pattern.DOTALL)
+                .matcher(stripComments(read(repoRoot().resolve(file))));
+            if (!block.find()) {
+                continue;
+            }
+            Matcher m = versionLiteral.matcher(resolve(block.group(1), props));
+            while (m.find()) {
+                quoted++;
+                if (!revision.equals(m.group())) {
+                    problems.add(file + ": its <description> quotes " + m.group()
+                        + " but the release is " + revision);
+                }
+            }
+        }
+        assertTrue(quoted > 0, "no published <description> quotes a version, so this test checked "
+            + "nothing; the install snippets moved or the pattern no longer matches them.");
+        assertTrue(problems.isEmpty(),
+            "A published pom's install snippet tells consumers which version to depend on:\n  "
+                + String.join("\n  ", problems));
+    }
+
     /** The parent must actually be parseable and populated, or every assertion above is vacuous. */
     @Test
     void theParentDeclaresTheVersionsTheseTestsReadFrom() {

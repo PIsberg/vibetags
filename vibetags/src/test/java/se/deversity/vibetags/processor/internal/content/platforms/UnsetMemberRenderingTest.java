@@ -50,7 +50,7 @@ class UnsetMemberRenderingTest {
 
     private static final RenderingContext CONTEXT = new RenderingContext(
         "Test Project", "# Generated Header\n",
-        Set.of("llms", "llms_full", "pr_agent", "codex_config", "aider_conventions"));
+        Set.of("llms", "llms_full", "pr_agent", "aider_conventions"));
 
     /**
      * {@code TESTING.md} renders only in a test round and answers {@code null} in any other, which

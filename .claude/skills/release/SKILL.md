@@ -50,6 +50,11 @@ The cadence is **at most 3 releases a month**. If this would be the fourth or la
 and tell the user the count, and continue only on an explicit go-ahead for a fix a consumer
 is blocked on. Say which it was in the release PR body.
 
+Central counts each published deployment as a release, and `publish.yml` deploys a version
+as one (#863), so a vibetags release costs 1 of the 7. The 7 are per organization: an
+async-test-lib release counts too, so tell the user the tag count is a floor and the usage
+page (https://central.sonatype.com/publishing/usage?org=deversity) has the real number.
+
 ## Step 2 — Preflight
 
 Refuse to continue and tell the user what is wrong if any of these fail:
@@ -79,8 +84,9 @@ tools/set-version.sh <version>
 That rewrites `<revision>` in `vibetags-parent/pom.xml` — which every managed pom
 inherits its version from, so `vibetags-annotations/pom.xml`, `vibetags/pom.xml`,
 `vibetags-bom/pom.xml` and `load-tests/pom.xml` need no edit at all — plus the
-places that cannot inherit it: both `build.gradle` files, the copy-pasteable
-snippets in the `<description>` blocks, and the standalone example/demo poms.
+places that cannot inherit it: both `build.gradle` files and the standalone
+example/demo poms. The install snippets in the published poms' `<description>` blocks
+quote `${revision}` and need no edit.
 
 Then confirm nothing was missed, rather than assuming. Install the annotations at the new
 version first, or the test cannot run at all — `vibetags` now depends on
@@ -100,7 +106,7 @@ believed it was benchmarking the branch.
 It also updates the consumers, which track a *released* BOM version: `examples/basic/pom.xml`,
 `examples/basic/build.gradle`, `examples/multimodule/pom.xml`, `examples/multimodule-indexed/pom.xml`,
 `examples/all-tiers/pom.xml`, `tools/demo/pom.xml`, the Kotlin/Groovy/Scala example builds,
-`vibetags-cli/pom.xml`, `README.md` and `.claude/skills/vibetags-usage/SKILL.md`. It prints
+`README.md` and `.claude/skills/vibetags-usage/SKILL.md`. It prints
 every file it touched, so read that list rather than assuming this one is current.
 
 Do not hand-edit those files first. This section used to say the script left the consumers
@@ -313,16 +319,25 @@ this step is irreversible and pushes artifacts to Maven Central:
 
 ```bash
 gh release create $TAG --target main --title "VibeTags $TAG" \
-  --notes-file "$SCRATCHPAD/release-notes-${TAG}.md" --latest
+  --notes-file "$SCRATCHPAD/release-notes-${TAG}.md" --latest=false
 ```
 
-For a release candidate, use `--prerelease` instead of `--latest`.
+`--latest=false`, never `--latest`: `publish.yml` marks the release Latest itself once all
+five poms resolve on repo1.maven.org, so a publish that fails never leaves the release page
+advertising a version nobody can depend on (#946). For a release candidate, add `--prerelease`;
+`publish.yml` never marks a prerelease Latest.
+
+The README's install snippets are still bumped in the release PR, so between its merge and the
+end of the publish `main`'s README names a version Central does not serve yet. Normally that is
+the half hour the publish takes; if the publish fails, tell the user the README is ahead until
+the release is finished.
 
 ## Step 8 — Watch the publish and report
 
 Creating the release triggers `.github/workflows/publish.yml`, which signs and deploys
 `vibetags-annotations`, `vibetags-processor`, `vibetags-ksp`, `vibetags-bom` and
-`vibetags-cli` to Maven Central, in that order:
+`vibetags-cli` to Maven Central as one deployment, waits until repo1.maven.org serves all
+five, and only then marks the release Latest:
 
 ```bash
 RUN_ID="$(gh run list --workflow=publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')"

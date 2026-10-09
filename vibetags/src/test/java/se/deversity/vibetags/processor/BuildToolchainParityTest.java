@@ -6,8 +6,12 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,6 +46,14 @@ class BuildToolchainParityTest {
      * rather than by narrowing {@link #compilingModules()}.
      */
     private static final Map<String, String> EXEMPT = Map.of();
+
+    /**
+     * Directories Maven is invoked from that compile the modules as a reactor, and so need their own
+     * {@code .mvn/jvm.config} as much as a module does. {@code publish.yml} deploys from the release
+     * reactor; without the file there, every module fails to compile with "An unknown compilation
+     * problem occurred", which is Error Prone missing its exports (seen 2026-10-09).
+     */
+    private static final List<String> REACTORS = List.of(".github/central-release");
 
     /**
      * The modules that compile Java and therefore owe the full stack, derived from the tree.
@@ -192,7 +204,9 @@ class BuildToolchainParityTest {
         assertTrue(expected.contains("--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"),
             reference + " no longer looks like the Error Prone export set; update this test deliberately.");
 
-        for (String module : compilingModules()) {
+        List<String> invocationDirs = new ArrayList<>(compilingModules());
+        invocationDirs.addAll(REACTORS);
+        for (String module : invocationDirs) {
             Path config = repoRoot().resolve(module + "/.mvn/jvm.config");
             assertTrue(Files.isRegularFile(config),
                 config + " is missing. Without it Error Prone does not fail in " + module
@@ -224,6 +238,64 @@ class BuildToolchainParityTest {
             "vibetags/build.gradle no longer pins maxHeapSize on the test task, so Gradle's 512m"
                 + " default is back and the Gradle legs run this suite under a heap Maven's legs"
                 + " never see. See the javadoc on this test for what that failure looks like.");
+    }
+
+    /**
+     * The skip properties a CI command may pass, each one a property a plugin actually binds.
+     * Verified against the plugin descriptors: {@code maven-pmd-plugin} binds {@code skip} to
+     * {@code pmd.skip} and {@code cpd.skip}, SpotBugs to {@code spotbugs.skip}, Checkstyle to
+     * {@code checkstyle.skip}, Surefire to {@code skipTests} and {@code maven.test.skip}.
+     */
+    private static final Set<String> SKIP_PROPERTIES_A_PLUGIN_READS = Set.of(
+        "pmd.skip", "cpd.skip", "spotbugs.skip", "checkstyle.skip", "skipTests", "maven.test.skip");
+
+    private static final Pattern SKIP_PROPERTY =
+        Pattern.compile("-D([A-Za-z.]*(?:skip|Skip)[A-Za-z.]*)");
+
+    /**
+     * A misspelled skip property is silent: Maven sets it, nothing reads it, and the analysis it
+     * was meant to skip runs anyway. {@code build.yml} passed {@code -Dmaven.pmd.skip=true} on every
+     * non-21 JDK leg, which no plugin reads, so PMD and CPD ran on JDK 25 and 26, where PMD
+     * reports confident nonsense, while the workflow comment and docs/WORKFLOW.md said they did
+     * not (#947). Only a check that knows the real names can notice.
+     */
+    @Test
+    void everySkipPropertyACiCommandPasses_isOneAPluginReads() {
+        List<Path> sources = ciCommandSources();
+        int seen = 0;
+        for (Path source : sources) {
+            String text = read(source);
+            Matcher m = SKIP_PROPERTY.matcher(text);
+            while (m.find()) {
+                seen++;
+                assertTrue(SKIP_PROPERTIES_A_PLUGIN_READS.contains(m.group(1)),
+                    repoRoot().relativize(source) + " passes -D" + m.group(1) + ", which no plugin"
+                        + " reads, so whatever it was meant to skip still runs. Known skip"
+                        + " properties: " + SKIP_PROPERTIES_A_PLUGIN_READS);
+            }
+            boolean skipsPmd = text.contains("-Dpmd.skip=true");
+            assertEquals(skipsPmd, text.contains("-Dcpd.skip=true"),
+                repoRoot().relativize(source) + " skips one of PMD and CPD but not the other; they"
+                    + " are one plugin with two skip properties, and skipping PMD alone still runs CPD.");
+        }
+        assertTrue(seen > 0, "no -D...skip property was found in " + sources
+            + ", so this test checked nothing; the file scan is broken.");
+    }
+
+    /** The workflow files and the shell scripts CI runs, where the build commands are written. */
+    private static List<Path> ciCommandSources() {
+        List<Path> sources = new ArrayList<>();
+        for (String dir : List.of(".github/workflows", ".github/scripts", "tools")) {
+            try (Stream<Path> files = Files.list(repoRoot().resolve(dir))) {
+                files.filter(p -> {
+                    String name = String.valueOf(p.getFileName());
+                    return name.endsWith(".yml") || name.endsWith(".sh");
+                }).sorted().forEach(sources::add);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+        return sources;
     }
 
     // -----------------------------------------------------------------------

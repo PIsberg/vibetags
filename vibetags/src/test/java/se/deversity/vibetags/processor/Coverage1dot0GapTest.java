@@ -294,15 +294,13 @@ class Coverage1dot0GapTest {
 
     @Test
     void guardrailContentBuilder_noCodex_codexBranchSkipped() {
-        // When "codex" is NOT in activeServices, the codex_config/codex_rules implicit
-        // activation block at line 185 must be skipped (false branch).
+        // When "codex" is NOT in activeServices, the codex_rules implicit
+        // activation block must be skipped (false branch).
         AnnotationCollector collector = new AnnotationCollector();
         Set<String> services = Set.of("cursor"); // no "codex"
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
             collector, services, "Project", "# header\n");
         GuardrailContentBuilder.Result result = builder.build();
-        assertFalse(result.contentByService.containsKey("codex_config"),
-            "codex_config must not appear when codex is not active");
         assertFalse(result.contentByService.containsKey("codex_rules"),
             "codex_rules must not appear when codex is not active");
     }
@@ -358,15 +356,15 @@ class Coverage1dot0GapTest {
     }
 
     @Test
-    void guardrailContentBuilder_codexActive_codexConfigAndRulesIncluded() {
-        // codex active → implicit codex_config and codex_rules entries are generated (L185-193)
+    void guardrailContentBuilder_codexActive_codexRulesIncludedAndNoConfig() {
+        // codex active → the implicit codex_rules entry is generated, and no codex_config (#934)
         AnnotationCollector collector = new AnnotationCollector();
         Set<String> services = Set.of("codex");
         GuardrailContentBuilder builder = new GuardrailContentBuilder(
             collector, services, "Project", "# header\n");
         GuardrailContentBuilder.Result result = builder.build();
-        assertTrue(result.contentByService.containsKey("codex_config"),
-            "codex active → codex_config must appear in result");
+        assertFalse(result.contentByService.containsKey("codex_config"),
+            "codex active → codex_config is no longer an output (#934)");
         assertTrue(result.contentByService.containsKey("codex_rules"),
             "codex active → codex_rules must appear in result");
     }

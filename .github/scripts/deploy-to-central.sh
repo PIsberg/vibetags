@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-# Deploy one module to Maven Central, and exit non-zero when that genuinely failed.
+# Deploy to Maven Central from a directory, and exit non-zero when that genuinely failed.
+# publish.yml calls it once, on the release reactor .github/central-release, so that every module
+# goes up as one Central deployment (#863).
 #
 # This replaces three inline copies of the same block, all of which shared one bug:
 #
@@ -13,7 +15,7 @@
 # vibetags-processor and vibetags-bom 1.0.0-RC8 but not vibetags-annotations,
 # while the run reported success. Any consumer pinning 1.0.0-RC8 could not resolve.
 #
-# Usage: deploy-to-central.sh <module-dir> <artifact-name> [extra mvn args...]
+# Usage: deploy-to-central.sh <directory> <name-for-messages> [extra mvn args...]
 
 set -uo pipefail
 

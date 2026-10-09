@@ -54,7 +54,7 @@ Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). J
 2. **Checkout**.
 3. **Set up JDK** — installs Temurin and primes the `~/.m2/repository` cache keyed on `pom.xml`.
 4. **Install VibeTags Annotations** — `cd vibetags-annotations && mvn install -B`. Installs the zero-dependency annotations jar into the local Maven repo first, because `vibetags/pom.xml` declares it as a regular `<dependency>`. Runs the same static-analysis stack as the library (Checkstyle, PMD, CPD, SpotBugs with Find Security Bugs, Error Prone with NullAway) under the same JDK-21-only split for the source and bytecode tools.
-5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs the fast test tier, and installs the artifact into the local Maven repo so the examples can resolve it. PMD, SpotBugs (with the Find Security Bugs detectors attached) and CPD are JDK-independent, so they run only on the JDK 21 leg (`-Dmaven.pmd.skip=true -Dspotbugs.skip=true` is passed on the other JDKs) to avoid repeating identical analysis on every leg. Error Prone still runs on every JDK because it is a compiler plugin and is JDK-sensitive, and it
+5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs the fast test tier, and installs the artifact into the local Maven repo so the examples can resolve it. PMD, SpotBugs (with the Find Security Bugs detectors attached) and CPD are JDK-independent, so they run only on the JDK 21 leg (`-Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true` is passed on the other JDKs; PMD and CPD have separate skip properties, and `BuildToolchainParityTest` fails a workflow that passes one no plugin reads) to avoid repeating identical analysis on every leg. Error Prone still runs on every JDK because it is a compiler plugin and is JDK-sensitive, and it
 carries NullAway with it — nullability is checked at `ERROR` on every matrix JDK, so a
 `@Nullable` that stops being honoured fails the build rather than producing a warning nobody reads.
 6. **Install VibeTags BOM** — `cd vibetags-bom && mvn install -B`. Installs `se.deversity.vibetags:vibetags-bom` (pom-only) into the local Maven repo. Required because `examples/basic/pom.xml` imports the BOM via `<dependencyManagement>` to resolve `vibetags-annotations` and `vibetags-processor` versions, and the BOM has to be resolvable before step 14 runs.
@@ -331,16 +331,24 @@ artifacts (#945).
    SHA-512 and puts it first on `PATH`.
 4. **Check the bundle checker against known layouts**: `.github/scripts/check-central-bundle.test.sh`
    runs `check-central-bundle.sh` against zips built to a known shape, including the layout Maven
-   3.10 produced, which it must reject.
-5. **Build each published module's Central bundle and check it**:
-   `.github/scripts/build-central-bundles.sh` takes the modules from `publish.yml`'s
-   `deploy-to-central.sh` calls, in their order, and runs `mvn clean deploy -P central-publish` in each
-   with the upload pointed at `http://127.0.0.1:9` and throwaway credentials. The plugin stages and
-   zips the real bundle and then fails to upload it; the script requires that failure, then checks
-   the zip: every file directly in `<group>/<artifact>/<version>/` and named for the component, the
-   `.pom` present (and for a jar the main, `-sources` and `-javadoc` jars), and an `.md5` and `.sha1`
-   beside every file. It skips tests and static analysis, which add no file to a bundle, and does
-   not check signatures or POM content, which only the real publish has.
+   3.10 produced, poms missing each element Central requires, and signatures that are missing or
+   do not verify, all of which it must reject.
+5. **Create a throwaway signing key**: a passphrase-less key that expires in a day, so the bundle
+   can be signed the way `publish.yml` signs it without the release key (#949).
+6. **Build each published module's Central bundle and check it**:
+   `.github/scripts/build-central-bundles.sh` runs `mvn clean deploy -P central-publish` on the
+   release reactor `publish.yml` deploys (`.github/central-release`), with the upload pointed at
+   `http://127.0.0.1:9` and throwaway credentials. The plugin stages every module into one bundle,
+   zips it after the last module and then fails to upload it; the script requires that failure and
+   exactly one `central-bundle.zip`, then checks it against every module's coordinates: every file
+   directly in a listed `<group>/<artifact>/<version>/` and named for that component, each
+   component's `.pom` present (and for a jar the main, `-sources` and `-javadoc` jars), and an
+   `.md5` and `.sha1` beside every file. With `SIGN=true` it also activates `sign-artifacts` and
+   requires an `.asc` beside every file that `gpg --verify` accepts, and every component's pom must
+   name its own coordinates and carry the elements Central requires: name, description, url, a
+   license, a developer, and the SCM connection and url (`check-central-pom.py`, #949). It skips
+   tests and static analysis, which add no file to a bundle. What only the real publish can show is
+   whether Central knows the release key.
 
 ---
 
@@ -388,8 +396,11 @@ release whose tag predates the fix: `gh workflow run publish.yml --ref main -f r
   `apache-maven-<version>-bin.tar.gz`). It is 3.9, not the runner image's 3.10, because
   `central-publishing-maven-plugin` 0.11.0 bundles Maven 3.10's local-repository files and Central
   rejects the result (#945). The `central-bundle` job in `build.yml` reads both values from here.
-- **Resolve which modules to deploy** — validates `modules` against `[a-z,]` and writes one
-  output per module. The input reaches the script through `env`, never through `${{ }}` inside
+- **Resolve which modules to deploy** — validates `modules` against `[a-z,]`, reads the version from
+  `<revision>`, leaves out every selected module whose pom repo1.maven.org already serves, and turns
+  what is left into a Maven `-pl` list of artifactIds (none when it is all five). When nothing is
+  left the deploy step is skipped, so finishing a release that published but was never marked
+  Latest does not build an empty bundle. The input reaches the script through `env`, never through `${{ }}` inside
   `run:`, because an interpolated expression becomes script text in the one job that holds the GPG
   key and the Central token.
 - Sets up Maven with `server-id: central` and exports `CENTRAL_TOKEN_USERNAME` / `CENTRAL_TOKEN_PASSWORD` for the deploy steps.
@@ -400,20 +411,29 @@ release whose tag predates the fix: `gh workflow run publish.yml --ref main -f r
 - **Refuse to deploy on any Maven but the pinned one**: fails unless `mvn --version` reports
   `MAVEN_VERSION`, before anything is signed or uploaded.
 - **Import GPG key** — pipes `secrets.GPG_PRIVATE_KEY` into `gpg --batch --import`, then prints key fingerprints.
-- **Five deploy steps, each gated on its module being selected**, each calling
-  `.github/scripts/deploy-to-central.sh <module-dir> <artifact> [maven args]`. The script runs
+- **Sign and deploy every module to Maven Central as one deployment** — one call,
+  `.github/scripts/deploy-to-central.sh .github/central-release vibetags -DskipTests
+  -DignorePublishedComponents=true [-pl <subset>]`. The release reactor builds annotations,
+  processor, KSP, BOM and CLI in one Maven invocation, and `central-publishing-maven-plugin` uploads
+  all of them as a single Portal deployment after the last module. Central counts each published
+  deployment as a release against the organization's 7 a month, so this makes a version cost 1
+  instead of 5, and a validation failure publishes nothing rather than the modules ahead of it
+  (#863). The reactor's module order keeps the BOM ahead of the CLI. `ignorePublishedComponents`
+  leaves out of the bundle any module Central already has, so a resume does not fail on it. Tests
+  are skipped; they ran on every push that led to the tagged commit. The script runs
   `mvn clean deploy -P central-publish,sign-artifacts`, reads Maven's exit status from `PIPESTATUS`
-  rather than from the `tee` it pipes through, treats "already exists" on Central as success so a
-  resume can re-run modules that landed, and retries a transport failure up to 3 times with
-  backoff. `build-maven` step 23 tests the failure reporting. Order:
-  1. **annotations** — first; the processor depends on it.
-  2. **processor** (`-DskipTests`) — tests ran on every push that led to the tagged commit.
-  3. **KSP front end** (`-DskipTests`) — after the processor, which it depends on; before the BOM, which manages it.
-  4. **BOM** — before the CLI, deliberately. Every install snippet in the README resolves through
-     the BOM, and when it used to go last a CLI deploy that timed out took the BOM down with it,
-     leaving every documented way of depending on the published jars broken.
-  5. **CLI** — last; it consumes the processor as a library, nobody's build depends on it, and its
-     fast filesystem-only tests run here as a final gate.
+  rather than from the `tee` it pipes through, treats "already exists" on Central as success, and
+  retries a transport failure up to 3 times with backoff. `build-maven` step 23 tests the failure
+  reporting. `CentralPublishingBudgetTest` fails on a second deploy call, and on a published module
+  missing from the reactor.
+- **Wait until Maven Central serves every module** — polls repo1.maven.org every 30 seconds, for
+  up to an hour, until all five poms of the version in `<revision>` answer 200. The plugin returns
+  when the Portal says PUBLISHED, which is minutes before repo1 serves the files.
+- **Mark the release Latest** — `gh release edit <tag> --latest`. The release skill creates the
+  release with `--latest=false`, so a publish that fails never leaves the release page advertising a
+  version nobody can resolve (#946). A resume marks its release only when it is the newest one, and
+  a prerelease is never marked. `ReleaseLatestAfterCentralTest` pins the order: deploy, wait, mark,
+  attach.
 - **Find the release to attach the signed artifacts to**, then **Attach signed artifacts to the
   GitHub release**: uploads each module's jars and `.asc` signatures (the BOM's `.pom.asc`) so
   Scorecard's `Signed-Releases` check can verify them. A release event attaches to its own release.

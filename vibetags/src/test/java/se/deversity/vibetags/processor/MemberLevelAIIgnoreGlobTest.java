@@ -111,6 +111,10 @@ class MemberLevelAIIgnoreGlobTest {
      * as {@code **}{@code /Snapshot.java}, which hid an unrelated {@code Snapshot.java} if one existed
      * and never the code it was meant to hide. Like a member, it stays excluded in prose only. The
      * same holds for a locked nested type's {@code .aiexclude} line.
+     *
+     * <p>Nor does it exclude the outer type's file. That would hide the nested type from a glob-only
+     * tool, and every unmarked line of {@code Ledger} with it; the owner chose under-exclusion as
+     * the lesser harm (#940), and docs/ANNOTATIONS.md states the limit.
      */
     @Test
     @DisplayName("a nested type's @AIIgnore or @AILocked puts no **/<Nested>.java line in any exclusion file")
@@ -135,11 +139,16 @@ class MemberLevelAIIgnoreGlobTest {
             String content = h.readFile(f);
             assertFalse(content.contains("Snapshot.java") || content.contains("Entry.java"),
                 f + " names a nested type as if it were a file:\n" + content);
+            assertFalse(content.contains("Ledger.java"),
+                f + " excludes the outer type's whole file for a nested type's annotation (#940):\n"
+                    + content);
             assertTrue(content.contains("**/GeneratedTable.java"),
                 f + " must still carry the top-level type's glob:\n" + content);
         }
         assertFalse(h.readFile(".greptile/config.json").contains("Snapshot.java"),
             "Greptile's ignorePatterns names the nested type");
+        assertFalse(h.readFile(".greptile/config.json").contains("Ledger.java"),
+            "Greptile's ignorePatterns excludes the outer type's whole file (#940)");
         assertTrue(h.readFile("GEMINI.md").contains("com.example.Ledger.Snapshot"),
             "the nested type must still reach the prose outputs");
     }

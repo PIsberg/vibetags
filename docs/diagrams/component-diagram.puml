@@ -85,7 +85,6 @@ package "Generated AI Config Files" {
   rectangle "Codex Files" as CodexFiles
   note right of CodexFiles
     AGENTS.md
-    .codex/config.toml
     .codex/rules/vibetags.rules
   end note
 

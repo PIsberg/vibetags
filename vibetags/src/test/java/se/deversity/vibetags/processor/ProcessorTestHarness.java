@@ -148,7 +148,6 @@ class ProcessorTestHarness {
         touch("llms-full.txt");
         touch(".cursorignore");
         touch(".qwenignore");
-        touch(".codex/config.toml");
         touch(".codex/rules/vibetags.rules");
         touch(".qwen/commands/refactor.md");
         touch("CONVENTIONS.md");

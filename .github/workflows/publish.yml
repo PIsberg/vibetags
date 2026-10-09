@@ -3,13 +3,12 @@ name: Publish to Maven Central
 on:
   release:
     types: [ created ]
-  # Resume a release that published some modules and not others. A deploy can fail with the
-  # bundle already uploaded — Central's validation is occasionally slow rather than stuck — and
-  # without this the only way to finish the release was to cut another tag. deploy-to-central.sh
-  # treats an already-published version as success, so re-running over the modules that did land
-  # is safe and skips them. A dispatch runs this file as it is on the branch it is dispatched from
-  # and builds the source of `ref`, so a fix to this workflow on main also finishes a release whose
-  # tag predates the fix.
+  # Resume a release that did not publish. A deploy can fail with the bundle already uploaded —
+  # Central's validation is occasionally slow rather than stuck — and without this the only way to
+  # finish the release was to cut another tag. The deploy passes ignorePublishedComponents, so the
+  # bundle leaves out every module Central already has and re-running is safe. A dispatch runs this
+  # file as it is on the branch it is dispatched from and builds the source of `ref`, so a fix to
+  # this workflow on main also finishes a release whose tag predates the fix.
   workflow_dispatch:
     inputs:
       ref:
@@ -52,7 +51,11 @@ jobs:
           # Empty on a release event, which keeps the default checkout of the tag.
           ref: ${{ github.event.inputs.ref || '' }}
 
-      # `all` on a release event, so the selection below is a no-op there.
+      # `all` on a release event. A module repo1.maven.org already serves at this version is left
+      # out: it is published, Central would reject it a second time, and a resume of a release that
+      # published but was never marked Latest would otherwise build a bundle with nothing in it. What
+      # is left becomes a Maven -pl list of artifactIds, which keeps the one-deployment shape for a
+      # subset too, or no list when it is every module.
       #
       # SELECTED arrives through env, never through ${{ }} inside the script. An expression
       # interpolated into `run:` is substituted into the script *text* before bash sees it, so a
@@ -69,14 +72,38 @@ jobs:
             *[!a-z,]*) echo "::error::modules must be 'all' or a comma-separated subset of annotations,processor,ksp,bom,cli"; exit 1 ;;
           esac
           echo "selected=$SELECTED" >> "$GITHUB_OUTPUT"
+          version="$(sed -n 's|^ *<revision>\([^<]*\)</revision>.*|\1|p' vibetags-parent/pom.xml)"
+          if [ -z "$version" ]; then
+            echo "::error::cannot read <revision> from vibetags-parent/pom.xml"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          wanted=""
+          pending=""
           for m in annotations processor ksp bom cli; do
             if [ "$SELECTED" = "all" ] || echo ",$SELECTED," | grep -q ",$m,"; then
-              echo "$m=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "$m=false" >> "$GITHUB_OUTPUT"
+              wanted="${wanted:+$wanted,}$m"
+              pom="https://repo1.maven.org/maven2/se/deversity/vibetags/vibetags-$m/$version/vibetags-$m-$version.pom"
+              if [ "$(curl -s -o /dev/null -w '%{http_code}' "$pom")" = "200" ]; then
+                echo "vibetags-$m $version is already on Maven Central; not deploying it again."
+              else
+                pending="${pending:+$pending,}$m"
+              fi
             fi
           done
-          echo "Deploying: $SELECTED"
+          if [ -z "$wanted" ]; then
+            echo "::error::'$SELECTED' names none of annotations,processor,ksp,bom,cli"; exit 1
+          fi
+          projects=""
+          if [ "$pending" = "annotations,processor,ksp,bom,cli" ]; then
+            echo "built_all=true" >> "$GITHUB_OUTPUT"
+          else
+            for m in ${pending//,/ }; do
+              projects="${projects:+$projects,}:vibetags-$m"
+            done
+          fi
+          echo "projects=$projects" >> "$GITHUB_OUTPUT"
+          echo "deploy=$([ -n "$pending" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "Deploying: ${pending:-nothing; every selected module is already on Maven Central}"
 
       - name: Set up JDK 21
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -118,68 +145,84 @@ jobs:
         env:
           GPG_TTY: /dev/tty
 
-      - name: Sign and deploy annotations to Maven Central
-        if: steps.selection.outputs.annotations == 'true'
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-annotations vibetags-annotations \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+      # One Central deployment for the whole release (#863). Central counts each published
+      # deployment against the organization's monthly allowance of 7 releases, and deploying one
+      # module at a time made a vibetags version cost 5: October 2026's release took the org from 1 to 6. The release
+      # reactor in .github/central-release builds every module in one Maven invocation;
+      # central-publishing-maven-plugin defers each module's files and uploads a single bundle after
+      # the last, so a version costs 1, and Central publishes all of it or none of it rather than
+      # leaving the first modules public when a later one fails validation. The reactor's module
+      # order keeps the BOM ahead of the CLI. ignorePublishedComponents leaves out of the bundle any
+      # module Central already has, so a resumed release does not fail on it. Tests are skipped: the
+      # release commit passed every one on every JDK before it was tagged.
+      - name: Sign and deploy every module to Maven Central as one deployment
+        if: steps.selection.outputs.deploy == 'true'
         env:
           CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          PROJECTS: ${{ steps.selection.outputs.projects }}
+        run: |
+          bash .github/scripts/deploy-to-central.sh .github/central-release vibetags \
+            -DskipTests -DignorePublishedComponents=true ${PROJECTS:+-pl "$PROJECTS"} \
+            -Dgpg.passphrase="$GPG_PASSPHRASE"
 
-      - name: Build, sign, and deploy processor to Maven Central
-        if: steps.selection.outputs.processor == 'true'
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags vibetags-processor -DskipTests \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+      # The plugin returns once the Portal reports the deployment PUBLISHED; repo1.maven.org serves
+      # the files some minutes later, and repo1 is what a consumer's build resolves from. Every
+      # module, not only the ones this run deployed: the next step tells the world the version is
+      # usable.
+      - name: Wait until Maven Central serves every module
         env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          VERSION: ${{ steps.selection.outputs.version }}
+        run: |
+          deadline=$(( $(date +%s) + 3600 ))
+          for m in annotations processor ksp bom cli; do
+            pom="https://repo1.maven.org/maven2/se/deversity/vibetags/vibetags-$m/$VERSION/vibetags-$m-$VERSION.pom"
+            until [ "$(curl -s -o /dev/null -w '%{http_code}' "$pom")" = "200" ]; do
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "::error::vibetags-$m $VERSION is not on repo1.maven.org after an hour, so the release is not marked Latest. Once it resolves, finish with: gh workflow run publish.yml --ref main -f ref=<tag> -f modules=all"
+                exit 1
+              fi
+              sleep 30
+            done
+            echo "vibetags-$m $VERSION: served by repo1.maven.org"
+          done
 
-      # After the processor, which the KSP front end depends on and resolves from the local
-      # repository the processor step installed into; before the BOM, which manages it. Tests are
-      # skipped for the same reason as the processor's: the release commit already passed them.
-      - name: Build, sign, and deploy KSP front end to Maven Central
-        if: steps.selection.outputs.ksp == 'true'
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-ksp vibetags-ksp -DskipTests \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+      # The release skill creates the release with --latest=false, so the release page never
+      # advertises a version consumers cannot resolve (#946). It becomes Latest here, once every
+      # module answers on repo1. A resume marks its release only when it is the newest one, so
+      # finishing an old release never takes Latest away from a newer one; a prerelease is never
+      # marked. EVENT, RELEASE_TAG and REF arrive through env for the reason at "Resolve which
+      # modules".
+      - name: Mark the release Latest
         env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-
-      # The BOM goes out before the CLI, and the order is the point. Every install snippet in
-      # the README resolves through the BOM, so it is the artifact a consumer cannot do without;
-      # the CLI is a convenience tool nobody's build depends on. It used to be last, and when a
-      # CLI deploy timed out waiting on Central the BOM was skipped with it — leaving annotations
-      # and processor published, every documented way of depending on them broken, and the release
-      # notes already out. Put the thing consumers need ahead of the thing they do not.
-      - name: Sign and deploy BOM to Maven Central
-        if: steps.selection.outputs.bom == 'true'
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REF: ${{ github.event.inputs.ref }}
         run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-bom vibetags-bom \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-
-      # After the processor: the CLI consumes it as a library, so the deploy build resolves
-      # the sibling from the local repository the earlier step installed into. Its tests run
-      # here as a last gate — they are fast and filesystem-only.
-      - name: Build, sign, and deploy CLI to Maven Central
-        if: steps.selection.outputs.cli == 'true'
-        run: |
-          bash .github/scripts/deploy-to-central.sh vibetags-cli vibetags-cli \
-            -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
-        env:
-          CENTRAL_TOKEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          CENTRAL_TOKEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          if [ "$EVENT" = "release" ]; then
+            tag="$RELEASE_TAG"
+          else
+            newest="$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 1 --json tagName --jq '.[0].tagName')"
+            if [ "$newest" != "$REF" ]; then
+              echo "Not marking: '$REF' is not the newest release ('$newest')."
+              exit 0
+            fi
+            tag="$REF"
+          fi
+          if [ "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = "true" ]; then
+            echo "Not marking: $tag is a prerelease."
+            exit 0
+          fi
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --latest
+          echo "Marked $tag as the Latest release."
 
       # Attach the GPG-signed jars/poms (and their .asc signatures) to the
       # GitHub release so Scorecard's Signed-Releases check can verify them.
-      # A release event attaches to its own release. A resume attaches only when it deployed
-      # every module, so every target/ directory below was built, and only when `ref` is the tag
-      # of the latest release: the action updates the release it attaches to without passing
+      # A release event attaches to its own release. A resume attaches only when it built every
+      # module, so every target/ directory below exists, and only when `ref` is the tag of the
+      # latest release: the action updates the release it attaches to without passing
       # make_latest, GitHub's update defaults that to true, and the action creates a release for a
       # tag that has none. REF arrives through env for the reason given at "Resolve which modules".
       - name: Find the release to attach the signed artifacts to
@@ -190,11 +233,12 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           REF: ${{ github.event.inputs.ref }}
           SELECTED: ${{ steps.selection.outputs.selected }}
+          BUILT_ALL: ${{ steps.selection.outputs.built_all }}
         run: |
           if [ "$EVENT" = "release" ]; then
             echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-          elif [ "$SELECTED" != "all" ]; then
-            echo "Not attaching: only '$SELECTED' was deployed, so not every module's jars were built."
+          elif [ "$BUILT_ALL" != "true" ]; then
+            echo "Not attaching: this run did not build every module ('$SELECTED' selected, the rest already on Central), so not every module's jars exist."
           elif [ "$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)" = "$REF" ]; then
             echo "tag=$REF" >> "$GITHUB_OUTPUT"
             echo "Attaching to the release for $REF, the latest release."

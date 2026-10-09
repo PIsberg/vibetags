@@ -159,8 +159,8 @@ public final class GuardrailContentBuilder {
         // per child (issue #830). ImplicitActivationFanOutTest drives this loop off the table, so a
         // sixth entry is rendered the day it is added rather than silently written by nobody.
         //
-        // The two Codex sidecars are the file-per-tool exception (.codex/config.toml and
-        // .codex/rules/vibetags.rules). The three *_safety files are the rules-directory exception:
+        // The Codex sidecar is the file-per-tool exception (.codex/rules/vibetags.rules; it had a
+        // .codex/config.toml twin until #934). The three *_safety files are the rules-directory exception:
         // a directory whose aggregate is the same path has nowhere else to put the always-loaded
         // safety tier, so it gets a file inside the directory (issues #648, #684), and the renderer
         // decides whether the tier belongs there or is already loaded from another file.
