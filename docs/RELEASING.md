@@ -328,7 +328,7 @@ Go to [GitHub Releases](https://github.com/PIsberg/vibetags/releases) and click 
 2. **Target**: `main`
 3. **Title**: `VibeTags vX.Y.Z`
 4. **Description**: Copy the relevant section from `CHANGELOG.md` (or let GitHub auto-generate from the release.yml template).
-5. Check **Set as latest release** if applicable.
+5. Leave **Set as latest release** unchecked: `publish.yml` sets it once Central serves every module.
 6. Click **Publish release**.
 
 #### Image-path gotcha — must rewrite relative paths
@@ -345,8 +345,14 @@ gh release create $TAG \
   --target main \
   --title "VibeTags $TAG" \
   --notes-file /tmp/release-notes-${TAG}.md \
-  --latest
+  --latest=false
 ```
+
+`--latest=false`, not `--latest`. `publish.yml` marks the release Latest once all five poms
+answer 200 on repo1.maven.org, so a publish that fails leaves the release page pointing at the
+previous version rather than one nobody can resolve (#946). The README's install snippets move in
+the release PR, so between its merge and the end of the publish they name a version Central does
+not serve yet; normally that is the half hour the publish takes.
 
 > **Do not inline the extraction, in any form.** `awk '/^## \[1.2.3\]/,/^## \[/'` returns the
 > header line and nothing else: when a range's start and end patterns both match the same

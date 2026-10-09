@@ -319,16 +319,25 @@ this step is irreversible and pushes artifacts to Maven Central:
 
 ```bash
 gh release create $TAG --target main --title "VibeTags $TAG" \
-  --notes-file "$SCRATCHPAD/release-notes-${TAG}.md" --latest
+  --notes-file "$SCRATCHPAD/release-notes-${TAG}.md" --latest=false
 ```
 
-For a release candidate, use `--prerelease` instead of `--latest`.
+`--latest=false`, never `--latest`: `publish.yml` marks the release Latest itself once all
+five poms resolve on repo1.maven.org, so a publish that fails never leaves the release page
+advertising a version nobody can depend on (#946). For a release candidate, add `--prerelease`;
+`publish.yml` never marks a prerelease Latest.
+
+The README's install snippets are still bumped in the release PR, so between its merge and the
+end of the publish `main`'s README names a version Central does not serve yet. Normally that is
+the half hour the publish takes; if the publish fails, tell the user the README is ahead until
+the release is finished.
 
 ## Step 8 — Watch the publish and report
 
 Creating the release triggers `.github/workflows/publish.yml`, which signs and deploys
 `vibetags-annotations`, `vibetags-processor`, `vibetags-ksp`, `vibetags-bom` and
-`vibetags-cli` to Maven Central, in that order:
+`vibetags-cli` to Maven Central as one deployment, waits until repo1.maven.org serves all
+five, and only then marks the release Latest:
 
 ```bash
 RUN_ID="$(gh run list --workflow=publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')"

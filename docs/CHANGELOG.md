@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A release becomes Latest only once Maven Central serves it** (#946). The release was created
+  with `--latest` before `publish.yml` ran, so when the first 1.4.0 publish failed the release page
+  advertised a Latest release whose five poms answered 404. The release skill now creates it with
+  `--latest=false`, and `publish.yml` waits until repo1.maven.org serves all five poms before it
+  runs `gh release edit --latest`. A resume deploys only the modules repo1 does not serve yet, and
+  skips the deploy when that is none. `ReleaseLatestAfterCentralTest` pins both halves. The README's
+  install snippets still move in the release PR, so they lead Central by the length of the publish.
 - **The `Central Bundle Shape` check now signs the bundle and reads its poms** (#949). It checked
   only the layout, so a missing signature or a pom without, say, `<scm>` would still have passed
   every pull-request check and been rejected after the release was tagged. The job now signs with

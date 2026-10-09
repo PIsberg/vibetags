@@ -396,8 +396,11 @@ release whose tag predates the fix: `gh workflow run publish.yml --ref main -f r
   `apache-maven-<version>-bin.tar.gz`). It is 3.9, not the runner image's 3.10, because
   `central-publishing-maven-plugin` 0.11.0 bundles Maven 3.10's local-repository files and Central
   rejects the result (#945). The `central-bundle` job in `build.yml` reads both values from here.
-- **Resolve which modules to deploy** — validates `modules` against `[a-z,]` and, for anything
-  but `all`, turns it into a Maven `-pl` list of artifactIds. The input reaches the script through `env`, never through `${{ }}` inside
+- **Resolve which modules to deploy** — validates `modules` against `[a-z,]`, reads the version from
+  `<revision>`, leaves out every selected module whose pom repo1.maven.org already serves, and turns
+  what is left into a Maven `-pl` list of artifactIds (none when it is all five). When nothing is
+  left the deploy step is skipped, so finishing a release that published but was never marked
+  Latest does not build an empty bundle. The input reaches the script through `env`, never through `${{ }}` inside
   `run:`, because an interpolated expression becomes script text in the one job that holds the GPG
   key and the Central token.
 - Sets up Maven with `server-id: central` and exports `CENTRAL_TOKEN_USERNAME` / `CENTRAL_TOKEN_PASSWORD` for the deploy steps.
@@ -423,6 +426,14 @@ release whose tag predates the fix: `gh workflow run publish.yml --ref main -f r
   retries a transport failure up to 3 times with backoff. `build-maven` step 23 tests the failure
   reporting. `CentralPublishingBudgetTest` fails on a second deploy call, and on a published module
   missing from the reactor.
+- **Wait until Maven Central serves every module** — polls repo1.maven.org every 30 seconds, for
+  up to an hour, until all five poms of the version in `<revision>` answer 200. The plugin returns
+  when the Portal says PUBLISHED, which is minutes before repo1 serves the files.
+- **Mark the release Latest** — `gh release edit <tag> --latest`. The release skill creates the
+  release with `--latest=false`, so a publish that fails never leaves the release page advertising a
+  version nobody can resolve (#946). A resume marks its release only when it is the newest one, and
+  a prerelease is never marked. `ReleaseLatestAfterCentralTest` pins the order: deploy, wait, mark,
+  attach.
 - **Find the release to attach the signed artifacts to**, then **Attach signed artifacts to the
   GitHub release**: uploads each module's jars and `.asc` signatures (the BOM's `.pom.asc`) so
   Scorecard's `Signed-Releases` check can verify them. A release event attaches to its own release.
