@@ -727,7 +727,7 @@ jobs:
       # so the narrative of what the processor decided survives the runner.
       - name: Upload failure logs
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failure-logs-maven-jdk${{ matrix.java }}
           path: |
@@ -824,7 +824,7 @@ jobs:
       # job exists, so their evidence must survive it.
       - name: Upload failure logs
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failure-logs-${{ matrix.os }}
           path: |
@@ -902,7 +902,7 @@ jobs:
 
       - name: Upload stress-test results
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: stress-results-${{ github.run_id }}
           path: |
@@ -1575,7 +1575,7 @@ jobs:
       # be read after the fact instead of re-run until it hides.
       - name: Upload the Gradle test report (on failure)
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gradle-test-report-jdk${{ matrix.java }}
           path: |
@@ -1829,7 +1829,7 @@ jobs:
       # them reproduce the toolchain locally.
       - name: Upload regenerated diagrams
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: regenerated-diagrams
           path: docs/diagrams/codekarta/
