@@ -33,10 +33,10 @@ to its `PINS` table in the same change, so the report can never silently go stal
   reason to skip them, it is a reason to run the full gates below.
 - Kotlin: `examples/kotlin` uses kapt and `examples/kotlin-ksp` compiles the same sources through
   KSP; a Kotlin or KSP bump is verified by both examples' Gradle builds, nothing less.
-- Maven for publishing stays on the 3.9 line until `central-publishing-maven-plugin` handles
-  Maven 3.10 (#945); under 3.10 the plugin builds bundles Central rejects. The report only offers
-  3.9.x. The `Central Bundle Shape` check on the PR is what verifies a bump of either the pin or the
-  plugin; a green `build-maven` says nothing about publishing.
+- Maven for publishing is pinned in `publish.yml`. Under Maven 3.10, plugin 0.11.0 built bundles
+  Central rejected (#945); 0.12.0 fixed that, so the pin moved to 3.10.0. The `Central Bundle Shape`
+  check on the PR is what verifies a bump of either the pin or the plugin; a green `build-maven`
+  says nothing about publishing.
 
 ## Step 3 - Apply, including the mirrors
 

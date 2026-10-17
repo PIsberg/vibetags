@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Releases are built on Maven 3.10.0 with `central-publishing-maven-plugin` 0.12.0** (#945).
+  `publish.yml` had pinned Maven 3.9.16 since the 1.4.0 publish, which Central rejected because
+  plugin 0.11.0 zipped Maven 3.10's `maven-metadata-local.xml` and `_remote.repositories` into the
+  bundle. Plugin 0.12.0 (2026-10-13) deletes them, and `.locks/`, before zipping, so the pin moves
+  to 3.10.0, the Maven the runner image ships, and test and release builds run on the same Maven
+  again. The pin itself stays, so the next image update cannot change a release's Maven unseen.
+  The `Central Bundle Shape` check built and checked the signed bundle with both.
+
 ### Removed
 
 - **`.codex/config.toml` is no longer written** (#934). VibeTags wrote it whenever `AGENTS.md` was

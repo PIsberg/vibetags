@@ -393,9 +393,10 @@ release whose tag predates the fix: `gh workflow run publish.yml --ref main -f r
 
 - Job: `publish-maven-central`, JDK 21, `permissions: contents: write` (to attach release assets).
   Job-level `env` pins the Maven every deploy runs on: `MAVEN_VERSION` and `MAVEN_SHA512` (of
-  `apache-maven-<version>-bin.tar.gz`). It is 3.9, not the runner image's 3.10, because
-  `central-publishing-maven-plugin` 0.11.0 bundles Maven 3.10's local-repository files and Central
-  rejects the result (#945). The `central-bundle` job in `build.yml` reads both values from here.
+  `apache-maven-<version>-bin.tar.gz`), 3.10.0 today, so a runner image update cannot change the
+  Maven a release is built with. It was 3.9.16 while `central-publishing-maven-plugin` 0.11.0
+  bundled Maven 3.10's local-repository files and Central rejected the result; 0.12.0 removes them
+  (#945). The `central-bundle` job in `build.yml` reads both values from here.
 - **Resolve which modules to deploy** — validates `modules` against `[a-z,]`, reads the version from
   `<revision>`, leaves out every selected module whose pom repo1.maven.org already serves, and turns
   what is left into a Maven `-pl` list of artifactIds (none when it is all five). When nothing is

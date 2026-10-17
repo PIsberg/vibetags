@@ -384,7 +384,8 @@ deployed before the processor (which depends on them). GitHub Packages publishin
 Central is published to.
 
 Every deploy runs on the Maven pinned in the job's `env` (`MAVEN_VERSION`, `MAVEN_SHA512`), not the
-runner image's: Maven 3.10 makes the plugin bundle files Central rejects (#945). Central sees a
+runner image's, so an image update cannot change what a release is built with: the image's move
+to Maven 3.10 once made the plugin bundle files Central rejects (#945). Central sees a
 bundle only after the tag exists, so the `Central Bundle Shape` check in `build.yml` builds every
 module's bundle with that Maven on each pull request. It must be green on the release PR.
 
@@ -448,9 +449,8 @@ around it.
    `Bundle has content that does NOT have a .pom file: <group>/<artifact>` means the bundle held a
    file outside its `<group>/<artifact>/<version>/` directory. That was the 2026-10-08 failure:
    the runner image's Maven had become 3.10, and the plugin zipped its `maven-metadata-local.xml`
-   (#945). Counting `Pre Bundling - deleted` lines in the log shows which Maven built the bundles:
-   the plugin logs one per module after cleaning up Maven 3.9's staging metadata, and none under
-   Maven 3.10.
+   (#945). Plugin 0.12.0 deletes those files before zipping and logs `Pre Bundling - deleted` for
+   each one; a bundle built by 0.11.0 under Maven 3.10 logged no such line at all.
 2. Fix the cause on `main` through a pull request. The `Central Bundle Shape` check builds the
    release bundle and must pass on it.
 3. Resume from the tag. The dispatch runs `publish.yml` as it is on `main` against the tag's source,
