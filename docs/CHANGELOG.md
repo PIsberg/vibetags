@@ -32,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`.codex/rules/vibetags.rules` loads in Codex** (#969). Every rule passed `pattern` as a string,
+  `prefix_rule("ls", "allow")`, and Codex requires a list of command tokens, so it refused the
+  whole file: `codex execpolicy check --rules .codex/rules/vibetags.rules ls` failed on line 5 with
+  "Type of parameter `pattern` doesn't match, expected `list`". The seven rules are now
+  `prefix_rule(pattern=["ls"], decision="allow")` with the same commands and decisions, and the
+  header comment loses its doubled `# #`. Checked with codex-cli 0.162.1: the regenerated file
+  loads and all seven commands get their decision. An existing file is rewritten on the next
+  build after upgrading. `CodexRulesSyntaxTest` pins the call shape.
 - **Granular rules and ignore globs name the Kotlin or Groovy file the code is in** (#939). The
   glob was always `**/<Type>.java`, so in a Kotlin or Groovy module a rule's `paths:`, `globs:` or
   `applyTo:` named a file that does not exist, and no path-scoped platform loaded it. The KSP front

@@ -146,8 +146,8 @@ class AIGuardrailProcessorIntegrationTest {
     @Test
     void testCodexRulesHasStarlarkContent() throws Exception {
         String content = agentsHarness.readFile(".codex/rules/vibetags.rules");
-        assertTrue(content.contains("prefix_rule(\"mvn\", \"prompt\")"));
-        assertTrue(content.contains("prefix_rule(\"ls\", \"allow\")"));
+        assertTrue(content.contains("prefix_rule(pattern=[\"mvn\"], decision=\"prompt\")"));
+        assertTrue(content.contains("prefix_rule(pattern=[\"ls\"], decision=\"allow\")"));
     }
 
     @Test

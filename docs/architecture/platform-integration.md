@@ -34,7 +34,7 @@ Sample `QWEN.md` output and the `.qwen/commands/refactor.md` / `.qwenignore` rol
 
 **Files:** `AGENTS.md` + `.codex/rules/vibetags.rules`
 
-**Behavior:** Codex CLI automatically reads `AGENTS.md` from the project root, and `vibetags.rules` defines security-conscious command permissions using Starlark. `.codex/config.toml` is not written (#934).
+**Behavior:** Codex CLI automatically reads `AGENTS.md` from the project root, and `vibetags.rules` defines security-conscious command permissions using Starlark: `prefix_rule(pattern=["ls"], decision="allow")` for `ls`, `cat` and `grep`, `decision="prompt"` for `mvn`, `npm`, `git` and `rm`. Codex requires `pattern` to be a list and rejects the whole file over one bare string (#969). `.codex/config.toml` is not written (#934).
 
 ### GitHub Copilot
 
