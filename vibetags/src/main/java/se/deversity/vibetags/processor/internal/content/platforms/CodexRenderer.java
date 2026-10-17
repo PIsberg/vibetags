@@ -61,14 +61,16 @@ public final class CodexRenderer implements PlatformRenderer {
     @Override
     public String render(GuardrailModel model, Platform platform, RenderingContext context) {
         if (platform == Platform.CODEX_RULES) {
-            return "# " + context.getGeneratedHeader().trim() + "\n# VibeTags: Starlark Command Permissions\n\n" +
-                "prefix_rule(\"ls\", \"allow\")\n" +
-                "prefix_rule(\"cat\", \"allow\")\n" +
-                "prefix_rule(\"grep\", \"allow\")\n" +
-                "prefix_rule(\"mvn\", \"prompt\")\n" +
-                "prefix_rule(\"npm\", \"prompt\")\n" +
-                "prefix_rule(\"git\", \"prompt\")\n" +
-                "prefix_rule(\"rm\", \"prompt\")\n";
+            // Codex takes pattern as a list of command tokens and rejects the whole file over one
+            // bare string (#969). The generated header already starts with "# ".
+            return context.getGeneratedHeader() + "# VibeTags: Starlark Command Permissions\n\n" +
+                "prefix_rule(pattern=[\"ls\"], decision=\"allow\")\n" +
+                "prefix_rule(pattern=[\"cat\"], decision=\"allow\")\n" +
+                "prefix_rule(pattern=[\"grep\"], decision=\"allow\")\n" +
+                "prefix_rule(pattern=[\"mvn\"], decision=\"prompt\")\n" +
+                "prefix_rule(pattern=[\"npm\"], decision=\"prompt\")\n" +
+                "prefix_rule(pattern=[\"git\"], decision=\"prompt\")\n" +
+                "prefix_rule(pattern=[\"rm\"], decision=\"prompt\")\n";
         }
 
         StringBuilder sb = new StringBuilder(4096);
