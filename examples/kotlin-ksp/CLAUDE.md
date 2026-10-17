@@ -8,6 +8,9 @@
     <file path="com.example.kotlin.AccountLedger.settle(java.lang.Object)">
       <reason>LEDGER-RESULT-KEPT: settlement outcome mapping is part of the payout contract.</reason>
     </file>
+    <file path="com.example.kotlin.Invoice.total()">
+      <reason>BILLING-MULTI-CLASS: invoice totals are signed by the e-invoicing gateway, which rejects any change in rounding.</reason>
+    </file>
     <file path="com.example.kotlin.PaymentService.chargeKey(java.lang.String,int)">
       <reason>Charge idempotency key derivation is contract-tested against the gateway. Changing it re-charges in-flight payments.</reason>
     </file>

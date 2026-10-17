@@ -62,6 +62,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Under kapt, a rule's glob names the `.kt` file a class is really in** (#955). kapt hands the
+  processor a `.java` stub, and the glob guessed `<Type>.kt`, which missed an `Invoice` declared in
+  `Billing.kt`, a facade renamed by `@file:JvmName`, and a lowercase `ledgerutils.kt`; no
+  path-scoped platform loaded those rules. kapt writes a `.kapt_metadata` file beside every stub
+  whose entry for the type names its source file (measured on Kotlin 2.4.10, a member-less
+  interface included). The processor now reads that entry for a type carrying `@kotlin.Metadata`,
+  decoding only the stream's block data, and keeps the old guess when the file is missing or reads
+  as anything else. A Groovy interface, whose stub carries no marker, is now recognised by
+  Gradle's `groovy-java-stubs` directory and scoped to `<Type>.groovy`; a Groovy type in a
+  differently named file still misses, since groovyc records nothing about the file.
+  `examples/kotlin` gains `Billing.kt`, two classes in a file named after neither, and kapt and KSP
+  write byte-identical rule files for it. `StubSourceNamesTest` and `GranularSourceFileGlobTest`
+  pin it.
 - **`.codex/rules/vibetags.rules` loads in Codex** (#969). Every rule passed `pattern` as a string,
   `prefix_rule("ls", "allow")`, and Codex requires a list of command tokens, so it refused the
   whole file: `codex execpolicy check --rules .codex/rules/vibetags.rules ls` failed on line 5 with
@@ -76,13 +89,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   end now names the real source file (`**/Types.kt` for every class of `Types.kt`). Under kapt and
   Groovy's stub generation javac sees a `.java` stub, which still says what it came from:
   `@kotlin.Metadata` gives `<Type>.kt` (and `<Name>.kt` for a file facade `<Name>Kt`), and
-  `groovy.lang.GroovyObject` gives `<Type>.groovy`; a stub does not name its file, so a class in a
-  differently named file still misses (docs/JVM-LANGUAGES.md). A Java type declared in another
-  type's file is now scoped to that file instead of a nonexistent `<Type>.java`, and, like a nested
-  type (#940), no longer writes an ignore glob that would hide the whole file. The file name
-  reaches `BuildFingerprint` (invariant 12). `examples/kotlin` and `examples/kotlin-ksp` opt into
-  `.github/instructions/`, so CI regenerates Kotlin rule files and compares the two front ends.
-  `GranularSourceFileGlobTest` and `StubParityTest` pin it.
+  `groovy.lang.GroovyObject` gives `<Type>.groovy`; a Kotlin class in a differently named file
+  is covered by the #955 entry above, and a Groovy one still misses (docs/JVM-LANGUAGES.md). A
+  Java type declared in another type's file is now scoped to that file instead of a nonexistent
+  `<Type>.java`, and, like a nested type (#940), no longer writes an ignore glob that would hide
+  the whole file. The file name reaches `BuildFingerprint` (invariant 12). `examples/kotlin` and
+  `examples/kotlin-ksp` opt into `.github/instructions/`, so CI regenerates Kotlin rule files and
+  compares the two front ends. `GranularSourceFileGlobTest` and `StubParityTest` pin it.
 - **A release becomes Latest only once Maven Central serves it** (#946). The release was created
   with `--latest` before `publish.yml` ran, so when the first 1.4.0 publish failed the release page
   advertised a Latest release whose five poms answered 404. The release skill now creates it with

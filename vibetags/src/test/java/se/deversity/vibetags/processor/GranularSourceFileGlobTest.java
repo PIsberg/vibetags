@@ -113,6 +113,86 @@ class GranularSourceFileGlobTest {
         assertFalse(rule.contains("Report.java"), rule);
     }
 
+    /**
+     * kapt's stub has the type's name, and the {@code .kapt_metadata} kapt writes beside it names
+     * the file it came from (#955). The layout is the one kapt 2.4.10 was measured writing; see
+     * {@code StubSourceNamesTest}.
+     */
+    private static void kaptStub(ProcessorTestHarness h, Path root, String type, String body, String ktFile)
+            throws IOException {
+        String internal = "com/example/" + type;
+        Path stub = h.writeSourceFile("build/tmp/kapt3/stubs/main/" + internal + ".java", body);
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        try (java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(bytes)) {
+            out.writeInt(1);
+            out.writeInt(1);
+            out.writeUTF(internal);
+            out.writeUTF(root.resolve("src/main/kotlin/com/example/" + ktFile).toString().replace('\\', '/'));
+            out.writeBoolean(false);
+            out.writeInt(0);
+        }
+        Files.write(stub.resolveSibling(type + ".kapt_metadata"), bytes.toByteArray());
+    }
+
+    @Test
+    @DisplayName("a kapt class in a differently named file is scoped to that file (#955)")
+    void aKotlinClassInAnotherFileNamesThatFile(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = granular(root);
+        kaptStub(h, root, "Invoice", """
+            package com.example;
+            @kotlin.Metadata(k = 1)
+            public final class Invoice {
+                @se.deversity.vibetags.annotations.AILocked(reason = "wire format")
+                public long total() { return 0L; }
+            }
+            """, "Billing.kt");
+
+        h.compile();
+
+        String rule = rule(h, "com.example.Invoice");
+        assertTrue(rule.contains("**/Billing.kt"), "Invoice is declared in Billing.kt:\n" + rule);
+        assertFalse(rule.contains("Invoice.kt"), "no Invoice.kt exists:\n" + rule);
+    }
+
+    @Test
+    @DisplayName("a facade renamed by @file:JvmName is scoped to its file, not to the JVM name (#955)")
+    void aRenamedFacadeNamesItsFile(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = granular(root);
+        kaptStub(h, root, "TypesFacade", """
+            package com.example;
+            @kotlin.Metadata(k = 2)
+            public final class TypesFacade {
+                @se.deversity.vibetags.annotations.AILocked(reason = "type table")
+                public static void register() {}
+            }
+            """, "Types.kt");
+
+        h.compile();
+
+        String rule = rule(h, "com.example.TypesFacade");
+        assertTrue(rule.contains("**/Types.kt"), "@file:JvmName(\"TypesFacade\") in Types.kt:\n" + rule);
+        assertFalse(rule.contains("TypesFacade.kt"), rule);
+    }
+
+    @Test
+    @DisplayName("a Groovy interface's stub, which carries no marker, is scoped to a .groovy file (#955)")
+    void aGroovyInterfaceUnderGradlesStubDirectory(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = granular(root);
+        h.writeSourceFile("build/tmp/compileGroovy/groovy-java-stubs/com/example/Tracked.java", """
+            package com.example;
+            public interface Tracked {
+                @se.deversity.vibetags.annotations.AILocked(reason = "tracking contract")
+                String trackingId();
+            }
+            """);
+
+        h.compile();
+
+        String rule = rule(h, "com.example.Tracked");
+        assertTrue(rule.contains("**/Tracked.groovy"), rule);
+        assertFalse(rule.contains("Tracked.java"), "the .java file is Gradle's stub, gone after the build:\n" + rule);
+    }
+
     @Test
     @DisplayName("a Java type is unchanged, and a second top-level type is scoped to the file it is in")
     void javaIsUnchangedAndASecondaryTypeNamesItsFile(@TempDir Path root) throws IOException {
