@@ -115,6 +115,11 @@ Configure the following secrets in your repository (`Settings > Secrets and vari
 | `GPG_PRIVATE_KEY` | Contents of `vibetags-private-key.asc` (the full ASCII-armored private key) |
 | `GPG_PASSPHRASE` | Passphrase for your GPG key |
 
+The key's fingerprint is not a secret and lives in `publish.yml` as `RELEASE_KEY_FINGERPRINT`. The
+import step refuses a `GPG_PRIVATE_KEY` whose primary key has any other fingerprint, and the
+`Release Key On A Keyserver` check looks that fingerprint up on the keyservers (#956), so a new key
+means changing that line too: see [Renew the release signing key](#renew-the-release-signing-key).
+
 > **Legacy secrets no longer needed:** `OSSRH_USERNAME` and `OSSRH_PASSWORD` are deprecated. The Central Portal User Token replaces them.
 
 #### 6. Maven `settings.xml` (local development only)
@@ -384,7 +389,8 @@ deployed before the processor (which depends on them). GitHub Packages publishin
 Central is published to.
 
 Every deploy runs on the Maven pinned in the job's `env` (`MAVEN_VERSION`, `MAVEN_SHA512`), not the
-runner image's: Maven 3.10 makes the plugin bundle files Central rejects (#945). Central sees a
+runner image's, so an image update cannot change what a release is built with: the image's move
+to Maven 3.10 once made the plugin bundle files Central rejects (#945). Central sees a
 bundle only after the tag exists, so the `Central Bundle Shape` check in `build.yml` builds every
 module's bundle with that Maven on each pull request. It must be green on the release PR.
 
@@ -427,6 +433,34 @@ For SNAPSHOT versions (e.g., `0.6.0-SNAPSHOT`):
 - Ensure `GPG_PASSPHRASE` matches the key's passphrase exactly.
 - Check that the key was not expired or revoked.
 - Confirm the primary key (not a subkey) has signing capability.
+- `GPG_PRIVATE_KEY holds no primary secret key with fingerprint ...` means the secret and
+  `RELEASE_KEY_FINGERPRINT` in `publish.yml` name different keys. Fix whichever is stale.
+
+### Renew the release signing key
+
+The `Release Key On A Keyserver` check (`build.yml`, #956) fetches the key named by
+`RELEASE_KEY_FINGERPRINT` from `keyserver.ubuntu.com`, `keys.openpgp.org` and `pgp.mit.edu`, the
+servers Central's [GPG requirements](https://central.sonatype.org/publish/requirements/gpg/) list.
+It passes while at least one of them serves it as an unrevoked primary key that can sign and does
+not expire within 60 days, and it prints every server's answer. Each line names a `reason=`:
+`not-served`, `revoked`, `expired`, `expires-soon`, `cannot-sign` or `not-a-primary-key`. As of
+2026-10-17 the key expires on 2028-04-06 and only `keyserver.ubuntu.com` serves it; the other two
+answer 404.
+
+When it goes red with `expires-soon`, extend the key rather than replace it, so the fingerprint and
+the `GPG_PRIVATE_KEY` secret stay as they are:
+
+```bash
+gpg --quick-set-expire 3B3479B9D506865693B12FF36DDFF11F46FEC058 2y
+gpg --keyserver keyserver.ubuntu.com --send-keys 3B3479B9D506865693B12FF36DDFF11F46FEC058
+# keys.openpgp.org publishes a key with a user ID only once its email address is verified:
+gpg --export --armor 3B3479B9D506865693B12FF36DDFF11F46FEC058 > release-key.asc   # upload at keys.openpgp.org/upload
+```
+
+Then re-run the check. A keyserver can take some minutes to serve the update. Replacing the key
+instead (after a revocation or a lost passphrase) needs a new `GPG_PRIVATE_KEY` and
+`GPG_PASSPHRASE`, and `RELEASE_KEY_FINGERPRINT` changed in a pull request whose check is green
+before the next release.
 
 ### Central Portal deployment fails with 401
 - Verify `CENTRAL_TOKEN_USERNAME` and `CENTRAL_TOKEN_PASSWORD` are correct (they are **not** your web login credentials).
@@ -448,9 +482,10 @@ around it.
    `Bundle has content that does NOT have a .pom file: <group>/<artifact>` means the bundle held a
    file outside its `<group>/<artifact>/<version>/` directory. That was the 2026-10-08 failure:
    the runner image's Maven had become 3.10, and the plugin zipped its `maven-metadata-local.xml`
-   (#945). Counting `Pre Bundling - deleted` lines in the log shows which Maven built the bundles:
-   the plugin logs one per module after cleaning up Maven 3.9's staging metadata, and none under
-   Maven 3.10.
+   (#945). Plugin 0.12.0 deletes those files before zipping. The log's `Apache Maven` line says
+   which Maven built the bundle; `Pre Bundling - deleted` lines no longer do, because the
+   `Central Bundle Shape` run that built a clean 0.12.0 bundle on Maven 3.10.0 (84 files in 5
+   components, run 39025093802) logged none.
 2. Fix the cause on `main` through a pull request. The `Central Bundle Shape` check builds the
    release bundle and must pass on it.
 3. Resume from the tag. The dispatch runs `publish.yml` as it is on `main` against the tag's source,
@@ -525,7 +560,7 @@ Release created on GitHub, or a manual dispatch with ref=<tag> to resume one
 └── publish-maven-central
     ├── env MAVEN_VERSION, MAVEN_SHA512 → installs that Maven, refuses to deploy on any other (#945)
     ├── server-id: central
-    ├── imports GPG key from secrets
+    ├── imports GPG key from secrets, refuses it unless it is env RELEASE_KEY_FINGERPRINT (#956)
     ├── deploy-to-central.sh .github/central-release → mvn clean deploy -P central-publish,sign-artifacts
     │   (one reactor: annotations, processor, ksp, bom, cli; signs jar, sources, javadoc, pom)
     ├── deploys to: central.sonatype.com as ONE deployment (auto-published, #863)
@@ -555,7 +590,7 @@ the table is now the only place it lives.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `build.yml` | Push to `main`/`master`, every PR | Multi-JDK build, tests, coverage, load tests, Central bundle shape |
+| `build.yml` | Push to `main`/`master`, every PR | Multi-JDK build, tests, coverage, load tests, Central bundle shape, release key on a keyserver |
 | `publish.yml` | Release created; manual dispatch to resume one | Deploys the five modules to Maven Central |
 | `codeql.yml` | Push to `main`, PRs, weekly | Security scanning |
 | `scorecards.yml` | Push to `main` | Supply chain security assessment |

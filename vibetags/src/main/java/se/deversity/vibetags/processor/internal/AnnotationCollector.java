@@ -61,6 +61,7 @@ import javax.lang.model.type.TypeMirror;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
 import java.lang.annotation.Annotation;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -307,17 +308,41 @@ public final class AnnotationCollector {
 
     /**
      * Records the source file name of each of the round's top-level types, which is what a glob for
-     * its code names (#939). Must run while the round is live.
+     * its code names (#939). For a kapt or Gradle Groovy stub it records the file the stub came
+     * from when the stub's surroundings say (#955, {@link StubSourceNames}). Must run while the
+     * round is live.
      */
     public void recordSourceFiles(RoundSources sources) {
         for (Element root : sources.roots()) {
-            if (root instanceof TypeElement) {
+            if (root instanceof TypeElement type) {
                 String name = sources.fileNameOf(root);
+                if (name != null && name.endsWith(".java")) {
+                    Path stub = sources.fileOf(root);
+                    if (stub != null) {
+                        name = stubSourceName(type, stub, name);
+                    }
+                }
                 if (name != null) {
                     sourceFileNames.put(root, name);
                 }
             }
         }
+    }
+
+    /**
+     * The file a stub was generated from, or {@code name} when it cannot be told. Only a type that
+     * carries kapt's {@code @kotlin.Metadata} has a {@code .kapt_metadata} looked for, so a Java
+     * build reads no extra file.
+     */
+    private static String stubSourceName(TypeElement type, Path stub, String name) {
+        if (ElementNaming.isKotlinStub(type)) {
+            String kotlin = StubSourceNames.kotlinFileName(stub, type.getQualifiedName().toString().replace('.', '/'));
+            return kotlin != null ? kotlin : name;
+        }
+        if (StubSourceNames.isGradleGroovyStub(stub)) {
+            return type.getSimpleName() + ".groovy";
+        }
+        return name;
     }
 
     /** Drains the round environment into our per-annotation sets. Returns true if anything was added. */

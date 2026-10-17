@@ -972,6 +972,8 @@ jobs:
           grep -qF "com.example.kotlin.CustomerVault" .cursorrules
           # A granular rule is scoped to the .kt file, not to a .java file that does not exist (#939).
           grep -qF 'applyTo: "**/PaymentService.kt"' .github/instructions/com-example-kotlin-PaymentService.instructions.md
+          # Invoice is declared in Billing.kt, not Invoice.kt: kapt's .kapt_metadata names the file (#955).
+          grep -qF 'applyTo: "**/Billing.kt"' .github/instructions/com-example-kotlin-Invoice.instructions.md
           # Issue #681, pinned in both directions (docs/JVM-LANGUAGES.md, Kotlin). kapt leaves a
           # function whose JVM name is mangled by a value class out of its Java stub, so the
           # @AILocked on AccountLedger.balanceFor reaches no processor and must appear in no
@@ -1029,8 +1031,9 @@ jobs:
             echo "::error::examples/kotlin-ksp failed to build (exit $status)."
             exit "$status"
           fi
-          # The granular rules too (#939): one class per file here, so KSP's real file and kapt's
-          # <Type>.kt agree, and any other difference is a front-end disagreement.
+          # The granular rules too (#939). KSP reads the real file and kapt the .kapt_metadata beside
+          # its stub (#955), so they agree even for Billing.kt, which declares Invoice and
+          # InvoiceLine; any difference is a front-end disagreement.
           for f in CLAUDE.md .cursorrules $(cd ../kotlin && ls .github/instructions/*.md); do
             if ! cmp -s "$f" "../kotlin/$f"; then
               echo "::error::examples/kotlin-ksp/$f differs from the kapt example's: KSP and kapt disagree."
@@ -1895,6 +1898,62 @@ jobs:
         env:
           SIGN: 'true'
         run: bash .github/scripts/build-central-bundles.sh
+
+  # Loads the committed .codex/rules/vibetags.rules with the Codex CLI and checks the decision it
+  # gives each command (#970). Every other check on that file reads the bytes VibeTags wrote, which
+  # is how #969 shipped: the tests agreed with the generator while Codex refused the whole file. The
+  # committed file is the regenerated one, because build-maven's self-check fails on any drift.
+  codex-rules:
+    name: Codex Loads Its Rules File
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Pin the Node toolchain that installs the CLI
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.23.2'
+
+      # `npm ci` against the committed lockfile, which carries an integrity hash per tarball, the
+      # only npm install Scorecard counts as pinned. Dependabot raises the pin.
+      - name: Install the Codex CLI (pinned by tools/codex-cli/package-lock.json)
+        working-directory: tools/codex-cli
+        run: |
+          npm ci
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Check the checker against known rules files
+        run: bash .github/scripts/check-codex-rules.test.sh
+
+      - name: Load the committed rules file with Codex
+        run: bash .github/scripts/check-codex-rules.sh .codex/rules/vibetags.rules
+
+  # Central verifies a bundle's signatures against the public key it finds on a keyserver. The
+  # Central Bundle Shape job signs with a throwaway key, so a release key that expired, was revoked
+  # or never reached a keyserver passed every check here and was rejected only by the real publish,
+  # after the tag (#956). This looks the release key up by the fingerprint publish.yml pins and goes
+  # red 60 days before it expires, while there is still time to renew it.
+  release-key:
+    name: Release Key On A Keyserver
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the key checker against keys made for this run
+        run: bash .github/scripts/check-release-key.test.sh
+
+      - name: Look up the release key on the keyservers Central lists
+        run: bash .github/scripts/check-release-key.sh
 
   # Mutation testing moved to .github/workflows/mutation.yml and runs on demand only
   # (workflow_dispatch). It was the longest job here and nothing gated on its result.

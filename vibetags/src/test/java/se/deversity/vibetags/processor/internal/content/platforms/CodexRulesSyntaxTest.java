@@ -28,7 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>There is no Starlark parser on the test classpath, so this pins the call shape Codex
  * accepts, checked against codex-cli 0.162.1: keyword arguments, {@code pattern} a list of string
- * tokens, {@code decision} one of the three values the docs list.
+ * tokens, {@code decision} one of the three values the docs list. It is a proxy: the
+ * {@code codex-rules} job in {@code build.yml} loads the committed file with the pinned Codex CLI
+ * itself (#970), and that job, not this regex, is what notices if Codex changes what it accepts.
  */
 class CodexRulesSyntaxTest {
 

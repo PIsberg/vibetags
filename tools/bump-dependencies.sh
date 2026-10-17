@@ -31,6 +31,9 @@ archunit.version                        com/tngtech/archunit/archunit-junit5
 async-test-lib.version                  se/deversity/async-test-lib/async-test-lib
 snakeyaml.version                       org/yaml/snakeyaml
 jmh.version                             org/openjdk/jmh/jmh-core
+ksp.version                             com/google/devtools/ksp/symbol-processing-api
+kotlin-stdlib.version                   org/jetbrains/kotlin/kotlin-stdlib
+kotlinx-coroutines.version              org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm
 maven-compiler-plugin.version           org/apache/maven/plugins/maven-compiler-plugin
 maven-surefire-plugin.version           org/apache/maven/plugins/maven-surefire-plugin
 maven-jar-plugin.version                org/apache/maven/plugins/maven-jar-plugin
@@ -39,6 +42,7 @@ maven-javadoc-plugin.version            org/apache/maven/plugins/maven-javadoc-p
 maven-shade-plugin.version              org/apache/maven/plugins/maven-shade-plugin
 exec-maven-plugin.version               org/codehaus/mojo/exec-maven-plugin
 flatten-maven-plugin.version            org/codehaus/mojo/flatten-maven-plugin
+build-helper-maven-plugin.version       org/codehaus/mojo/build-helper-maven-plugin
 maven-pmd-plugin.version                org/apache/maven/plugins/maven-pmd-plugin
 pmd.version                             net/sourceforge/pmd/pmd-java
 maven-checkstyle-plugin.version         org/apache/maven/plugins/maven-checkstyle-plugin
@@ -107,11 +111,11 @@ printf '%-40s %-12s %-12s%s\n' "groovy (examples/groovy)" "$groovy" "$groovy_now
 scala="$(sed -n "s|.*org.scala-lang:scala-library:\([^']*\)'.*|\1|p" "$ROOT/examples/scala/build.gradle")"
 scala_now="$(curl -sf https://repo1.maven.org/maven2/org/scala-lang/scala-library/maven-metadata.xml | grep -o '<version>2\.13\.[0-9]*</version>' | sed 's/<[^>]*>//g' | tail -n1)"
 printf '%-40s %-12s %-12s%s\n' "scala 2.13 line (examples/scala)" "$scala" "$scala_now" "$([ "$scala" != "$scala_now" ] && echo '  <- update')"
-# The Maven publish.yml deploys on: the 3.9 line until central-publishing-maven-plugin handles 3.10
-# (#945). A bump also needs MAVEN_SHA512 beside it; the skill says where to take it from.
+# The Maven publish.yml deploys on, the newest stable 3.x (no -alpha/-beta/-rc) (#945). A bump also
+# needs MAVEN_SHA512 beside it; the skill says where to take it from.
 maven="$(sed -n "s/^ *MAVEN_VERSION: *'\([^']*\)'.*/\1/p" "$ROOT/.github/workflows/publish.yml")"
-maven_now="$(curl -sf https://repo1.maven.org/maven2/org/apache/maven/apache-maven/maven-metadata.xml | grep -o '<version>3\.9\.[0-9]*</version>' | sed 's/<[^>]*>//g' | tail -n1)"
-printf '%-40s %-12s %-12s%s\n' "maven 3.9 line (publish.yml)" "$maven" "$maven_now" "$([ "$maven" != "$maven_now" ] && echo '  <- update')"
+maven_now="$(curl -sf https://repo1.maven.org/maven2/org/apache/maven/apache-maven/maven-metadata.xml | grep -o '<version>3\.[0-9]*\.[0-9]*</version>' | sed 's/<[^>]*>//g' | sort -V | tail -n1)"
+printf '%-40s %-12s %-12s%s\n' "maven (publish.yml)" "$maven" "$maven_now" "$([ "$maven" != "$maven_now" ] && echo '  <- update')"
 echo
 echo "pre-commit hook revs: run 'python -m pre_commit autoupdate' (no dry-run exists); the checkstyle"
 echo "hook needs Docker to verify, so revert its rev unless you can run it."

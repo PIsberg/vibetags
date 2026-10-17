@@ -85,11 +85,13 @@ public final class ElementNaming {
      * used as it is. Under kapt and Groovy's stub generation it is a generated {@code .java} stub,
      * so the stub's markers decide: kapt keeps {@code @kotlin.Metadata} on every class, and a
      * Groovy class implements {@code groovy.lang.GroovyObject} (a trait carries
-     * {@code @groovy.transform.Trait}). A stub does not say what its source file was called, so the
-     * type's own name stands in for it, which is the convention both languages follow for a file
-     * declaring one class; a Kotlin file facade ({@code BillingKt}, metadata kind 2) drops its
-     * {@code Kt}. Otherwise the recorded name, which for Java can differ from the type's own name
-     * (a second top-level type in {@code Ledger.java}), and failing that {@code <Type>.java}.
+     * {@code @groovy.transform.Trait}). Where kapt's {@code .kapt_metadata} names the real file,
+     * {@link AnnotationCollector#recordSourceFiles} has already recorded it as {@code recorded}
+     * (#955, {@link StubSourceNames}); otherwise the type's own name stands in for it, which is
+     * the convention both languages follow for a file declaring one class, and a Kotlin file
+     * facade ({@code BillingKt}, metadata kind 2) drops its {@code Kt}. Otherwise the recorded
+     * name, which for Java can differ from the type's own name (a second top-level type in
+     * {@code Ledger.java}), and failing that {@code <Type>.java}.
      */
     public static String sourceFileName(TypeElement outermost, @Nullable String recorded) {
         String stem = outermost.getSimpleName().toString();
@@ -107,6 +109,11 @@ public final class ElementNaming {
             return recorded != null && recorded.endsWith(".groovy") ? recorded : stem + ".groovy";
         }
         return recorded != null ? recorded : stem + ".java";
+    }
+
+    /** Whether {@code type} carries kapt's {@code @kotlin.Metadata}, which is how a kapt stub is told from Java. */
+    static boolean isKotlinStub(TypeElement type) {
+        return kotlinMetadataKind(type) > 0;
     }
 
     /** {@code kotlin.Metadata}'s {@code k} for a file facade: the class holding a file's top-level functions. */

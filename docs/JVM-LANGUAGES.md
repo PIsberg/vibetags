@@ -78,10 +78,15 @@ path-scoped platforms never loaded the rule.
   every class of `Types.kt`, and for its file facade. `StubParityTest` checks it on every rule of
   its fixture.
 - **kapt** hands the processor a generated `.java` stub. The stub keeps `@kotlin.Metadata`, so the
-  processor knows the code is Kotlin, but not what the file was called; it names `<Type>.kt`, the
-  Kotlin convention for a file holding one class, and `<Name>.kt` for a file facade `<Name>Kt`. A
-  class in a file named otherwise, or a facade renamed with `@file:JvmName`, gets a glob that
-  misses. Moving to KSP fixes it, and changes that one line of each rule file.
+  processor knows the code is Kotlin, and the `<Stub>.kapt_metadata` kapt writes beside every stub
+  names the `.kt` file it came from, so the glob is that file (#955): `**/Billing.kt` for an
+  `Invoice` declared in `Billing.kt`, `**/Types.kt` for a facade renamed with
+  `@file:JvmName("TypesFacade")`, `**/ledgerutils.kt` for a lowercase file. Measured on Kotlin
+  2.4.10: every stub, an interface with no members included, has an entry for its type. The file is
+  kapt's line-mapping data, not a documented contract, so when it is missing or reads as anything
+  unexpected the processor falls back to `<Type>.kt`, and `<Name>.kt` for a file facade
+  `<Name>Kt`. KSP needs no such file and names the same files, which `examples/kotlin`'s
+  `Billing.kt` checks on every pull request.
 
 `examples/kotlin` and `examples/kotlin-ksp` opt into Copilot's `.github/instructions/`, so CI
 regenerates Kotlin rule files on every pull request and compares the two front ends' copies.
@@ -369,9 +374,12 @@ tasks.withType(GroovyCompile).configureEach {
 
 A Groovy class's stub implements `groovy.lang.GroovyObject` (a trait carries
 `@groovy.transform.Trait`), so its rule and ignore globs name `<Type>.groovy` rather than the stub's
-`.java` (#939). As with kapt, the stub does not say what the file was called, so a class in a file
-named otherwise gets a glob that misses. A Groovy interface implements neither and keeps
-`<Type>.java`.
+`.java` (#939). A Groovy interface's stub implements neither, but Gradle writes every stub under a
+directory named `groovy-java-stubs`, and a stub there is taken as Groovy's too, so an interface also
+gets `<Type>.groovy` (#955; another build tool's stub directory is not recognised and the interface
+keeps `<Type>.java`). Unlike kapt, groovyc leaves nothing that says what the file was called
+(measured on Groovy 5.1.0 with `keepStubs`: no file beside the stub, and nothing in it), so a
+Groovy type in a file named otherwise gets a glob that misses.
 
 ### Field-level annotations are dropped
 

@@ -79,5 +79,13 @@ Four consequences. The first two are cosmetic for typical use; the third loses g
 The CI step that builds this example asserts all three `AccountLedger` outcomes, so a kapt release
 that changes any of them fails the build (#681). Details: [docs/JVM-LANGUAGES.md](../../docs/JVM-LANGUAGES.md#kotlin).
 
+## Which file a rule names
+
+This example also opts into Copilot's `.github/instructions/`, one rule file per annotated class,
+each scoped by `applyTo:` to the file the class is in. `Billing.kt` declares `Invoice` and
+`InvoiceLine`, so `com-example-kotlin-Invoice.instructions.md` applies to `**/Billing.kt`, not to an
+`Invoice.kt` that does not exist. kapt's stub is `Invoice.java`; the processor reads the file name
+from the `.kapt_metadata` kapt writes beside it (#955), and CI asserts the line.
+
 For KSP, see [`../kotlin-ksp/`](../kotlin-ksp/README.md): it compiles these same sources through
 KSP with `vibetags-ksp`, and CI requires its output to equal this example's byte for byte. kapt is the supported route for Kotlin; this example builds with Kotlin 2.4.10.

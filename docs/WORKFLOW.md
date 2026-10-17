@@ -347,8 +347,50 @@ artifacts (#945).
    requires an `.asc` beside every file that `gpg --verify` accepts, and every component's pom must
    name its own coordinates and carry the elements Central requires: name, description, url, a
    license, a developer, and the SCM connection and url (`check-central-pom.py`, #949). It skips
-   tests and static analysis, which add no file to a bundle. What only the real publish can show is
-   whether Central knows the release key.
+   tests and static analysis, which add no file to a bundle. Whether Central can find the release
+   key's public half is the `release-key` job's question.
+
+### Job: `codex-rules`
+
+Loads the committed `.codex/rules/vibetags.rules` with the Codex CLI and checks the decision Codex
+gives each command VibeTags writes a rule for (#970). Every other check on that file reads the bytes
+VibeTags itself wrote, which is how #969 shipped: the tests agreed with the generator while Codex
+refused the whole file (`prefix_rule("ls", "allow")` passed `pattern` as a string where Codex wants
+a list). The committed file is the regenerated one, because `build-maven`'s self-check fails on any
+drift, so the job needs no build of its own.
+
+1. Harden runner, checkout, Node 22 (`actions/setup-node`, the same pin as `instruction-evals.yml`).
+2. **Install the Codex CLI**: `npm ci` in `tools/codex-cli/`, whose lockfile pins `@openai/codex` by
+   integrity hash. Dependabot raises the pin (`directory: /tools/codex-cli`).
+3. **Check the checker against known rules files**: `.github/scripts/check-codex-rules.test.sh` runs
+   the checker on seven cases with the real CLI: the generated shape passes; the pre-#969 string
+   pattern, a wrong decision, a missing rule, a missing file and a missing CLI each fail it.
+4. **Load the committed rules file with Codex**: `.github/scripts/check-codex-rules.sh` runs
+   `codex execpolicy check --rules <file> <command>` for `ls`, `cat` and `grep` (expects `allow`) and
+   `mvn`, `npm`, `git` and `rm` (expects `prompt`). A file Codex cannot parse makes the CLI exit
+   non-zero; a command no rule matches gets no decision; both fail the job, and so does a CLI that is
+   not installed, so the check cannot skip and report green.
+
+### Job: `release-key`
+
+Looks the release signing key up on the keyservers Central lists (#956). `central-bundle` signs with a
+throwaway key, because pull requests have no access to the release key, so a release key that
+expired, was revoked or never reached a keyserver passed every pull-request check and would have
+been rejected only by the real publish, after the tag.
+
+1. Harden runner, checkout.
+2. **Check the key checker against keys made for this run**: `.github/scripts/check-release-key.test.sh`
+   makes throwaway keys in a private gpg homedir, serves them from `file://` URLs and requires the
+   checker to pass a usable key and fail, each for its named `reason=`, a key expiring within 60
+   days, an expired one, a revoked one, a signing subkey, a key no server serves, and a malformed
+   fingerprint.
+3. **Look up the release key on the keyservers Central lists**: `.github/scripts/check-release-key.sh`
+   reads `RELEASE_KEY_FINGERPRINT` from `publish.yml` and fetches that key from `keyserver.ubuntu.com`,
+   `keys.openpgp.org` and `pgp.mit.edu`. It passes when at least one serves it as an unrevoked
+   primary key that can sign and does not expire within 60 days, and prints every server's answer.
+   So every pull request goes red 60 days before the key expires; renewing it is in
+   [RELEASING.md](RELEASING.md#renew-the-release-signing-key). It depends on the keyservers being
+   up: if all three are down at once, the job fails.
 
 ---
 
@@ -393,9 +435,13 @@ release whose tag predates the fix: `gh workflow run publish.yml --ref main -f r
 
 - Job: `publish-maven-central`, JDK 21, `permissions: contents: write` (to attach release assets).
   Job-level `env` pins the Maven every deploy runs on: `MAVEN_VERSION` and `MAVEN_SHA512` (of
-  `apache-maven-<version>-bin.tar.gz`). It is 3.9, not the runner image's 3.10, because
-  `central-publishing-maven-plugin` 0.11.0 bundles Maven 3.10's local-repository files and Central
-  rejects the result (#945). The `central-bundle` job in `build.yml` reads both values from here.
+  `apache-maven-<version>-bin.tar.gz`), 3.10.0 today, so a runner image update cannot change the
+  Maven a release is built with. It was 3.9.16 while `central-publishing-maven-plugin` 0.11.0
+  bundled Maven 3.10's local-repository files and Central rejected the result; 0.12.0 removes them
+  (#945). The `central-bundle` job in `build.yml` reads both values from here. A third,
+  `RELEASE_KEY_FINGERPRINT`, names the release key's primary key; **Import GPG key** fails unless
+  `GPG_PRIVATE_KEY` holds it, and the `release-key` job in `build.yml` looks it up on the
+  keyservers (#956).
 - **Resolve which modules to deploy** — validates `modules` against `[a-z,]`, reads the version from
   `<revision>`, leaves out every selected module whose pom repo1.maven.org already serves, and turns
   what is left into a Maven `-pl` list of artifactIds (none when it is all five). When nothing is
