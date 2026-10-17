@@ -28,6 +28,12 @@ updates:
     schedule:
       interval: daily
 
+  # The Codex CLI build.yml's codex-rules job loads .codex/rules/vibetags.rules with (#970).
+  - package-ecosystem: npm
+    directory: /tools/codex-cli
+    schedule:
+      interval: weekly
+
   # /vibetags is the only Maven directory that needs to be listed, and it reaches further than
   # it looks. Every third-party version in this build is a <name.version> property in
   # vibetags-parent/pom.xml (tier-1 invariant 14), and dependabot resolves the parent from the

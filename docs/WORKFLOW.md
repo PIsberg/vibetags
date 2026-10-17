@@ -350,6 +350,27 @@ artifacts (#945).
    tests and static analysis, which add no file to a bundle. What only the real publish can show is
    whether Central knows the release key.
 
+### Job: `codex-rules`
+
+Loads the committed `.codex/rules/vibetags.rules` with the Codex CLI and checks the decision Codex
+gives each command VibeTags writes a rule for (#970). Every other check on that file reads the bytes
+VibeTags itself wrote, which is how #969 shipped: the tests agreed with the generator while Codex
+refused the whole file (`prefix_rule("ls", "allow")` passed `pattern` as a string where Codex wants
+a list). The committed file is the regenerated one, because `build-maven`'s self-check fails on any
+drift, so the job needs no build of its own.
+
+1. Harden runner, checkout, Node 22 (`actions/setup-node`, the same pin as `instruction-evals.yml`).
+2. **Install the Codex CLI**: `npm ci` in `tools/codex-cli/`, whose lockfile pins `@openai/codex` by
+   integrity hash. Dependabot raises the pin (`directory: /tools/codex-cli`).
+3. **Check the checker against known rules files**: `.github/scripts/check-codex-rules.test.sh` runs
+   the checker on seven cases with the real CLI: the generated shape passes; the pre-#969 string
+   pattern, a wrong decision, a missing rule, a missing file and a missing CLI each fail it.
+4. **Load the committed rules file with Codex**: `.github/scripts/check-codex-rules.sh` runs
+   `codex execpolicy check --rules <file> <command>` for `ls`, `cat` and `grep` (expects `allow`) and
+   `mvn`, `npm`, `git` and `rm` (expects `prompt`). A file Codex cannot parse makes the CLI exit
+   non-zero; a command no rule matches gets no decision; both fail the job, and so does a CLI that is
+   not installed, so the check cannot skip and report green.
+
 ---
 
 ## 2. CodeQL (`codeql.yml`)

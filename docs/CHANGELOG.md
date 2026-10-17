@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   again. The pin itself stays, so the next image update cannot change a release's Maven unseen.
   The `Central Bundle Shape` check built and checked the signed bundle with both.
 
+### Tests
+
+- **CI loads `.codex/rules/vibetags.rules` with the Codex CLI** (#970). #969 shipped because every
+  check on that file read the bytes VibeTags itself wrote. The new `Codex Loads Its Rules File` job
+  installs `@openai/codex` 0.162.1 with `npm ci` from `tools/codex-cli/package-lock.json` and runs
+  `codex execpolicy check` for each of the seven commands, expecting `allow` for `ls`, `cat` and
+  `grep` and `prompt` for `mvn`, `npm`, `git` and `rm`. A file Codex cannot parse, a missing rule
+  and a missing CLI all fail it; `check-codex-rules.test.sh` proves each of those against the real
+  CLI, including the pre-#969 string-pattern file. Dependabot watches the new manifest.
+
 ### Removed
 
 - **`.codex/config.toml` is no longer written** (#934). VibeTags wrote it whenever `AGENTS.md` was
