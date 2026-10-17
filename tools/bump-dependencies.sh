@@ -31,6 +31,9 @@ archunit.version                        com/tngtech/archunit/archunit-junit5
 async-test-lib.version                  se/deversity/async-test-lib/async-test-lib
 snakeyaml.version                       org/yaml/snakeyaml
 jmh.version                             org/openjdk/jmh/jmh-core
+ksp.version                             com/google/devtools/ksp/symbol-processing-api
+kotlin-stdlib.version                   org/jetbrains/kotlin/kotlin-stdlib
+kotlinx-coroutines.version              org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm
 maven-compiler-plugin.version           org/apache/maven/plugins/maven-compiler-plugin
 maven-surefire-plugin.version           org/apache/maven/plugins/maven-surefire-plugin
 maven-jar-plugin.version                org/apache/maven/plugins/maven-jar-plugin
@@ -39,6 +42,7 @@ maven-javadoc-plugin.version            org/apache/maven/plugins/maven-javadoc-p
 maven-shade-plugin.version              org/apache/maven/plugins/maven-shade-plugin
 exec-maven-plugin.version               org/codehaus/mojo/exec-maven-plugin
 flatten-maven-plugin.version            org/codehaus/mojo/flatten-maven-plugin
+build-helper-maven-plugin.version       org/codehaus/mojo/build-helper-maven-plugin
 maven-pmd-plugin.version                org/apache/maven/plugins/maven-pmd-plugin
 pmd.version                             net/sourceforge/pmd/pmd-java
 maven-checkstyle-plugin.version         org/apache/maven/plugins/maven-checkstyle-plugin
