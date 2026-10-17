@@ -482,8 +482,10 @@ around it.
    `Bundle has content that does NOT have a .pom file: <group>/<artifact>` means the bundle held a
    file outside its `<group>/<artifact>/<version>/` directory. That was the 2026-10-08 failure:
    the runner image's Maven had become 3.10, and the plugin zipped its `maven-metadata-local.xml`
-   (#945). Plugin 0.12.0 deletes those files before zipping and logs `Pre Bundling - deleted` for
-   each one; a bundle built by 0.11.0 under Maven 3.10 logged no such line at all.
+   (#945). Plugin 0.12.0 deletes those files before zipping. The log's `Apache Maven` line says
+   which Maven built the bundle; `Pre Bundling - deleted` lines no longer do, because the
+   `Central Bundle Shape` run that built a clean 0.12.0 bundle on Maven 3.10.0 (84 files in 5
+   components, run 39025093802) logged none.
 2. Fix the cause on `main` through a pull request. The `Central Bundle Shape` check builds the
    release bundle and must pass on it.
 3. Resume from the tag. The dispatch runs `publish.yml` as it is on `main` against the tag's source,
