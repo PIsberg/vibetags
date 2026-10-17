@@ -26,6 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `grep` and `prompt` for `mvn`, `npm`, `git` and `rm`. A file Codex cannot parse, a missing rule
   and a missing CLI all fail it; `check-codex-rules.test.sh` proves each of those against the real
   CLI, including the pre-#969 string-pattern file. Dependabot watches the new manifest.
+- **CI checks that a keyserver Central lists serves the release signing key** (#956). The bundle
+  check signs with a throwaway key, so an expired, revoked or unpublished release key would have
+  surfaced only as a rejected publish after the tag. The `Release Key On A Keyserver` job fetches
+  the key named by `publish.yml`'s new `RELEASE_KEY_FINGERPRINT` from `keyserver.ubuntu.com`,
+  `keys.openpgp.org` and `pgp.mit.edu`, and fails unless one serves it as an unrevoked primary
+  signing key with at least 60 days left. `publish.yml` now refuses a `GPG_PRIVATE_KEY` whose
+  primary key has another fingerprint, so the job checks the key releases are signed with.
+  `check-release-key.test.sh` covers each failure with throwaway keys. On 2026-10-17 only
+  `keyserver.ubuntu.com` serves the key, which expires on 2028-04-06; docs/RELEASING.md says how
+  to renew it.
 
 ### Removed
 

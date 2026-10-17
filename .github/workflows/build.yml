@@ -1930,5 +1930,27 @@ jobs:
       - name: Load the committed rules file with Codex
         run: bash .github/scripts/check-codex-rules.sh .codex/rules/vibetags.rules
 
+  # Central verifies a bundle's signatures against the public key it finds on a keyserver. The
+  # Central Bundle Shape job signs with a throwaway key, so a release key that expired, was revoked
+  # or never reached a keyserver passed every check here and was rejected only by the real publish,
+  # after the tag (#956). This looks the release key up by the fingerprint publish.yml pins and goes
+  # red 60 days before it expires, while there is still time to renew it.
+  release-key:
+    name: Release Key On A Keyserver
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the key checker against keys made for this run
+        run: bash .github/scripts/check-release-key.test.sh
+
+      - name: Look up the release key on the keyservers Central lists
+        run: bash .github/scripts/check-release-key.sh
+
   # Mutation testing moved to .github/workflows/mutation.yml and runs on demand only
   # (workflow_dispatch). It was the longest job here and nothing gated on its result.

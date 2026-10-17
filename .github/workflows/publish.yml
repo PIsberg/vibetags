@@ -40,6 +40,11 @@ jobs:
       MAVEN_VERSION: '3.10.0'
       # SHA-512 of apache-maven-<MAVEN_VERSION>-bin.tar.gz, the value Apache publishes beside it.
       MAVEN_SHA512: '908b1501bfb420bf7c8affb855534a9c407fd6099367bfb9f2f2dcb8e9799102bffb84518cde74c679bd76870247c6528683abdd620581bffa90f95d92d175aa'
+      # Fingerprint of the primary key GPG_PRIVATE_KEY holds. Public, not a secret. The import step
+      # below refuses any other key, and build.yml's release-key job checks that a keyserver Central
+      # lists serves this key, unrevoked and good for 60 more days (#956). Replacing the key means
+      # changing this line in the same PR as the secret (docs/RELEASING.md).
+      RELEASE_KEY_FINGERPRINT: '3B3479B9D506865693B12FF36DDFF11F46FEC058' # gitleaks:allow (a public key's fingerprint)
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -143,6 +148,13 @@ jobs:
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
           gpg --list-keys --keyid-format LONG
+          # Sign only with the key the keyserver check watches (#956).
+          primaries="$(gpg --batch --with-colons --list-secret-keys \
+            | awk -F: '$1 == "sec" { primary = 1; next } $1 == "ssb" { primary = 0 } $1 == "fpr" && primary { print $10 }')"
+          if ! printf '%s\n' "$primaries" | grep -qx "$RELEASE_KEY_FINGERPRINT"; then
+            echo "::error::GPG_PRIVATE_KEY holds no primary secret key with fingerprint $RELEASE_KEY_FINGERPRINT (RELEASE_KEY_FINGERPRINT); not signing with an unwatched key"
+            exit 1
+          fi
         env:
           GPG_TTY: /dev/tty
 
