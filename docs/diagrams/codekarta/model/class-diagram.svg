@@ -93,8 +93,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="432.0" y="381.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">simpleName: String</text>
   <text x="432.0" y="396.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">displayName: String</text>
   <text x="432.0" y="411.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">granularQName: String</text>
-  <text x="432.0" y="426.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">kind: ElementTag</text>
-  <text x="432.0" y="441.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+4 more)</text>
+  <text x="432.0" y="426.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">fileStem: String</text>
+  <text x="432.0" y="441.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+6 more)</text>
   <line x1="424.0" y1="455.0" x2="604.0" y2="455.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="432.0" y="468.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">signature(): String</text>
   <text x="432.0" y="483.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">path(): String</text>
@@ -102,7 +102,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="432.0" y="513.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">simpleName(): String</text>
   <text x="432.0" y="528.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">displayName(): String</text>
   <text x="432.0" y="543.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">granularQName(): String</text>
-  <text x="432.0" y="558.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+9 more)</text>
+  <text x="432.0" y="558.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+12 more)</text>
 </g>
 <g id="ElementTag">
   <title>ElementTag [CLASS]</title>

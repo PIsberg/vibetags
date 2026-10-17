@@ -112,7 +112,7 @@ class StubSourceNamesTest {
             out.writeInt(1);
             out.writeObject("com/example/Obj");
         }
-        assertNull(StubSourceNames.blockData(bytes.toByteArray()), "an object in the stream ends the read");
+        assertEquals(0, StubSourceNames.blockData(bytes.toByteArray()).length, "an object in the stream ends the read");
         assertNull(StubSourceNames.kotlinFileName(stub(dir, "Obj", bytes.toByteArray()), "com/example/Obj"));
 
         byte[] whole = kaptMetadata(1, "com/example/Cut", "/src/Cut.kt");

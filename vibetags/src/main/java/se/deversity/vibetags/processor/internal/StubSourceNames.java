@@ -68,7 +68,7 @@ final class StubSourceNames {
                 return null;
             }
             byte[] data = blockData(Files.readAllBytes(metadata));
-            return data == null ? null : sourceFor(data, internalName);
+            return data.length == 0 ? null : sourceFor(data, internalName);
         } catch (IOException | RuntimeException unreadable) {
             return null;
         }
@@ -85,13 +85,14 @@ final class StubSourceNames {
     }
 
     /**
-     * The block data of a serialization stream, concatenated, or {@code null} when the stream holds
-     * anything else. Nothing is deserialized: an object, a class or any other tag ends the read.
+     * The block data of a serialization stream, concatenated, or an empty array when the stream
+     * holds anything else, which no kapt file does. Nothing is deserialized: an object, a class or
+     * any other tag ends the read.
      */
-    static byte @Nullable [] blockData(byte[] stream) throws IOException {
+    static byte[] blockData(byte[] stream) throws IOException {
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(stream));
         if (in.readUnsignedShort() != STREAM_MAGIC || in.readUnsignedShort() != STREAM_VERSION) {
-            return null;
+            return new byte[0];
         }
         ByteArrayOutputStream out = new ByteArrayOutputStream(stream.length);
         int tag;
@@ -102,10 +103,10 @@ final class StubSourceNames {
             } else if (tag == TC_BLOCKDATALONG) {
                 length = in.readInt();
             } else {
-                return null;
+                return new byte[0];
             }
             if (length < 0 || length > in.available()) {
-                return null;
+                return new byte[0];
             }
             byte[] block = new byte[length];
             in.readFully(block);
