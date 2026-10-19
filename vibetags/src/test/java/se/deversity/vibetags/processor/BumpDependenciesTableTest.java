@@ -33,8 +33,12 @@ class BumpDependenciesTableTest {
     /** The same match as the script's own check: an element whose name ends in {@code .version}. */
     private static final Pattern PROPERTY = Pattern.compile("<([a-zA-Z0-9.-]*\\.version)>");
 
-    /** A table row: the property, then the Maven Central path of its artifact. */
-    private static final Pattern ROW = Pattern.compile("(?m)^([a-zA-Z0-9.-]+\\.version)\\s+[a-z0-9]+(/[A-Za-z0-9._-]+)+$");
+    /**
+     * A table row: the property, then where its releases are listed (a Maven Central path, a
+     * plugins.gradle.org path or a named feed), then optionally the release line it stays on.
+     */
+    private static final Pattern ROW =
+        Pattern.compile("(?m)^([a-zA-Z0-9.-]+\\.version)\\s+[a-z0-9]+[:/][A-Za-z0-9._:/-]+(\\s+[0-9.]+)?$");
 
     @Test
     @DisplayName("no parent-pom version property is missing from the script's table")
@@ -59,7 +63,7 @@ class BumpDependenciesTableTest {
         assertTrue(missing.isEmpty(),
             "vibetags-parent/pom.xml declares " + missing + " but tools/bump-dependencies.sh has no "
                 + "row for them, so the script exits 2 before reporting anything. Add a row per "
-                + "property with the Maven Central path of the artifact it pins.");
+                + "property with the source its releases are listed in.");
     }
 
     private static String read(String relative) throws IOException {

@@ -35,7 +35,9 @@ jobs:
     # the release ("Bundle has content that does NOT have a .pom file"). Plugin 0.12.0 removes them
     # before zipping, so the pin moved from 3.9.16 to 3.10.0 (#945). The central-bundle job in
     # build.yml reads both values from here and builds every module's bundle with them on each pull
-    # request.
+    # request. Both are copies of publish-maven.version and publish-maven.sha512 in
+    # vibetags-parent/pom.xml: change them there and run tools/sync-version-mirrors.py, because
+    # BuildVersionParityTest fails while this copy and the parent disagree.
     env:
       MAVEN_VERSION: '3.10.0'
       # SHA-512 of apache-maven-<MAVEN_VERSION>-bin.tar.gz, the value Apache publishes beside it.

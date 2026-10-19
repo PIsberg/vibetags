@@ -388,7 +388,8 @@ auto-publishes without manual approval (`autoPublish=true`). Order matters: anno
 deployed before the processor (which depends on them). GitHub Packages publishing was removed; only
 Central is published to.
 
-Every deploy runs on the Maven pinned in the job's `env` (`MAVEN_VERSION`, `MAVEN_SHA512`), not the
+Every deploy runs on the Maven pinned in the job's `env` (`MAVEN_VERSION`, `MAVEN_SHA512`, copies of
+`publish-maven.version` and `publish-maven.sha512` in `vibetags-parent/pom.xml`), not the
 runner image's, so an image update cannot change what a release is built with: the image's move
 to Maven 3.10 once made the plugin bundle files Central rejects (#945). Central sees a
 bundle only after the tag exists, so the `Central Bundle Shape` check in `build.yml` builds every

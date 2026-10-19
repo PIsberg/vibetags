@@ -75,102 +75,121 @@ the module, and a BOM that forces both sides to the same version defeats it.
 
 Nothing in this section ships. It runs.
 
-**Compile and package.** `maven-compiler-plugin`, `maven-surefire-plugin`, `maven-jar-plugin`,
-`maven-source-plugin`, `maven-javadoc-plugin`. Two more serve `load-tests/` alone:
-`maven-shade-plugin` builds the benchmark fat jar, and `exec-maven-plugin` gives it an `exec:java`
-entry point into `org.openjdk.jmh.Main`. `build-helper-maven-plugin` runs only when `-Dtest` is
-set: its `regex-properties` goal works out which surefire execution a named test belongs to, so
-the test does not also run in the other one (#686, docs/TESTS.md).
+### Compile, test and package
 
-**Static analysis.** Four tools, each catching something the others do not. All four run in all
-four modules that compile Java (`vibetags`, `vibetags-annotations`, `vibetags-cli` and
-`vibetags-ksp`)
-and `BuildToolchainParityTest` fails if one of them drops a tool, because a check that was never
+| Artifact | Property | Why it is here |
+|---|---|---|
+| `maven-compiler-plugin` | `maven-compiler-plugin.version` | Compiles every module against `maven.compiler.release` 21, and carries Error Prone and NullAway on its `annotationProcessorPaths`. The consumer-shaped poms (`examples/*/pom.xml`, `tools/demo/pom.xml`) carry a copy, see [Toolchains](#toolchains-and-copies). |
+| `maven-surefire-plugin` | `maven-surefire-plugin.version` | Runs the tests: the fast tier by default, everything under `-Pe2e` (docs/TESTS.md). |
+| `maven-jar-plugin` | `maven-jar-plugin.version` | Builds the jars. In `vibetags` it writes `Implementation-Version` into the manifest, which `ProcessorVersion` reads into `BuildFingerprint`, so a new processor release regenerates every file. |
+| `maven-source-plugin`, `maven-javadoc-plugin` | `maven-source-plugin.version`, `maven-javadoc-plugin.version` | The `-sources` and `-javadoc` jars Maven Central requires beside every published jar. |
+| `maven-shade-plugin` | `maven-shade-plugin.version` | `load-tests/` only: builds the benchmark fat jar. |
+| `exec-maven-plugin` | `exec-maven-plugin.version` | `load-tests/` only: an `exec:java` entry point into `org.openjdk.jmh.Main`. |
+| `build-helper-maven-plugin` | `build-helper-maven-plugin.version` | Runs only when `-Dtest` is set: its `regex-properties` goal works out which surefire execution a named test belongs to, so the test does not also run in the other one (#686, docs/TESTS.md). |
+| `flatten-maven-plugin` | `flatten-maven-plugin.version` | Resolves `${revision}` and strips `vibetags-parent` out of the deployed POMs, so what consumers download is self-contained. |
+
+### Static analysis
+
+Four tools, each catching something the others do not. All four run in all four modules that
+compile Java (`vibetags`, `vibetags-annotations`, `vibetags-cli` and `vibetags-ksp`), and
+`BuildToolchainParityTest` fails if one of them drops a tool, because a check that was never
 configured cannot fail and so reports nothing when it is missing.
 
-- `maven-pmd-plugin` with `pmd-core` and `pmd-java` (`pmd.version`) for source-level rules and
-  copy-paste detection. All eight java rule categories are imported by `pmd-ruleset.xml`; each
-  exclusion in that file names the rule, its finding count and the reason. A red PMD gate is worth
-  checking against the JDK before believing it: PMD run on a newer JDK than the build targets
-  reports confident nonsense.
-- `maven-checkstyle-plugin` for style, also wired into `pre-commit` so it fails before the commit
-  rather than in CI.
-- `spotbugs-maven-plugin` with `findsecbugs-plugin` (`findsecbugs-plugin.version`) for bytecode
-  analysis, the security rules included. `vibetags`, `vibetags-cli` and `vibetags-ksp` carry a
-  `spotbugs-exclude.xml`; `vibetags-annotations` deliberately has none, so the absence of that file
-  stays evidence that nothing there has been excused.
-- Error Prone (`error-prone.version`) with NullAway (`nullaway.version`), on
-  `annotationProcessorPaths` of the compiler plugin, main sources only. NullAway is what makes the
-  JSpecify annotations load-bearing instead of decorative. It needs the `--add-exports` flags in
-  each module's `.mvn/jvm.config` to reach javac's internals: without them Error Prone does not
-  fail, it silently does not run, which is why those four files are pinned byte-identical.
+| Artifact | Property | Why it is here |
+|---|---|---|
+| `maven-pmd-plugin` with `pmd-core`, `pmd-java` | `maven-pmd-plugin.version`, `pmd.version` | Source-level rules and copy-paste detection. All eight java rule categories are imported by `pmd-ruleset.xml`; each exclusion in that file names the rule, its finding count and the reason. The Gradle builds derive their PMD `toolVersion` from `pmd.version`. A red PMD gate is worth checking against the JDK before believing it: PMD run on a newer JDK than the build targets reports confident nonsense. |
+| `maven-checkstyle-plugin` | `maven-checkstyle-plugin.version` | Style. Also wired into `pre-commit`, so it fails before the commit rather than in CI. |
+| `spotbugs-maven-plugin` with `findsecbugs-plugin` | `spotbugs-maven-plugin.version`, `findsecbugs-plugin.version` | Bytecode analysis, the security rules included. `vibetags`, `vibetags-cli` and `vibetags-ksp` carry a `spotbugs-exclude.xml`; `vibetags-annotations` deliberately has none, so the absence of that file stays evidence that nothing there has been excused. |
+| Error Prone with NullAway | `error-prone.version`, `nullaway.version` | On the compiler's `annotationProcessorPaths`, main sources only. NullAway is what makes the JSpecify annotations load-bearing instead of decorative. It needs the `--add-exports` flags in each module's `.mvn/jvm.config` to reach javac's internals: without them Error Prone does not fail, it silently does not run, which is why those four files are pinned byte-identical. |
+| `org.eclipse.jdt:ecj` | `ecj.version` | Never on a classpath. `tools/ecj-degradation-check.sh` (the `ecj` job in `build.yml`) compiles `examples/basic` with it to check the documented claim that the processor degrades rather than fails under a compiler with no Tree API. |
 
-**Coverage and mutation.** `jacoco-maven-plugin` measures line coverage; `pitest-maven` with
-`pitest-junit5-plugin` measures whether the tests would notice if the code were wrong. Mutation
-testing runs on demand only, via `.github/workflows/mutation.yml`, because it costs minutes rather
-than seconds.
+### Coverage, supply chain and publishing
 
-**Supply chain and publishing.** `cyclonedx-maven-plugin` emits the SBOM, as JSON only: each
-published file costs Central's monthly file allowance 4 files with its signature and checksums
-(#863).
-`maven-enforcer-plugin` (`maven-enforcer-plugin.version`) bans any compile- or runtime-scoped
-dependency outside the allowlist declared in `vibetags-parent` — this document is the ledger of
-what ships, and the enforcer rule is that ledger's executable form. Test scope is exempt: it
-never reaches a consumer, and gating it would tax every test-library bump for no risk reduction.
-`central-publishing-maven-plugin` and `maven-gpg-plugin` sign and publish to Maven Central.
-`flatten-maven-plugin` resolves `${revision}` and strips `vibetags-parent` out of the deployed POMs,
-so what consumers download is self-contained.
+| Artifact | Property | Why it is here |
+|---|---|---|
+| `jacoco-maven-plugin` | `jacoco-maven-plugin.version` | Line and branch coverage, uploaded to Codecov from CI. |
+| `pitest-maven` with `pitest-junit5-plugin` | `pitest-maven.version`, `pitest-junit5-plugin.version` | Mutation testing: whether the tests would notice if the code were wrong. On demand only, via `.github/workflows/mutation.yml`, because it costs minutes rather than seconds. |
+| `cyclonedx-maven-plugin` | `cyclonedx-maven-plugin.version` | Emits the SBOM, as JSON only: each published file costs Central's monthly file allowance 4 files with its signature and checksums (#863). |
+| `maven-enforcer-plugin` | `maven-enforcer-plugin.version` | Bans any compile- or runtime-scoped dependency outside the allowlist declared in `vibetags-parent`. This document is the ledger of what ships, and the enforcer rule is that ledger's executable form. Test scope is exempt: it never reaches a consumer, and gating it would tax every test-library bump for no risk reduction. |
+| `central-publishing-maven-plugin` | `central-publishing-maven-plugin.version` | Uploads the signed bundle to the Central Portal and publishes it (`autoPublish=true`). 0.12.0 is the first that bundles cleanly under Maven 3.10 (#945). |
+| `maven-gpg-plugin` | `maven-gpg-plugin.version` | Signs every published file; Central rejects an unsigned bundle. |
 
-## Outside Maven
+## Toolchains and copies
+
+The parent also defines the toolchains, although no Maven build reads them, so that every version
+in the repository has one definition. The files that use them cannot read a pom: a Gradle wrapper
+reads only its own properties file, the examples are standalone so a reader can lift one into their
+own project, a workflow's `env` is fixed before any step runs, and a README snippet is text. So
+each of those files carries a **copy**. `vibetags-parent/version-mirrors.txt` lists every place a
+copy lives, `tools/sync-version-mirrors.py` writes them all from the parent, and
+`BuildVersionParityTest` fails the build when one disagrees or when a row of that list stops
+finding its copy.
+
+| Property | What it is for | Copies live in |
+|---|---|---|
+| `gradle.version` | The Gradle every Gradle build in the repository runs on: the Gradle publishing path of `vibetags` and `vibetags-annotations`, and the nine Gradle examples. | Every `gradle/wrapper/gradle-wrapper.properties`, eleven today (`git ls-files '*gradle-wrapper.properties'`). The checked-in `gradle-wrapper.jar` files are validated against Gradle's published checksums by `.github/workflows/gradle-wrapper-validation.yml`, which must run on every push to main for Scorecard's Binary-Artifacts check to accept them. |
+| `kotlin.version` | The Kotlin compiler and Gradle plugin `examples/kotlin` (kapt) and `examples/kotlin-ksp` (KSP) build with. Separate from `kotlin-stdlib.version`, which follows what `symbol-processing-api` declares; this one is a consumer's choice. | Both examples' `build.gradle.kts`, and the snippets in `README.md`, `USAGE.md` and the examples' READMEs. |
+| `ksp.version` | The KSP API `vibetags-ksp` compiles against (see above), and the KSP Gradle plugin `examples/kotlin-ksp` applies. | `examples/kotlin-ksp/build.gradle.kts` and the KSP snippets. |
+| `groovy.version` | `examples/groovy`, which shows Groovy support through `javaAnnotationProcessing` stubs (docs/JVM-LANGUAGES.md). | `examples/groovy/build.gradle`. |
+| `scala.version` | `examples/scala`, which shows the Java-only support scalac allows. Stays on the 2.13 line on purpose. | `examples/scala/build.gradle`. |
+| `foojay-resolver.version` | The `foojay-resolver-convention` settings plugin, which lets a Gradle example download the JDK toolchain its build asks for when the machine has none. | Every `settings.gradle` / `settings.gradle.kts` under `examples/`. |
+| `maven-compiler-plugin.version` | See [Compile, test and package](#compile-test-and-package). | `examples/*/pom.xml`, `tools/demo/pom.xml`. |
+| `publish-maven.version`, `publish-maven.sha512` | The Maven `publish.yml` deploys on, and the SHA-512 Apache publishes for its `-bin.tar.gz`, so a runner image update cannot change the Maven a release is built with. It moved from 3.9.16 to 3.10.0 once `central-publishing-maven-plugin` 0.12.0 stopped zipping Maven 3.10's local-repository files into the bundle (#945). The `Central Bundle Shape` job in `build.yml` builds every published module's bundle with it on each pull request, so a bump that breaks bundling is a red pull request rather than a rejected release. Not named `maven.version`: Maven defines that itself, and a property would shadow it for every plugin. | `MAVEN_VERSION` and `MAVEN_SHA512` in the job `env` of `.github/workflows/publish.yml`; `build.yml` reads them from there. |
+| `node.version` | The Node that installs the pinned CLIs below. `EvalsNodePinTest` checks it against the claude CLI's `engines.node`. | `node-version` in `build.yml` (codex-rules job) and `instruction-evals.yml`. |
+
+## Pinned outside the parent, deliberately
+
+These stay where their own update tooling edits them. Moving them into the pom would stop that
+tooling from working and buy nothing, because none of them can be read from a pom either.
 
 - **GitHub Actions** are pinned to commit SHAs, not tags, with the human-readable version in a
   trailing comment. Dependabot proposes the bumps. Pinning is what the OSSF Scorecard
   Pinned-Dependencies check wants, and it is also the only form that cannot be moved under you.
-- **Gradle wrapper**, `gradle-9.7.1-bin.zip` in ten `gradle-wrapper.properties` files: the two
-  published modules and the eight examples. This entry said "three subprojects" for several
-  releases while the count grew to ten, which is the kind of number worth counting rather than
-  remembering (`git ls-files '*gradle-wrapper.properties'`). The checked-in
-  `gradle-wrapper.jar` files are validated against Gradle's published checksums by
-  `.github/workflows/gradle-wrapper-validation.yml`, which must run on every push to main for
-  Scorecard's Binary-Artifacts check to accept them.
-- **pre-commit hooks**: `gherynos/pre-commit-java` (Checkstyle), `gitleaks/gitleaks` (secret
-  scanning), and `pre-commit/pre-commit-hooks` (end-of-file and trailing-whitespace fixers).
-- **Maven itself, for publishing.** `publish.yml` deploys on the Maven its job `env` names
-  (`MAVEN_VERSION`, with `MAVEN_SHA512` the SHA-512 Apache publishes for that distribution), not on
-  the runner image's, so an image update cannot change the Maven a release is built with. It is
-  3.10.0, the line the image ships; it stayed on 3.9.16 until `central-publishing-maven-plugin`
-  0.12.0 stopped zipping Maven 3.10's local-repository files into the bundle (#945). The
-  `Central Bundle Shape` job in `build.yml` reads the pin from there and
-  builds every published module's bundle with it, so a bump that breaks bundling is a red pull
-  request rather than a rejected release. Dependabot does not see the pin;
-  `tools/bump-dependencies.sh` reports it. The rest of CI runs on the image's Maven.
+- **npm CLIs**, each in its own `package.json` with a committed lockfile of integrity hashes and
+  installed with `npm ci`; Dependabot bumps both. `evals/package.json` pins
+  `@anthropic-ai/claude-code`, the CLI the instruction evals run (`evals/README.md`).
+  `tools/codex-cli/package.json` pins `@openai/codex`, which the `codex-rules` job in `build.yml`
+  loads the generated `.codex/rules/vibetags.rules` with (#970).
+- **pre-commit hooks**, `rev:` in `.pre-commit-config.yaml`, bumped by
+  `python -m pre_commit autoupdate`: `gherynos/pre-commit-java` (Checkstyle, run in Docker),
+  `gitleaks/gitleaks` (secret scanning), and `pre-commit/pre-commit-hooks` (end-of-file and
+  trailing-whitespace fixers).
+- **The JDKs CI builds on** (`java-version` in the workflows) are a test matrix, not a
+  dependency: the build targets `maven.compiler.release` 21 whichever JDK runs it.
 
 ## Bumping
 
-`vibetags-parent/pom.xml` holds every version and nothing else holds any, with two exceptions the
-build itself enforces:
+`tools/bump-dependencies.sh` reports every property in the parent whose source has a newer stable
+release, toolchains included, and `BumpDependenciesTableTest` fails if the parent gains a
+`*.version` property the script has no source for. To apply one, edit the property in
+`vibetags-parent/pom.xml`, then run `python tools/sync-version-mirrors.py` to rewrite its copies.
+The procedure, with the gates that verify a bump, is the `bump-dependencies` skill.
 
-- The Gradle files cannot inherit from a Maven parent, so `vibetags/build.gradle`,
-  `vibetags-annotations/build.gradle` and `examples/basic/build.gradle` **read** the parent's
-  properties rather than repeating them: `pomVersion('junit.version')` and the rest parse
-  `vibetags-parent/pom.xml` at configuration time.
-- The example poms are standalone on purpose, so a reader can lift one into their own project.
+The parent holds every version. Inside the Maven build nothing else holds any:
 
-`BuildVersionParityTest` fails the build when a copy drifts from the parent, when a managed pom
-grows a version literal, and when a Gradle module applying PMD does not derive its `toolVersion`
-from `pmd.version`.
+- The managed poms inherit; `BuildVersionParityTest` fails if one grows a version literal.
+- The Gradle files cannot inherit from a Maven parent, so `vibetags/build.gradle` and
+  `vibetags-annotations/build.gradle` **read** the parent's properties rather than repeating them:
+  `pomVersion('junit.version')` and the rest parse `vibetags-parent/pom.xml` at configuration time.
+- Everything else is a listed copy, as [Toolchains and copies](#toolchains-and-copies) describes.
 
-That last check used to compare the literal against the parent instead, which reads the same and
-is weaker. It exists because the drift had already happened - `vibetags-annotations` sat on PMD
-7.24.0 while everything else was on 7.26.0, so two modules were analysed by different rule sets -
-but comparing the literal made every automated bump fail. Dependabot edits `vibetags-parent/pom.xml`
-and nothing else, because that is where the property lives, so each PMD bump arrived as a red PR
-needing a hand-fix before it could merge. Deriving the value removes the copy the check was
-policing; asserting the *mechanism* is what stops the check passing vacuously once there is no
-literal left to compare.
+`BuildVersionParityTest` also fails when a Gradle module applying PMD does not derive its
+`toolVersion` from `pmd.version`. That check used to compare the literal against the parent
+instead, which reads the same and is weaker. It exists because the drift had already happened -
+`vibetags-annotations` sat on PMD 7.24.0 while everything else was on 7.26.0, so two modules were
+analysed by different rule sets - but comparing the literal made every automated bump fail.
+Dependabot edits `vibetags-parent/pom.xml` and nothing else, because that is where the property
+lives, so each PMD bump arrived as a red PR needing a hand-fix before it could merge. Deriving the
+value removes the copy the check was policing; asserting the *mechanism* is what stops the check
+passing vacuously once there is no literal left to compare.
+
+The copies list exists for the same reason. Before it, the copies were a table in the
+`bump-dependencies` skill that nothing checked, and they drifted: the six consumer poms sat on
+`maven-compiler-plugin` 3.15.0 while the parent had moved to 3.16.0, and `examples/enforcing` was
+not in the table at all.
 
 To bump the VibeTags release version itself, use `tools/set-version.sh <version>` and then run
-that test.
+`BuildVersionParityTest`.
 
 ### Versions deliberately not taken
 

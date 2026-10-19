@@ -19,8 +19,8 @@ directory (`CLAUDE.md`, `.cursorrules`) are regenerated on every build.
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.10"
-    kotlin("kapt") version "2.4.10"
+    kotlin("jvm") version "2.4.21"
+    kotlin("kapt") version "2.4.21"
 }
 
 dependencies {
@@ -88,4 +88,4 @@ each scoped by `applyTo:` to the file the class is in. `Billing.kt` declares `In
 from the `.kapt_metadata` kapt writes beside it (#955), and CI asserts the line.
 
 For KSP, see [`../kotlin-ksp/`](../kotlin-ksp/README.md): it compiles these same sources through
-KSP with `vibetags-ksp`, and CI requires its output to equal this example's byte for byte. kapt is the supported route for Kotlin; this example builds with Kotlin 2.4.10.
+KSP with `vibetags-ksp`, and CI requires its output to equal this example's byte for byte. kapt is the supported route for Kotlin; this example builds with the Kotlin version its `build.gradle.kts` names.

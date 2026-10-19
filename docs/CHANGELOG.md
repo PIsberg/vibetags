@@ -16,6 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to 3.10.0, the Maven the runner image ships, and test and release builds run on the same Maven
   again. The pin itself stays, so the next image update cannot change a release's Maven unseen.
   The `Central Bundle Shape` check built and checked the signed bundle with both.
+- **Every version, toolchains included, is now defined once in `vibetags-parent/pom.xml`.** The
+  Gradle wrapper, the Kotlin, Groovy, Scala and foojay-resolver versions of the examples, the Maven
+  `publish.yml` deploys on (with its SHA-512) and the Node the workflows install were literals
+  copied 46 times across 37 files, kept in step by a table in the `bump-dependencies` skill that nothing
+  checked. They had drifted: six consumer poms were on `maven-compiler-plugin` 3.15.0 against the
+  parent's 3.16.0, and `examples/enforcing` was missing from the table. Each is now a parent
+  property (`gradle.version`, `kotlin.version`, `groovy.version`, `scala.version`,
+  `foojay-resolver.version`, `publish-maven.version`, `publish-maven.sha512`, `node.version`).
+  Files that cannot read a pom still carry a copy, listed in `vibetags-parent/version-mirrors.txt`;
+  `tools/sync-version-mirrors.py` writes them from the parent, and `BuildVersionParityTest` fails
+  when a copy disagrees or a row finds nothing (it failed on the six poms before the sync).
+  `tools/bump-dependencies.sh` now reports the toolchains from the same table, and
+  `vibetags/build.gradle` reads `junit.platform.version` instead of repeating it.
+  `docs/DEPENDENCIES.md` now names the property and the purpose of every build plugin and
+  toolchain, and lists what stays outside the parent (Actions SHAs, npm CLIs, pre-commit revs).
+- **Dependency bumps.** `async-test-lib` 1.13.1 → 1.13.2, `ecj` 3.46.0 → 3.46.100, Gradle wrapper
+  9.7.1 → 9.8.1 (11 wrappers), Kotlin in the examples and snippets 2.4.10 → 2.4.21, Groovy
+  5.1.0 → 6.0.0, Node 22.23.2 → 24.22.0 (the current LTS line), `maven-compiler-plugin` in the
+  consumer poms 3.15.0 → 3.16.0. Every other pin was already the newest stable release, except
+  the `pre-commit-java` hook, left on v0.2.4 because v0.6.37 could not be verified (#982).
 
 ### Tests
 

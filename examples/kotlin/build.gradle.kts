@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.4.10"
-    kotlin("kapt") version "2.4.10"
+    kotlin("jvm") version "2.4.21"
+    kotlin("kapt") version "2.4.21"
 }
 
 group = "se.deversity.vibetags.example"

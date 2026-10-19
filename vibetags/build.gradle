@@ -128,7 +128,7 @@ dependencies {
     // right" is not the property that matters - "the tool reading it sees every module's
     // guardrails" is, and only a parser shows that.
     testImplementation "org.yaml:snakeyaml:${pomVersion('snakeyaml.version')}"
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.3'
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${pomVersion('junit.platform.version')}"
 }
 
 tasks.withType(JavaCompile).configureEach {
