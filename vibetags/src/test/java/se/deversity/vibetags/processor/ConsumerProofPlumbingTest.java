@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -83,6 +84,31 @@ class ConsumerProofPlumbingTest {
                 "CLAUDE_CODE_OAUTH_TOKEN", "stub-token"));
         assertEquals(0, r.exit, r.output);
         assertTrue(r.output.contains("credential-visible: 1/1 passed"), r.output);
+    }
+
+    @Test
+    void aRunWhoseAgentNeverWorkedIsNotMeasuredAndWritesNoReport() throws Exception {
+        // The first real consumer-proof run (CI run 39324142569) had every one of 36 sessions
+        // refused with "You've hit your session limit". Each was counted as a failed trial and the
+        // job published a 0% table and went green, which reads as "VibeTags binds nothing".
+        // A harness error measures nothing, so the run must say so and publish no table.
+        Path agent = Files.createDirectories(tempDir.resolve("limited-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\n"
+                + "echo '{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":true,"
+                + "\"result\":\"You have hit your session limit\"}'\n"
+                + "exit 1\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Path proofDir = tempDir.resolve("proof");
+        Result r = run(EVALS.resolve("consumer/run-proof.sh"),
+            Map.of("TRIALS", "1", "TASKS", "locked-direct", "PROOF_DIR", unix(proofDir),
+                "PATH_PREFIX", agent.toString()));
+
+        assertEquals(2, r.exit, r.output);
+        assertTrue(r.output.contains("HARNESS-ERROR"), r.output);
+        assertFalse(Files.exists(proofDir.resolve("REPORT.md")), "a run that measured nothing must not publish a table");
     }
 
     private record Result(int exit, String output) {

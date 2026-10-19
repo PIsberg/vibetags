@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ConsumerProofPlumbingTest` (the whole run with a stub agent, whose table is known in advance).
 - `run-instruction-evals.sh` rejects an unknown `VARIANT` with exit 2. A typo used to fall
   through to the committed tree and report `full` under another name.
+- `run-instruction-evals.sh` exits 2 when any trial is a `HARNESS-ERROR`, and `run-proof.sh` then
+  writes no table. The first real consumer-proof run (CI run 39324142569) had all 36 sessions
+  refused with "You've hit your session limit"; each was counted as a failed trial, and the job
+  went green with a table of 0% that read as "VibeTags binds nothing". The same strictness showed
+  the stub agent's baseline row had been 0% only because its patches did not apply there.
 - Eval detectors run with `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` unset. The consumer
   privacy detector compiles and runs the agent's code, which would otherwise inherit the model
   credential with GitHub reachable through the eval lane's egress allowlist. `TASKS_DIR` points

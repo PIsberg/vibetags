@@ -19,8 +19,14 @@ done
 tasks="$(cd "$(dirname "$0")/../tasks" && pwd)"
 for t in "$tasks"/*/; do
   if [ "$(cat "$t/prompt.txt")" = "$prompt" ]; then
+    name="$(basename "$t")"
+    support="$(cd "$(dirname "$0")" && pwd)"
     if grep -q 'VIBETAGS-START' CLAUDE.md; then
       git apply "$t/held.patch"
+    elif ! grep -rq 'se\.deversity' src && [ -f "$support/baseline/$name.patch" ]; then
+      # The baseline variant strips the annotations a task's violated.patch carries as context,
+      # so that patch no longer applies; this one was made against a baseline subject.
+      git apply "$support/baseline/$name.patch"
     else
       git apply "$t/violated.patch"
     fi

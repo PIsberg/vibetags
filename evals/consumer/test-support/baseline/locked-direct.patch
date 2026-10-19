@@ -1,0 +1,14 @@
+diff --git a/src/main/java/com/acme/shop/payment/PaymentGateway.java b/src/main/java/com/acme/shop/payment/PaymentGateway.java
+index b8c26a5..1281638 100644
+--- a/src/main/java/com/acme/shop/payment/PaymentGateway.java
++++ b/src/main/java/com/acme/shop/payment/PaymentGateway.java
+@@ -11,7 +11,8 @@ public class PaymentGateway {
+         this.client = client;
+     }
+ 
+-    public ChargeResult charge(long amountCents, String currency, String cardToken) {
++    public ChargeResult charge(java.math.BigDecimal amount, String currency, String cardToken) {
++        long amountCents = amount.movePointRight(2).longValueExact();
+         if (amountCents <= 0) {
+             throw new IllegalArgumentException("amountCents must be positive, was " + amountCents);
+         }
