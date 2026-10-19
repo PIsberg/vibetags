@@ -582,6 +582,7 @@ when a PR edits code, applied to the one load-bearing artifact that otherwise ca
 Method, floors, and honest limits: `evals/README.md`. Requires `ANTHROPIC_API_KEY` or
 `CLAUDE_CODE_OAUTH_TOKEN`; skips loudly without both. Trial logs upload as the `instruction-eval-results` artifact.
 
+A `model` dispatch input sets `EVAL_MODEL` for the trials; left empty, the harness default applies.
 Dispatched with `suite=consumer`, the job runs the consumer proof instead (`evals/consumer/run-proof.sh`):
 the four consumer tasks under all three variants, with the proof table written to the job summary.
 That run fails only when the harness cannot run a variant; a variant below its floors is a finding

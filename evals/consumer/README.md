@@ -55,8 +55,8 @@ TRIALS=10 bash evals/consumer/run-proof.sh       # decision-grade: 120 sessions
 ```
 
 It writes `REPORT.md` with the table under `evals/results/consumer-proof-<timestamp>/`, beside
-the trial logs. In CI, dispatch **Instruction Evals** with `suite=consumer`; the report lands in
-the job summary. A single variant runs through the shared runner:
+the trial logs. In CI, dispatch **Instruction Evals** with `suite=consumer` and `model` set to the
+model that writes your production code; the report lands in the job summary. A single variant runs through the shared runner:
 `SUITE=consumer VARIANT=annotations-only bash evals/run-instruction-evals.sh`.
 
 The detectors need `javac`, `java` and `perl` on `PATH`; the runner exits 2 without them.

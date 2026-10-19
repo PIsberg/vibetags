@@ -44,6 +44,10 @@ on:
         options:
           - repo
           - consumer
+      model:
+        description: 'Model id for the trials (EVAL_MODEL). Empty keeps the harness default; use the model that writes production code here'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -158,12 +162,15 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           TRIALS: ${{ github.event.inputs.trials || '3' }}
           SUITE: ${{ github.event.inputs.suite || 'repo' }}
+          MODEL_INPUT: ${{ github.event.inputs.model }}
           RESULTS_DIR: ${{ github.workspace }}/eval-results
         run: |
           # A secret that is not configured arrives as an empty variable, not an absent one.
           # Unset it so the CLI sees only the credential that exists.
           [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
           [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || unset CLAUDE_CODE_OAUTH_TOKEN
+          # An empty input leaves EVAL_MODEL unset, so the harness keeps its own default.
+          if [ -n "$MODEL_INPUT" ]; then export EVAL_MODEL="$MODEL_INPUT"; fi
           if [ "$SUITE" = "consumer" ]; then
             # The proof's report is the result; a variant below its floors is a finding, so only
             # a harness failure (exit 2) fails the job.
