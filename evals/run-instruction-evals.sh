@@ -36,6 +36,8 @@
 #                       consumer suite: full | annotations-only | baseline, built by
 #                       consumer/prepare-subject.sh. Any other value exits 2.
 #   TASKS="t1 t2"       space-separated task dir names; empty means all
+#   TASKS_DIR=...       run the task dirs under this directory instead of the suite's own; the
+#                       suite still decides the subject and its variants
 #   MAX_TURNS=25        per-trial turn cap
 #   RESULTS_DIR=...     where trial logs land (default evals/results/<timestamp>/)
 #
@@ -86,6 +88,7 @@ case "$ENGINE" in
     exit 2
     ;;
 esac
+TASKS_ROOT="${TASKS_DIR:-$TASKS_ROOT}"
 
 # Hermetic trials: an empty config dir keeps the user's global CLAUDE.md, skills and
 # agents out of the experiment; --strict-mcp-config keeps MCP servers out. The variable
@@ -172,7 +175,10 @@ for taskdir in "$TASKS_ROOT"/*/; do
     if [ "$engine_rc" -ne 0 ]; then
       echo "   trial $trial: HARNESS-ERROR ($ENGINE exited $engine_rc; see $(basename "$err")) - counted as fail"
     else
-      ( cd "$wt" && bash "$taskdir/detect.sh" ) >"$det" 2>&1
+      # Detectors run without the model credential. Some compile and run what the agent wrote
+      # (consumer privacy-logging does), and that code would otherwise inherit a secret it
+      # could send anywhere the runner's egress allows.
+      ( cd "$wt" && env -u ANTHROPIC_API_KEY -u CLAUDE_CODE_OAUTH_TOKEN bash "$taskdir/detect.sh" ) >"$det" 2>&1
       detect_rc=$?
       if [ "$detect_rc" -eq 0 ]; then
         passes=$((passes + 1))

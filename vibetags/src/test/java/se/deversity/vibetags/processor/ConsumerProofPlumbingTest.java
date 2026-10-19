@@ -56,6 +56,35 @@ class ConsumerProofPlumbingTest {
         assertTrue(r.output.contains("has no variant 'no-index'"), r.output);
     }
 
+    @Test
+    void detectorsRunWithoutTheModelCredential() throws Exception {
+        // A detector may compile and run what the agent wrote (privacy-logging does), so it must
+        // not inherit the credential the eval step holds: that code could send it anywhere the
+        // runner's egress allows.
+        Path tasks = tempDir.resolve("tasks");
+        Path task = Files.createDirectories(tasks.resolve("credential-visible"));
+        Files.writeString(task.resolve("prompt.txt"), "any prompt", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("task.env"), "FLOOR_PCT=100\n", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("detect.sh"),
+            "if [ -n \"${ANTHROPIC_API_KEY:-}${CLAUDE_CODE_OAUTH_TOKEN:-}\" ]; then\n"
+                + "  echo 'violation: the detector can read the model credential'; exit 1\n"
+                + "fi\n"
+                + "echo 'held: no credential in the detector environment'\n",
+            StandardCharsets.UTF_8);
+        Path agent = Files.createDirectories(tempDir.resolve("agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\necho '{}'\n", StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Path results = tempDir.resolve("results");
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS_DIR", unix(tasks),
+                "RESULTS_DIR", unix(results), "PATH_PREFIX", agent.toString(),
+                "CLAUDE_CODE_OAUTH_TOKEN", "stub-token"));
+        assertEquals(0, r.exit, r.output);
+        assertTrue(r.output.contains("credential-visible: 1/1 passed"), r.output);
+    }
+
     private record Result(int exit, String output) {
     }
 
@@ -68,8 +97,10 @@ class ConsumerProofPlumbingTest {
         e.put("ANTHROPIC_API_KEY", "stub-not-a-key");
         e.remove("CLAUDE_CODE_OAUTH_TOKEN");
         String pathKey = e.keySet().stream().filter(k -> k.equalsIgnoreCase("PATH")).findFirst().orElse("PATH");
-        e.put(pathKey, EVALS.resolve("consumer/test-support") + File.pathSeparator + e.getOrDefault(pathKey, ""));
+        String stubDir = env.getOrDefault("PATH_PREFIX", EVALS.resolve("consumer/test-support").toString());
+        e.put(pathKey, stubDir + File.pathSeparator + e.getOrDefault(pathKey, ""));
         e.putAll(env);
+        e.remove("PATH_PREFIX");
         Process p = pb.start();
         String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         return new Result(p.waitFor(), out);

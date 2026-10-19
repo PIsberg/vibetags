@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ConsumerProofPlumbingTest` (the whole run with a stub agent, whose table is known in advance).
 - `run-instruction-evals.sh` rejects an unknown `VARIANT` with exit 2. A typo used to fall
   through to the committed tree and report `full` under another name.
+- Eval detectors run with `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` unset. The consumer
+  privacy detector compiles and runs the agent's code, which would otherwise inherit the model
+  credential with GitHub reachable through the eval lane's egress allowlist. `TASKS_DIR` points
+  the runner at another task directory, which is how `ConsumerProofPlumbingTest` checks this.
 
 ### Changed
 
