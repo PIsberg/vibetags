@@ -19,8 +19,8 @@ import java.util.Set;
  * {@code <annotationProcessorPaths>} is set. A project whose Lombok or MapStruct ran by discovery
  * loses both the moment it adds a VibeTags-only processor path, and javac's only symptom is
  * "cannot find symbol" on a getter Lombok never generated, or for MapStruct a mapper
- * implementation that is missing at run time. Reproduced with the published 1.4.0 against Lombok
- * 1.18.42 and MapStruct 1.6.3. Gradle drops a processor the same way when it sits on
+ * implementation that is missing at run time. Reproduced on 2026-10-19 against Lombok 1.18.42 and
+ * MapStruct 1.6.3 with the release then current. Gradle drops a processor the same way when it sits on
  * {@code compileOnly} but not {@code annotationProcessor}.
  *
  * <p>javac loads every processor on one processor path through one class loader, the one that

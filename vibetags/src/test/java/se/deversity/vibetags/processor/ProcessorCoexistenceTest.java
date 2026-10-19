@@ -33,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Maven stops discovering processors on the class path once {@code <annotationProcessorPaths>}
  * is set, so a project whose Lombok ran by discovery loses it the moment VibeTags' documented
- * processor path is added: verified against Lombok 1.18.42 and MapStruct 1.6.3 with the published
- * 1.4.0, where the build failed on a Lombok getter with nothing pointing at the cause. Each peer is
+ * processor path is added: verified on 2026-10-19 against Lombok 1.18.42 and MapStruct 1.6.3 with
+ * the release then current, where the build failed on a Lombok getter with nothing pointing at the cause. Each peer is
  * stubbed here by its trigger annotation, which is all the check reads from the source side.
  */
 class ProcessorCoexistenceTest {
