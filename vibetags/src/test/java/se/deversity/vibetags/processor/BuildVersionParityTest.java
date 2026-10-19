@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -340,6 +341,57 @@ class BuildVersionParityTest {
                 + String.join("\n  ", problems));
     }
 
+    /**
+     * Every copy listed in {@code vibetags-parent/version-mirrors.txt} equals the parent's value.
+     *
+     * <p>The copies exist because the files holding them cannot read a pom: a Gradle wrapper, a
+     * standalone example build, a workflow's {@code env}, a README snippet. Before this check they
+     * were kept in step by a table in the bump-dependencies skill, and they were not: the six
+     * consumer poms sat on {@code maven-compiler-plugin} 3.15.0 while the parent moved to 3.16.0,
+     * and {@code examples/enforcing} was missing from the table altogether.
+     */
+    @Test
+    void everyMirroredCopyAgreesWithTheParent() {
+        Path root = repoRoot();
+        List<MirrorRow> rows = mirrorRows(root);
+        assertTrue(rows.size() >= 10,
+            "version-mirrors.txt yields only " + rows.size() + " rows, so the parser has drifted "
+                + "from the file and this test checks almost nothing");
+        List<String> problems = mirrorMismatches(root, rows, properties());
+        assertTrue(problems.isEmpty(),
+            "A copy of a parent version disagrees with vibetags-parent/pom.xml. Edit the parent, "
+                + "then run `python tools/sync-version-mirrors.py` to rewrite every copy:\n  "
+                + String.join("\n  ", problems));
+    }
+
+    /**
+     * The comparison reports a stale copy and a row that finds nothing, and does not read a nested
+     * checkout. A row that matches nothing would otherwise pass forever after its file moved.
+     */
+    @Test
+    void aStaleMirrorAndARowThatMatchesNothingAreBothReported(@TempDir Path root) throws IOException {
+        String wrapper = "distributionUrl=https\\://services.gradle.org/distributions/gradle-%s-bin.zip\n";
+        plant(root.resolve("examples/a/gradle/wrapper/gradle-wrapper.properties"), wrapper.formatted("8.0"));
+        plant(root.resolve("examples/b/gradle/wrapper/gradle-wrapper.properties"), wrapper.formatted("9.9"));
+        Path worktree = root.resolve(".claude/worktrees/agent-stale");
+        plant(worktree.resolve(".git"), "gitdir: /elsewhere/.git/worktrees/agent-stale\n");
+        plant(worktree.resolve("gradle/wrapper/gradle-wrapper.properties"), wrapper.formatted("7.0"));
+
+        List<MirrorRow> rows = List.of(
+            new MirrorRow("gradle.version", "**/gradle/wrapper/gradle-wrapper.properties",
+                "distributions/gradle-([^-]+)-bin\\.zip"),
+            new MirrorRow("groovy.version", "examples/groovy/build.gradle", "groovy:([^']+)"),
+            new MirrorRow("absent.version", "examples/*/gradle/wrapper/*", "gradle-([^-]+)-bin"));
+
+        assertEquals(List.of(
+                "examples/a/gradle/wrapper/gradle-wrapper.properties: gradle.version is 8.0 but "
+                    + "vibetags-parent declares 9.9",
+                "groovy.version in examples/groovy/build.gradle: no copy found, so the row checks "
+                    + "nothing",
+                "absent.version: not a property of vibetags-parent/pom.xml"),
+            mirrorMismatches(root, rows, Map.of("gradle.version", "9.9", "groovy.version", "5.0")));
+    }
+
     /** The parent must actually be parseable and populated, or every assertion above is vacuous. */
     @Test
     void theParentDeclaresTheVersionsTheseTestsReadFrom() {
@@ -393,6 +445,14 @@ class BuildVersionParityTest {
      * worktree carrying an older branch's build files ({@link NestedCheckouts}).
      */
     static List<String> discoverGradleFiles(Path root) {
+        return discoverFiles(root, name -> name.endsWith(".gradle") || name.endsWith(".gradle.kts"));
+    }
+
+    /**
+     * The files under {@code root} whose name passes {@code nameFilter}, as sorted root-relative
+     * paths with forward slashes, pruned as {@link #discoverGradleFiles} describes.
+     */
+    static List<String> discoverFiles(Path root, Predicate<String> nameFilter) {
         List<String> found = new ArrayList<>();
         try {
             Files.walkFileTree(root, new SimpleFileVisitor<>() {
@@ -408,9 +468,7 @@ class BuildVersionParityTest {
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    String name = file.getFileName().toString();
-                    if (attrs.isRegularFile()
-                            && (name.endsWith(".gradle") || name.endsWith(".gradle.kts"))) {
+                    if (attrs.isRegularFile() && nameFilter.test(file.getFileName().toString())) {
                         found.add(root.relativize(file).toString().replace('\\', '/'));
                     }
                     return FileVisitResult.CONTINUE;
@@ -445,6 +503,81 @@ class BuildVersionParityTest {
             }
         }
         return problems;
+    }
+
+    /** One row of {@code version-mirrors.txt}: a parent property, where its copies are, how to find one. */
+    record MirrorRow(String property, String glob, String regex) { }
+
+    private static final String MIRRORS = "vibetags-parent/version-mirrors.txt";
+
+    private static List<MirrorRow> mirrorRows(Path root) {
+        List<MirrorRow> rows = new ArrayList<>();
+        for (String line : read(root.resolve(MIRRORS)).split("\\R")) {
+            String trimmed = line.strip();
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                continue;
+            }
+            String[] cells = trimmed.split("\\s+", 3);
+            assertEquals(3, cells.length, MIRRORS + ": a row needs a property, a glob and a regex: " + line);
+            rows.add(new MirrorRow(cells[0], cells[1], cells[2]));
+        }
+        return rows;
+    }
+
+    /**
+     * Every copy {@code rows} finds under {@code root} that differs from {@code props}, every row
+     * that finds no copy, and every row naming a property the parent lacks. One line each.
+     */
+    static List<String> mirrorMismatches(Path root, List<MirrorRow> rows, Map<String, String> props) {
+        List<String> files = discoverFiles(root, name -> true);
+        List<String> problems = new ArrayList<>();
+        for (MirrorRow row : rows) {
+            String expected = props.get(row.property());
+            if (expected == null) {
+                problems.add(row.property() + ": not a property of vibetags-parent/pom.xml");
+                continue;
+            }
+            Pattern glob = globPattern(row.glob());
+            Pattern copy = Pattern.compile(row.regex());
+            int seen = 0;
+            for (String file : files) {
+                if (!glob.matcher(file).matches()) {
+                    continue;
+                }
+                Matcher m = copy.matcher(read(root.resolve(file)));
+                while (m.find()) {
+                    seen++;
+                    if (!expected.equals(m.group(1))) {
+                        problems.add(file + ": " + row.property() + " is " + m.group(1)
+                            + " but vibetags-parent declares " + expected);
+                    }
+                }
+            }
+            if (seen == 0) {
+                problems.add(row.property() + " in " + row.glob() + ": no copy found, so the row "
+                    + "checks nothing");
+            }
+        }
+        return problems;
+    }
+
+    /** {@code *} stays inside one directory, {@code **}{@code /} crosses any number; nothing else is special. */
+    static Pattern globPattern(String glob) {
+        StringBuilder regex = new StringBuilder();
+        int i = 0;
+        while (i < glob.length()) {
+            if (glob.startsWith("**/", i)) {
+                regex.append("(?:[^/]+/)*");
+                i += 3;
+            } else if (glob.charAt(i) == '*') {
+                regex.append("[^/]*");
+                i++;
+            } else {
+                regex.append(Pattern.quote(String.valueOf(glob.charAt(i))));
+                i++;
+            }
+        }
+        return Pattern.compile(regex.toString());
     }
 
     private static Path repoRoot() {

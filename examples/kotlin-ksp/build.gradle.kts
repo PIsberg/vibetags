@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.21"
     // KSP in place of kapt. KSP cannot load a JSR 269 processor, so the dependency below is
     // vibetags-ksp, which runs the same processor behind a KSP front end.
     id("com.google.devtools.ksp") version "2.3.12"

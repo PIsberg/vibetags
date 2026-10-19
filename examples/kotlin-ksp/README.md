@@ -35,7 +35,7 @@ paths identical, and the build says so.
 
 ```kotlin
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.21"
     id("com.google.devtools.ksp") version "2.3.12"
 }
 

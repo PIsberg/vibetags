@@ -38,7 +38,9 @@ updates:
   # it looks. Every third-party version in this build is a <name.version> property in
   # vibetags-parent/pom.xml (tier-1 invariant 14), and dependabot resolves the parent from the
   # child: #470 was opened "in /vibetags" and its diff edits vibetags-parent/pom.xml. So one
-  # entry covers all 33 pins.
+  # entry covers every pin a Maven dependency or plugin declaration uses. The toolchain properties
+  # beside them (gradle, kotlin, groovy, scala, foojay-resolver, publish-maven, node) are referenced
+  # by no Maven declaration, so dependabot cannot see them; tools/bump-dependencies.sh reports them.
   #
   # This used to sit alongside `directory: /example`, which has never existed - the examples live
   # under examples/, each with its own pom. That entry produced nothing at all, silently, which is
@@ -49,9 +51,9 @@ updates:
   #     released version. That number is owned by tools/set-version.sh, and
   #     BuildVersionParityTest fails if it disagrees with <revision>. A dependabot PR moving it
   #     would be red on arrival and could never merge.
-  #   - Their maven-compiler-plugin literals are mirrors of the parent property. Bumping the copy
-  #     without the original is the drift the mirror table in the bump-dependencies skill exists
-  #     to prevent.
+  #   - Their maven-compiler-plugin literals are mirrors of the parent property, listed in
+  #     vibetags-parent/version-mirrors.txt. Bumping the copy without the original is the drift
+  #     BuildVersionParityTest fails on; tools/sync-version-mirrors.py writes them from the parent.
   #
   # Both are release-managed rather than dependency-managed, so they belong to that skill and to
   # set-version.sh, not here.

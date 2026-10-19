@@ -291,4 +291,7 @@ and this section seem to disagree, the enforcing test decides.
   `vibetags-bom` and `load-tests` inherit every version; a literal there is one the next release
   will miss. The Gradle builds and the standalone example poms cannot inherit, so they hold
   literals — `BuildVersionParityTest` fails the build when any of them disagrees with the parent.
-  To bump: `tools/set-version.sh <version>`, then that test.
+  To bump: `tools/set-version.sh <version>`, then that test. Third-party and toolchain versions
+  follow the same rule: the parent defines each one, `vibetags-parent/version-mirrors.txt` lists
+  every copy a file that cannot read the pom has to carry, and `tools/sync-version-mirrors.py`
+  writes them. Edit the parent, never the copy.

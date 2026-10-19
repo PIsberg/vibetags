@@ -1,0 +1,37 @@
+# Every copy of a vibetags-parent/pom.xml version that lives in a file unable to read the pom.
+#
+# The pom is the one place a version is defined. These files carry a copy anyway because the tool
+# reading each one cannot look anywhere else: a Gradle wrapper reads only its own properties file,
+# the examples are standalone so a reader can lift one into their own project, a workflow's env is
+# fixed before any step runs, and a README snippet is text. This file holds no versions, only where
+# the copies are:
+#
+#   tools/sync-version-mirrors.py      writes every copy from the pom (run it after a bump)
+#   BuildVersionParityTest             fails when a copy disagrees, or a row matches nothing
+#
+# Format, one row per line: <property> <glob> <regex>
+#   property  a <properties> entry in vibetags-parent/pom.xml
+#   glob      repo-relative; '*' stays inside one directory, '**/' crosses any number of them
+#   regex     the rest of the line, Java and Python syntax alike; group 1 is the version
+# Build output, node_modules and nested git checkouts (agent worktrees, corpus clones) are skipped.
+
+gradle.version                  **/gradle/wrapper/gradle-wrapper.properties  distributions/gradle-([^-]+)-bin\.zip
+
+maven-compiler-plugin.version   examples/*/pom.xml                     <artifactId>maven-compiler-plugin</artifactId>\s*<version>([^<]+)</version>
+maven-compiler-plugin.version   tools/demo/pom.xml                     <artifactId>maven-compiler-plugin</artifactId>\s*<version>([^<]+)</version>
+
+kotlin.version                  examples/*/build.gradle.kts            kotlin\("(?:jvm|kapt)"\) version "([^"]+)"
+kotlin.version                  *.md                                   kotlin\("(?:jvm|kapt)"\) version "([^"]+)"
+kotlin.version                  examples/*/README.md                   kotlin\("(?:jvm|kapt)"\) version "([^"]+)"
+
+ksp.version                     examples/*/build.gradle.kts            id\("com\.google\.devtools\.ksp"\) version "([^"]+)"
+ksp.version                     *.md                                   id\("com\.google\.devtools\.ksp"\) version "([^"]+)"
+ksp.version                     examples/*/README.md                   id\("com\.google\.devtools\.ksp"\) version "([^"]+)"
+
+groovy.version                  examples/groovy/build.gradle           org\.apache\.groovy:groovy:([^'"]+)
+scala.version                   examples/scala/build.gradle            org\.scala-lang:scala-library:([^'"]+)
+foojay-resolver.version         examples/**/settings.gradle*           foojay-resolver-convention['"]\)? version ['"]([^'"]+)['"]
+
+publish-maven.version           .github/workflows/publish.yml          MAVEN_VERSION: '([^']+)'
+publish-maven.sha512            .github/workflows/publish.yml          MAVEN_SHA512: '([^']+)'
+node.version                    .github/workflows/*.yml                node-version: '([^']+)'
