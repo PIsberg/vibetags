@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **VibeTags names an annotation processor the build dropped.** Once `maven-compiler-plugin`
+  has `<annotationProcessorPaths>`, javac stops discovering processors on the class path, so
+  pasting the README's VibeTags-only list into a project whose Lombok ran by discovery switched
+  Lombok and MapStruct off. Reproduced with 1.4.0, Lombok 1.18.42 and MapStruct 1.6.3: the build
+  failed with `cannot find symbol` on a Lombok getter and nothing pointing at the processor path.
+  On the first round VibeTags now checks, for each of seven peers (Lombok, MapStruct, Immutables,
+  AutoValue, Dagger, RecordBuilder, AutoService), whether the sources use one of its annotations
+  and whether its processor class is loadable from the processor path, and warns at the annotated
+  element with the Maven and Gradle fix. Verified with real jars: the broken Maven path names both
+  peers on JDK 21 and 26, a Gradle build with Lombok on `compileOnly` alone names Lombok, and the
+  three correct wirings (shared processor path, class-path discovery, Gradle `annotationProcessor`)
+  print nothing. `ProcessorCoexistenceTest` covers it in-JVM. USAGE.md gains "Other Annotation
+  Processors", including the start.spring.io layout, whose per-execution list silently overrides a
+  plugin-level VibeTags list (verified: green build, nothing generated). New example
+  `examples/processor-compat` builds Lombok and MapStruct beside VibeTags under
+  `-Xlint:all,-processing -Werror` in CI, and fails on purpose with `-Pvibetags-only`.
 - **A consumer proof: does VibeTags change what an agent does?** (`evals/consumer/`). The eval
   bank measured only this repository's own instruction stack, and has never run in CI (#632), so
   the product's central claim had no measurement behind it. The consumer suite runs agents on
@@ -105,6 +121,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **No more "redundantly supports both '*' and other annotation interfaces" warning.** From a
+  project's second build on (a sidecar on record), or with transitive guardrails, the processor
+  widened its supported types to `"*"` plus its own package, which javac's `processing` lint
+  reports, so every `-Xlint:all` build of every consumer printed it. It now declares `"*"` alone,
+  which already covers the package.
+- `tools/bump-dependencies.sh`'s stable-only report treated a dot-qualified pre-release as stable
+  (`1.7.0.Beta2`, `6.0.0.CR1`); its filter matched only a hyphen. `BumpDependenciesTableTest` now
+  reads the filter out of the script and checks both spellings.
 - **Under kapt, a rule's glob names the `.kt` file a class is really in** (#955). kapt hands the
   processor a `.java` stub, and the glob guessed `<Type>.kt`, which missed an `Invoice` declared in
   `Billing.kt`, a facade renamed by `@file:JvmName`, and a lowercase `ledgerutils.kt`; no

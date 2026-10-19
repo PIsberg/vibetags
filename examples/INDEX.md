@@ -14,6 +14,7 @@ date. "Drift gate" is what CI does to the example's committed generated files af
 |---|---|---|---|---|---|
 | [`basic/`](basic/) | Maven and Gradle | 1 | 44 | byte for byte, whole directory | log contract on `vibetags.log`; cache-off rebuild byte-identical |
 | [`enforcing/`](enforcing/) | Maven | 1 | 3 | byte for byte, whole directory | build red on drifted `@AILocked` signature; violation names the baseline entry |
+| [`processor-compat/`](processor-compat/) | Maven | 1 | 2 | byte for byte, whole directory | Lombok and MapStruct ran beside VibeTags under `-Werror`; a VibeTags-only processor path fails with both peers named |
 | [`multimodule/`](multimodule/) | Maven | 5 | 44 | byte for byte, plus check mode | recovery, roles, mirror, locks, transitive origin |
 | [`multimodule-indexed/`](multimodule-indexed/) | Maven | 2 | 44 | check mode | root collapses to an index; safety buckets stay inline |
 | [`all-tiers/`](all-tiers/) | Maven | 2 | 44 | check mode | tier split: buckets inline, Tier-2 isolation, Tier-3 front matter |
@@ -44,6 +45,7 @@ Which example to read for a given processor feature.
 | All 44 annotations in use | `basic`, `multimodule`, `multimodule-indexed`, `all-tiers`, `gradle-multimodule` |
 | Every supported platform's output committed | `basic`, enforced by `ExampleOptInCoverageTest` rather than by convention. It had lapsed: `.gemini/rules` shipped in #320 and no example opted into it until the 2026-09 sweep, so Gemini's granular output and the `GEMINI.md` index collapse had no committed fixture for four releases. Cline's `.clinerules/` directory was the one exemption until 1.4 removed the single `.clinerules` file that shared its path (#645); `basic` carries the directory now. |
 | Enforcing mode (`-Avibetags.enforce`, `.vibetags-baseline`, `-Avibetags.baseline.update`) | `enforcing` |
+| Other annotation processors on the same path (Lombok, MapStruct), and the dropped-processor warning | `processor-compat` |
 | Sidecar merge into a root aggregate | every reactor example |
 | Granular rules grouped by role (`.vibetags-roles`) | `multimodule`, `multimodule-indexed`, `all-tiers`, `gradle-multimodule` |
 | Root aggregate as index (`.vibetags-root-index`) | `multimodule-indexed`, `all-tiers` |

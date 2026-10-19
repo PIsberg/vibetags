@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>se.deversity.vibetags.example</groupId>
+    <artifactId>vibetags-example-processor-compat</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>VibeTags Processor Coexistence Example</name>
+    <description>VibeTags beside Lombok and MapStruct on one annotation processor path</description>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- BOM is the single source of truth for vibetags-* versions. -->
+        <vibetags.bom.version>1.4.0</vibetags.bom.version>
+        <lombok.version>1.18.48</lombok.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>se.deversity.vibetags</groupId>
+                <artifactId>vibetags-bom</artifactId>
+                <version>${vibetags.bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>se.deversity.vibetags</groupId>
+            <artifactId>vibetags-annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${mapstruct.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.16.0</version>
+                <configuration>
+                    <release>21</release>
+                    <compilerArgs>
+                        <arg>-Avibetags.root=${project.basedir}</arg>
+                        <!-- Strict builds work: VibeTags adds no warning of its own. The processing
+                             lint stays off because javac reports every annotation no processor
+                             claims, MapStruct's @Mapper included, with or without VibeTags. -->
+                        <arg>-Xlint:all,-processing</arg>
+                        <arg>-Werror</arg>
+                    </compilerArgs>
+                    <!-- Once this list exists, javac runs only what is on it and ignores
+                         processors on the class path. Every processor the sources rely on goes
+                         here, VibeTags beside them. Their order among themselves is their own
+                         (lombok-mapstruct-binding lets MapStruct see Lombok's accessors);
+                         where VibeTags sits does not matter. -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>${lombok-mapstruct-binding.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
+                        <path>
+                            <groupId>se.deversity.vibetags</groupId>
+                            <artifactId>vibetags-processor</artifactId>
+                            <version>${vibetags.bom.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- The mistake this example exists to catch: a processor path holding VibeTags alone.
+             CI builds with -Pvibetags-only and requires the build to fail with VibeTags naming
+             both processors the path dropped, rather than leaving "cannot find symbol" on a
+             Lombok getter as the only clue. -->
+        <profile>
+            <id>vibetags-only</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <annotationProcessorPaths combine.self="override">
+                                <path>
+                                    <groupId>se.deversity.vibetags</groupId>
+                                    <artifactId>vibetags-processor</artifactId>
+                                    <version>${vibetags.bom.version}</version>
+                                </path>
+                            </annotationProcessorPaths>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

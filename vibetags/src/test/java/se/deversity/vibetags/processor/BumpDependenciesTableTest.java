@@ -8,11 +8,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -64,6 +66,27 @@ class BumpDependenciesTableTest {
             "vibetags-parent/pom.xml declares " + missing + " but tools/bump-dependencies.sh has no "
                 + "row for them, so the script exits 2 before reporting anything. Add a row per "
                 + "property with the source its releases are listed in.");
+    }
+
+    @Test
+    @DisplayName("the stable-only filter drops every pre-release spelling Central carries, and nothing else")
+    void stableFilterDropsDotQualifiedPreReleases() throws IOException {
+        // MapStruct, Hibernate and others qualify a pre-release with a dot (1.7.0.Beta2, 6.0.0.CR1).
+        // The filter matched only a hyphen, so the default "stable releases only" report offered
+        // MapStruct's beta as the upgrade. Read the pattern out of the script, the way grep -viE
+        // applies it, so this checks the filter that runs rather than a copy of it.
+        String script = read("tools/bump-dependencies.sh");
+        Matcher m = Pattern.compile("grep -viE -- '([^']+)'").matcher(script);
+        assertTrue(m.find(), "tools/bump-dependencies.sh no longer filters pre-releases with grep -viE");
+        Pattern preRelease = Pattern.compile(m.group(1), Pattern.CASE_INSENSITIVE);
+
+        for (String pre : List.of("1.7.0.Beta2", "1.7.0.Beta1", "6.0.0.CR1", "2.0.0-M1", "1.0.0-rc1",
+                "5.0.0-alpha-3", "1.2.0.Alpha1", "3.0.0-SNAPSHOT", "26-ea")) {
+            assertTrue(preRelease.matcher(pre).find(), pre + " passed the stable-only filter");
+        }
+        for (String stable : List.of("1.6.3", "1.18.48", "7.1.4.Final", "47", "2.13.18", "3.16.0", "0.2.0")) {
+            assertFalse(preRelease.matcher(stable).find(), stable + " was dropped as a pre-release");
+        }
     }
 
     private static String read(String relative) throws IOException {

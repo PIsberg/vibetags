@@ -30,6 +30,9 @@ ksp.version                     examples/*/README.md                   id\("com\
 
 groovy.version                  examples/groovy/build.gradle           org\.apache\.groovy:groovy:([^'"]+)
 scala.version                   examples/scala/build.gradle            org\.scala-lang:scala-library:([^'"]+)
+lombok.version                  examples/processor-compat/pom.xml      <lombok\.version>([^<]+)</lombok\.version>
+mapstruct.version               examples/processor-compat/pom.xml      <mapstruct\.version>([^<]+)</mapstruct\.version>
+lombok-mapstruct-binding.version examples/processor-compat/pom.xml     <lombok-mapstruct-binding\.version>([^<]+)</lombok-mapstruct-binding\.version>
 foojay-resolver.version         examples/**/settings.gradle*           foojay-resolver-convention['"]\)? version ['"]([^'"]+)['"]
 
 publish-maven.version           .github/workflows/publish.yml          MAVEN_VERSION: '([^']+)'

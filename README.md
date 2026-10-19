@@ -85,6 +85,12 @@
 </build>
 ```
 
+> **Already using Lombok, MapStruct or another annotation processor?** Put `vibetags-processor` in the
+> same `<annotationProcessorPaths>` list as them. Once that list exists, javac ignores processors on
+> the class path, so a list holding VibeTags alone switches the others off. VibeTags names any
+> processor it sees dropped; [Other Annotation Processors](USAGE.md#other-annotation-processors) has
+> the snippet and the Spring Boot layout.
+
 **2. Opt in to the AI platforms you use** (file presence = opt-in; VibeTags never creates files on its own):
 
 ```bash
@@ -608,6 +614,8 @@ The recommended setup uses the BOM (`vibetags-bom`) to manage both versions in o
 ```
 
 > **Note:** `maven-compiler-plugin`'s `<annotationProcessorPaths>` does not honour `<dependencyManagement>` (see [MCOMPILER-391](https://issues.apache.org/jira/browse/MCOMPILER-391)). Reuse the BOM version property there — see `examples/basic/pom.xml`.
+
+> **Note (other processors):** a VibeTags-only `<annotationProcessorPaths>` switches off Lombok, MapStruct and any other processor that ran by class-path discovery. List them beside VibeTags: [Other Annotation Processors](USAGE.md#other-annotation-processors).
 
 > **Note (JDK 23+):** `javac` only runs annotation processors that are explicitly configured; `<annotationProcessorPaths>` and Gradle's `annotationProcessor` qualify. A pom that instead lists `vibetags-processor` as an ordinary dependency silently generates nothing on JDK 23+ unless `<proc>full</proc>` is added to `maven-compiler-plugin`. More silent-failure cases: [Troubleshooting: Nothing Was Generated](USAGE.md#troubleshooting-nothing-was-generated).
 

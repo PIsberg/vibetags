@@ -210,6 +210,7 @@ done
 for rel in \
     examples/basic/pom.xml \
     examples/enforcing/pom.xml \
+    examples/processor-compat/pom.xml \
     examples/basic/build.gradle \
     examples/multimodule/pom.xml \
     examples/multimodule-indexed/pom.xml \

@@ -11,6 +11,7 @@
 - [Transitive Guardrails: Rules That Travel With a Dependency](#transitive-guardrails-rules-that-travel-with-a-dependency)
 - [The Companion CLI: init and doctor](#the-companion-cli-vibetags-init-and-vibetags-doctor)
 - [Choosing Which AI Services to Support (Opt-in Model)](#choosing-which-ai-services-to-support-opt-in-model)
+- [Other Annotation Processors](#other-annotation-processors)
 - [Troubleshooting: Nothing Was Generated](#troubleshooting-nothing-was-generated)
 - [Granular Rules (Cursor, Trae, Zoo Code)](#-granular-rules-cursor-trae-zoo-code)
 - [Qwen Configuration](#-qwen-configuration)
@@ -640,6 +641,95 @@ Create one or more of the following files in your project root to opt in:
 
 **Teams:** Only commit the config files for the AI tools your team actually uses.
 
+### Other Annotation Processors
+
+VibeTags shares the compiler with Lombok, MapStruct and any other annotation processor. It
+returns `false` from `process()`, so it claims nothing another processor needs, and its position
+on the processor path does not matter. The one way adding it breaks a build is Maven's processor
+path.
+
+**Once `maven-compiler-plugin` has `<annotationProcessorPaths>`, javac runs only what is on that
+list.** Processors on the class path stop running. A project whose Lombok runs by discovery
+(Lombok as a `provided` dependency and no processor path, the usual setup on JDK 21) loses Lombok
+the moment the VibeTags-only snippet from the README is added, and javac reports `cannot find
+symbol` on a getter Lombok never wrote. MapStruct fails later and more quietly: its mapper
+implementation is never generated. Both were reproduced against Lombok 1.18.42 and MapStruct
+1.6.3.
+
+Match what the build already does:
+
+- **The pom already has `<annotationProcessorPaths>`:** add `vibetags-processor` to that list,
+  where it is. start.spring.io's Lombok pom declares one list per execution, `default-compile` and
+  `default-testCompile`. A list pasted at plugin level beside them is overridden by each
+  execution's own, and VibeTags then generates nothing, with the build still green. Add it to
+  both executions' lists; the `default-testCompile` one is where test-code guardrails come from.
+- **It has none, and its processors run by discovery:** list every processor the sources use
+  beside VibeTags. For Lombok and MapStruct, with `lombok-mapstruct-binding` so MapStruct sees
+  Lombok's accessors:
+
+```xml
+<annotationProcessorPaths>
+    <path>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+    </path>
+    <path>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok-mapstruct-binding</artifactId>
+        <version>${lombok-mapstruct-binding.version}</version>
+    </path>
+    <path>
+        <groupId>org.mapstruct</groupId>
+        <artifactId>mapstruct-processor</artifactId>
+        <version>${mapstruct.version}</version>
+    </path>
+    <path>
+        <groupId>se.deversity.vibetags</groupId>
+        <artifactId>vibetags-processor</artifactId>
+        <version>${vibetags.bom.version}</version>
+    </path>
+</annotationProcessorPaths>
+```
+
+- **Or keep discovery:** add `vibetags-processor` as a `provided` dependency instead of a
+  processor path. On JDK 23 and later that needs `<proc>full</proc>`, which a project whose Lombok
+  runs by discovery on those JDKs already has. Its logging dependencies (SLF4J, Logback) then sit
+  on the compile class path too.
+- **A parent pom declares the list:** a child's `<annotationProcessorPaths>` replaces the
+  inherited one, Lombok included. Write `<annotationProcessorPaths combine.children="append">` in
+  the child to add VibeTags to the parent's list.
+
+**Gradle** has no discovery to lose: every processor already sits in the `annotationProcessor`
+configuration, and VibeTags goes there too. A processor on `compileOnly` alone does not run, with
+or without VibeTags.
+
+**When a processor was dropped, VibeTags says so.** If the sources use a peer's annotation and
+that peer's processor is not on the compilation's processor path, the build prints, at the
+annotated element:
+
+```
+warning: VibeTags: @lombok.Data needs the Lombok annotation processor, which this compilation
+did not run. Once maven-compiler-plugin has <annotationProcessorPaths>, javac ignores processors
+on the class path: add org.projectlombok:lombok to that list beside vibetags-processor. On Gradle,
+add it to the annotationProcessor configuration.
+```
+
+Seven processors are recognised: Lombok, MapStruct, Immutables, AutoValue, Dagger, RecordBuilder
+and AutoService. A peer the sources do not use is never reported.
+
+**Strict builds** (`-Xlint:all -Werror`): VibeTags adds no warning of its own. javac's
+`processing` lint reports every annotation no processor claims, MapStruct's `@Mapper` and VibeTags'
+own annotations alike, so a strict build that runs any processor uses `-Xlint:all,-processing`.
+
+**Tested together.** On 2026-10-19, on JDK 26, one processor path carried VibeTags beside Lombok
+1.18.42, MapStruct 1.6.3 with `lombok-mapstruct-binding` 0.2.0, Immutables 2.11.6, AutoValue
+1.11.0, Dagger 2.57.2, RecordBuilder 47, AutoService 1.1.1, Hibernate's `hibernate-processor`
+7.1.4.Final and Spring Boot's configuration processor 3.5.6, under
+`-Xlint:all,-processing,-classfile -Werror`. Every processor generated its output and VibeTags
+wrote its files. CI builds the Lombok and MapStruct case on every push:
+[`examples/processor-compat/`](examples/processor-compat/).
+
 ### Troubleshooting: Nothing Was Generated
 
 The build says `BUILD SUCCESS`, an opted-in file exists, and it is still empty. The first two
@@ -686,6 +776,13 @@ reads and writes UTF-8. The file is left exactly as it is, and every build warns
 UTF-8. Re-save it as UTF-8 and rebuild`. Re-save it as UTF-8 in your editor, or create opt-in
 files with `New-Item CLAUDE.md` or PowerShell 7, which write UTF-8. A file in another legacy
 encoding gets the same warning with `it is not valid UTF-8`.
+
+**4. The processor path sits inside an `<execution>`.**
+
+A pom generated by start.spring.io declares `<annotationProcessorPaths>` inside the
+`default-compile` and `default-testCompile` executions. A VibeTags list added at plugin level is
+overridden by those, so VibeTags never runs and the build stays green. Add `vibetags-processor`
+to each execution's list instead: [Other Annotation Processors](#other-annotation-processors).
 
 **Still empty?** Read `vibetags.log`. Every skipped write is a `write.skip` event carrying a
 `reason=`, and compiling with `-Avibetags.log.level=DEBUG` records the full decision path
