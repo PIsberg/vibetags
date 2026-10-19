@@ -6,6 +6,11 @@ the architecture rules. Until now the instruction layer could not. This harness 
 falsifiable: it measures whether the standing rules actually bind an agent, instead of
 assuming they do. Rationale and method: *Vibe Architecture*, Chapter 3f.
 
+This page covers the **repo suite**: this repository's own rules, measured against its own tree.
+The **consumer proof** in [`consumer/`](consumer/README.md) asks the product question instead:
+does VibeTags change what an agent does in an ordinary project that uses it? It shares this
+runner (`SUITE=consumer`) and compares three variants of a small annotated fixture.
+
 ## What a task is
 
 One directory under `tasks/`, three files:

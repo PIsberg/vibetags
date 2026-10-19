@@ -63,6 +63,7 @@ Read one of these before anything under `docs/`.
 | Document | Answers |
 |---|---|
 | [`../evals/README.md`](../evals/README.md) | Whether the rules in `CLAUDE.md` actually bind an agent, measured rather than assumed. |
+| [`../evals/consumer/README.md`](../evals/consumer/README.md) | Whether VibeTags changes what an agent does in an ordinary project that uses it: the consumer proof, its three variants, and how to run it. |
 | [`vibetags-in-practice.md`](vibetags-in-practice.md) | A survey of annotation and platform usage across five real consumer codebases. A dated snapshot (2026-07-16), not a live count. |
 | [`../corpus/README.md`](../corpus/README.md) | What the third-party corpus runs assert, and what they have found. |
 | [`../load-tests/README.md`](../load-tests/README.md) | The benchmark harness: what each category measures and how to capture a release baseline. |

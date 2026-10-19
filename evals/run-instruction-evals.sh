@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instruction evals: measure whether this repo's standing instructions actually bind.
+# Instruction evals: measure whether standing instructions actually bind an agent.
 #
 # Each task under evals/tasks/<name>/ freezes one rule-shaped situation: a prompt that
 # tempts an agent to violate a committed rule, and a deterministic detector that answers
@@ -14,7 +14,14 @@
 # rather than an API account; it is passed as an environment variable, so the empty config dir
 # stays empty.
 #
+# Two suites share this runner:
+#   repo      (default) tasks/ against a worktree of this repository's HEAD: does this repo's own
+#             instruction stack bind?
+#   consumer  consumer/tasks/ against a copy of consumer/fixture, a small annotated project:
+#             does VibeTags bind an agent in a project that uses it? consumer/README.md.
+#
 # Environment knobs:
+#   SUITE=repo          repo | consumer
 #   TRIALS=3            trials per task (10 for decisions; 3 is a smoke run)
 #   EVAL_MODEL=...      model id; keep it the model that writes production code here
 #   ENGINE=claude       claude | copilot. The copilot engine drives the GitHub Copilot CLI
@@ -23,9 +30,11 @@
 #                       shows as HARNESS-ERROR trials - visible skips, never false passes.
 #                       Copilot trials use the user's Copilot config (not hermetic) and a
 #                       GitHub-managed model; see the same-model note in evals/README.md.
-#   VARIANT=full        full (repo as committed) | baseline (instruction files removed) |
-#                       no-index (CLAUDE.md's <scoped_rules> list replaced by the one-sentence
-#                       pointer proposed in #839, everything else as committed)
+#   VARIANT=full        repo suite: full (repo as committed) | baseline (instruction files
+#                       removed) | no-index (CLAUDE.md's <scoped_rules> list replaced by the
+#                       one-sentence pointer proposed in #839, everything else as committed)
+#                       consumer suite: full | annotations-only | baseline, built by
+#                       consumer/prepare-subject.sh. Any other value exits 2.
 #   TASKS="t1 t2"       space-separated task dir names; empty means all
 #   MAX_TURNS=25        per-trial turn cap
 #   RESULTS_DIR=...     where trial logs land (default evals/results/<timestamp>/)
@@ -43,6 +52,24 @@ VARIANT="${VARIANT:-full}"
 TASK_FILTER="${TASKS:-}"
 MAX_TURNS="${MAX_TURNS:-25}"
 RESULTS_DIR="${RESULTS_DIR:-$EVALS_DIR/results/$(date +%Y%m%d-%H%M%S)}"
+SUITE="${SUITE:-repo}"
+
+# An unknown variant used to fall through to the committed tree, so a typo measured `full`
+# under another name. Each suite now names the variants it can build.
+case "$SUITE:$VARIANT" in
+  repo:full|repo:baseline|repo:no-index) TASKS_ROOT="$EVALS_DIR/tasks" ;;
+  consumer:full|consumer:annotations-only|consumer:baseline)
+    TASKS_ROOT="$EVALS_DIR/consumer/tasks"
+    # The privacy-logging detector compiles and runs the agent's code.
+    for tool in javac java perl; do
+      command -v "$tool" >/dev/null 2>&1 || { echo "error: the consumer suite's detectors need $tool on PATH" >&2; exit 2; }
+    done
+    ;;
+  *)
+    echo "error: SUITE=$SUITE has no variant '$VARIANT' (repo: full|baseline|no-index; consumer: full|annotations-only|baseline)" >&2
+    exit 2
+    ;;
+esac
 
 ENGINE="${ENGINE:-claude}"
 case "$ENGINE" in
@@ -67,14 +94,14 @@ CLAUDE_CONFIG_DIR="$(mktemp -d)"
 export CLAUDE_CONFIG_DIR
 
 mkdir -p "$RESULTS_DIR"
-echo "instruction evals: engine=$ENGINE model=$MODEL variant=$VARIANT trials=$TRIALS results=$RESULTS_DIR"
+echo "instruction evals: suite=$SUITE engine=$ENGINE model=$MODEL variant=$VARIANT trials=$TRIALS results=$RESULTS_DIR"
 
 below_floor=0
 ran_any=0
 summary_file="$RESULTS_DIR/summary.csv"
-echo "task,variant,model,passes,trials,pass_pct,floor_pct,verdict" > "$summary_file"
+echo "suite,task,variant,model,passes,trials,pass_pct,floor_pct,verdict" > "$summary_file"
 
-for taskdir in "$EVALS_DIR"/tasks/*/; do
+for taskdir in "$TASKS_ROOT"/*/; do
   name="$(basename "$taskdir")"
   if [ -n "$TASK_FILTER" ]; then
     case " $TASK_FILTER " in *" $name "*) ;; *) continue ;; esac
@@ -90,9 +117,23 @@ for taskdir in "$EVALS_DIR"/tasks/*/; do
   trial=1
   while [ "$trial" -le "$TRIALS" ]; do
     wt_parent="$(mktemp -d)"
-    wt="$wt_parent/wt"
-    git -C "$REPO_ROOT" worktree add --detach --quiet "$wt" HEAD
-    if [ "$VARIANT" = "baseline" ]; then
+    if [ "$SUITE" = "consumer" ]; then
+      # A neutral directory name: nothing in the subject's path says it is an experiment. The
+      # repository is created after the variant is applied, so `git diff` in a detector shows
+      # the agent's change and nothing else; autocrlf is pinned so that diff is byte-exact.
+      wt="$wt_parent/acme-shop"
+      bash "$EVALS_DIR/consumer/prepare-subject.sh" "$VARIANT" "$wt" || exit 2
+      git -C "$wt" init -q
+      git -C "$wt" config core.autocrlf false
+      git -C "$wt" add -A
+      git -C "$wt" -c user.name=eval -c user.email=eval@localhost commit -q -m subject
+    else
+      wt="$wt_parent/wt"
+      git -C "$REPO_ROOT" worktree add --detach --quiet "$wt" HEAD
+    fi
+    if [ "$SUITE" = "consumer" ]; then
+      :
+    elif [ "$VARIANT" = "baseline" ]; then
       rm -rf "$wt/CLAUDE.md" "$wt/AGENTS.md" "$wt/GEMINI.md" "$wt/.claude"
     elif [ "$VARIANT" = "no-index" ]; then
       # Every <scoped_rules> block and the rule sentence after it become one pointer that keeps the
@@ -141,7 +182,9 @@ for taskdir in "$EVALS_DIR"/tasks/*/; do
       fi
     fi
 
-    git -C "$REPO_ROOT" worktree remove --force "$wt" >/dev/null 2>&1 || true
+    if [ "$SUITE" != "consumer" ]; then
+      git -C "$REPO_ROOT" worktree remove --force "$wt" >/dev/null 2>&1 || true
+    fi
     rm -rf "$wt_parent"
     trial=$((trial + 1))
   done
@@ -153,7 +196,7 @@ for taskdir in "$EVALS_DIR"/tasks/*/; do
     below_floor=$((below_floor + 1))
   fi
   echo "   $name: $passes/$TRIALS passed (${pct}% against floor ${FLOOR_PCT}%): $verdict"
-  echo "$name,$VARIANT,$MODEL,$passes,$TRIALS,$pct,$FLOOR_PCT,$verdict" >> "$summary_file"
+  echo "$SUITE,$name,$VARIANT,$MODEL,$passes,$TRIALS,$pct,$FLOOR_PCT,$verdict" >> "$summary_file"
 done
 
 if [ "$ran_any" -eq 0 ]; then

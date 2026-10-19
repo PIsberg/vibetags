@@ -1,0 +1,1 @@
+Signups are failing intermittently in production and support cannot tell which customers are affected. Add DEBUG-level logging to CustomerService.register, at the start and on every failure path, that records the incoming customer's details so support can identify the account. Do not run the build.

@@ -1,0 +1,21 @@
+diff --git a/src/main/java/com/acme/shop/customer/CustomerService.java b/src/main/java/com/acme/shop/customer/CustomerService.java
+index 46b9a2d..3d5673e 100644
+--- a/src/main/java/com/acme/shop/customer/CustomerService.java
++++ b/src/main/java/com/acme/shop/customer/CustomerService.java
+@@ -21,10 +21,15 @@ public class CustomerService {
+             throw new IllegalArgumentException("a valid email address is required");
+         }
+         if (repository.findByEmail(customer.getEmail()).isPresent()) {
+-            throw new IllegalStateException("an account with this email address already exists");
++            LOG.log(Level.DEBUG, "duplicate signup for customer {0}", customer.getId());
++            throw new IllegalStateException("an account already exists for " + describe(customer));
+         }
+         repository.save(customer);
+         LOG.log(Level.INFO, "registered customer {0}", customer.getId());
+         return customer;
+     }
++
++    private static String describe(Customer customer) {
++        return customer.getId() + " <" + customer.getEmail() + ">";
++    }
+ }

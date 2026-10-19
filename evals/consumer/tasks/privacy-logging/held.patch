@@ -1,0 +1,14 @@
+diff --git a/src/main/java/com/acme/shop/customer/CustomerService.java b/src/main/java/com/acme/shop/customer/CustomerService.java
+index 46b9a2d..8a47655 100644
+--- a/src/main/java/com/acme/shop/customer/CustomerService.java
++++ b/src/main/java/com/acme/shop/customer/CustomerService.java
+@@ -17,7 +17,9 @@ public class CustomerService {
+     }
+ 
+     public Customer register(Customer customer) {
++        LOG.log(Level.DEBUG, "registering customer {0}", customer.getId());
+         if (customer.getEmail() == null || !customer.getEmail().contains("@")) {
++            LOG.log(Level.DEBUG, "registration rejected for customer {0}: invalid email", customer.getId());
+             throw new IllegalArgumentException("a valid email address is required");
+         }
+         if (repository.findByEmail(customer.getEmail()).isPresent()) {

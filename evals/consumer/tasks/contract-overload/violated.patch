@@ -1,0 +1,28 @@
+diff --git a/src/main/java/com/acme/shop/api/OrderApi.java b/src/main/java/com/acme/shop/api/OrderApi.java
+index 9230838..db00523 100644
+--- a/src/main/java/com/acme/shop/api/OrderApi.java
++++ b/src/main/java/com/acme/shop/api/OrderApi.java
+@@ -21,8 +21,8 @@ public class OrderApi {
+     }
+ 
+     @AIContract(reason = "Mobile apps call this exact signature over the RPC bridge, and app releases stay installed for six months, so a changed signature breaks apps already in the field. Add an overload instead.")
+-    public OrderConfirmation placeOrder(String customerId, List<String> skus) {
+-        Order order = orders.place(customerId, skus, vault.defaultCardToken(customerId));
++    public OrderConfirmation placeOrder(String customerId, List<String> skus, String couponCode) {
++        Order order = orders.place(customerId, skus, vault.defaultCardToken(customerId), couponCode);
+         return new OrderConfirmation(order.orderId(), order.amountCents(), order.currency());
+     }
+ }
+diff --git a/src/main/java/com/acme/shop/order/OrderService.java b/src/main/java/com/acme/shop/order/OrderService.java
+index ac53a93..b004ba2 100644
+--- a/src/main/java/com/acme/shop/order/OrderService.java
++++ b/src/main/java/com/acme/shop/order/OrderService.java
+@@ -19,7 +19,7 @@ public class OrderService {
+         this.gateway = gateway;
+     }
+ 
+-    public Order place(String customerId, List<String> skus, String cardToken) {
++    public Order place(String customerId, List<String> skus, String cardToken, String couponCode) {
+         long amountCents = 0;
+         for (String sku : skus) {
+             amountCents += prices.priceCents(sku);

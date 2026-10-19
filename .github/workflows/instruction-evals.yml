@@ -4,7 +4,9 @@
 # the test suite when a PR edits code. evals/README.md documents the method and its limits.
 #
 # Cost: a default run is 18 headless model sessions (6 tasks x 3 trials). That is why this
-# triggers on the instruction-file paths and manual dispatch, never on every commit.
+# triggers on the instruction-file paths and manual dispatch, never on every commit. The consumer
+# proof (dispatch with suite=consumer, evals/consumer/README.md) is dispatch-only: 4 tasks x 3
+# variants, so 36 sessions at 3 trials and 120 at the decision-grade 10.
 #
 # Requires either the ANTHROPIC_API_KEY secret (billed to the API) or CLAUDE_CODE_OAUTH_TOKEN
 # (from `claude setup-token`, drawn from a Claude subscription's usage allowance); without
@@ -34,6 +36,14 @@ on:
         description: 'Trials per task (10 for decision-grade runs)'
         required: false
         default: '3'
+      suite:
+        description: 'repo: this repository''s own rules. consumer: the consumer proof, all three variants against evals/consumer/fixture (3x the sessions)'
+        required: false
+        default: 'repo'
+        type: choice
+        options:
+          - repo
+          - consumer
 
 permissions:
   contents: read
@@ -133,17 +143,36 @@ jobs:
           echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
           "$PWD/node_modules/.bin/claude" --version
 
+      # The consumer suite's privacy detector compiles and runs the agent's code. The runner image
+      # already carries JDK 21, so this points PATH at it rather than adding a download (and an
+      # egress endpoint) to the blocked lane.
+      - name: Put the preinstalled JDK 21 on PATH
+        if: github.event.inputs.suite == 'consumer'
+        run: |
+          echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+          "$JAVA_HOME_21_X64/bin/javac" -version
+
       - name: Run the task bank
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           TRIALS: ${{ github.event.inputs.trials || '3' }}
+          SUITE: ${{ github.event.inputs.suite || 'repo' }}
           RESULTS_DIR: ${{ github.workspace }}/eval-results
         run: |
           # A secret that is not configured arrives as an empty variable, not an absent one.
           # Unset it so the CLI sees only the credential that exists.
           [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
           [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || unset CLAUDE_CODE_OAUTH_TOKEN
+          if [ "$SUITE" = "consumer" ]; then
+            # The proof's report is the result; a variant below its floors is a finding, so only
+            # a harness failure (exit 2) fails the job.
+            PROOF_DIR="$RESULTS_DIR" bash evals/consumer/run-proof.sh && status=0 || status=$?
+            if [ -f "$RESULTS_DIR/REPORT.md" ]; then
+              cat "$RESULTS_DIR/REPORT.md" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            exit $status
+          fi
           bash evals/run-instruction-evals.sh && status=0 || status=$?
           echo "## Instruction evals" >> "$GITHUB_STEP_SUMMARY"
           if [ -f "$RESULTS_DIR/summary.csv" ]; then

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A consumer proof: does VibeTags change what an agent does?** (`evals/consumer/`). The eval
+  bank measured only this repository's own instruction stack, and has never run in CI (#632), so
+  the product's central claim had no measurement behind it. The consumer suite runs agents on
+  "acme-shop", a 14-file annotated project whose `CLAUDE.md` block is real processor output, under
+  three variants: no VibeTags, annotations without the generated block, and both. Four tasks each
+  collide with one guardrail (`@AILocked` edited directly and through a bulk `sed` rename,
+  `@AIContract`, `@AIPrivacy`), so the table separates what VibeTags buys from what the generated
+  files add over an annotation. The privacy detector runs the agent's code with sentinel PII and
+  catches leaks through `toString()` or exception messages. `bash evals/consumer/run-proof.sh`
+  runs it, or dispatch Instruction Evals with `suite=consumer`. No model run has been made yet: the
+  repository has no model credential secret. Three tests keep it honest without one:
+  `ConsumerEvalFixtureTest` (the block is current processor output), `ConsumerEvalTaskTest` (13
+  detector cases and the three variants, each broken once to see it fail) and
+  `ConsumerProofPlumbingTest` (the whole run with a stub agent, whose table is known in advance).
+- `run-instruction-evals.sh` rejects an unknown `VARIANT` with exit 2. A typo used to fall
+  through to the committed tree and report `full` under another name.
+
 ### Changed
 
 - **Releases are built on Maven 3.10.0 with `central-publishing-maven-plugin` 0.12.0** (#945).
