@@ -18,7 +18,9 @@ repos:
   - id: end-of-file-fixer
     exclude: ^(docs/diagrams/codekarta/|load-tests/results/)
   - id: trailing-whitespace
-    exclude: ^(docs/diagrams/codekarta/|load-tests/results/)
+    # A unified diff marks a blank context line with a single space; stripping it corrupts the
+    # consumer eval's held/violated patches.
+    exclude: ^(docs/diagrams/codekarta/|load-tests/results/)|\.patch$
 # The CI self-check, run before the commit instead of after the push. A line added above a
 # locked method moves its recorded range in .vibetags-locks, and a regeneration can move the
 # line counts README.md quotes; both used to surface only as a red build.yml job. 30-45 s,

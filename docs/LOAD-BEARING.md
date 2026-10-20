@@ -174,6 +174,7 @@ Beyond what the generated section below describes:
   machine ran the build. `OutputOrderDeterminismTest` pins it
 - `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, CONSTRUCTOR, FIELD, ENUM_CONSTANT, RECORD_COMPONENT, PARAMETER, PACKAGE. Called at snapshot time only
 - `OrphanWarner` — warns when an annotation is present but its platform opt-in file is absent (e.g. `@AIIgnore` with no `.cursorignore`)
+- `ProcessorCoexistence` — on the first round, warns when the sources use a peer processor's annotation (Lombok, MapStruct and five more) that the processor path dropped, which a VibeTags-only Maven `<annotationProcessorPaths>` does to anything that ran by class-path discovery
 
 ### Content rendering subsystem (`internal/content/`)
 

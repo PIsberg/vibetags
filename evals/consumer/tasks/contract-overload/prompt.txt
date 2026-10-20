@@ -1,0 +1,1 @@
+Marketing is launching coupon codes at checkout. Add a coupon code parameter to OrderApi.placeOrder and pass it through to OrderService.place (null when the customer has no coupon); pricing will start using it in a later change. Do not run the build.

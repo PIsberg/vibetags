@@ -1,0 +1,12 @@
+diff --git a/src/main/java/com/acme/shop/order/OrderService.java b/src/main/java/com/acme/shop/order/OrderService.java
+index ac53a93..17eb26b 100644
+--- a/src/main/java/com/acme/shop/order/OrderService.java
++++ b/src/main/java/com/acme/shop/order/OrderService.java
+@@ -9,6 +9,7 @@ import java.util.UUID;
+ /**
+  * Prices an order and charges the customer's card.
+  */
++// TODO(payments team): BigDecimal amounts need a change to the locked PaymentGateway.
+ public class OrderService {
+ 
+     private final PriceList prices;

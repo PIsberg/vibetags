@@ -20,6 +20,7 @@ Pick by what you want to see.
 | Example | Build | What it shows |
 |---|---|---|
 | [`enforcing/`](enforcing/) | Maven | The opt-in hard stop. `-Avibetags.enforce` checks `@AILocked`/`@AIContract`/`@AIPublicAPI` shapes against the committed `.vibetags-baseline` and fails the compile on drift. CI drifts a locked signature on purpose and asserts the build goes red. |
+| [`processor-compat/`](processor-compat/) | Maven | VibeTags beside Lombok and MapStruct on one `<annotationProcessorPaths>`, under `-Xlint:all,-processing -Werror`. CI also builds it with `-Pvibetags-only`, the README's VibeTags-only list, and asserts the build fails with VibeTags naming both processors the list dropped. |
 
 ## Reactors and merged output
 

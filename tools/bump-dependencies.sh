@@ -66,6 +66,9 @@ gradle.version                          gradle:distributions
 kotlin.version                          org/jetbrains/kotlin/kotlin-gradle-plugin
 groovy.version                          org/apache/groovy/groovy
 scala.version                           org/scala-lang/scala-library 2.13.
+lombok.version                          org/projectlombok/lombok
+mapstruct.version                       org/mapstruct/mapstruct-processor
+lombok-mapstruct-binding.version        org/projectlombok/lombok-mapstruct-binding
 foojay-resolver.version                 plugins:org/gradle/toolchains/foojay-resolver-convention/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin
 publish-maven.version                   org/apache/maven/apache-maven 3.
 node.version                            node:lts
@@ -101,7 +104,8 @@ latest() {
       versions="$(metadata_versions "https://repo1.maven.org/maven2/$source")" || { echo "?"; return; } ;;
   esac
   if [ "$INCLUDE_PRE" = 0 ]; then
-    versions="$(printf '%s\n' "$versions" | grep -viE -- '-(alpha|beta|rc|m|ea|cr|pre|snapshot)[-.]?[0-9]*$' || true)"
+    # A dot qualifies a pre-release as often as a hyphen does: MapStruct's 1.7.0.Beta2, Hibernate's CR1.
+    versions="$(printf '%s\n' "$versions" | grep -viE -- '[-.](alpha|beta|rc|m|ea|cr|pre|snapshot)[-.]?[0-9]*$' || true)"
   fi
   if [ -n "$line" ]; then
     printf '%s\n' "$versions" | grep -F -- "$line" | grep "^${line//./\\.}" | sort -V | tail -n1

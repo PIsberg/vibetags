@@ -55,6 +55,11 @@ common "VibeTags is broken" report, and neither failure produces a useful error:
 > path, so that shape compiles cleanly and writes no files: no error, no warning. If the processor
 > has to stay on the class path, add `<proc>full</proc>` to the compiler plugin's configuration.
 
+> **Already using Lombok, MapStruct or another processor?** Put `vibetags-processor` in the same
+> `<annotationProcessorPaths>` list as them. A list holding VibeTags alone switches off every
+> processor that ran by class-path discovery. Details, and the start.spring.io layout:
+> [USAGE.md](../../../USAGE.md#other-annotation-processors).
+
 `vibetags-processor` does pull `vibetags-annotations` in transitively (kept from 0.5.x for
 backwards compatibility), so a single-artifact setup can work, but only until JDK 23, and it puts
 the whole processor and its SLF4J/Logback dependencies on your compile classpath. Declare both.

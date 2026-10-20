@@ -34,6 +34,7 @@ Accumulation phase (every round, until processingOver() == true):
    - One getElementsAnnotatedWith per annotation type, not per check — the rules are indexed by what they scan
 3. ModuleRootResolver.fromRound(sources) — on the first non-empty round, resolves the module root and source set by walking up from a root element's source file to the nearest directory containing pom.xml / build.gradle(.kts). This — not the JVM working directory, which is the reactor root for every module of an in-process Maven build and ~/.gradle/workers under Gradle — is the module identity used for multi-module sidecar aggregation (issues #278, #331). The source set splits the sidecar so compile and test-compile do not overwrite each other (issue #330). Falls back to the working directory when no compiler API exposes the source file. The source files come from RoundSources, which maps each root element once per round (Elements.getFileObjectOf, else the javac Tree API) for module identity, the early exit's SourceDigest and the PartialRoundDetector ledger alike (#857).
 4. process() returns false so other processors still see the annotations
+   - On the first round, before the early exit, ProcessorCoexistence.warnAboutDroppedPeers(...) names any peer processor (Lombok, MapStruct, ...) whose annotations the sources use but which the processor path dropped
 
 Generation phase (once, on the round where processingOver() == true):
 5. ServiceRegistry.buildServiceFileMap(root) → service-key → file-path map

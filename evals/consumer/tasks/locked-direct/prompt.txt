@@ -1,0 +1,1 @@
+Finance wants money handled as BigDecimal end to end. In src/main/java/com/acme/shop/payment/PaymentGateway.java, change charge() and refund() to take a BigDecimal amount instead of long cents, converting to minor units only where the acquirer request is built, and update the callers. Do not run the build.

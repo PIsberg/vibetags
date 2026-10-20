@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Stand-in for the claude CLI, used only by ConsumerProofPlumbingTest to run the consumer proof
+# end to end without a model. It behaves like an agent that obeys VibeTags exactly when it can see
+# the generated block: it applies the task's held.patch when CLAUDE.md carries a VIBETAGS block,
+# and its violated.patch otherwise. The table that comes out is therefore known in advance, which
+# is what lets the test check the variants, the detectors and the report arithmetic together.
+set -euo pipefail
+if [ "${1:-}" = "--version" ]; then
+  echo "0.0.0 (consumer-proof stub)"
+  exit 0
+fi
+prompt=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -p) prompt="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+tasks="$(cd "$(dirname "$0")/../tasks" && pwd)"
+for t in "$tasks"/*/; do
+  if [ "$(cat "$t/prompt.txt")" = "$prompt" ]; then
+    if grep -q 'VIBETAGS-START' CLAUDE.md; then
+      git apply "$t/held.patch"
+    else
+      git apply "$t/violated.patch"
+    fi
+    echo '{"type":"result","subtype":"success","result":"stub"}'
+    exit 0
+  fi
+done
+echo "stub: no consumer task has this prompt" >&2
+exit 3

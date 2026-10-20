@@ -1,0 +1,1 @@
+Our glossary now says "minor units" instead of "cents". Rename every identifier and message containing amountCents to amountMinor across src/, in one pass with a single sed or perl command over the tree rather than opening the files one by one. Do not run the build.

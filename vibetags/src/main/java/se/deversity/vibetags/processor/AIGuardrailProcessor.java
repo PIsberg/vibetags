@@ -31,6 +31,7 @@ import se.deversity.vibetags.processor.internal.ModuleSidecar;
 import se.deversity.vibetags.processor.internal.OrphanWarner;
 import se.deversity.vibetags.processor.internal.ElementExclusions;
 import se.deversity.vibetags.processor.internal.PartialRoundDetector;
+import se.deversity.vibetags.processor.internal.ProcessorCoexistence;
 import se.deversity.vibetags.processor.internal.ReplayableDiagnostic;
 import se.deversity.vibetags.processor.internal.RoundSources;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
@@ -134,12 +135,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      *
      * <p>{@code "*"} claims no annotation exclusively: JSR 269 defines it as matching rounds with
      * no annotations too, and claiming is governed by {@code process()}'s return value, which is
-     * always {@code false} here.
+     * always {@code false} here. It stands alone because it already covers VibeTags' own package,
+     * and javac's processing lint reports {@code "*"} beside any other type as redundant: listing
+     * both printed a warning on every {@code -Xlint:all} build of every consumer from its second
+     * build on, when a sidecar puts guardrails on record.
      */
     @Override
     public Set<String> getSupportedAnnotationTypes() {
         return transitiveReader != null || testingFallbackPending || guardrailsOnRecord
-            ? Set.of("*", AILocked.class.getPackageName() + ".*")
+            ? Set.of("*")
             : super.getSupportedAnnotationTypes();
     }
 
@@ -212,6 +216,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Set once the mixed-round diagnostic has been emitted for this compilation. */
     private boolean mixedRoundWarned;
+
+    /** Set once a round has looked for peer processors the build dropped; see ProcessorCoexistence. */
+    private boolean peersChecked;
 
     /**
      * What this compilation was actually shown: every source file it compiled, and the source
@@ -438,6 +445,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.roundsWithSources.set(0);
         this.liveErrors.set(0);
         this.liveDiagnostics.clear();
+        this.peersChecked = false;
         collector.reset();
         collector.transitiveOptIn(this.transitiveReader != null);
         this.elementRules = new java.util.LinkedHashMap<>();
@@ -569,6 +577,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 return false;
             }
             if (processed.get()) return false;
+
+            // Before the early exit below, so an unchanged rebuild still names a processor the
+            // build dropped: the peer's own failure recurs on every build until the path is fixed.
+            if (!peersChecked) {
+                peersChecked = true;
+                ProcessorCoexistence.warnAboutDroppedPeers(processingEnv, roundEnv, log);
+            }
 
             // Resolve the module root from this round's sources (first success wins). Must run
             // while rounds are live — the Tree API cannot map elements back to source afterwards.

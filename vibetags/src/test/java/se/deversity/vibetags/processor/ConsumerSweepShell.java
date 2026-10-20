@@ -46,6 +46,28 @@ final class ConsumerSweepShell {
         return cmd;
     }
 
+    /**
+     * The command that runs {@code script} with bash, for scripts that need more than POSIX sh
+     * (arrays, process substitution). On Windows only Git for Windows' {@code bin/bash.exe} will
+     * do: a {@code bash} on PATH there may be WSL's, which runs in another filesystem and cannot
+     * resolve the Windows paths it is handed. Aborts, or fails under CI, when none is found.
+     */
+    static List<String> bashCommand(String script, String... args) {
+        Optional<String> bash = System.getProperty("os.name", "").startsWith("Windows")
+            ? gitRoot().map(root -> root.resolve("bin").resolve("bash.exe"))
+                .filter(Files::isRegularFile)
+                .map(b -> b.toAbsolutePath().toString())
+            : Optional.of("bash").filter(ConsumerSweepShell::runs);
+        if (bash.isEmpty()) {
+            skipOrFail("true".equalsIgnoreCase(System.getenv("CI")));
+        }
+        List<String> cmd = new ArrayList<>();
+        cmd.add(bash.orElseThrow());
+        cmd.add(script);
+        cmd.addAll(List.of(args));
+        return cmd;
+    }
+
     /** {@code sh} when it runs from PATH, else Git for Windows' {@code bin/sh.exe} when present. */
     static Optional<String> choose(boolean shOnPath, Optional<Path> gitRoot) {
         if (shOnPath) {

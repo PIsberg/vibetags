@@ -696,6 +696,45 @@ jobs:
           git checkout -- .
           echo "Enforcement verified red-on-drift; violation names the baseline entry."
 
+      - name: Build Processor-Coexistence Example (Lombok and MapStruct beside VibeTags)
+        run: |
+          cd examples/processor-compat
+          # Lombok, MapStruct and VibeTags on one <annotationProcessorPaths>, under
+          # -Xlint:all,-processing -Werror. Green means both peers ran (CustomerService calls a
+          # Lombok accessor and the mapper MapStruct generates) and VibeTags added no warning.
+          mvn clean compile -B
+
+      - name: Verify The Processor-Coexistence Example's Committed Guardrails Match Its Annotations
+        run: |
+          if [ -n "$(git status --porcelain -- examples/processor-compat/)" ]; then
+            echo "::error::examples/processor-compat/ guardrail files are out of date with its annotations."
+            echo "Run: cd examples/processor-compat && mvn clean compile   then commit the regenerated files."
+            git status --porcelain -- examples/processor-compat/
+            git --no-pager diff -- examples/processor-compat/
+            exit 1
+          fi
+          echo "examples/processor-compat/ regenerates byte-for-byte to the committed files."
+
+      - name: Verify A VibeTags-Only Processor Path Names The Processors It Dropped
+        run: |
+          cd examples/processor-compat
+          # The README's processor path pasted into a Lombok + MapStruct project: once
+          # <annotationProcessorPaths> holds VibeTags alone, javac runs neither peer. The build
+          # must fail, and VibeTags must name both peers, or the user is left with "cannot find
+          # symbol" on a Lombok getter and nothing pointing at the processor path.
+          if mvn clean compile -B -Pvibetags-only > only.log 2>&1; then
+            echo "::error::processor-compat compiled with Lombok and MapStruct dropped from the processor path."
+            tail -50 only.log
+            exit 1
+          fi
+          grep -qF "VibeTags: @lombok.Data needs the Lombok annotation processor" only.log \
+            || { echo "::error::VibeTags did not name the dropped Lombok processor:"; tail -50 only.log; exit 1; }
+          grep -qF "VibeTags: @org.mapstruct.Mapper needs the MapStruct annotation processor" only.log \
+            || { echo "::error::VibeTags did not name the dropped MapStruct processor:"; tail -50 only.log; exit 1; }
+          rm only.log
+          git checkout -- .
+          echo "A VibeTags-only processor path fails with both dropped processors named."
+
       # -Pe2e adds back the @Tag("e2e") classes that `mvn test` skips locally. The install
       # step above ran the fast tier; this is the only place the whole suite runs, so it is
       # not the redundant second pass it looks like.
