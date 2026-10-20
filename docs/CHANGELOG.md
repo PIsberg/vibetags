@@ -30,7 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pass, but trials run with `acceptEdits`, which approves no shell command: in the first real
   consumer run all 9 `locked-sweep` trials ended "no-edit" in every variant, and
   `scoped-rule-unopened`, whose detector counts renaming nothing as held, had been passing without
-  measuring anything. Instruction Evals also gains a `tasks` dispatch input.
+  measuring anything. Instruction Evals also gains a `tasks` dispatch input. Because perl, `sed`'s
+  `e` command, `find -exec` and `xargs` can each run arbitrary commands, every trial now runs with
+  `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which strips credentials from the agent's subprocesses while
+  the CLI keeps them for its own API calls.
 - `run-instruction-evals.sh` exits 2 when any trial is a `HARNESS-ERROR`, and `run-proof.sh` then
   writes no table. The first real consumer-proof run (CI run 39324142569) had all 36 sessions
   refused with "You've hit your session limit"; each was counted as a failed trial, and the job

@@ -125,7 +125,8 @@ class ConsumerProofPlumbingTest {
         Path argsOut = tempDir.resolve("agent-args.txt");
         Path agent = Files.createDirectories(tempDir.resolve("recording-agent"));
         Path stub = agent.resolve("claude");
-        Files.writeString(stub, "#!/usr/bin/env bash\nprintf '%s\n' \"$@\" > \"$ARGS_OUT\"\necho '{}'\n",
+        Files.writeString(stub, "#!/usr/bin/env bash\nprintf '%s\n' \"$@\" > \"$ARGS_OUT\"\n"
+                + "echo \"SCRUB=${CLAUDE_CODE_SUBPROCESS_ENV_SCRUB:-unset}\" >> \"$ARGS_OUT\"\necho '{}'\n",
             StandardCharsets.UTF_8);
         assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
 
@@ -139,6 +140,10 @@ class ConsumerProofPlumbingTest {
         int flag = args.indexOf("--allowedTools");
         assertTrue(flag >= 0, "the runner did not pass --allowedTools: " + args);
         assertEquals("Bash(sed *) Bash(perl *)", args.get(flag + 1), String.valueOf(args));
+        // perl, sed's e command, find -exec and xargs can all run arbitrary commands, so the
+        // agent's subprocesses must not hold the credential: the CLI's scrub strips it from every
+        // subprocess while the CLI keeps it for its own API calls.
+        assertTrue(args.contains("SCRUB=1"), "trials must run with CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1: " + args);
     }
 
     private record Result(int exit, String output) {
