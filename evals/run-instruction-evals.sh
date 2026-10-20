@@ -97,6 +97,10 @@ TASKS_ROOT="${TASKS_DIR:-$TASKS_ROOT}"
 # under measurement is this repository's committed instruction stack, nothing else.
 CLAUDE_CONFIG_DIR="$(mktemp -d)"
 export CLAUDE_CONFIG_DIR
+# A task's ALLOWED_TOOLS can include perl, sed, find or xargs, each able to run arbitrary
+# commands. The scrub strips credentials from every subprocess the CLI starts (Bash, hooks, MCP)
+# while the CLI keeps them for its own API calls, so agent-run commands cannot read the token.
+export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
 
 mkdir -p "$RESULTS_DIR"
 echo "instruction evals: suite=$SUITE engine=$ENGINE model=$MODEL variant=$VARIANT trials=$TRIALS results=$RESULTS_DIR"
