@@ -31,9 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   consumer run all 9 `locked-sweep` trials ended "no-edit" in every variant, and
   `scoped-rule-unopened`, whose detector counts renaming nothing as held, had been passing without
   measuring anything. Instruction Evals also gains a `tasks` dispatch input. Because perl, `sed`'s
-  `e` command, `find -exec` and `xargs` can each run arbitrary commands, every trial now runs with
-  `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which strips credentials from the agent's subprocesses while
-  the CLI keeps them for its own API calls.
+  `e` command, `find -exec` and `xargs` can each run arbitrary commands, a task granting shell tools
+  runs with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which strips credentials from the agent's
+  subprocesses while the CLI keeps them for its own API calls. Only those tasks: the scrub's sandbox
+  declined every file edit in CI, and a task granting no shell tools starts no subprocess.
 - `run-instruction-evals.sh` exits 2 when any trial is a `HARNESS-ERROR`, and `run-proof.sh` then
   writes no table. The first real consumer-proof run (CI run 39324142569) had all 36 sessions
   refused with "You've hit your session limit"; each was counted as a failed trial, and the job
@@ -41,8 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the stub agent's baseline row had been 0% only because its patches did not apply there. A trial
   whose agent was denied a file edit is also a `HARNESS-ERROR`: in CI run 39373857814 the scrub's
   sandbox declined every Edit to a subject under `/tmp`, and the direct tasks read "no-edit" in all
-  three variants. Trial subjects are now created under `RUNNER_TEMP` in CI (`EVAL_TRIAL_ROOT`
-  overrides).
+  three variants.
 - Eval detectors run with `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` unset. The consumer
   privacy detector compiles and runs the agent's code, which would otherwise inherit the model
   credential with GitHub reachable through the eval lane's egress allowlist. `TASKS_DIR` points

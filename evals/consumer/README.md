@@ -59,8 +59,9 @@ the trial logs. In CI, dispatch **Instruction Evals** with `suite=consumer` and 
 model that writes your production code; the report lands in the job summary. A single variant runs through the shared runner:
 `SUITE=consumer VARIANT=annotations-only bash evals/run-instruction-evals.sh`.
 
-The detectors need `javac`, `java` and `perl` on `PATH`; the runner exits 2 without them. Trials run
-with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which on Linux needs bubblewrap and socat (`apt-get install
+The detectors need `javac`, `java` and `perl` on `PATH`; the runner exits 2 without them. A task
+that grants shell tools (`locked-sweep`) runs with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which on Linux
+needs bubblewrap and socat (`apt-get install
 bubblewrap socat`). Without bubblewrap the CLI refuses to start and every trial is a
 `HARNESS-ERROR`; without socat the sessions run but no shell command does.
 
