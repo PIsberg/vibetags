@@ -50,7 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `e` command, `find -exec` and `xargs` can each run arbitrary commands, a task granting shell tools
   runs with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which strips credentials from the agent's
   subprocesses while the CLI keeps them for its own API calls. Only those tasks: the scrub's sandbox
-  declined every file edit in CI, and a task granting no shell tools starts no subprocess.
+  declined every file edit in CI. Every trial also runs with `--settings` switching project hooks off
+  (the repo suite's subject carries a `SessionEnd` hook, which had run with the credential in every
+  repo-suite trial), and a task granting no shell tools gets `Bash` denied outright, since a deny
+  rule beats any allow rule a subject's settings could add.
 - `run-instruction-evals.sh` exits 2 when any trial is a `HARNESS-ERROR`, and `run-proof.sh` then
   writes no table. The first real consumer-proof run (CI run 39324142569) had all 36 sessions
   refused with "You've hit your session limit"; each was counted as a failed trial, and the job
