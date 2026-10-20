@@ -113,6 +113,10 @@ for taskdir in "$TASKS_ROOT"/*/; do
     case " $TASK_FILTER " in *" $name "*) ;; *) continue ;; esac
   fi
   FLOOR_PCT=66
+  # Shell commands the task needs, as claude CLI permission rules ("Bash(sed *) Bash(perl *)").
+  # Trials run with acceptEdits, which approves file edits and nothing else, so a task that asks
+  # for a bulk sed/perl pass measured "no-edit" in every variant until it could name them.
+  ALLOWED_TOOLS=""
   # shellcheck disable=SC1091
   . "$taskdir/task.env"
   prompt="$(cat "$taskdir/prompt.txt")"
@@ -161,6 +165,7 @@ for taskdir in "$TASKS_ROOT"/*/; do
           --model "$MODEL" \
           --max-turns "$MAX_TURNS" \
           --permission-mode acceptEdits \
+          ${ALLOWED_TOOLS:+--allowedTools "$ALLOWED_TOOLS"} \
           --strict-mcp-config \
           --output-format json
       ) >"$out" 2>"$err"
