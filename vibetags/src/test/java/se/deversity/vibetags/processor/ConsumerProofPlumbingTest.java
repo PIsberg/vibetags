@@ -144,6 +144,7 @@ class ConsumerProofPlumbingTest {
         // agent's subprocesses must not hold the credential: the CLI's scrub strips it from every
         // subprocess while the CLI keeps it for its own API calls.
         assertTrue(args.contains("SCRUB=1"), "trials must run with CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1: " + args);
+        assertTrue(args.get(args.indexOf("--settings") + 1).contains("\"disableAllHooks\":true"), String.valueOf(args));
     }
 
     @Test
@@ -184,7 +185,8 @@ class ConsumerProofPlumbingTest {
         Path agent = Files.createDirectories(tempDir.resolve("recording-agent"));
         Path stub = agent.resolve("claude");
         Files.writeString(stub, "#!/usr/bin/env bash\n"
-                + "echo \"SCRUB=${CLAUDE_CODE_SUBPROCESS_ENV_SCRUB:-unset}\" > \"$ARGS_OUT\"\necho '{}'\n",
+                + "printf '%s\\n' \"$@\" > \"$ARGS_OUT\"\n"
+                + "echo \"SCRUB=${CLAUDE_CODE_SUBPROCESS_ENV_SCRUB:-unset}\" >> \"$ARGS_OUT\"\necho '{}'\n",
             StandardCharsets.UTF_8);
         assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
 
@@ -193,7 +195,13 @@ class ConsumerProofPlumbingTest {
                 "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString(),
                 "ARGS_OUT", unix(argsOut)));
         assertEquals(0, r.exit, r.output);
-        assertEquals(List.of("SCRUB=unset"), Files.readAllLines(argsOut, StandardCharsets.UTF_8));
+        List<String> args = Files.readAllLines(argsOut, StandardCharsets.UTF_8);
+        assertTrue(args.contains("SCRUB=unset"), String.valueOf(args));
+        // Without the scrub, nothing may start a subprocess holding the credential: project hooks
+        // are switched off (the repo suite's subject carries a SessionEnd hook), and Bash is
+        // denied outright, since a deny rule beats an allow rule a subject's settings might add.
+        String settings = args.get(args.indexOf("--settings") + 1);
+        assertTrue(settings.contains("\"disableAllHooks\":true") && settings.contains("\"deny\":[\"Bash\"]"), settings);
     }
 
     private record Result(int exit, String output) {

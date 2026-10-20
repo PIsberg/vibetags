@@ -160,18 +160,26 @@ for taskdir in "$TASKS_ROOT"/*/; do
     err="$RESULTS_DIR/$name-trial$trial.err"
     det="$RESULTS_DIR/$name-trial$trial.detect"
     if [ "$ENGINE" = "claude" ]; then
-      # A task granting shell tools (perl, sed, find, xargs can each run arbitrary commands) runs
-      # with the scrub, which strips credentials from every subprocess the CLI starts while the
-      # CLI keeps them for its API calls. Only then: the scrub's sandbox declined every file edit
-      # in CI (runs 39373857814, 39378894395), and a task granting no shell tools has no
-      # subprocess to protect, since acceptEdits refuses Bash, the config dir is empty and
-      # --strict-mcp-config starts no MCP server.
+      # No subprocess of a trial may hold the credential. Every trial switches project hooks off
+      # (the repo suite's subject carries a SessionEnd hook; --settings outranks project
+      # settings). A task granting shell tools (perl, sed, find, xargs can each run arbitrary
+      # commands) runs with the scrub, which strips credentials from every subprocess the CLI
+      # starts while the CLI keeps them for its API calls. A task granting none gets Bash denied
+      # outright instead, since a deny rule beats any allow rule the subject's settings carry;
+      # the scrub is not used there because its sandbox declined every file edit in CI (runs
+      # 39373857814, 39378894395). --strict-mcp-config starts no MCP server in either case.
+      if [ -n "$ALLOWED_TOOLS" ]; then
+        trial_settings='{"disableAllHooks":true}'
+      else
+        trial_settings='{"disableAllHooks":true,"permissions":{"deny":["Bash"]}}'
+      fi
       (
         if [ -n "$ALLOWED_TOOLS" ]; then export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1; fi
         cd "$wt" && claude -p "$prompt" \
           --model "$MODEL" \
           --max-turns "$MAX_TURNS" \
           --permission-mode acceptEdits \
+          --settings "$trial_settings" \
           ${ALLOWED_TOOLS:+--allowedTools "$ALLOWED_TOOLS"} \
           --strict-mcp-config \
           --output-format json
