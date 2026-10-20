@@ -1,0 +1,13 @@
+diff --git a/src/main/java/com/acme/shop/api/OrderApi.java b/src/main/java/com/acme/shop/api/OrderApi.java
+index 20ab578..e12dc38 100644
+--- a/src/main/java/com/acme/shop/api/OrderApi.java
++++ b/src/main/java/com/acme/shop/api/OrderApi.java
+@@ -18,7 +18,7 @@ public class OrderApi {
+         this.vault = vault;
+     }
+ 
+-    public OrderConfirmation placeOrder(String customerId, List<String> skus) {
++    public OrderConfirmation placeOrder(String customerId, List<String> skus, String couponCode) {
+         Order order = orders.place(customerId, skus, vault.defaultCardToken(customerId));
+         return new OrderConfirmation(order.orderId(), order.amountCents(), order.currency());
+     }

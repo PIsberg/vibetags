@@ -41,7 +41,9 @@
 #   MAX_TURNS=25        per-trial turn cap
 #   RESULTS_DIR=...     where trial logs land (default evals/results/<timestamp>/)
 #
-# Exit status: 0 when every task met its floor, 1 otherwise, 2 on harness misconfiguration.
+# Exit status: 0 when every task met its floor, 1 otherwise, 2 on harness misconfiguration or when
+# any trial was a HARNESS-ERROR (the agent never ran, e.g. a refused session), since such a run
+# measured nothing for those trials and its pass rates would read as results.
 # No pipes stand between a command and the place its exit code is read.
 
 set -uo pipefail
@@ -100,6 +102,7 @@ mkdir -p "$RESULTS_DIR"
 echo "instruction evals: suite=$SUITE engine=$ENGINE model=$MODEL variant=$VARIANT trials=$TRIALS results=$RESULTS_DIR"
 
 below_floor=0
+harness_errors=0
 ran_any=0
 summary_file="$RESULTS_DIR/summary.csv"
 echo "suite,task,variant,model,passes,trials,pass_pct,floor_pct,verdict" > "$summary_file"
@@ -173,7 +176,8 @@ for taskdir in "$TASKS_ROOT"/*/; do
     fi
 
     if [ "$engine_rc" -ne 0 ]; then
-      echo "   trial $trial: HARNESS-ERROR ($ENGINE exited $engine_rc; see $(basename "$err")) - counted as fail"
+      harness_errors=$((harness_errors + 1))
+      echo "   trial $trial: HARNESS-ERROR ($ENGINE exited $engine_rc; see $(basename "$err") and $(basename "$out")) - not a measurement"
     else
       # Detectors run without the model credential. Some compile and run what the agent wrote
       # (consumer privacy-logging does), and that code would otherwise inherit a secret it
@@ -212,6 +216,10 @@ fi
 
 echo
 echo "summary written to $summary_file"
+if [ "$harness_errors" -gt 0 ]; then
+  echo "RESULT: $harness_errors trial(s) were HARNESS-ERROR, so this run measured nothing for them. The pass rates above are not results; fix the engine (credential, quota, model id) and rerun."
+  exit 2
+fi
 if [ "$below_floor" -gt 0 ]; then
   echo "RESULT: $below_floor task(s) below floor. A rule below its floor gets rewritten, promoted to an enforcing gate, or deleted - in that order (evals/README.md)."
   exit 1

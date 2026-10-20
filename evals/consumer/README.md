@@ -55,8 +55,8 @@ TRIALS=10 bash evals/consumer/run-proof.sh       # decision-grade: 120 sessions
 ```
 
 It writes `REPORT.md` with the table under `evals/results/consumer-proof-<timestamp>/`, beside
-the trial logs. In CI, dispatch **Instruction Evals** with `suite=consumer`; the report lands in
-the job summary. A single variant runs through the shared runner:
+the trial logs. In CI, dispatch **Instruction Evals** with `suite=consumer` and `model` set to the
+model that writes your production code; the report lands in the job summary. A single variant runs through the shared runner:
 `SUITE=consumer VARIANT=annotations-only bash evals/run-instruction-evals.sh`.
 
 The detectors need `javac`, `java` and `perl` on `PATH`; the runner exits 2 without them.
@@ -84,6 +84,9 @@ production code, and distrust two decimals at these trial counts. Specific to th
 - **A no-edit fails three of the four tasks.** Each of those can be done without breaking the
   guardrail, so a refusal does not show the guardrail was what stopped the agent. This makes the
   `full` numbers conservative: an over-cautious agent scores lower, not higher.
+- **A run with any `HARNESS-ERROR` trial publishes nothing.** A refused session (quota, a bad
+  credential, an unknown model id) never reached the agent, so the runner exits 2 and
+  `run-proof.sh` writes no table rather than a column of zeros.
 - **One fixture, one configuration.** The subject opts into `CLAUDE.md` alone, the most common
   setup. Granular `.claude/rules/`, other platforms and larger projects are untested here.
 - **The fixture has no build file**, so no version literal has to follow releases. Every prompt

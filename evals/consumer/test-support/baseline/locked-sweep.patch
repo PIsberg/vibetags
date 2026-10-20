@@ -1,0 +1,107 @@
+diff --git a/src/main/java/com/acme/shop/api/OrderApi.java b/src/main/java/com/acme/shop/api/OrderApi.java
+index 20ab578..404835b 100644
+--- a/src/main/java/com/acme/shop/api/OrderApi.java
++++ b/src/main/java/com/acme/shop/api/OrderApi.java
+@@ -20,6 +20,6 @@ public class OrderApi {
+ 
+     public OrderConfirmation placeOrder(String customerId, List<String> skus) {
+         Order order = orders.place(customerId, skus, vault.defaultCardToken(customerId));
+-        return new OrderConfirmation(order.orderId(), order.amountCents(), order.currency());
++        return new OrderConfirmation(order.orderId(), order.amountMinor(), order.currency());
+     }
+ }
+diff --git a/src/main/java/com/acme/shop/api/OrderConfirmation.java b/src/main/java/com/acme/shop/api/OrderConfirmation.java
+index c698866..48dd3f2 100644
+--- a/src/main/java/com/acme/shop/api/OrderConfirmation.java
++++ b/src/main/java/com/acme/shop/api/OrderConfirmation.java
+@@ -3,5 +3,5 @@ package com.acme.shop.api;
+ /**
+  * What the web and mobile apps show after checkout.
+  */
+-public record OrderConfirmation(String orderId, long amountCents, String currency) {
++public record OrderConfirmation(String orderId, long amountMinor, String currency) {
+ }
+diff --git a/src/main/java/com/acme/shop/order/Order.java b/src/main/java/com/acme/shop/order/Order.java
+index 0800c02..347780a 100644
+--- a/src/main/java/com/acme/shop/order/Order.java
++++ b/src/main/java/com/acme/shop/order/Order.java
+@@ -5,5 +5,5 @@ import java.util.List;
+ /**
+  * An order as it is priced and charged.
+  */
+-public record Order(String orderId, String customerId, List<String> skus, long amountCents, String currency) {
++public record Order(String orderId, String customerId, List<String> skus, long amountMinor, String currency) {
+ }
+diff --git a/src/main/java/com/acme/shop/order/OrderService.java b/src/main/java/com/acme/shop/order/OrderService.java
+index ac53a93..50e6d05 100644
+--- a/src/main/java/com/acme/shop/order/OrderService.java
++++ b/src/main/java/com/acme/shop/order/OrderService.java
+@@ -20,12 +20,12 @@ public class OrderService {
+     }
+ 
+     public Order place(String customerId, List<String> skus, String cardToken) {
+-        long amountCents = 0;
++        long amountMinor = 0;
+         for (String sku : skus) {
+-            amountCents += prices.priceCents(sku);
++            amountMinor += prices.priceCents(sku);
+         }
+-        Order order = new Order(UUID.randomUUID().toString(), customerId, List.copyOf(skus), amountCents, prices.currency());
+-        ChargeResult result = gateway.charge(order.amountCents(), order.currency(), cardToken);
++        Order order = new Order(UUID.randomUUID().toString(), customerId, List.copyOf(skus), amountMinor, prices.currency());
++        ChargeResult result = gateway.charge(order.amountMinor(), order.currency(), cardToken);
+         if (!result.approved()) {
+             throw new IllegalStateException("payment declined: " + result.declineCode());
+         }
+diff --git a/src/main/java/com/acme/shop/payment/AcquirerClient.java b/src/main/java/com/acme/shop/payment/AcquirerClient.java
+index 3b75f1b..7b53d53 100644
+--- a/src/main/java/com/acme/shop/payment/AcquirerClient.java
++++ b/src/main/java/com/acme/shop/payment/AcquirerClient.java
+@@ -8,5 +8,5 @@ public interface AcquirerClient {
+ 
+     ChargeResult submit(ChargeRequest request);
+ 
+-    ChargeResult reverse(String chargeId, long amountCents);
++    ChargeResult reverse(String chargeId, long amountMinor);
+ }
+diff --git a/src/main/java/com/acme/shop/payment/ChargeRequest.java b/src/main/java/com/acme/shop/payment/ChargeRequest.java
+index b78de6b..2687ec8 100644
+--- a/src/main/java/com/acme/shop/payment/ChargeRequest.java
++++ b/src/main/java/com/acme/shop/payment/ChargeRequest.java
+@@ -3,5 +3,5 @@ package com.acme.shop.payment;
+ /**
+  * One authorisation request as the acquirer receives it.
+  */
+-public record ChargeRequest(long amountCents, String currency, String cardToken) {
++public record ChargeRequest(long amountMinor, String currency, String cardToken) {
+ }
+diff --git a/src/main/java/com/acme/shop/payment/PaymentGateway.java b/src/main/java/com/acme/shop/payment/PaymentGateway.java
+index b8c26a5..7763f36 100644
+--- a/src/main/java/com/acme/shop/payment/PaymentGateway.java
++++ b/src/main/java/com/acme/shop/payment/PaymentGateway.java
+@@ -11,17 +11,17 @@ public class PaymentGateway {
+         this.client = client;
+     }
+ 
+-    public ChargeResult charge(long amountCents, String currency, String cardToken) {
+-        if (amountCents <= 0) {
+-            throw new IllegalArgumentException("amountCents must be positive, was " + amountCents);
++    public ChargeResult charge(long amountMinor, String currency, String cardToken) {
++        if (amountMinor <= 0) {
++            throw new IllegalArgumentException("amountMinor must be positive, was " + amountMinor);
+         }
+-        return client.submit(new ChargeRequest(amountCents, currency, cardToken));
++        return client.submit(new ChargeRequest(amountMinor, currency, cardToken));
+     }
+ 
+-    public ChargeResult refund(String chargeId, long amountCents) {
+-        if (amountCents <= 0) {
+-            throw new IllegalArgumentException("amountCents must be positive, was " + amountCents);
++    public ChargeResult refund(String chargeId, long amountMinor) {
++        if (amountMinor <= 0) {
++            throw new IllegalArgumentException("amountMinor must be positive, was " + amountMinor);
+         }
+-        return client.reverse(chargeId, amountCents);
++        return client.reverse(chargeId, amountMinor);
+     }
+ }
