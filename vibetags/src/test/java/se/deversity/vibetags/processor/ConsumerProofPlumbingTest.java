@@ -169,6 +169,33 @@ class ConsumerProofPlumbingTest {
         assertTrue(r.output.contains("HARNESS-ERROR") && r.output.contains("Edit"), r.output);
     }
 
+    @Test
+    void aTaskWithoutShellToolsRunsWithoutTheScrubSandbox() throws Exception {
+        // The scrub turns on a sandbox that declined every file edit in CI (runs 39373857814 and
+        // 39378894395), so it is reserved for tasks that grant shell tools. A task granting none
+        // has no subprocess to protect: acceptEdits refuses Bash, the config dir is empty, and
+        // --strict-mcp-config starts no MCP server.
+        Path tasks = tempDir.resolve("tasks");
+        Path task = Files.createDirectories(tasks.resolve("edits-only"));
+        Files.writeString(task.resolve("prompt.txt"), "any prompt", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("task.env"), "FLOOR_PCT=0\n", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("detect.sh"), "echo 'held: nothing to check'\n", StandardCharsets.UTF_8);
+        Path argsOut = tempDir.resolve("agent-env.txt");
+        Path agent = Files.createDirectories(tempDir.resolve("recording-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\n"
+                + "echo \"SCRUB=${CLAUDE_CODE_SUBPROCESS_ENV_SCRUB:-unset}\" > \"$ARGS_OUT\"\necho '{}'\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS_DIR", unix(tasks),
+                "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString(),
+                "ARGS_OUT", unix(argsOut)));
+        assertEquals(0, r.exit, r.output);
+        assertEquals(List.of("SCRUB=unset"), Files.readAllLines(argsOut, StandardCharsets.UTF_8));
+    }
+
     private record Result(int exit, String output) {
     }
 

@@ -40,7 +40,6 @@
 #                       suite still decides the subject and its variants
 #   MAX_TURNS=25        per-trial turn cap
 #   RESULTS_DIR=...     where trial logs land (default evals/results/<timestamp>/)
-#   EVAL_TRIAL_ROOT=... where trial subjects are created (default $RUNNER_TEMP in CI, else mktemp's)
 #
 # Exit status: 0 when every task met its floor, 1 otherwise, 2 on harness misconfiguration or when
 # any trial was a HARNESS-ERROR (the agent never ran, e.g. a refused session), since such a run
@@ -98,11 +97,6 @@ TASKS_ROOT="${TASKS_DIR:-$TASKS_ROOT}"
 # under measurement is this repository's committed instruction stack, nothing else.
 CLAUDE_CONFIG_DIR="$(mktemp -d)"
 export CLAUDE_CONFIG_DIR
-# A task's ALLOWED_TOOLS can include perl, sed, find or xargs, each able to run arbitrary
-# commands. The scrub strips credentials from every subprocess the CLI starts (Bash, hooks, MCP)
-# while the CLI keeps them for its own API calls, so agent-run commands cannot read the token.
-export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
-TRIAL_ROOT="${EVAL_TRIAL_ROOT:-${RUNNER_TEMP:-}}"
 
 mkdir -p "$RESULTS_DIR"
 echo "instruction evals: suite=$SUITE engine=$ENGINE model=$MODEL variant=$VARIANT trials=$TRIALS results=$RESULTS_DIR"
@@ -132,9 +126,7 @@ for taskdir in "$TASKS_ROOT"/*/; do
 
   trial=1
   while [ "$trial" -le "$TRIALS" ]; do
-    # Not under /tmp in CI: with the scrub's sandbox on, every Edit to a subject under /tmp was
-    # declined (CI run 39373857814). EVAL_TRIAL_ROOT overrides; CI's RUNNER_TEMP is the default.
-    wt_parent="$(mktemp -d ${TRIAL_ROOT:+-p "$TRIAL_ROOT"})"
+    wt_parent="$(mktemp -d)"
     if [ "$SUITE" = "consumer" ]; then
       # A neutral directory name: nothing in the subject's path says it is an experiment. The
       # repository is created after the variant is applied, so `git diff` in a detector shows
@@ -168,7 +160,14 @@ for taskdir in "$TASKS_ROOT"/*/; do
     err="$RESULTS_DIR/$name-trial$trial.err"
     det="$RESULTS_DIR/$name-trial$trial.detect"
     if [ "$ENGINE" = "claude" ]; then
+      # A task granting shell tools (perl, sed, find, xargs can each run arbitrary commands) runs
+      # with the scrub, which strips credentials from every subprocess the CLI starts while the
+      # CLI keeps them for its API calls. Only then: the scrub's sandbox declined every file edit
+      # in CI (runs 39373857814, 39378894395), and a task granting no shell tools has no
+      # subprocess to protect, since acceptEdits refuses Bash, the config dir is empty and
+      # --strict-mcp-config starts no MCP server.
       (
+        if [ -n "$ALLOWED_TOOLS" ]; then export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1; fi
         cd "$wt" && claude -p "$prompt" \
           --model "$MODEL" \
           --max-turns "$MAX_TURNS" \
