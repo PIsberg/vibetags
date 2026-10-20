@@ -5,6 +5,6 @@
   "description": "Pins the Codex CLI that build.yml's codex-rules job loads the generated .codex/rules/vibetags.rules with, installed by 'npm ci' against a committed lockfile of integrity hashes (#970).",
   "license": "Apache-2.0",
   "dependencies": {
-    "@openai/codex": "0.162.1"
+    "@openai/codex": "0.163.0"
   }
 }
