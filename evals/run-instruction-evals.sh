@@ -40,6 +40,7 @@
 #                       suite still decides the subject and its variants
 #   MAX_TURNS=25        per-trial turn cap
 #   RESULTS_DIR=...     where trial logs land (default evals/results/<timestamp>/)
+#   EVAL_TRIAL_ROOT=... where trial subjects are created (default $RUNNER_TEMP in CI, else mktemp's)
 #
 # Exit status: 0 when every task met its floor, 1 otherwise, 2 on harness misconfiguration or when
 # any trial was a HARNESS-ERROR (the agent never ran, e.g. a refused session), since such a run
@@ -101,6 +102,7 @@ export CLAUDE_CONFIG_DIR
 # commands. The scrub strips credentials from every subprocess the CLI starts (Bash, hooks, MCP)
 # while the CLI keeps them for its own API calls, so agent-run commands cannot read the token.
 export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
+TRIAL_ROOT="${EVAL_TRIAL_ROOT:-${RUNNER_TEMP:-}}"
 
 mkdir -p "$RESULTS_DIR"
 echo "instruction evals: suite=$SUITE engine=$ENGINE model=$MODEL variant=$VARIANT trials=$TRIALS results=$RESULTS_DIR"
@@ -130,7 +132,9 @@ for taskdir in "$TASKS_ROOT"/*/; do
 
   trial=1
   while [ "$trial" -le "$TRIALS" ]; do
-    wt_parent="$(mktemp -d)"
+    # Not under /tmp in CI: with the scrub's sandbox on, every Edit to a subject under /tmp was
+    # declined (CI run 39373857814). EVAL_TRIAL_ROOT overrides; CI's RUNNER_TEMP is the default.
+    wt_parent="$(mktemp -d ${TRIAL_ROOT:+-p "$TRIAL_ROOT"})"
     if [ "$SUITE" = "consumer" ]; then
       # A neutral directory name: nothing in the subject's path says it is an experiment. The
       # repository is created after the variant is applied, so `git diff` in a detector shows
@@ -184,9 +188,24 @@ for taskdir in "$TASKS_ROOT"/*/; do
       engine_rc=$?
     fi
 
+    # A file edit the agent attempted and the environment refused is not the agent's choice. In CI
+    # run 39373857814 the sandbox declined every Edit and the direct tasks read "no-edit" in all
+    # three variants, a table that looked like a result. Counted as a HARNESS-ERROR instead.
+    denied_edit=""
+    if [ "$engine_rc" -eq 0 ] && [ "$ENGINE" = "claude" ]; then
+      denied_edit="$(perl -MJSON::PP -0777 -ne '
+        my $d = eval { decode_json($_) } or exit 0;
+        for my $x (@{ $d->{permission_denials} || [] }) {
+          if (($x->{tool_name} // "") =~ /^(Edit|MultiEdit|Write|NotebookEdit)$/) { print $x->{tool_name}; last }
+        }' "$out" 2>/dev/null)"
+    fi
+
     if [ "$engine_rc" -ne 0 ]; then
       harness_errors=$((harness_errors + 1))
       echo "   trial $trial: HARNESS-ERROR ($ENGINE exited $engine_rc; see $(basename "$err") and $(basename "$out")) - not a measurement"
+    elif [ -n "$denied_edit" ]; then
+      harness_errors=$((harness_errors + 1))
+      echo "   trial $trial: HARNESS-ERROR (the agent's $denied_edit was denied; see $(basename "$out")) - not a measurement"
     else
       # Detectors run without the model credential. Some compile and run what the agent wrote
       # (consumer privacy-logging does), and that code would otherwise inherit a secret it

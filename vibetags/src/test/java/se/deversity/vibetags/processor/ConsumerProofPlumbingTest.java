@@ -146,6 +146,29 @@ class ConsumerProofPlumbingTest {
         assertTrue(args.contains("SCRUB=1"), "trials must run with CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1: " + args);
     }
 
+    @Test
+    void aTrialWhoseFileEditWasDeniedIsNotAMeasurement() throws Exception {
+        // In CI run 39373857814 the sandbox the credential scrub turns on declined every Edit, so
+        // the direct tasks read "no-edit" in all three variants: 0% where a no-edit fails, 100%
+        // where it passes, a table that looked like a result. A denied file edit is the
+        // environment failing, not the agent choosing, so it counts as a HARNESS-ERROR.
+        Path agent = Files.createDirectories(tempDir.resolve("denied-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\n"
+                + "echo '{\"type\":\"result\",\"is_error\":false,\"result\":\"write permission was declined\","
+                + "\"permission_denials\":[{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"src/A.java\","
+                + "\"old_string\":\"[a]\",\"new_string\":\"[b]\"}}]}'\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS", "locked-direct",
+                "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString()));
+
+        assertEquals(2, r.exit, r.output);
+        assertTrue(r.output.contains("HARNESS-ERROR") && r.output.contains("Edit"), r.output);
+    }
+
     private record Result(int exit, String output) {
     }
 

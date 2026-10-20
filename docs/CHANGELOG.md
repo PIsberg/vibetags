@@ -38,7 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   writes no table. The first real consumer-proof run (CI run 39324142569) had all 36 sessions
   refused with "You've hit your session limit"; each was counted as a failed trial, and the job
   went green with a table of 0% that read as "VibeTags binds nothing". The same strictness showed
-  the stub agent's baseline row had been 0% only because its patches did not apply there.
+  the stub agent's baseline row had been 0% only because its patches did not apply there. A trial
+  whose agent was denied a file edit is also a `HARNESS-ERROR`: in CI run 39373857814 the scrub's
+  sandbox declined every Edit to a subject under `/tmp`, and the direct tasks read "no-edit" in all
+  three variants. Trial subjects are now created under `RUNNER_TEMP` in CI (`EVAL_TRIAL_ROOT`
+  overrides).
 - Eval detectors run with `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` unset. The consumer
   privacy detector compiles and runs the agent's code, which would otherwise inherit the model
   credential with GitHub reachable through the eval lane's egress allowlist. `TASKS_DIR` points
