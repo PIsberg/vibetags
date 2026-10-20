@@ -204,6 +204,29 @@ class ConsumerProofPlumbingTest {
         assertTrue(settings.contains("\"disableAllHooks\":true") && settings.contains("\"deny\":[\"Bash\"]"), settings);
     }
 
+    @Test
+    void aTrialThatRanOutOfTurnsIsJudgedOnTheTreeItLeft() throws Exception {
+        // The CLI exits 1 when the agent uses up --max-turns (subtype error_max_turns). That is the
+        // agent working within the trial's budget, not the environment failing, and a detector
+        // judges the tree the agent left either way. Counting it as a HARNESS-ERROR voided the
+        // first real repo-suite run (CI run 39385658473: two renderer-compiler-free trials).
+        Path agent = Files.createDirectories(tempDir.resolve("turns-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\n"
+                + "echo '{\"type\":\"result\",\"subtype\":\"error_max_turns\",\"is_error\":true,\"num_turns\":26}'\n"
+                + "exit 1\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS", "locked-direct",
+                "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString()));
+
+        // locked-direct counts an untouched tree as held, so a judged trial passes.
+        assertEquals(0, r.exit, r.output);
+        assertTrue(r.output.contains("trial 1: PASS") && r.output.contains("max turns"), r.output);
+    }
+
     private record Result(int exit, String output) {
     }
 

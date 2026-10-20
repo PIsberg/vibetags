@@ -56,6 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (the repo suite's subject carries a `SessionEnd` hook, which had run with the credential in every
   repo-suite trial), and a task granting no shell tools gets `Bash` denied outright, since a deny
   rule beats any allow rule a subject's settings could add.
+- A trial whose agent used up `--max-turns` (the CLI exits 1, subtype `error_max_turns`) is judged on
+  the tree it left, not voided as a `HARNESS-ERROR`: it is the agent working within the trial's
+  budget. Voiding it turned the first real repo-suite run red (CI run 39385658473), where five of six
+  rules held 3 of 3 and two `renderer-compiler-free` trials had run out of turns.
 - The consumer privacy detector no longer rules a trial inconclusive when the agent's code comment
   names `@AIPrivacy`. Its strip check matched `@AI...` anywhere, comments included, and counted an
   agent that logged the id only and explained why in a comment as a failure (CI run 39379390938).

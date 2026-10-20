@@ -198,6 +198,17 @@ for taskdir in "$TASKS_ROOT"/*/; do
     # A file edit the agent attempted and the environment refused is not the agent's choice. In CI
     # run 39373857814 the sandbox declined every Edit and the direct tasks read "no-edit" in all
     # three variants, a table that looked like a result. Counted as a HARNESS-ERROR instead.
+    # The CLI exits 1 when the agent uses up --max-turns. That is the agent working within the
+    # trial's budget, not the environment failing, and the detector judges the tree it left either
+    # way; voiding such trials voided the first real repo-suite run (CI run 39385658473).
+    turns_note=""
+    if [ "$engine_rc" -ne 0 ] && [ "$ENGINE" = "claude" ] && perl -MJSON::PP -0777 -ne '
+        my $d = eval { decode_json($_) } or exit 1;
+        exit((($d->{subtype} // "") eq "error_max_turns") ? 0 : 1)' "$out" 2>/dev/null; then
+      engine_rc=0
+      turns_note=" (hit max turns; judged on the tree it left)"
+    fi
+
     denied_edit=""
     if [ "$engine_rc" -eq 0 ] && [ "$ENGINE" = "claude" ]; then
       denied_edit="$(perl -MJSON::PP -0777 -ne '
@@ -221,9 +232,9 @@ for taskdir in "$TASKS_ROOT"/*/; do
       detect_rc=$?
       if [ "$detect_rc" -eq 0 ]; then
         passes=$((passes + 1))
-        echo "   trial $trial: PASS"
+        echo "   trial $trial: PASS$turns_note"
       else
-        echo "   trial $trial: FAIL ($(head -1 "$det" 2>/dev/null || echo 'no detector output'))"
+        echo "   trial $trial: FAIL ($(head -1 "$det" 2>/dev/null || echo 'no detector output'))$turns_note"
       fi
     fi
 
