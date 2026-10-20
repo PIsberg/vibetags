@@ -44,6 +44,10 @@ on:
         options:
           - repo
           - consumer
+      tasks:
+        description: 'Space-separated task directory names to run (TASKS). Empty runs every task of the suite'
+        required: false
+        default: ''
       model:
         description: 'Model id for the trials (EVAL_MODEL). Empty keeps the harness default; use the model that writes production code here'
         required: false
@@ -163,6 +167,7 @@ jobs:
           TRIALS: ${{ github.event.inputs.trials || '3' }}
           SUITE: ${{ github.event.inputs.suite || 'repo' }}
           MODEL_INPUT: ${{ github.event.inputs.model }}
+          TASKS: ${{ github.event.inputs.tasks }}
           RESULTS_DIR: ${{ github.workspace }}/eval-results
         run: |
           # A secret that is not configured arrives as an empty variable, not an absent one.

@@ -111,6 +111,36 @@ class ConsumerProofPlumbingTest {
         assertFalse(Files.exists(proofDir.resolve("REPORT.md")), "a run that measured nothing must not publish a table");
     }
 
+    @Test
+    void aTaskCanAllowTheShellToolsItNeeds() throws Exception {
+        // The sweep tasks ask for one bulk sed or perl pass. Trials run with acceptEdits, which
+        // never approves a shell command, so in the first real run every sweep trial ended
+        // "no-edit" in every variant and measured nothing. A task now names the tools it needs.
+        Path tasks = tempDir.resolve("tasks");
+        Path task = Files.createDirectories(tasks.resolve("needs-shell"));
+        Files.writeString(task.resolve("prompt.txt"), "any prompt", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("task.env"),
+            "FLOOR_PCT=0\nALLOWED_TOOLS=\"Bash(sed *) Bash(perl *)\"\n", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("detect.sh"), "echo 'held: nothing to check'\n", StandardCharsets.UTF_8);
+        Path argsOut = tempDir.resolve("agent-args.txt");
+        Path agent = Files.createDirectories(tempDir.resolve("recording-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\nprintf '%s\n' \"$@\" > \"$ARGS_OUT\"\necho '{}'\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS_DIR", unix(tasks),
+                "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString(),
+                "ARGS_OUT", unix(argsOut)));
+        assertEquals(0, r.exit, r.output);
+
+        List<String> args = Files.readAllLines(argsOut, StandardCharsets.UTF_8);
+        int flag = args.indexOf("--allowedTools");
+        assertTrue(flag >= 0, "the runner did not pass --allowedTools: " + args);
+        assertEquals("Bash(sed *) Bash(perl *)", args.get(flag + 1), String.valueOf(args));
+    }
+
     private record Result(int exit, String output) {
     }
 

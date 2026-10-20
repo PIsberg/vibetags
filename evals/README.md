@@ -21,7 +21,10 @@ One directory under `tasks/`, three files:
   finishes. Exit 0 means the rule held. Detectors are plain code over the produced tree
   (`git diff`, `grep`); no model judges another model here.
 - `task.env` - the floor: `FLOOR_PCT`, the minimum pass rate below which the rule is
-  considered non-binding.
+  considered non-binding. Optionally `ALLOWED_TOOLS`, the shell commands the task needs as claude
+  CLI permission rules (`"Bash(sed *) Bash(perl *)"`): trials run with `acceptEdits`, which approves
+  file edits and no shell command, so a task that asks for a bulk `sed` pass needs this or it
+  measures nothing.
 
 The current bank measures five rules that CI cannot otherwise see an agent break mid-flight:
 

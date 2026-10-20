@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ConsumerProofPlumbingTest` (the whole run with a stub agent, whose table is known in advance).
 - `run-instruction-evals.sh` rejects an unknown `VARIANT` with exit 2. A typo used to fall
   through to the committed tree and report `full` under another name.
+- An eval task can declare the shell commands it needs (`ALLOWED_TOOLS` in `task.env`). The two
+  sweep tasks, consumer `locked-sweep` and repo `scoped-rule-unopened`, ask for one bulk `sed`
+  pass, but trials run with `acceptEdits`, which approves no shell command: in the first real
+  consumer run all 9 `locked-sweep` trials ended "no-edit" in every variant, and
+  `scoped-rule-unopened`, whose detector counts renaming nothing as held, had been passing without
+  measuring anything. Instruction Evals also gains a `tasks` dispatch input.
 - `run-instruction-evals.sh` exits 2 when any trial is a `HARNESS-ERROR`, and `run-proof.sh` then
   writes no table. The first real consumer-proof run (CI run 39324142569) had all 36 sessions
   refused with "You've hit your session limit"; each was counted as a failed trial, and the job
