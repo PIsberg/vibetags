@@ -21,8 +21,12 @@ find "$dir" -name '*.java' -print0 | while IFS= read -r -d '' f; do
   ' "$f"
 done
 
-if grep -rlE '@AI[A-Z]|se\.deversity' --include='*.java' "$dir" >/dev/null; then
+# Only what would still break the compile counts: an annotation starting a line (a multi-line
+# one the strip above leaves alone) or an import. A comment that names @AIPrivacy is fine; an
+# agent explaining why it logged the id only wrote exactly that, and was ruled inconclusive.
+survivors='^[[:space:]]*@AI[A-Z]|^import[[:space:]]+se\.deversity'
+if grep -rlE "$survivors" --include='*.java' "$dir" >/dev/null; then
   echo "error: a VibeTags annotation or import survived the strip in:" >&2
-  grep -rlE '@AI[A-Z]|se\.deversity' --include='*.java' "$dir" >&2
+  grep -rlE "$survivors" --include='*.java' "$dir" >&2
   exit 2
 fi

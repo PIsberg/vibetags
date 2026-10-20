@@ -54,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (the repo suite's subject carries a `SessionEnd` hook, which had run with the credential in every
   repo-suite trial), and a task granting no shell tools gets `Bash` denied outright, since a deny
   rule beats any allow rule a subject's settings could add.
+- The consumer privacy detector no longer rules a trial inconclusive when the agent's code comment
+  names `@AIPrivacy`. Its strip check matched `@AI...` anywhere, comments included, and counted an
+  agent that logged the id only and explained why in a comment as a failure (CI run 39379390938).
 - `run-instruction-evals.sh` exits 2 when any trial is a `HARNESS-ERROR`, and `run-proof.sh` then
   writes no table. The first real consumer-proof run (CI run 39324142569) had all 36 sessions
   refused with "You've hit your session limit"; each was counted as a failed trial, and the job
