@@ -34,8 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@AIContract`, `@AIPrivacy`), so the table separates what VibeTags buys from what the generated
   files add over an annotation. The privacy detector runs the agent's code with sentinel PII and
   catches leaks through `toString()` or exception messages. `bash evals/consumer/run-proof.sh`
-  runs it, or dispatch Instruction Evals with `suite=consumer`. No model run has been made yet: the
-  repository has no model credential secret. Three tests keep it honest without one:
+  runs it, or dispatch Instruction Evals with `suite=consumer`. First result (CI run 39379986450,
+  `claude-opus-5-5`, 120 sessions): without VibeTags the guardrail broke in 39 of 40 trials, with it
+  in 0 of 40, and on the bulk rename only the generated block held (10 of 10 against 0 of 10 for
+  annotations alone). README.md gains "Does It Work?"; full table in `evals/consumer/RESULTS.md`. Three tests keep the harness honest without a model:
   `ConsumerEvalFixtureTest` (the block is current processor output), `ConsumerEvalTaskTest` (13
   detector cases and the three variants, each broken once to see it fail) and
   `ConsumerProofPlumbingTest` (the whole run with a stub agent, whose table is known in advance).
