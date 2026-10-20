@@ -6,6 +6,8 @@ hand-tuned. This one answers it for a small, ordinary project: `fixture/` is "ac
 files with three kinds of guardrail on them and a `CLAUDE.md` whose generated block is real
 processor output.
 
+Latest results: [RESULTS.md](RESULTS.md).
+
 ## The three variants
 
 Every trial runs on a fresh copy of the fixture built by `prepare-subject.sh`:
