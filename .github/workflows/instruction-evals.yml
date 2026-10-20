@@ -120,6 +120,10 @@ jobs:
             raw.githubusercontent.com:443
             registry.npmjs.org:443
             nodejs.org:443
+            azure.archive.ubuntu.com:80
+            archive.ubuntu.com:80
+            security.ubuntu.com:80
+            packages.microsoft.com:443
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The lockfile pins the CLI; this pins the toolchain that installs it. Without this step
@@ -159,6 +163,20 @@ jobs:
         run: |
           echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
           "$JAVA_HOME_21_X64/bin/javac" -version
+
+      # The harness sets CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 so the agent's shell commands cannot read
+      # the credential. On Linux the CLI enforces that with bubblewrap and refuses to start without
+      # it: every session of the first decision-grade run (CI run 39370876182) failed with
+      # "bubblewrap is required for subprocess env scrubbing". Ubuntu 24.04 also restricts the
+      # unprivileged user namespaces bubblewrap needs, so that restriction is lifted on this
+      # disposable runner, and the step proves bwrap runs before any session is spent.
+      - name: Install bubblewrap for the subprocess credential scrub
+        run: |
+          sudo apt-get update -o Acquire::Retries=3 || true
+          sudo apt-get install -y --no-install-recommends bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          bwrap --ro-bind / / --dev /dev --proc /proc true
+          echo "bubblewrap $(bwrap --version) runs"
 
       - name: Run the task bank
         env:
