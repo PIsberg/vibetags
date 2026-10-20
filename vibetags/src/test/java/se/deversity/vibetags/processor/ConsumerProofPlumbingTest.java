@@ -111,6 +111,122 @@ class ConsumerProofPlumbingTest {
         assertFalse(Files.exists(proofDir.resolve("REPORT.md")), "a run that measured nothing must not publish a table");
     }
 
+    @Test
+    void aTaskCanAllowTheShellToolsItNeeds() throws Exception {
+        // The sweep tasks ask for one bulk sed or perl pass. Trials run with acceptEdits, which
+        // never approves a shell command, so in the first real run every sweep trial ended
+        // "no-edit" in every variant and measured nothing. A task now names the tools it needs.
+        Path tasks = tempDir.resolve("tasks");
+        Path task = Files.createDirectories(tasks.resolve("needs-shell"));
+        Files.writeString(task.resolve("prompt.txt"), "any prompt", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("task.env"),
+            "FLOOR_PCT=0\nALLOWED_TOOLS=\"Bash(sed *) Bash(perl *)\"\n", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("detect.sh"), "echo 'held: nothing to check'\n", StandardCharsets.UTF_8);
+        Path argsOut = tempDir.resolve("agent-args.txt");
+        Path agent = Files.createDirectories(tempDir.resolve("recording-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\nprintf '%s\n' \"$@\" > \"$ARGS_OUT\"\n"
+                + "echo \"SCRUB=${CLAUDE_CODE_SUBPROCESS_ENV_SCRUB:-unset}\" >> \"$ARGS_OUT\"\necho '{}'\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS_DIR", unix(tasks),
+                "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString(),
+                "ARGS_OUT", unix(argsOut)));
+        assertEquals(0, r.exit, r.output);
+
+        List<String> args = Files.readAllLines(argsOut, StandardCharsets.UTF_8);
+        int flag = args.indexOf("--allowedTools");
+        assertTrue(flag >= 0, "the runner did not pass --allowedTools: " + args);
+        assertEquals("Bash(sed *) Bash(perl *)", args.get(flag + 1), String.valueOf(args));
+        // perl, sed's e command, find -exec and xargs can all run arbitrary commands, so the
+        // agent's subprocesses must not hold the credential: the CLI's scrub strips it from every
+        // subprocess while the CLI keeps it for its own API calls.
+        assertTrue(args.contains("SCRUB=1"), "trials must run with CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1: " + args);
+        assertTrue(args.get(args.indexOf("--settings") + 1).contains("\"disableAllHooks\":true"), String.valueOf(args));
+    }
+
+    @Test
+    void aTrialWhoseFileEditWasDeniedIsNotAMeasurement() throws Exception {
+        // In CI run 39373857814 the sandbox the credential scrub turns on declined every Edit, so
+        // the direct tasks read "no-edit" in all three variants: 0% where a no-edit fails, 100%
+        // where it passes, a table that looked like a result. A denied file edit is the
+        // environment failing, not the agent choosing, so it counts as a HARNESS-ERROR.
+        Path agent = Files.createDirectories(tempDir.resolve("denied-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\n"
+                + "echo '{\"type\":\"result\",\"is_error\":false,\"result\":\"write permission was declined\","
+                + "\"permission_denials\":[{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"src/A.java\","
+                + "\"old_string\":\"[a]\",\"new_string\":\"[b]\"}}]}'\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS", "locked-direct",
+                "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString()));
+
+        assertEquals(2, r.exit, r.output);
+        assertTrue(r.output.contains("HARNESS-ERROR") && r.output.contains("Edit"), r.output);
+    }
+
+    @Test
+    void aTaskWithoutShellToolsRunsWithoutTheScrubSandbox() throws Exception {
+        // The scrub turns on a sandbox that declined every file edit in CI (runs 39373857814 and
+        // 39378894395), so it is reserved for tasks that grant shell tools. A task granting none
+        // has no subprocess to protect: acceptEdits refuses Bash, the config dir is empty, and
+        // --strict-mcp-config starts no MCP server.
+        Path tasks = tempDir.resolve("tasks");
+        Path task = Files.createDirectories(tasks.resolve("edits-only"));
+        Files.writeString(task.resolve("prompt.txt"), "any prompt", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("task.env"), "FLOOR_PCT=0\n", StandardCharsets.UTF_8);
+        Files.writeString(task.resolve("detect.sh"), "echo 'held: nothing to check'\n", StandardCharsets.UTF_8);
+        Path argsOut = tempDir.resolve("agent-env.txt");
+        Path agent = Files.createDirectories(tempDir.resolve("recording-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\n"
+                + "printf '%s\\n' \"$@\" > \"$ARGS_OUT\"\n"
+                + "echo \"SCRUB=${CLAUDE_CODE_SUBPROCESS_ENV_SCRUB:-unset}\" >> \"$ARGS_OUT\"\necho '{}'\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS_DIR", unix(tasks),
+                "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString(),
+                "ARGS_OUT", unix(argsOut)));
+        assertEquals(0, r.exit, r.output);
+        List<String> args = Files.readAllLines(argsOut, StandardCharsets.UTF_8);
+        assertTrue(args.contains("SCRUB=unset"), String.valueOf(args));
+        // Without the scrub, nothing may start a subprocess holding the credential: project hooks
+        // are switched off (the repo suite's subject carries a SessionEnd hook), and Bash is
+        // denied outright, since a deny rule beats an allow rule a subject's settings might add.
+        String settings = args.get(args.indexOf("--settings") + 1);
+        assertTrue(settings.contains("\"disableAllHooks\":true") && settings.contains("\"deny\":[\"Bash\"]"), settings);
+    }
+
+    @Test
+    void aTrialThatRanOutOfTurnsIsJudgedOnTheTreeItLeft() throws Exception {
+        // The CLI exits 1 when the agent uses up --max-turns (subtype error_max_turns). That is the
+        // agent working within the trial's budget, not the environment failing, and a detector
+        // judges the tree the agent left either way. Counting it as a HARNESS-ERROR voided the
+        // first real repo-suite run (CI run 39385658473: two renderer-compiler-free trials).
+        Path agent = Files.createDirectories(tempDir.resolve("turns-agent"));
+        Path stub = agent.resolve("claude");
+        Files.writeString(stub, "#!/usr/bin/env bash\n"
+                + "echo '{\"type\":\"result\",\"subtype\":\"error_max_turns\",\"is_error\":true,\"num_turns\":26}'\n"
+                + "exit 1\n",
+            StandardCharsets.UTF_8);
+        assertTrue(stub.toFile().setExecutable(true) || System.getProperty("os.name").startsWith("Windows"));
+
+        Result r = run(EVALS.resolve("run-instruction-evals.sh"),
+            Map.of("SUITE", "consumer", "TRIALS", "1", "TASKS", "locked-direct",
+                "RESULTS_DIR", unix(tempDir.resolve("results")), "PATH_PREFIX", agent.toString()));
+
+        // locked-direct counts an untouched tree as held, so a judged trial passes.
+        assertEquals(0, r.exit, r.output);
+        assertTrue(r.output.contains("trial 1: PASS") && r.output.contains("max turns"), r.output);
+    }
+
     private record Result(int exit, String output) {
     }
 

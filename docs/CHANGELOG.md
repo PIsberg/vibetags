@@ -34,18 +34,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `@AIContract`, `@AIPrivacy`), so the table separates what VibeTags buys from what the generated
   files add over an annotation. The privacy detector runs the agent's code with sentinel PII and
   catches leaks through `toString()` or exception messages. `bash evals/consumer/run-proof.sh`
-  runs it, or dispatch Instruction Evals with `suite=consumer`. No model run has been made yet: the
-  repository has no model credential secret. Three tests keep it honest without one:
+  runs it, or dispatch Instruction Evals with `suite=consumer`. First result (CI run 39379986450,
+  `claude-opus-5-5`, 120 sessions): without VibeTags the guardrail broke in 39 of 40 trials, with it
+  in 0 of 40, and on the bulk rename only the generated block held (10 of 10 against 0 of 10 for
+  annotations alone). README.md gains "Does It Work?"; full table in `evals/consumer/RESULTS.md`. Three tests keep the harness honest without a model:
   `ConsumerEvalFixtureTest` (the block is current processor output), `ConsumerEvalTaskTest` (13
   detector cases and the three variants, each broken once to see it fail) and
   `ConsumerProofPlumbingTest` (the whole run with a stub agent, whose table is known in advance).
 - `run-instruction-evals.sh` rejects an unknown `VARIANT` with exit 2. A typo used to fall
   through to the committed tree and report `full` under another name.
+- An eval task can declare the shell commands it needs (`ALLOWED_TOOLS` in `task.env`). The two
+  sweep tasks, consumer `locked-sweep` and repo `scoped-rule-unopened`, ask for one bulk `sed`
+  pass, but trials run with `acceptEdits`, which approves no shell command: in the first real
+  consumer run all 9 `locked-sweep` trials ended "no-edit" in every variant, and
+  `scoped-rule-unopened`, whose detector counts renaming nothing as held, had been passing without
+  measuring anything. Instruction Evals also gains a `tasks` dispatch input. Because perl, `sed`'s
+  `e` command, `find -exec` and `xargs` can each run arbitrary commands, a task granting shell tools
+  runs with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which strips credentials from the agent's
+  subprocesses while the CLI keeps them for its own API calls. Only those tasks: the scrub's sandbox
+  declined every file edit in CI. Every trial also runs with `--settings` switching project hooks off
+  (the repo suite's subject carries a `SessionEnd` hook, which had run with the credential in every
+  repo-suite trial), and a task granting no shell tools gets `Bash` denied outright, since a deny
+  rule beats any allow rule a subject's settings could add.
+- A trial whose agent used up `--max-turns` (the CLI exits 1, subtype `error_max_turns`) is judged on
+  the tree it left, not voided as a `HARNESS-ERROR`: it is the agent working within the trial's
+  budget. Voiding it turned the first real repo-suite run red (CI run 39385658473), where five of six
+  rules held 3 of 3 and two `renderer-compiler-free` trials had run out of turns.
+- The consumer privacy detector no longer rules a trial inconclusive when the agent's code comment
+  names `@AIPrivacy`. Its strip check matched `@AI...` anywhere, comments included, and counted an
+  agent that logged the id only and explained why in a comment as a failure (CI run 39379390938).
 - `run-instruction-evals.sh` exits 2 when any trial is a `HARNESS-ERROR`, and `run-proof.sh` then
   writes no table. The first real consumer-proof run (CI run 39324142569) had all 36 sessions
   refused with "You've hit your session limit"; each was counted as a failed trial, and the job
   went green with a table of 0% that read as "VibeTags binds nothing". The same strictness showed
-  the stub agent's baseline row had been 0% only because its patches did not apply there.
+  the stub agent's baseline row had been 0% only because its patches did not apply there. A trial
+  whose agent was denied a file edit is also a `HARNESS-ERROR`: in CI run 39373857814 the scrub's
+  sandbox declined every Edit to a subject under `/tmp`, and the direct tasks read "no-edit" in all
+  three variants.
 - Eval detectors run with `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` unset. The consumer
   privacy detector compiles and runs the agent's code, which would otherwise inherit the model
   credential with GitHub reachable through the eval lane's egress allowlist. `TASKS_DIR` points

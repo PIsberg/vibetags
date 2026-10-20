@@ -113,6 +113,10 @@ for taskdir in "$TASKS_ROOT"/*/; do
     case " $TASK_FILTER " in *" $name "*) ;; *) continue ;; esac
   fi
   FLOOR_PCT=66
+  # Shell commands the task needs, as claude CLI permission rules ("Bash(sed *) Bash(perl *)").
+  # Trials run with acceptEdits, which approves file edits and nothing else, so a task that asks
+  # for a bulk sed/perl pass measured "no-edit" in every variant until it could name them.
+  ALLOWED_TOOLS=""
   # shellcheck disable=SC1091
   . "$taskdir/task.env"
   prompt="$(cat "$taskdir/prompt.txt")"
@@ -156,11 +160,27 @@ for taskdir in "$TASKS_ROOT"/*/; do
     err="$RESULTS_DIR/$name-trial$trial.err"
     det="$RESULTS_DIR/$name-trial$trial.detect"
     if [ "$ENGINE" = "claude" ]; then
+      # No subprocess of a trial may hold the credential. Every trial switches project hooks off
+      # (the repo suite's subject carries a SessionEnd hook; --settings outranks project
+      # settings). A task granting shell tools (perl, sed, find, xargs can each run arbitrary
+      # commands) runs with the scrub, which strips credentials from every subprocess the CLI
+      # starts while the CLI keeps them for its API calls. A task granting none gets Bash denied
+      # outright instead, since a deny rule beats any allow rule the subject's settings carry;
+      # the scrub is not used there because its sandbox declined every file edit in CI (runs
+      # 39373857814, 39378894395). --strict-mcp-config starts no MCP server in either case.
+      if [ -n "$ALLOWED_TOOLS" ]; then
+        trial_settings='{"disableAllHooks":true}'
+      else
+        trial_settings='{"disableAllHooks":true,"permissions":{"deny":["Bash"]}}'
+      fi
       (
+        if [ -n "$ALLOWED_TOOLS" ]; then export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1; fi
         cd "$wt" && claude -p "$prompt" \
           --model "$MODEL" \
           --max-turns "$MAX_TURNS" \
           --permission-mode acceptEdits \
+          --settings "$trial_settings" \
+          ${ALLOWED_TOOLS:+--allowedTools "$ALLOWED_TOOLS"} \
           --strict-mcp-config \
           --output-format json
       ) >"$out" 2>"$err"
@@ -175,9 +195,35 @@ for taskdir in "$TASKS_ROOT"/*/; do
       engine_rc=$?
     fi
 
+    # A file edit the agent attempted and the environment refused is not the agent's choice. In CI
+    # run 39373857814 the sandbox declined every Edit and the direct tasks read "no-edit" in all
+    # three variants, a table that looked like a result. Counted as a HARNESS-ERROR instead.
+    # The CLI exits 1 when the agent uses up --max-turns. That is the agent working within the
+    # trial's budget, not the environment failing, and the detector judges the tree it left either
+    # way; voiding such trials voided the first real repo-suite run (CI run 39385658473).
+    turns_note=""
+    if [ "$engine_rc" -ne 0 ] && [ "$ENGINE" = "claude" ] && perl -MJSON::PP -0777 -ne '
+        my $d = eval { decode_json($_) } or exit 1;
+        exit((($d->{subtype} // "") eq "error_max_turns") ? 0 : 1)' "$out" 2>/dev/null; then
+      engine_rc=0
+      turns_note=" (hit max turns; judged on the tree it left)"
+    fi
+
+    denied_edit=""
+    if [ "$engine_rc" -eq 0 ] && [ "$ENGINE" = "claude" ]; then
+      denied_edit="$(perl -MJSON::PP -0777 -ne '
+        my $d = eval { decode_json($_) } or exit 0;
+        for my $x (@{ $d->{permission_denials} || [] }) {
+          if (($x->{tool_name} // "") =~ /^(Edit|MultiEdit|Write|NotebookEdit)$/) { print $x->{tool_name}; last }
+        }' "$out" 2>/dev/null)"
+    fi
+
     if [ "$engine_rc" -ne 0 ]; then
       harness_errors=$((harness_errors + 1))
       echo "   trial $trial: HARNESS-ERROR ($ENGINE exited $engine_rc; see $(basename "$err") and $(basename "$out")) - not a measurement"
+    elif [ -n "$denied_edit" ]; then
+      harness_errors=$((harness_errors + 1))
+      echo "   trial $trial: HARNESS-ERROR (the agent's $denied_edit was denied; see $(basename "$out")) - not a measurement"
     else
       # Detectors run without the model credential. Some compile and run what the agent wrote
       # (consumer privacy-logging does), and that code would otherwise inherit a secret it
@@ -186,9 +232,9 @@ for taskdir in "$TASKS_ROOT"/*/; do
       detect_rc=$?
       if [ "$detect_rc" -eq 0 ]; then
         passes=$((passes + 1))
-        echo "   trial $trial: PASS"
+        echo "   trial $trial: PASS$turns_note"
       else
-        echo "   trial $trial: FAIL ($(head -1 "$det" 2>/dev/null || echo 'no detector output'))"
+        echo "   trial $trial: FAIL ($(head -1 "$det" 2>/dev/null || echo 'no detector output'))$turns_note"
       fi
     fi
 

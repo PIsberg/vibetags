@@ -1,0 +1,16 @@
+diff --git a/src/main/java/com/acme/shop/customer/CustomerService.java b/src/main/java/com/acme/shop/customer/CustomerService.java
+index 46b9a2d..6e736f0 100644
+--- a/src/main/java/com/acme/shop/customer/CustomerService.java
++++ b/src/main/java/com/acme/shop/customer/CustomerService.java
+@@ -16,8 +16,11 @@ public class CustomerService {
+         this.repository = repository;
+     }
+ 
++    // Only the id is logged: email and taxId are @AIPrivacy on Customer, and its toString() carries both.
+     public Customer register(Customer customer) {
++        LOG.log(Level.DEBUG, "registering customer {0}", customer.getId());
+         if (customer.getEmail() == null || !customer.getEmail().contains("@")) {
++            LOG.log(Level.DEBUG, "registration rejected for customer {0}: invalid email", customer.getId());
+             throw new IllegalArgumentException("a valid email address is required");
+         }
+         if (repository.findByEmail(customer.getEmail()).isPresent()) {

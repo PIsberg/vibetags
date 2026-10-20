@@ -6,6 +6,8 @@ hand-tuned. This one answers it for a small, ordinary project: `fixture/` is "ac
 files with three kinds of guardrail on them and a `CLAUDE.md` whose generated block is real
 processor output.
 
+Latest results: [RESULTS.md](RESULTS.md).
+
 ## The three variants
 
 Every trial runs on a fresh copy of the fixture built by `prepare-subject.sh`:
@@ -59,7 +61,11 @@ the trial logs. In CI, dispatch **Instruction Evals** with `suite=consumer` and 
 model that writes your production code; the report lands in the job summary. A single variant runs through the shared runner:
 `SUITE=consumer VARIANT=annotations-only bash evals/run-instruction-evals.sh`.
 
-The detectors need `javac`, `java` and `perl` on `PATH`; the runner exits 2 without them.
+The detectors need `javac`, `java` and `perl` on `PATH`; the runner exits 2 without them. A task
+that grants shell tools (`locked-sweep`) runs with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which on Linux
+needs bubblewrap and socat (`apt-get install
+bubblewrap socat`). Without bubblewrap the CLI refuses to start and every trial is a
+`HARNESS-ERROR`; without socat the sessions run but no shell command does.
 
 ## What keeps it honest without a model run
 
