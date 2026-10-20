@@ -583,6 +583,9 @@ Method, floors, and honest limits: `evals/README.md`. Requires `ANTHROPIC_API_KE
 `CLAUDE_CODE_OAUTH_TOKEN`; skips loudly without both. Trial logs upload as the `instruction-eval-results` artifact.
 
 A `model` dispatch input sets `EVAL_MODEL` for the trials; left empty, the harness default applies.
+The job installs bubblewrap (and lifts Ubuntu 24.04's unprivileged-user-namespace restriction on the
+disposable runner) because the harness runs the CLI with `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which
+on Linux refuses to start without it; the Ubuntu package mirrors are on the egress allowlist for that.
 Dispatched with `suite=consumer`, the job runs the consumer proof instead (`evals/consumer/run-proof.sh`):
 the four consumer tasks under all three variants, with the proof table written to the job summary.
 That run fails only when the harness cannot run a variant; a variant below its floors is a finding
