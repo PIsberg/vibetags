@@ -106,6 +106,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   consumer poms 3.15.0 → 3.16.0. Every other pin was already the newest stable release, except
   the `pre-commit-java` hook, left on v0.2.4 because v0.6.37 could not be verified (#982).
 
+- **Instruction Evals runs on request, not on every instruction-file PR.** The path trigger billed
+  18 headless sessions to every PR touching `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/**` or
+  `evals/**`, including PRs nobody wanted measured. A PR now runs the evals when it carries the
+  `run-instruction-evals` label, and on each push while it does; a manual dispatch still runs them.
+  An unlabelled PR starts no job and shows no check. `InstructionEvalsOptInTest` pins the trigger
+  and the preflight condition.
+
 ### Tests
 
 - **CI loads `.codex/rules/vibetags.rules` with the Codex CLI** (#970). #969 shipped because every
