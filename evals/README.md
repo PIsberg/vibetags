@@ -90,9 +90,10 @@ variable under measurement is the committed instruction stack of this repository
 
 ## CI
 
-`.github/workflows/instruction-evals.yml` runs the bank when a PR touches `CLAUDE.md`,
-`AGENTS.md`, `GEMINI.md`, or `.claude/**` - the merge gate for instruction edits - and on
-manual dispatch. It requires either the `ANTHROPIC_API_KEY` secret or `CLAUDE_CODE_OAUTH_TOKEN`
+`.github/workflows/instruction-evals.yml` runs the bank when a PR carries the
+`run-instruction-evals` label (added, or pushed to while labelled), and on manual dispatch. It
+does not run on a path match: a run is 18 paid sessions, so the label is the decision to spend
+them. An unlabelled PR runs nothing and shows no check. It requires either the `ANTHROPIC_API_KEY` secret or `CLAUDE_CODE_OAUTH_TOKEN`
 (`claude setup-token` prints one; runs then draw on that Claude subscription's usage allowance
 instead of API billing, and a long run can exhaust it, which shows up as HARNESS-ERROR trials).
 Without either the evals job is **skipped**, not passed. Fork PRs receive no secrets, so they

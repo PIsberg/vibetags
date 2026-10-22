@@ -1,10 +1,10 @@
-# Instruction evals: the merge gate for the instruction layer. When a PR edits the files
-# agents obey (CLAUDE.md, AGENTS.md, GEMINI.md, .claude/**), this runs the task bank in
-# evals/ and fails if any measured rule drops below its floor - the same idea as running
-# the test suite when a PR edits code. evals/README.md documents the method and its limits.
+# Instruction evals: the measurement for the instruction layer. It runs the task bank in evals/
+# and fails if any measured rule drops below its floor - the same idea as running the test suite
+# when a PR edits code. evals/README.md documents the method and its limits. It is opt-in: a PR
+# runs it when the run-instruction-evals label is added, and a maintainer can dispatch it by hand.
 #
-# Cost: a default run is 18 headless model sessions (6 tasks x 3 trials). That is why this
-# triggers on the instruction-file paths and manual dispatch, never on every commit. The consumer
+# Cost: a default run is 18 headless model sessions (6 tasks x 3 trials). That is why it does not
+# run on every PR that edits an instruction file. The consumer
 # proof (dispatch with suite=consumer, evals/consumer/README.md) is dispatch-only: 4 tasks x 3
 # variants, so 36 sessions at 3 trials and 120 at the decision-grade 10.
 #
@@ -22,14 +22,11 @@
 name: Instruction Evals
 
 on:
+  # Opt-in, not automatic: a PR runs the evals only while it carries the run-instruction-evals
+  # label (the preflight job checks it). Each run is 18 paid sessions, so a path trigger here
+  # would bill every PR that touches an instruction file, including the ones nobody wanted measured.
   pull_request:
-    paths:
-      - 'CLAUDE.md'
-      - 'AGENTS.md'
-      - 'GEMINI.md'
-      - '.claude/**'
-      - 'evals/**'
-      - '.github/workflows/instruction-evals.yml'
+    types: [opened, reopened, labeled, synchronize]
   workflow_dispatch:
     inputs:
       trials:
@@ -70,6 +67,10 @@ jobs:
   preflight:
     name: Check for the eval key
     runs-on: ubuntu-latest
+    # Opt-in gate: a manual dispatch, or a PR carrying the label. Everything else (an unlabelled PR,
+    # or one that only edits an instruction file) never starts this job, so no evals run and no
+    # check appears for it. The evals job depends on this one, so it is skipped too.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'run-instruction-evals')
     outputs:
       has_key: ${{ steps.check.outputs.has_key }}
     steps:
