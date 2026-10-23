@@ -202,7 +202,7 @@ vibetags/                          # Root
 
 ## Code Style
 
-- **Java**: Follow the project's Checkstyle rules (enforced via pre-commit hooks).
+- **Java**: Follow the project's Checkstyle rules (`checkstyle.xml`), enforced by every Maven build at `validate` and by the `checkstyle` pre-commit hook.
 - **Markdown**: Use semantic markup, proper heading levels, and consistent formatting.
 - **Generated files**: Never hand-edit files like `.cursorrules`, `CLAUDE.md`, etc. — they are auto-generated.
 

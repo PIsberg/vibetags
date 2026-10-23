@@ -119,6 +119,30 @@ class ProcessorCoexistenceTest {
         }
     }
 
+    @Test
+    void aPeerTheJvmLoadedOutsideTheProcessorPathIsNotReported() throws IOException {
+        // Lombok in Eclipse runs as a java agent, not as an annotation processor: -javaagent puts
+        // lombok.jar on the JVM's own class path, and the generated getters exist although no
+        // processor-path loader can see Lombok's processor (#990). Measured with ECJ 3.46.100 and
+        // Lombok 1.18.42 as -javaagent:lombok.jar=ECJ: the build passes, so a warning there is false.
+        Path peerClasses = compileFakePeerProcessor("lombok.launch", "AnnotationProcessorHider",
+            "public class AnnotationProcessorHider { public static class AnnotationProcessor {} }");
+        ClassLoader processorPath = ProcessorCoexistenceTest.class.getClassLoader();
+        try (URLClassLoader jvm = new URLClassLoader(new URL[] {peerClasses.toUri().toURL()}, processorPath)) {
+            ProcessorTestHarness h = new ProcessorTestHarness(tempDir.resolve("subject"), false);
+            h.addSource("lombok.Data", "package lombok;\npublic @interface Data {}\n");
+            h.addSource("com.example.Customer", "package com.example;\n@lombok.Data\npublic class Customer {}\n");
+
+            List<String> asAgent = warnings(h.compileWithReturningDiagnostics(new CheckingProcessor(processorPath, jvm)));
+            List<String> dropped = warnings(h.compileWithReturningDiagnostics(
+                new CheckingProcessor(processorPath, processorPath)));
+
+            assertTrue(asAgent.stream().noneMatch(w -> w.contains("Lombok")), String.valueOf(asAgent));
+            assertTrue(dropped.stream().anyMatch(w -> w.contains("Lombok")),
+                "the same compile must report Lombok when neither loader can see it: " + dropped);
+        }
+    }
+
     @TestFactory
     Stream<DynamicTest> everyPeerIsRecognisedByItsTriggerAnnotation() {
         return ProcessorCoexistence.PEERS.stream().flatMap(peer -> peer.annotations().stream()
@@ -164,17 +188,26 @@ class ProcessorCoexistenceTest {
         RoundEnvironment round = org.mockito.Mockito.mock(RoundEnvironment.class);
         org.mockito.Mockito.when(env.getElementUtils()).thenThrow(new IllegalStateException("no elements"));
 
-        assertEquals(List.of(), ProcessorCoexistence.warnAboutDroppedPeers(
-            env, round, ProcessorCoexistenceTest.class.getClassLoader(), null));
+        ClassLoader loader = ProcessorCoexistenceTest.class.getClassLoader();
+        assertEquals(List.of(), ProcessorCoexistence.warnAboutDroppedPeers(env, round, loader, loader, null));
     }
 
-    /** Runs the coexistence check alone, with a chosen class loader standing in for the processor path. */
+    /**
+     * Runs the coexistence check alone, with chosen class loaders standing in for the processor path
+     * and for the JVM's own class path.
+     */
     private static final class CheckingProcessor extends AbstractProcessor {
         private final ClassLoader loader;
+        private final ClassLoader jvmLoader;
         private boolean done;
 
         CheckingProcessor(ClassLoader loader) {
+            this(loader, loader);
+        }
+
+        CheckingProcessor(ClassLoader loader, ClassLoader jvmLoader) {
             this.loader = loader;
+            this.jvmLoader = jvmLoader;
         }
 
         @Override
@@ -191,7 +224,7 @@ class ProcessorCoexistenceTest {
         public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
             if (!done) {
                 done = true;
-                ProcessorCoexistence.warnAboutDroppedPeers(processingEnv, roundEnv, loader, null);
+                ProcessorCoexistence.warnAboutDroppedPeers(processingEnv, roundEnv, loader, jvmLoader, null);
             }
             return false;
         }

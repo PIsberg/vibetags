@@ -194,6 +194,127 @@ class GranularSourceFileGlobTest {
     }
 
     @Test
+    @DisplayName("a Groovy type in a differently named file is scoped to that file (#973)")
+    void aGroovyTypeInAnotherFileNamesThatFile(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = granular(root);
+        // groovyc's stub names nothing, but the sources sit where Gradle's convention puts them.
+        writeGroovy(root, "src/main/groovy/com/example/Shipping.groovy", """
+            package com.example
+
+            /** Declares two types, so neither is in a file named after it. */
+            class Shipment {}
+
+            @groovy.transform.CompileStatic
+            final class Parcel {
+                String trackingId() { 'p-1' }
+            }
+            """);
+        h.writeSourceFile("build/tmp/compileGroovy/groovy-java-stubs/com/example/Parcel.java", """
+            package com.example;
+            public final class Parcel implements groovy.lang.GroovyObject {
+                @se.deversity.vibetags.annotations.AILocked(reason = "tracking contract")
+                public String trackingId() { return null; }
+            }
+            """);
+
+        h.compile();
+
+        String rule = rule(h, "com.example.Parcel");
+        assertTrue(rule.contains("**/Shipping.groovy"), "Parcel is declared in Shipping.groovy:\n" + rule);
+        assertFalse(rule.contains("Parcel.groovy"), "no Parcel.groovy exists:\n" + rule);
+    }
+
+    @Test
+    @DisplayName("a test source set's Groovy type is looked up under src/test/groovy (#973)")
+    void aGroovyTestTypeIsLookedUpInItsSourceSet(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = granular(root);
+        writeGroovy(root, "src/test/groovy/com/example/Fixtures.groovy", """
+            package com.example
+
+            interface Tracked {
+                String trackingId()
+            }
+            """);
+        h.writeSourceFile("build/tmp/compileTestGroovy/groovy-java-stubs/com/example/Tracked.java", """
+            package com.example;
+            public interface Tracked {
+                @se.deversity.vibetags.annotations.AILocked(reason = "tracking contract")
+                String trackingId();
+            }
+            """);
+
+        h.compile();
+
+        String rule = rule(h, "com.example.Tracked");
+        assertTrue(rule.contains("**/Fixtures.groovy"), "Tracked is declared in src/test/groovy's Fixtures.groovy:\n" + rule);
+    }
+
+    @Test
+    @DisplayName("a Groovy type keeps <Type>.groovy when no file, or more than one, declares it (#973)")
+    void aGroovyTypeKeepsItsOwnNameWhenTheLookupIsNotSure(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = granular(root);
+        // A comment that starts a line with the declaration is not a declaration, and two files
+        // that both seem to declare the type leave the answer open.
+        writeGroovy(root, "src/main/groovy/com/example/Notes.groovy", """
+            package com.example
+            /*
+            class Parcel was moved out of here
+            */
+            class Notes {}
+            """);
+        writeGroovy(root, "src/main/groovy/com/example/A.groovy", "package com.example\nclass Crate {}\n");
+        writeGroovy(root, "src/main/groovy/com/example/B.groovy", "package com.example\nclass Crate {}\n");
+        for (String type : new String[] {"Parcel", "Crate"}) {
+            h.writeSourceFile("build/tmp/compileGroovy/groovy-java-stubs/com/example/" + type + ".java",
+                "package com.example;\npublic final class " + type + " implements groovy.lang.GroovyObject {\n"
+                    + "    @se.deversity.vibetags.annotations.AILocked(reason = \"r\")\n"
+                    + "    public void run() {}\n}\n");
+        }
+
+        h.compile();
+
+        assertTrue(rule(h, "com.example.Crate").contains("**/Crate.groovy"), rule(h, "com.example.Crate"));
+        String parcel = rule(h, "com.example.Parcel");
+        assertTrue(parcel.contains("**/Parcel.groovy"), "a block comment is not a declaration:\n" + parcel);
+        assertFalse(parcel.contains("Notes.groovy"), parcel);
+    }
+
+    @Test
+    @DisplayName("GMavenPlus's stubs are Groovy's too, interfaces included, and name their file (#973)")
+    void gmavenPlusStubsNameTheirFile(@TempDir Path root) throws IOException {
+        ProcessorTestHarness h = granular(root);
+        // Measured with gmavenplus-plugin 4.2.1 and Groovy 5.0.2: generateStubs writes
+        // target/generated-sources/groovy-stubs/main/<package>/<Type>.java, and an interface's stub
+        // carries no Groovy marker.
+        writeGroovy(root, "src/main/groovy/com/example/Shipping.groovy", """
+            package com.example
+
+            interface Tracked {
+                String carrierId()
+            }
+            """);
+        h.writeSourceFile("target/generated-sources/groovy-stubs/main/com/example/Tracked.java", """
+            package com.example;
+            public interface Tracked {
+                @se.deversity.vibetags.annotations.AILocked(reason = "carrier contract")
+                String carrierId();
+            }
+            """);
+
+        h.compile();
+
+        String rule = rule(h, "com.example.Tracked");
+        assertTrue(rule.contains("**/Shipping.groovy"), "Tracked is declared in Shipping.groovy:\n" + rule);
+        assertFalse(rule.contains("Tracked.java"), "the .java file is GMavenPlus's stub, removed by removeStubs:\n" + rule);
+    }
+
+    private static void writeGroovy(Path root, String relative, String source) throws IOException {
+        Path file = root.resolve(relative);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, source);
+    }
+
+    @Test
     @DisplayName("a Java type is unchanged, and a second top-level type is scoped to the file it is in")
     void javaIsUnchangedAndASecondaryTypeNamesItsFile(@TempDir Path root) throws IOException {
         ProcessorTestHarness h = granular(root);

@@ -27,6 +27,15 @@ import java.util.Set;
  * loaded VibeTags; with class-path discovery that loader is the class path's. So a peer whose
  * processor class that loader cannot see did not run in this compilation. A peer the source does
  * not use is never reported, however its jars are wired.
+ *
+ * <p>The one peer known to run without being on the processor path is Lombok as a java agent, how
+ * the Eclipse IDE runs it (#990). {@code -javaagent} puts the jar on the JVM's own class path, so a
+ * peer the system class loader can see counts as present too. No verified wiring puts a processor
+ * there otherwise: Maven's in-process javac, the {@code javac} launcher and Gradle's daemon each
+ * have a JVM class path of their own tooling, so the check loses nothing where it was measured.
+ * ECJ 3.46.100 with {@code -javaagent:lombok.jar=ECJ} and VibeTags alone on {@code -processorpath}
+ * builds and prints nothing (its processor loader already delegates to the JVM class path), and
+ * reports Lombok without the agent, where the build fails on the getter.
  */
 public final class ProcessorCoexistence {
 
@@ -86,20 +95,33 @@ public final class ProcessorCoexistence {
     }
 
     /**
-     * Warns once for each peer the round's source uses whose processor {@code processorLoader}
-     * cannot load. Call it on the first round: later rounds only add generated sources.
+     * As {@link #warnAboutDroppedPeers(ProcessingEnvironment, RoundEnvironment, ClassLoader, ClassLoader, Logger)},
+     * with the JVM's system class loader as {@code jvmLoader}.
+     */
+    public static List<Peer> warnAboutDroppedPeers(ProcessingEnvironment env, RoundEnvironment round,
+                                                   ClassLoader processorLoader, @Nullable Logger log) {
+        return warnAboutDroppedPeers(env, round, processorLoader, ClassLoader.getSystemClassLoader(), log);
+    }
+
+    /**
+     * Warns once for each peer the round's source uses whose processor neither
+     * {@code processorLoader} nor {@code jvmLoader} can load. Call it on the first round: later
+     * rounds only add generated sources.
      *
      * <p>Never throws. The check is advisory, and anything escaping it would reach
      * {@code process()}'s catch-all, which ends the round before validation and generation run.
      *
      * @param processorLoader the loader that loaded the calling processor
+     * @param jvmLoader       the loader for the JVM's own class path, where {@code -javaagent} puts
+     *                        a peer that runs outside the processor path
      * @param log             the diagnostic log, or {@code null}
      * @return the peers reported, in {@link #PEERS} order
      */
     public static List<Peer> warnAboutDroppedPeers(ProcessingEnvironment env, RoundEnvironment round,
-                                                   ClassLoader processorLoader, @Nullable Logger log) {
+                                                   ClassLoader processorLoader, ClassLoader jvmLoader,
+                                                   @Nullable Logger log) {
         try {
-            return check(env, round, processorLoader, log);
+            return check(env, round, processorLoader, jvmLoader, log);
         } catch (RuntimeException e) {
             if (log != null) {
                 log.debug("coexistence.skip reason=error detail={}", String.valueOf(e));
@@ -109,7 +131,7 @@ public final class ProcessorCoexistence {
     }
 
     private static List<Peer> check(ProcessingEnvironment env, RoundEnvironment round,
-                                    ClassLoader processorLoader, @Nullable Logger log) {
+                                    ClassLoader processorLoader, ClassLoader jvmLoader, @Nullable Logger log) {
         List<Peer> dropped = new ArrayList<>();
         for (Peer peer : PEERS) {
             Use use = firstUse(env, round, peer);
@@ -119,6 +141,12 @@ public final class ProcessorCoexistence {
             if (loads(processorLoader, peer.processorClass())) {
                 if (log != null && log.isDebugEnabled()) {
                     log.debug("coexistence.peer name={} annotation={} state=on-processor-path", peer.name(), use.annotation());
+                }
+                continue;
+            }
+            if (loads(jvmLoader, peer.processorClass())) {
+                if (log != null && log.isDebugEnabled()) {
+                    log.debug("coexistence.peer name={} annotation={} state=on-jvm-class-path", peer.name(), use.annotation());
                 }
                 continue;
             }

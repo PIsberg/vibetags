@@ -101,7 +101,7 @@ jobs:
             inquisitor-violations only if violations exist) as its output contract states.
           claude_args: >-
             --model claude-opus-5
-            --max-turns 40
+            --max-turns 80
             --allowedTools "Read,Grep,Glob,Write,Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
 
       - name: Publish the verdict (deterministic gate)

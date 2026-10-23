@@ -716,7 +716,9 @@ add it to the annotationProcessor configuration.
 ```
 
 Seven processors are recognised: Lombok, MapStruct, Immutables, AutoValue, Dagger, RecordBuilder
-and AutoService. A peer the sources do not use is never reported.
+and AutoService. A peer the sources do not use is never reported, and neither is one the JVM
+itself loaded, which is how Lombok runs as a java agent in the Eclipse IDE. Checked against Maven,
+Gradle, ECJ with Lombok's agent and Bazel `java_plugin`s; the Eclipse IDE was not run.
 
 **Strict builds** (`-Xlint:all -Werror`): VibeTags adds no warning of its own. javac's
 `processing` lint reports every annotation no processor claims, MapStruct's `@Mapper` and VibeTags'

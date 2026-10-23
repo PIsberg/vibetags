@@ -122,11 +122,43 @@ class StubSourceNamesTest {
     }
 
     @Test
-    @DisplayName("a stub is Groovy's when it sits under Gradle's groovy-java-stubs directory")
-    void gradleGroovyStubDirectory() {
-        assertTrue(StubSourceNames.isGradleGroovyStub(
+    @DisplayName("a stub is Groovy's when it sits under Gradle's or GMavenPlus's stub directory")
+    void groovyStubDirectories() {
+        assertTrue(StubSourceNames.isGroovyStub(
             Path.of("build", "tmp", "compileGroovy", "groovy-java-stubs", "com", "example", "Tracked.java")));
-        assertFalse(StubSourceNames.isGradleGroovyStub(Path.of("src", "main", "java", "com", "example", "Tracked.java")));
-        assertFalse(StubSourceNames.isGradleGroovyStub(Path.of("src", "groovy-java-stubs-old", "Tracked.java")));
+        assertTrue(StubSourceNames.isGroovyStub(
+            Path.of("target", "generated-sources", "groovy-stubs", "main", "com", "example", "Tracked.java")));
+        assertFalse(StubSourceNames.isGroovyStub(Path.of("src", "main", "java", "com", "example", "Tracked.java")));
+        assertFalse(StubSourceNames.isGroovyStub(Path.of("src", "groovy-java-stubs-old", "Tracked.java")));
+        assertFalse(StubSourceNames.isGroovyStub(Path.of("src", "groovy-stubs", "Tracked.java")),
+            "groovy-stubs counts only under generated-sources, where GMavenPlus puts it");
+    }
+
+    @Test
+    @DisplayName("a Groovy type's file is looked up in the source set its compile task names, under any build directory (#973)")
+    void groovyFileFollowsTheTaskAndBuildDirectory(@TempDir Path project) throws IOException {
+        Path sources = Files.createDirectories(project.resolve("src/integrationTest/groovy/com/example"));
+        Files.writeString(sources.resolve("Shipping.groovy"),
+            "package com.example\n@groovy.transform.Canonical final class Parcel {}\n");
+        Path stub = project.resolve("out/tmp/compileIntegrationTestGroovy/groovy-java-stubs/com/example/Parcel.java");
+
+        assertEquals("Shipping.groovy", StubSourceNames.groovyFileName(stub, "Parcel"));
+    }
+
+    @Test
+    @DisplayName("a layout that is not Gradle's, or a missing package directory, leaves the guess in place (#973)")
+    void groovyFileOutsideGradlesLayoutIsNotGuessed(@TempDir Path project) throws IOException {
+        Files.createDirectories(project.resolve("src/main/groovy/com/example"));
+        Files.writeString(project.resolve("src/main/groovy/com/example/Shipping.groovy"), "class Parcel {}\n");
+
+        assertNull(StubSourceNames.groovyFileName(
+            project.resolve("target/groovy-java-stubs/com/example/Parcel.java"), "Parcel"),
+            "no tmp/<task> above the stub directory");
+        assertNull(StubSourceNames.groovyFileName(
+            project.resolve("build/tmp/compileJava/groovy-java-stubs/com/example/Parcel.java"), "Parcel"),
+            "compileJava is not a Groovy task");
+        assertNull(StubSourceNames.groovyFileName(
+            project.resolve("build/tmp/compileGroovy/groovy-java-stubs/com/other/Parcel.java"), "Parcel"),
+            "no src/main/groovy/com/other");
     }
 }

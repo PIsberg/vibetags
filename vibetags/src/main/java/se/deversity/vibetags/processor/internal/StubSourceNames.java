@@ -6,8 +6,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.regex.Pattern;
 
 /**
  * The real source file behind a generated Java stub, for the stubs that leave a trace of it (#955).
@@ -27,9 +30,11 @@ import java.nio.file.Path;
  *       path names the {@code .kt} file. This is kapt's line-mapping data, not a documented
  *       contract, so anything unexpected in it means the guess stands.</li>
  *   <li><strong>Groovy</strong> stubs name nothing, but Gradle writes them under a directory
- *       named {@code groovy-java-stubs}, and an interface's stub carries no other marker. Under it a
- *       stub is taken to be Groovy's. The file name still has to be guessed from the type, so a
- *       Groovy type in a differently named file keeps missing.</li>
+ *       named {@code groovy-java-stubs}, and GMavenPlus under {@code generated-sources/groovy-stubs}
+ *       (measured with gmavenplus-plugin 4.2.1 and Groovy 5.0.2, 2026-10-23), and an interface's
+ *       stub carries no other marker. Under either a stub is taken to be Groovy's. Neither groovyc
+ *       nor the build tool records which file a type came from, so the file is looked for where the
+ *       build tool's layout puts the package's sources ({@link #groovyFileName}, #973).</li>
  * </ul>
  *
  * <p>Reads at most {@link #MAX_BYTES} of one file per Kotlin top-level type and never throws: any
@@ -39,6 +44,11 @@ final class StubSourceNames {
 
     /** The directory Gradle's {@code GroovyCompile} writes joint-compilation stubs to. */
     static final String GRADLE_GROOVY_STUB_DIR = "groovy-java-stubs";
+
+    /** The directory GMavenPlus's {@code generateStubs} writes to, under {@code generated-sources}. */
+    static final String GMAVENPLUS_STUB_DIR = "groovy-stubs";
+
+    private static final String GENERATED_SOURCES = "generated-sources";
 
     /** A larger file is not read; kapt writes a few hundred bytes per class. */
     static final int MAX_BYTES = 4 * 1024 * 1024;
@@ -50,6 +60,28 @@ final class StubSourceNames {
     private static final int KAPT_METADATA_VERSION = 1;
 
     private StubSourceNames() {}
+
+    /**
+     * The {@code .kapt_metadata} beside {@code stub} when the stub sits in a kapt stub directory
+     * (Gradle's {@code kapt3}, kotlin-maven-plugin's {@code kaptStubs}) and the file exists, else
+     * {@code null}. The directory test is a name match, so a Java source costs no file access.
+     */
+    static @Nullable Path kaptMetadataOf(Path stub) {
+        boolean kapt = false;
+        for (Path part : stub) {
+            String name = part.toString();
+            if ("kapt3".equals(name) || "kaptStubs".equals(name)) {
+                kapt = true;
+            }
+        }
+        Path file = stub.getFileName();
+        if (!kapt || file == null || !file.toString().endsWith(".java")) {
+            return null;
+        }
+        String stem = file.toString().substring(0, file.toString().length() - ".java".length());
+        Path metadata = stub.resolveSibling(stem + ".kapt_metadata");
+        return Files.isRegularFile(metadata) ? metadata : null;
+    }
 
     /**
      * The name of the {@code .kt} file kapt generated {@code stub} from, read from the
@@ -74,14 +106,145 @@ final class StubSourceNames {
         }
     }
 
-    /** Whether {@code stub} sits under the directory Gradle writes Groovy's stubs to. */
-    static boolean isGradleGroovyStub(Path stub) {
-        for (Path part : stub) {
-            if (GRADLE_GROOVY_STUB_DIR.equals(part.toString())) {
-                return true;
+    /**
+     * The {@code .groovy} file that declares the top-level type {@code simpleName}, whose stub is
+     * {@code stub}, or {@code null} when that cannot be told (#973).
+     *
+     * <p>Gradle writes a stub to {@code <project>/<buildDir>/tmp/<task>/groovy-java-stubs/<package>/}
+     * and GMavenPlus to {@code <project>/<buildDir>/generated-sources/groovy-stubs/<sourceSet>/<package>/},
+     * and both read {@code <project>/src/<sourceSet>/groovy/} by convention, the source set being
+     * Gradle's {@code compile<SourceSet>Groovy} task. In that package directory
+     * {@code <simpleName>.groovy} wins when it exists; otherwise the one file with a line declaring
+     * the type ({@code class}, {@code interface}, {@code trait}, {@code enum} or {@code record},
+     * after any modifiers, outside a comment) names it. No directory, another layout, no declaring
+     * file or two of them all return {@code null}, which leaves the caller's guess of
+     * {@code <simpleName>.groovy} in place. Reads only the {@code .groovy} files of one directory,
+     * each at most {@link #MAX_BYTES}, and never throws.
+     */
+    static @Nullable String groovyFileName(Path stub, String simpleName) {
+        try {
+            Path dir = groovySourceDir(stub);
+            if (dir == null || !Files.isDirectory(dir)) {
+                return null;
+            }
+            String own = simpleName + ".groovy";
+            if (Files.isRegularFile(dir.resolve(own))) {
+                return own;
+            }
+            Pattern declares = Pattern.compile("(?m)^[ \\t]*(?:@[\\w.]+(?:\\([^)\\n]*\\))?[ \\t]+)*"
+                + "(?:(?:public|protected|private|abstract|final|static|sealed|non-sealed|strictfp)[ \\t]+)*"
+                + "(?:class|interface|trait|enum|record)[ \\t]+" + Pattern.quote(simpleName) + "\\b");
+            String found = null;
+            try (DirectoryStream<Path> files = Files.newDirectoryStream(dir, "*.groovy")) {
+                for (Path file : files) {
+                    if (!Files.isRegularFile(file) || Files.size(file) > MAX_BYTES
+                        || !declares.matcher(withoutComments(Files.readString(file, StandardCharsets.UTF_8))).find()) {
+                        continue;
+                    }
+                    if (found != null) {
+                        return null; // two candidates: not ours to pick
+                    }
+                    Path name = file.getFileName();
+                    found = name == null ? null : name.toString();
+                }
+            }
+            return found;
+        } catch (IOException | RuntimeException unreadable) {
+            return null;
+        }
+    }
+
+    /**
+     * {@code source} with its block and line comments blanked out, newlines kept, so a commented-out
+     * declaration does not read as one. A linear scan rather than a regular expression, for the
+     * reason {@code ElementNaming.stripAnnotations} gives. String literals are not tracked: a
+     * {@code //} inside one blanks the rest of its line, which never holds a type declaration.
+     */
+    private static String withoutComments(String source) {
+        StringBuilder out = new StringBuilder(source.length());
+        int i = 0;
+        int n = source.length();
+        while (i < n) {
+            char c = source.charAt(i);
+            char next = i + 1 < n ? source.charAt(i + 1) : 0;
+            if (c == '/' && next == '*') {
+                int end = source.indexOf("*/", i + 2);
+                int stop = end < 0 ? n : end + 2;
+                for (int j = i; j < stop; j++) {
+                    out.append(source.charAt(j) == '\n' ? '\n' : ' ');
+                }
+                i = stop;
+            } else if (c == '/' && next == '/') {
+                int end = source.indexOf('\n', i);
+                i = end < 0 ? n : end;
+            } else {
+                out.append(c);
+                i++;
             }
         }
-        return false;
+        return out.toString();
+    }
+
+    /**
+     * {@code <project>/src/<sourceSet>/groovy/<package>} for a stub at
+     * {@code <project>/<buildDir>/tmp/compile<SourceSet>Groovy/groovy-java-stubs/<package>/<Type>.java}
+     * (Gradle) or {@code <project>/<buildDir>/generated-sources/groovy-stubs/<sourceSet>/<package>/<Type>.java}
+     * (GMavenPlus), or {@code null} for any other layout.
+     */
+    private static @Nullable Path groovySourceDir(Path stub) {
+        int names = stub.getNameCount();
+        int gradle = lastIndexOf(stub, GRADLE_GROOVY_STUB_DIR);
+        if (gradle >= 3 && "tmp".equals(stub.getName(gradle - 2).toString())) {
+            String task = stub.getName(gradle - 1).toString();
+            if (!task.startsWith("compile") || !task.endsWith("Groovy") || task.length() < "compileGroovy".length()) {
+                return null;
+            }
+            String set = task.substring("compile".length(), task.length() - "Groovy".length());
+            String sourceSet = set.isEmpty() ? "main" : Character.toLowerCase(set.charAt(0)) + set.substring(1);
+            return sourceDir(stub, gradle - 3, sourceSet, gradle + 1);
+        }
+        int gmaven = lastIndexOf(stub, GMAVENPLUS_STUB_DIR);
+        if (gmaven >= 2 && GENERATED_SOURCES.equals(stub.getName(gmaven - 1).toString()) && gmaven + 2 < names) {
+            return sourceDir(stub, gmaven - 2, stub.getName(gmaven + 1).toString(), gmaven + 2);
+        }
+        return null;
+    }
+
+    /**
+     * {@code <project>/src/<sourceSet>/groovy/<package>}, where the project is the first
+     * {@code projectEnd} names of {@code stub} and the package runs from name {@code packageStart}
+     * to the stub's parent.
+     */
+    private static @Nullable Path sourceDir(Path stub, int projectEnd, String sourceSet, int packageStart) {
+        Path root = stub.getRoot();
+        Path project = projectEnd == 0 ? null : stub.subpath(0, projectEnd);
+        Path base = project == null ? root : root == null ? project : root.resolve(project);
+        if (base == null) {
+            return null;
+        }
+        Path dir = base.resolve("src").resolve(sourceSet).resolve("groovy");
+        int names = stub.getNameCount();
+        return packageStart < names - 1 ? dir.resolve(stub.subpath(packageStart, names - 1).toString()) : dir;
+    }
+
+    private static int lastIndexOf(Path path, String name) {
+        int at = -1;
+        for (int i = 0; i < path.getNameCount(); i++) {
+            if (name.equals(path.getName(i).toString())) {
+                at = i;
+            }
+        }
+        return at;
+    }
+
+    /**
+     * Whether {@code stub} sits under a directory Gradle or GMavenPlus writes Groovy's stubs to:
+     * Gradle's {@code groovy-java-stubs}, or GMavenPlus's {@code generated-sources/groovy-stubs}.
+     */
+    static boolean isGroovyStub(Path stub) {
+        int gmaven = lastIndexOf(stub, GMAVENPLUS_STUB_DIR);
+        return lastIndexOf(stub, GRADLE_GROOVY_STUB_DIR) >= 0
+            || gmaven >= 1 && GENERATED_SOURCES.equals(stub.getName(gmaven - 1).toString());
     }
 
     /**

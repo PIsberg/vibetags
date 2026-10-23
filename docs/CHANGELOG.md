@@ -78,6 +78,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Inquisitor gets 80 turns instead of 40.** Its review of PR #1000 (four issues, five
+  commits) used up 40 turns twice, on two heads, at about $3.25 to $3.56 a run, and the
+  `Adversarial Review` check failed without a report, which reads like a finding and was not one.
+  A review that finishes early costs nothing extra. `InquisitorTurnBudgetTest` pins the floor.
+- **The `checkstyle` pre-commit hook runs the build's own Checkstyle** (#982). It was
+  `gherynos/pre-commit-java`, which runs Checkstyle in Docker with Sun's default ruleset when no
+  `-c` is passed, and none was: Checkstyle 13.3.0 with `/sun_checks.xml` reports 226 errors (225
+  `LineLength`, 1 `JavadocPackage`) on `vibetags-annotations`, which `checkstyle.xml` passes with 0.
+  On Windows it never ran at all: the hook repository ships no `.gitattributes`, so
+  `core.autocrlf=true` checks its scripts out with CRLF and bash in the container fails on `\r`,
+  at v0.2.4 and at v0.6.37 alike. The hook is now local: `tools/checkstyle-hook.sh` runs
+  `maven-checkstyle-plugin` in each module a staged `.java` file belongs to, so the ruleset,
+  suppressions and Checkstyle version (9.3) are what every Maven build applies at `validate`. It
+  runs as a git `!` alias like the self-check hook (#905). Verified from PowerShell on Windows:
+  passes on clean files, fails on an injected unused import. `SKIP=checkstyle` is gone from the
+  release and bump-dependencies skills. `CheckstyleHookWiringTest` pins the wiring.
 - **Releases are built on Maven 3.10.0 with `central-publishing-maven-plugin` 0.12.0** (#945).
   `publish.yml` had pinned Maven 3.9.16 since the 1.4.0 publish, which Central rejected because
   plugin 0.11.0 zipped Maven 3.10's `maven-metadata-local.xml` and `_remote.repositories` into the
@@ -158,6 +174,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Groovy type in a differently named file gets a glob for that file** (#973). `Parcel` declared
+  in `Shipping.groovy` was scoped to `**/Parcel.groovy`, a file that does not exist, so no
+  path-scoped platform loaded its rule; groovyc's stub names nothing. The processor now lists the
+  package's source directory where Gradle and GMavenPlus read it (`src/<sourceSet>/groovy/<package>/`,
+  the source set taken from the stub's path) and uses the one file declaring the type outside a
+  comment. GMavenPlus's stub directory (`generated-sources/groovy-stubs`, measured with
+  gmavenplus-plugin 4.2.1) is now recognised too, so a Groovy interface built with Maven gets a
+  `.groovy` glob instead of `<Type>.java`. Measured on real builds: `examples/groovy`'s Gradle with
+  Groovy 6.0.0 and GMavenPlus with Groovy 5.0.2 both give `**/Shipping.groovy` for a class and an
+  interface in `Shipping.groovy`. Sources outside the convention keep the old guess.
+- **A no-op rebuild no longer keeps a stale glob after a type moves to another file** (#955,
+  #973). The early exit's key (#834) hashed every source javac read, but a kapt stub of a class
+  and a Groovy stub are byte-identical whichever file the type is declared in, and that file is
+  what the rule's glob names. The key now covers the `.kapt_metadata` beside a kapt stub and the
+  `.groovy` file found for a Groovy stub. Verified on a real Gradle build with the processor jar
+  unchanged: renaming `Parcels.groovy` to `Shipping.groovy` and rebuilding moved both globs. The
+  kapt half is verified by `SourceDigestTest` only, not on a Kotlin build. `SourceDigestTest`
+  gains both cases; each failed before the change.
+- **The dropped-processor warning stays quiet for Lombok run as a java agent** (#990). Lombok in
+  the Eclipse IDE runs as `-javaagent`, not as an annotation processor, so its processor class can
+  be missing from the processor path while its getters exist. A peer the JVM's own class loader can
+  load now counts as present: `-javaagent` puts the jar there, and no verified wiring puts a
+  processor there otherwise. Measured with real compilers and Lombok 1.18.42: ECJ 3.46.100 with
+  `-javaagent:lombok.jar=ECJ` and VibeTags alone on `-processorpath` builds and prints nothing (it
+  did before the change too, because ECJ's processor loader delegates to the JVM class path), and
+  without the agent it still names Lombok while the build fails on the getter. Bazel 8.4.2 with
+  Lombok and VibeTags as two separate `java_plugin`s builds with no warning, and with VibeTags alone
+  warns and fails the same way. The Eclipse IDE itself was not run. `ProcessorCoexistenceTest`
+  gains the agent case, which failed before the change.
+- **A member naming a type another processor generates gets a qualified path** (#989). A guardrail
+  on `total(ImmutableMoney)` or `attr(Order_)`, where Immutables or hibernate-processor generates
+  the type, rendered it as the bare name, beside `toDto(com.example.Customer)` for every ordinary
+  type: VibeTags collects the member in round 1, before the type exists, and javac's error type
+  carries only the name the source wrote. The path is the element's identity in
+  `.vibetags-locks`, granular rule file names and `.vibetags-baseline`, so it depended on whether
+  the peer had run yet. VibeTags now looks such a member up again in the final round, where the
+  type exists. **One-time rename:** a project with such a signature sees the path, its granular
+  rule file name and its baseline entry change once, to the qualified form, on the first build
+  with this version; rerun `-Avibetags.baseline.update=true` if it uses the enforcing mode. Members
+  whose types all resolved in round 1 are named exactly as before. `GeneratedTypeSignatureTest`
+  failed 3 of 3 before the change.
 - **No more "redundantly supports both '*' and other annotation interfaces" warning.** From a
   project's second build on (a sidecar on record), or with transitive guardrails, the processor
   widened its supported types to `"*"` plus its own package, which javac's `processing` lint

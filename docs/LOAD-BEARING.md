@@ -173,6 +173,7 @@ Beyond what the generated section below describes:
   order the collector received makes generated output and the `BuildFingerprint` depend on which
   machine ran the build. `OutputOrderDeterminismTest` pins it
 - `ElementNaming` — fully-qualified element paths (`com.example.Foo.bar`) for generated output; handles TYPE, METHOD, CONSTRUCTOR, FIELD, ENUM_CONSTANT, RECORD_COMPONENT, PARAMETER, PACKAGE. Called at snapshot time only
+- `FinalRoundElements` — at snapshot time, looks a member up again in the final round when its signature held an error type, so a type another processor generates (Immutables' `ImmutableMoney`, hibernate-processor's `Order_`) renders qualified in the path and the baseline signature rather than as the bare name of round 1 (#989). Elements with no error type are named from the collected object, unchanged
 - `OrphanWarner` — warns when an annotation is present but its platform opt-in file is absent (e.g. `@AIIgnore` with no `.cursorignore`)
 - `ProcessorCoexistence` — on the first round, warns when the sources use a peer processor's annotation (Lombok, MapStruct and five more) that the processor path dropped, which a VibeTags-only Maven `<annotationProcessorPaths>` does to anything that ran by class-path discovery
 

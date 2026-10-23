@@ -59,7 +59,7 @@ copy (a new example, a new snippet) gets a row there; a row that stops matching 
 | `publish-maven.version` | change `publish-maven.sha512` beside it. Take the SHA-512 from `https://archive.apache.org/dist/maven/maven-3/<v>/binaries/apache-maven-<v>-bin.tar.gz.sha512` and compare it with `sha512sum` of the archive downloaded from Maven Central, which is where the workflow fetches it |
 | `ksp.version` | `kotlin-stdlib.version` and `kotlinx-coroutines.version` follow what `symbol-processing-api` declares, so re-read its pom |
 | `scala.version` | stays on the 2.13 line: the example is about Java-only support |
-| pre-commit hook revs | `python -m pre_commit autoupdate`; the `checkstyle` hook runs in Docker, so unless Docker is available revert its rev and say so - an unverifiable bump is not a verified one |
+| pre-commit hook revs | `python -m pre_commit autoupdate` (gitleaks and pre-commit-hooks; the `checkstyle` and `vibetags-self-check` hooks are local, so their versions move with the Maven pins) |
 | GitHub Actions, npm CLIs | Dependabot owns them (`docs/DEPENDENCIES.md`, "Pinned outside the parent") |
 
 Never touch `<revision>`: that is the VibeTags release version, owned by `tools/set-version.sh`
@@ -81,7 +81,7 @@ From the repo root, in this order (each depends on the previous install):
 (cd examples/groovy && ./gradlew clean build --no-daemon)
 (cd examples/scala && ./gradlew clean build --no-daemon)
 (cd examples/basic && ./gradlew clean build --no-daemon)
-git add -A && SKIP=checkstyle python -m pre_commit run --all-files
+git add -A && python -m pre_commit run --all-files
 ```
 
 Report each result as passed, failed (with the output) or not run. A Gradle build that

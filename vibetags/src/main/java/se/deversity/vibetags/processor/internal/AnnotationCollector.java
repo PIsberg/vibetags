@@ -58,6 +58,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.GranularBody;
 import java.lang.annotation.Annotation;
@@ -257,6 +258,12 @@ public final class AnnotationCollector {
      */
     private final Map<Element, String> sourceFileNames = new HashMap<>();
 
+    /**
+     * Looks an element up again in the final round when its signature named a type that did not
+     * exist in the round it was collected in (#989); {@code null} until {@link #resolveAgainst}.
+     */
+    private @Nullable FinalRoundElements finalRound;
+
     /** Creates every bucket up front, in registry order, so no caller can ever see a missing one. */
     public AnnotationCollector() {
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
@@ -331,18 +338,36 @@ public final class AnnotationCollector {
 
     /**
      * The file a stub was generated from, or {@code name} when it cannot be told. Only a type that
-     * carries kapt's {@code @kotlin.Metadata} has a {@code .kapt_metadata} looked for, so a Java
-     * build reads no extra file.
+     * carries kapt's {@code @kotlin.Metadata} has a {@code .kapt_metadata} looked for, and only a
+     * stub under Gradle's or GMavenPlus's Groovy stub directory has its package's sources read
+     * (#973), so a Java build reads no extra file.
      */
     private static String stubSourceName(TypeElement type, Path stub, String name) {
         if (ElementNaming.isKotlinStub(type)) {
             String kotlin = StubSourceNames.kotlinFileName(stub, type.getQualifiedName().toString().replace('.', '/'));
             return kotlin != null ? kotlin : name;
         }
-        if (StubSourceNames.isGradleGroovyStub(stub)) {
-            return type.getSimpleName() + ".groovy";
+        if (StubSourceNames.isGroovyStub(stub)) {
+            String groovy = StubSourceNames.groovyFileName(stub, type.getSimpleName().toString());
+            return groovy != null ? groovy : type.getSimpleName() + ".groovy";
         }
         return name;
+    }
+
+    /**
+     * Names every element as the final round sees it from here on (#989). A member collected in
+     * round 1 whose signature names a type another processor generates still holds javac's error
+     * type, which renders unqualified; by the final round that type exists. Call once processing
+     * is over, before the model is read: the lookup is only meaningful while that round is live.
+     *
+     * <p>Invalidates the memoised snapshot, which an earlier round may have built from the
+     * unresolved elements.
+     */
+    public void resolveAgainst(Elements elements) {
+        finalRound = new FinalRoundElements(elements);
+        memo = null;
+        publishedMemo = null;
+        granularMemo = null;
     }
 
     /** Drains the round environment into our per-annotation sets. Returns true if anything was added. */
@@ -416,6 +441,7 @@ public final class AnnotationCollector {
         // previous round's answers for its own.
         thisRound.clear();
         sourceFileNames.clear();
+        finalRound = null;
         lockedPositions.clear();
         transitiveRules.clear();
         anyAnnotationsFound = false;
@@ -669,9 +695,10 @@ public final class AnnotationCollector {
         Map<Element, TaggedElement.Builder> builders = new LinkedHashMap<>();
         final boolean signatures = captureSignatures;
         final Map<Element, String> fileNames = sourceFileNames;
+        final @Nullable FinalRoundElements resolver = finalRound;
         buckets.forEach((type, elements) -> {
             for (Element e : elements) {
-                record(builders.computeIfAbsent(e, k -> newBuilder(k, signatures, fileNames)), e, type);
+                record(builders.computeIfAbsent(e, k -> newBuilder(k, signatures, fileNames, resolver)), e, type);
             }
         });
 
@@ -679,11 +706,11 @@ public final class AnnotationCollector {
         GuardrailModel.Builder model = GuardrailModel.builder();
         buckets.forEach((type, elements) -> {
             for (Element e : elements) {
-                model.add(type, materialize(e, builders, tagged, signatures, fileNames));
+                model.add(type, materialize(e, builders, tagged, signatures, fileNames, resolver));
             }
         });
         lockedPositions.forEach((e, position) ->
-            model.lockedPosition(materialize(e, builders, tagged, signatures, fileNames), position));
+            model.lockedPosition(materialize(e, builders, tagged, signatures, fileNames, resolver), position));
         model.transitiveRules(transitiveRules);
         return model.build();
     }
@@ -696,28 +723,35 @@ public final class AnnotationCollector {
                                              Map<Element, TaggedElement.Builder> builders,
                                              Map<Element, TaggedElement> tagged,
                                              boolean signatures,
-                                             Map<Element, String> fileNames) {
+                                             Map<Element, String> fileNames,
+                                             @Nullable FinalRoundElements resolver) {
         TaggedElement done = tagged.get(e);
         if (done != null) {
             return done;
         }
-        TaggedElement.Builder builder = builders.computeIfAbsent(e, k -> newBuilder(k, signatures, fileNames));
+        TaggedElement.Builder builder = builders.computeIfAbsent(e, k -> newBuilder(k, signatures, fileNames, resolver));
         Element ownerElement = ElementNaming.owningElement(e);
         if (!ownerElement.equals(e)) {
-            builder.owner(materialize(ownerElement, builders, tagged, signatures, fileNames));
+            builder.owner(materialize(ownerElement, builders, tagged, signatures, fileNames, resolver));
         }
         TaggedElement result = builder.build();
         tagged.put(e, result);
         return result;
     }
 
-    /** The name forms and kind for {@code e}, computed once here and never derived again. */
-    private static TaggedElement.Builder newBuilder(Element e, boolean signatures, Map<Element, String> fileNames) {
-        TaggedElement.Builder builder = TaggedElement.builder(ElementNaming.elementPath(e))
-            .names(e.toString(),
-                   ElementNaming.simpleNameOf(e),
-                   ElementNaming.elementDisplayName(e),
-                   ElementNaming.granularQName(e))
+    /**
+     * The name forms and kind for {@code e}, computed once here and never derived again. The names
+     * and signature are read from {@code e} as the final round sees it (#989); everything keyed by
+     * element, the source file and the buckets included, stays keyed by {@code e} itself.
+     */
+    private static TaggedElement.Builder newBuilder(Element e, boolean signatures, Map<Element, String> fileNames,
+                                                    @Nullable FinalRoundElements resolver) {
+        Element named = resolver == null ? e : resolver.current(e);
+        TaggedElement.Builder builder = TaggedElement.builder(ElementNaming.elementPath(named))
+            .names(named.toString(),
+                   ElementNaming.simpleNameOf(named),
+                   ElementNaming.elementDisplayName(named),
+                   ElementNaming.granularQName(named))
             .fileStem(ElementNaming.fileStem(e));
         TypeElement outermost = e instanceof TypeElement ? ElementNaming.outermostType(e) : null;
         if (outermost != null) {
@@ -729,7 +763,7 @@ public final class AnnotationCollector {
             // round is live; the enforcing mode reads it later as plain data (issue #284). Skipped
             // entirely when enforcement is off — rendering the visible member set of every type is
             // the single most expensive thing done per element, and nothing else reads the result.
-            .signature(signatures ? ElementSignature.of(e) : "");
+            .signature(signatures ? ElementSignature.of(resolver == null ? e : resolver.forSignature(e)) : "");
     }
 
     /**

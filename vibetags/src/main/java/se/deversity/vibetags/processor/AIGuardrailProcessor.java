@@ -492,6 +492,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     // order is locked, and its fingerprint short-circuit returns before any of it.
                     // The inherited rules must reach the collector BEFORE that fingerprint is
                     // computed, or a dependency upgrade would be short-circuited past in silence.
+                    // First of all, though, every collected element is named as this last round
+                    // sees it: a type another processor generated now exists (#989).
+                    collector.resolveAgainst(processingEnv.getElementUtils());
                     applyTransitiveRules();
                     collector.setMirrorState(MirrorConfig.state(root));
                     // Publishing runs in check mode too, and must. In a reactor that both

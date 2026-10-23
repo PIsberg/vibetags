@@ -114,6 +114,7 @@ class ProcessorTestHarness {
     private final List<JavaFileObject> sources = new ArrayList<>();
     private final List<Path> fileSources = new ArrayList<>();
     private javax.annotation.processing.Processor processorOverride;
+    private List<javax.annotation.processing.Processor> peers = List.of();
 
     ProcessorTestHarness(Path tempDir) throws IOException {
         this(tempDir, true);
@@ -321,6 +322,20 @@ class ProcessorTestHarness {
         }
     }
 
+    /**
+     * Compiles with {@link AIGuardrailProcessor} and {@code peer} in the same javac invocation, the
+     * way a build runs VibeTags beside Immutables, MapStruct or hibernate-processor. VibeTags is
+     * handed to javac first, so the peer's generated sources reach it only in a later round.
+     */
+    void compileAlongside(javax.annotation.processing.Processor peer, String... extraOptions) {
+        this.peers = List.of(peer);
+        try {
+            compileReturningDiagnostics(extraOptions);
+        } finally {
+            this.peers = List.of();
+        }
+    }
+
     List<javax.tools.Diagnostic<? extends JavaFileObject>> compileReturningDiagnostics(String... extraOptions) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
@@ -347,8 +362,10 @@ class ProcessorTestHarness {
             JavaCompiler.CompilationTask task = compiler.getTask(
                 null, fm, diagnostics, options, null, units
             );
-            task.setProcessors(List.of(
-                processorOverride != null ? processorOverride : new AIGuardrailProcessor()));
+            List<javax.annotation.processing.Processor> processors = new ArrayList<>();
+            processors.add(processorOverride != null ? processorOverride : new AIGuardrailProcessor());
+            processors.addAll(peers);
+            task.setProcessors(processors);
             task.call();
             return diagnostics.getDiagnostics();
         } catch (IOException e) {
