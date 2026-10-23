@@ -181,6 +181,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Lombok and VibeTags as two separate `java_plugin`s builds with no warning, and with VibeTags alone
   warns and fails the same way. The Eclipse IDE itself was not run. `ProcessorCoexistenceTest`
   gains the agent case, which failed before the change.
+- **A member naming a type another processor generates gets a qualified path** (#989). A guardrail
+  on `total(ImmutableMoney)` or `attr(Order_)`, where Immutables or hibernate-processor generates
+  the type, rendered it as the bare name, beside `toDto(com.example.Customer)` for every ordinary
+  type: VibeTags collects the member in round 1, before the type exists, and javac's error type
+  carries only the name the source wrote. The path is the element's identity in
+  `.vibetags-locks`, granular rule file names and `.vibetags-baseline`, so it depended on whether
+  the peer had run yet. VibeTags now looks such a member up again in the final round, where the
+  type exists. **One-time rename:** a project with such a signature sees the path, its granular
+  rule file name and its baseline entry change once, to the qualified form, on the first build
+  with this version; rerun `-Avibetags.baseline.update=true` if it uses the enforcing mode. Members
+  whose types all resolved in round 1 are named exactly as before. `GeneratedTypeSignatureTest`
+  failed 3 of 3 before the change.
 - **No more "redundantly supports both '*' and other annotation interfaces" warning.** From a
   project's second build on (a sidecar on record), or with transitive guardrails, the processor
   widened its supported types to `"*"` plus its own package, which javac's `processing` lint
