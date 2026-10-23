@@ -78,6 +78,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Inquisitor gets 80 turns instead of 40.** Its review of PR #1000 (four issues, five
+  commits) used up 40 turns twice, on two heads, at about $3.25 to $3.56 a run, and the
+  `Adversarial Review` check failed without a report, which reads like a finding and was not one.
+  A review that finishes early costs nothing extra. `InquisitorTurnBudgetTest` pins the floor.
 - **The `checkstyle` pre-commit hook runs the build's own Checkstyle** (#982). It was
   `gherynos/pre-commit-java`, which runs Checkstyle in Docker with Sun's default ruleset when no
   `-c` is passed, and none was: Checkstyle 13.3.0 with `/sun_checks.xml` reports 226 errors (225

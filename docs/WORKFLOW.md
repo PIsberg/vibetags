@@ -568,7 +568,11 @@ Skipped in the PR and the preflight summary says SKIPPED. Until #697 the job gat
 instead, which skipped every step and still reported the job as a green pass. Branch protection
 treats a skipped job as satisfying a required check, so promoting this one to required also means
 making a missing key fail rather than skip. The model is pinned by exact ID in the workflow;
-changing it is a reviewed commit like any other change to an enforcer. Not yet in the
+changing it is a reviewed commit like any other change to an enforcer. Its turn budget is
+`--max-turns 80`: at 40 the review of a four-issue pull request (#1000) ran out of turns before
+writing a report, twice, and the job failed with no finding; `InquisitorTurnBudgetTest` pins the
+floor. A run that hits the limit still fails, so read its log before treating the red as a gripe.
+Not yet in the
 required-checks set — it blocks nothing until its verdict record earns that promotion.
 
 ---
