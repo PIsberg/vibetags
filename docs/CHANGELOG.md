@@ -170,6 +170,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The dropped-processor warning stays quiet for Lombok run as a java agent** (#990). Lombok in
+  the Eclipse IDE runs as `-javaagent`, not as an annotation processor, so its processor class can
+  be missing from the processor path while its getters exist. A peer the JVM's own class loader can
+  load now counts as present: `-javaagent` puts the jar there, and no verified wiring puts a
+  processor there otherwise. Measured with real compilers and Lombok 1.18.42: ECJ 3.46.100 with
+  `-javaagent:lombok.jar=ECJ` and VibeTags alone on `-processorpath` builds and prints nothing (it
+  did before the change too, because ECJ's processor loader delegates to the JVM class path), and
+  without the agent it still names Lombok while the build fails on the getter. Bazel 8.4.2 with
+  Lombok and VibeTags as two separate `java_plugin`s builds with no warning, and with VibeTags alone
+  warns and fails the same way. The Eclipse IDE itself was not run. `ProcessorCoexistenceTest`
+  gains the agent case, which failed before the change.
 - **No more "redundantly supports both '*' and other annotation interfaces" warning.** From a
   project's second build on (a sidecar on record), or with transitive guardrails, the processor
   widened its supported types to `"*"` plus its own package, which javac's `processing` lint
