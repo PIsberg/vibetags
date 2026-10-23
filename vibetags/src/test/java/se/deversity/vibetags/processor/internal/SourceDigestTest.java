@@ -53,6 +53,42 @@ class SourceDigestTest {
     }
 
     @Test
+    void movingAGroovyTypeToAnotherFileMovesTheKey() throws IOException {
+        // A Groovy rule's glob names the .groovy file that declares the type (#973), and groovyc's
+        // stub is byte-identical whichever file that is, so the file is an input of its own.
+        Files.writeString(root.resolve("CLAUDE.md"), "", StandardCharsets.UTF_8);
+        Path sources = Files.createDirectories(root.resolve("src/main/groovy/com/example"));
+        Files.writeString(sources.resolve("Shipping.groovy"), "package com.example\nclass Parcel {}\n", StandardCharsets.UTF_8);
+        source = root.resolve("build/tmp/compileGroovy/groovy-java-stubs/com/example/Parcel.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "package com.example;\npublic class Parcel {}\n", StandardCharsets.UTF_8);
+        String before = key();
+
+        Files.move(sources.resolve("Shipping.groovy"), sources.resolve("Parcels.groovy"));
+
+        assertNotNull(before);
+        assertNotEquals(before, key(), "the stub did not change, the file declaring Parcel did");
+    }
+
+    @Test
+    void aKaptMetadataEditMovesTheKey() throws IOException {
+        // A kapt stub of a class carries no file name, so moving the class to another .kt file
+        // changes only the .kapt_metadata beside it, which names the file its glob uses (#955).
+        Files.writeString(root.resolve("CLAUDE.md"), "", StandardCharsets.UTF_8);
+        source = root.resolve("build/tmp/kapt3/stubs/main/com/example/Invoice.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "package com.example;\npublic final class Invoice {}\n", StandardCharsets.UTF_8);
+        Path metadata = source.resolveSibling("Invoice.kapt_metadata");
+        Files.writeString(metadata, "Billing.kt", StandardCharsets.UTF_8);
+        String before = key();
+
+        Files.writeString(metadata, "Ledger.kt", StandardCharsets.UTF_8);
+
+        assertNotNull(before);
+        assertNotEquals(before, key(), "the stub did not change, the file kapt says it came from did");
+    }
+
+    @Test
     void aNewOptInMovesTheKey() throws IOException {
         project();
         String before = key();

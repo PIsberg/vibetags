@@ -375,11 +375,22 @@ tasks.withType(GroovyCompile).configureEach {
 A Groovy class's stub implements `groovy.lang.GroovyObject` (a trait carries
 `@groovy.transform.Trait`), so its rule and ignore globs name `<Type>.groovy` rather than the stub's
 `.java` (#939). A Groovy interface's stub implements neither, but Gradle writes every stub under a
-directory named `groovy-java-stubs`, and a stub there is taken as Groovy's too, so an interface also
-gets `<Type>.groovy` (#955; another build tool's stub directory is not recognised and the interface
-keeps `<Type>.java`). Unlike kapt, groovyc leaves nothing that says what the file was called
-(measured on Groovy 5.1.0 with `keepStubs`: no file beside the stub, and nothing in it), so a
-Groovy type in a file named otherwise gets a glob that misses.
+directory named `groovy-java-stubs` and GMavenPlus under `generated-sources/groovy-stubs`, and a stub
+under either is taken as Groovy's too, so an interface also gets a `.groovy` glob (#955, #973).
+Another build tool's stub directory is not recognised, and its interfaces keep `<Type>.java`.
+
+Unlike kapt, groovyc leaves nothing that says what the file was called (measured on Groovy 5.1.0
+with `keepStubs`: no file beside the stub, and nothing in it). So the processor reads the sources
+where both build tools look for them: from a Gradle stub at
+`<buildDir>/tmp/compile<SourceSet>Groovy/groovy-java-stubs/<package>/`, or a GMavenPlus stub at
+`<buildDir>/generated-sources/groovy-stubs/<sourceSet>/<package>/`, it lists
+`src/<sourceSet>/groovy/<package>/` (#973). `<Type>.groovy` wins when it exists; otherwise the one
+file with a line declaring the type outside a comment names it, so `Parcel` declared in
+`Shipping.groovy` gets `**/Shipping.groovy`. Measured end to end on 2026-10-23 with Groovy 6.0.0
+under `examples/groovy`'s Gradle and with Groovy 5.0.2 under gmavenplus-plugin 4.2.1, for a class
+and an interface; renaming the file and rebuilding moves the glob with it. Sources outside that
+convention (a custom `srcDirs`), a type no file declares, or one two files seem to declare keep
+the `<Type>.groovy` guess, and a glob that may miss.
 
 ### Field-level annotations are dropped
 

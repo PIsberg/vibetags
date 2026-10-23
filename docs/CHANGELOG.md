@@ -170,6 +170,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Groovy type in a differently named file gets a glob for that file** (#973). `Parcel` declared
+  in `Shipping.groovy` was scoped to `**/Parcel.groovy`, a file that does not exist, so no
+  path-scoped platform loaded its rule; groovyc's stub names nothing. The processor now lists the
+  package's source directory where Gradle and GMavenPlus read it (`src/<sourceSet>/groovy/<package>/`,
+  the source set taken from the stub's path) and uses the one file declaring the type outside a
+  comment. GMavenPlus's stub directory (`generated-sources/groovy-stubs`, measured with
+  gmavenplus-plugin 4.2.1) is now recognised too, so a Groovy interface built with Maven gets a
+  `.groovy` glob instead of `<Type>.java`. Measured on real builds: `examples/groovy`'s Gradle with
+  Groovy 6.0.0 and GMavenPlus with Groovy 5.0.2 both give `**/Shipping.groovy` for a class and an
+  interface in `Shipping.groovy`. Sources outside the convention keep the old guess.
+- **A no-op rebuild no longer keeps a stale glob after a type moves to another file** (#955,
+  #973). The early exit's key (#834) hashed every source javac read, but a kapt stub of a class
+  and a Groovy stub are byte-identical whichever file the type is declared in, and that file is
+  what the rule's glob names. The key now covers the `.kapt_metadata` beside a kapt stub and the
+  `.groovy` file found for a Groovy stub. Verified on a real Gradle build with the processor jar
+  unchanged: renaming `Parcels.groovy` to `Shipping.groovy` and rebuilding moved both globs. The
+  kapt half is verified by `SourceDigestTest` only, not on a Kotlin build. `SourceDigestTest`
+  gains both cases; each failed before the change.
 - **The dropped-processor warning stays quiet for Lombok run as a java agent** (#990). Lombok in
   the Eclipse IDE runs as `-javaagent`, not as an annotation processor, so its processor class can
   be missing from the processor path while its getters exist. A peer the JVM's own class loader can

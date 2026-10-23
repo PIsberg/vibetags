@@ -32,8 +32,10 @@ import java.util.stream.Stream;
  * <p>Everything else that shapes output is in the key too: the processor version, every
  * {@code -A} option, the module and source set, which opt-in files exist and as what kind, at the
  * root and the module root, whether {@code AGENTS.md} carries a marker pair (its activation beside
- * another AI file turns on that, not on presence), and the content of every {@code .vibetags-*}
- * configuration file there.
+ * another AI file turns on that, not on presence), the content of every {@code .vibetags-*}
+ * configuration file there, for a kapt stub the {@code .kapt_metadata} beside it (#955), and for a
+ * Groovy stub the {@code .groovy} file found to declare its type (#973): neither stub changes when
+ * its type moves to another file, and the rule glob names that file.
  * Taking in more than output depends on only costs a missed exit; taking in less is a false
  * "unchanged". Sidecars, the write cache and the locks report are outputs or run records with
  * checks of their own, and are left out because they change on every build. Lock files
@@ -106,6 +108,20 @@ public final class SourceDigest {
                 return null;
             }
             line(sha, "source " + source.getKey() + " " + hash);
+            // A Groovy stub is byte-identical whichever .groovy file declares its type, and that
+            // file is what the type's rule glob names (#973), so it is an input of its own. The
+            // path test is a string match, so a Java build reads nothing more.
+            Path file = source.getValue();
+            // Likewise a kapt stub of a class: the .kapt_metadata beside it names the .kt file (#955).
+            Path metadata = StubSourceNames.kaptMetadataOf(file);
+            if (metadata != null) {
+                line(sha, "kapt-metadata " + source.getKey() + " " + hashOf(fileSha, buffer, metadata));
+            }
+            if (StubSourceNames.isGroovyStub(file)) {
+                String stub = String.valueOf(file.getFileName());
+                String type = stub.endsWith(".java") ? stub.substring(0, stub.length() - ".java".length()) : stub;
+                line(sha, "groovy-source " + source.getKey() + " " + StubSourceNames.groovyFileName(file, type));
+            }
         }
         return HexFormat.of().formatHex(sha.digest());
     }

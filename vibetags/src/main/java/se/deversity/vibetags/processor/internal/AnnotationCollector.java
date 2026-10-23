@@ -338,16 +338,18 @@ public final class AnnotationCollector {
 
     /**
      * The file a stub was generated from, or {@code name} when it cannot be told. Only a type that
-     * carries kapt's {@code @kotlin.Metadata} has a {@code .kapt_metadata} looked for, so a Java
-     * build reads no extra file.
+     * carries kapt's {@code @kotlin.Metadata} has a {@code .kapt_metadata} looked for, and only a
+     * stub under Gradle's or GMavenPlus's Groovy stub directory has its package's sources read
+     * (#973), so a Java build reads no extra file.
      */
     private static String stubSourceName(TypeElement type, Path stub, String name) {
         if (ElementNaming.isKotlinStub(type)) {
             String kotlin = StubSourceNames.kotlinFileName(stub, type.getQualifiedName().toString().replace('.', '/'));
             return kotlin != null ? kotlin : name;
         }
-        if (StubSourceNames.isGradleGroovyStub(stub)) {
-            return type.getSimpleName() + ".groovy";
+        if (StubSourceNames.isGroovyStub(stub)) {
+            String groovy = StubSourceNames.groovyFileName(stub, type.getSimpleName().toString());
+            return groovy != null ? groovy : type.getSimpleName() + ".groovy";
         }
         return name;
     }
