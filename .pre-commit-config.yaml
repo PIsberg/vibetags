@@ -1,8 +1,4 @@
 repos:
-- repo: https://github.com/gherynos/pre-commit-java
-  rev: v0.2.4
-  hooks:
-  - id: checkstyle
 - repo: https://github.com/gitleaks/gitleaks
   rev: v8.30.0
   hooks:
@@ -37,3 +33,13 @@ repos:
     language: system
     pass_filenames: false
     files: ^(vibetags/src/|vibetags-annotations/src/|vibetags/pom\.xml$|README\.md$)
+# Checkstyle as the build runs it: maven-checkstyle-plugin in each module a staged .java file
+# belongs to, so the ruleset, suppressions and Checkstyle version are the ones CI applies. Same git
+# `!` alias as above, for the same Windows reason (#905). It replaced gherynos/pre-commit-java,
+# which ran Sun's default ruleset rather than checkstyle.xml and could not run on Windows (#982).
+  - id: checkstyle
+    name: Checkstyle with the build's own configuration (tools/checkstyle-hook.sh)
+    entry: git -c "alias.vibetags-checkstyle=!bash tools/checkstyle-hook.sh" vibetags-checkstyle
+    language: system
+    files: \.java$
+    require_serial: true

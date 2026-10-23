@@ -98,7 +98,7 @@ configured cannot fail and so reports nothing when it is missing.
 | Artifact | Property | Why it is here |
 |---|---|---|
 | `maven-pmd-plugin` with `pmd-core`, `pmd-java` | `maven-pmd-plugin.version`, `pmd.version` | Source-level rules and copy-paste detection. All eight java rule categories are imported by `pmd-ruleset.xml`; each exclusion in that file names the rule, its finding count and the reason. The Gradle builds derive their PMD `toolVersion` from `pmd.version`. A red PMD gate is worth checking against the JDK before believing it: PMD run on a newer JDK than the build targets reports confident nonsense. |
-| `maven-checkstyle-plugin` | `maven-checkstyle-plugin.version` | Style. Also wired into `pre-commit`, so it fails before the commit rather than in CI. |
+| `maven-checkstyle-plugin` | `maven-checkstyle-plugin.version` | Style. Also the `checkstyle` pre-commit hook (`tools/checkstyle-hook.sh` runs this plugin in each module a staged `.java` file belongs to), so it fails before the commit rather than in CI. |
 | `spotbugs-maven-plugin` with `findsecbugs-plugin` | `spotbugs-maven-plugin.version`, `findsecbugs-plugin.version` | Bytecode analysis, the security rules included. `vibetags`, `vibetags-cli` and `vibetags-ksp` carry a `spotbugs-exclude.xml`; `vibetags-annotations` deliberately has none, so the absence of that file stays evidence that nothing there has been excused. |
 | Error Prone with NullAway | `error-prone.version`, `nullaway.version` | On the compiler's `annotationProcessorPaths`, main sources only. NullAway is what makes the JSpecify annotations load-bearing instead of decorative. It needs the `--add-exports` flags in each module's `.mvn/jvm.config` to reach javac's internals: without them Error Prone does not fail, it silently does not run, which is why those four files are pinned byte-identical. |
 | `org.eclipse.jdt:ecj` | `ecj.version` | Never on a classpath. `tools/ecj-degradation-check.sh` (the `ecj` job in `build.yml`) compiles `examples/basic` with it to check the documented claim that the processor degrades rather than fails under a compiler with no Tree API. |
@@ -154,9 +154,10 @@ tooling from working and buy nothing, because none of them can be read from a po
   `tools/codex-cli/package.json` pins `@openai/codex`, which the `codex-rules` job in `build.yml`
   loads the generated `.codex/rules/vibetags.rules` with (#970).
 - **pre-commit hooks**, `rev:` in `.pre-commit-config.yaml`, bumped by
-  `python -m pre_commit autoupdate`: `gherynos/pre-commit-java` (Checkstyle, run in Docker),
-  `gitleaks/gitleaks` (secret scanning), and `pre-commit/pre-commit-hooks` (end-of-file and
-  trailing-whitespace fixers).
+  `python -m pre_commit autoupdate`: `gitleaks/gitleaks` (secret scanning) and
+  `pre-commit/pre-commit-hooks` (end-of-file and trailing-whitespace fixers). The `checkstyle` and
+  `vibetags-self-check` hooks are local and have no rev: they run this repository's own scripts
+  with the Maven plugins pinned above.
 - **The JDKs CI builds on** (`java-version` in the workflows) are a test matrix, not a
   dependency: the build targets `maven.compiler.release` 21 whichever JDK runs it.
 

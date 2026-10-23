@@ -78,6 +78,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The `checkstyle` pre-commit hook runs the build's own Checkstyle** (#982). It was
+  `gherynos/pre-commit-java`, which runs Checkstyle in Docker with Sun's default ruleset when no
+  `-c` is passed, and none was: Checkstyle 13.3.0 with `/sun_checks.xml` reports 226 errors (225
+  `LineLength`, 1 `JavadocPackage`) on `vibetags-annotations`, which `checkstyle.xml` passes with 0.
+  On Windows it never ran at all: the hook repository ships no `.gitattributes`, so
+  `core.autocrlf=true` checks its scripts out with CRLF and bash in the container fails on `\r`,
+  at v0.2.4 and at v0.6.37 alike. The hook is now local: `tools/checkstyle-hook.sh` runs
+  `maven-checkstyle-plugin` in each module a staged `.java` file belongs to, so the ruleset,
+  suppressions and Checkstyle version (9.3) are what every Maven build applies at `validate`. It
+  runs as a git `!` alias like the self-check hook (#905). Verified from PowerShell on Windows:
+  passes on clean files, fails on an injected unused import. `SKIP=checkstyle` is gone from the
+  release and bump-dependencies skills. `CheckstyleHookWiringTest` pins the wiring.
 - **Releases are built on Maven 3.10.0 with `central-publishing-maven-plugin` 0.12.0** (#945).
   `publish.yml` had pinned Maven 3.9.16 since the 1.4.0 publish, which Central rejected because
   plugin 0.11.0 zipped Maven 3.10's `maven-metadata-local.xml` and `_remote.repositories` into the

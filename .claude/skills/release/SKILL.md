@@ -201,18 +201,10 @@ Also run the pre-commit hooks, since the repo enforces them:
 pre-commit run --all-files
 ```
 
-The `checkstyle` hook runs in a Docker image, so on a machine without a running Docker
-daemon that command aborts before any hook runs — including the two that matter most here,
-gitleaks and the whitespace fixers. Run the rest rather than skipping the step entirely:
-
-```bash
-SKIP=checkstyle pre-commit run --all-files
-```
-
-Checkstyle itself is not lost by that: it is bound to the `validate` phase, so the Maven
-build above already ran it over the whole project. Report which hooks actually ran — a
-skipped gate is not a passed gate, and "pre-commit passed" is the wrong thing to say when
-only three of four did.
+Every hook runs without Docker: the `checkstyle` hook runs `maven-checkstyle-plugin` in each
+module through `tools/checkstyle-hook.sh` (#982). Report which hooks actually ran: a skipped
+gate is not a passed gate, and "pre-commit passed" is the wrong thing to say when one was
+skipped.
 
 ## Step 5b — Sweep the consumers, before the release exists
 
