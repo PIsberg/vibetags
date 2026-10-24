@@ -74,6 +74,11 @@ Read one of these before anything under `docs/`.
 [`SECURITY.md`](SECURITY.md) for reporting a vulnerability, [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
 for the community standard.
 
+### Publications
+
+[`publications/vibetags-deck.html`](publications/vibetags-deck.html) is the 32-slide talk "AI Context
+& VibeTags" (standalone HTML, linked from the README's Mentioned in Publications section).
+
 ## Not reference material
 
 - [`proposals/`](proposals/) holds ideas that have not shipped.

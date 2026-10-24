@@ -998,6 +998,12 @@ annotation vocabulary, the granular `.claude/rules/` layout, and the scoped-rule
 book reports cutting one real reactor's always-loaded context from 537 to 137 lines. VibeTags also
 appears in the chapters on context budgets, spec-driven development, and multi-agent CI.
 
+**[AI Context & VibeTags](docs/publications/vibetags-deck.html)** is a 32-slide talk by Peter Isberg
+on why AI coding agents need context files, and how VibeTags compiles one set of `@AI*` annotations
+into each platform's guardrail file. The deck is a single self-contained HTML file: open it in a
+browser, with no network access or build step needed. GitHub shows the source, so download the file
+or view it through a static HTML preview to present it.
+
 ## 💛 Support VibeTags
 
 VibeTags is built and maintained by a single developer in his spare time. If it saves you time, a small donation helps keep the project alive:
