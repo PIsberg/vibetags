@@ -4,8 +4,11 @@
 # committed rule is violated. The gating is deliberately dumb bash over files the reviewer
 # writes; the model never decides its own exit code.
 #
-# Runs only when the ANTHROPIC_API_KEY or the CLAUDE_CODE_OAUTH_TOKEN secret (from
-# `claude setup-token`, a Claude subscription) exists. Without either the review job is SKIPPED,
+# Runs on request only: nothing starts it on a pull request. A maintainer runs it from the Actions
+# tab (Inquisitor, Run workflow) on the branch to review, with the base branch to diff against
+# (default main). Each run is one review at the maintainer's request, so the model is not spent on
+# every push. Needs the ANTHROPIC_API_KEY or the CLAUDE_CODE_OAUTH_TOKEN secret (from
+# `claude setup-token`, a Claude subscription). Without either the review job is SKIPPED,
 # so the check reads "Skipped" in the PR instead of a green tick it did not earn (#697); the
 # preflight job below says why that takes two jobs. The job is intentionally not in the
 # required-checks set while it earns trust; promote it once its verdict record justifies
@@ -19,13 +22,18 @@
 name: Inquisitor
 
 on:
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Base branch the diff is taken against (origin/<base>...HEAD)"
+        required: true
+        default: main
 
 permissions:
   contents: read
 
 concurrency:
-  group: inquisitor-${{ github.event.pull_request.number }}
+  group: inquisitor-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -97,7 +105,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             Read the file .github/INQUISITOR.md and follow it exactly. The base ref for
-            the diff is origin/${{ github.base_ref }}. Produce inquisitor-report.md (and
+            the diff is origin/${{ inputs.base }}. Produce inquisitor-report.md (and
             inquisitor-violations only if violations exist) as its output contract states.
           claude_args: >-
             --model claude-opus-5

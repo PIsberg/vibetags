@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This document describes what happens during CI builds in `.github/workflows/`. Thirteen workflows: seven run on push, pull request, schedule, or release; mutation testing runs only when someone asks for it; the weekly perf ring runs on its own schedule; the demo recording runs when the code it demonstrates changes; the Copilot review lane requests an advisory reviewer on every PR and skips loudly when Copilot has no quota; and the two Anthropic-backed workflows (Inquisitor, Instruction Evals) run on pull requests but skip themselves, loudly, when neither the `ANTHROPIC_API_KEY` nor the `CLAUDE_CODE_OAUTH_TOKEN` secret is set.
+This document describes what happens during CI builds in `.github/workflows/`. Thirteen workflows: seven run on push, pull request, schedule, or release; mutation testing runs only when someone asks for it; the weekly perf ring runs on its own schedule; the demo recording runs when the code it demonstrates changes; the Copilot review lane requests an advisory reviewer on every PR and skips loudly when Copilot has no quota; the Inquisitor runs only when someone asks for it (`workflow_dispatch`), and the two Anthropic-backed workflows (Inquisitor, Instruction Evals) skip themselves, loudly, when neither the `ANTHROPIC_API_KEY` nor the `CLAUDE_CODE_OAUTH_TOKEN` secret is set.
 
 ## Overview
 
@@ -15,7 +15,7 @@ This document describes what happens during CI builds in `.github/workflows/`. T
 | Mutation Testing (PIT) | `mutation.yml` | Manual only (`workflow_dispatch`) |
 | Demo GIF | `demo.yml` | Push to `main` touching the processor or the demo, manual |
 | Gradle Wrapper Validation | `gradle-wrapper-validation.yml` | Push to `main`; PRs touching a wrapper |
-| Inquisitor (adversarial AI review) | `inquisitor.yml` | Pull requests; needs `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` |
+| Inquisitor (adversarial AI review) | `inquisitor.yml` | Manual only (`workflow_dispatch`, with a base branch); needs `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` |
 | Instruction Evals | `instruction-evals.yml` | PRs carrying the `run-instruction-evals` label, manual |
 | Copilot Review | `copilot-review.yml` | PR opened/reopened/ready-for-review |
 | Nightly Perf Ring | `nightly-perf.yml` | Weekly cron (Mondays 03:17 UTC), manual |
@@ -41,8 +41,9 @@ open runs nothing.
 ''A superseded run is cancelled.'' Every workflow except `publish.yml` and `dependency-review.yml`
 now declares a `concurrency` group keyed on the ref, cancelling in progress everywhere except
 `main` and `master` - a run there is the record of that branch's health and must finish.
-`inquisitor.yml` and `instruction-evals.yml` key theirs on the pull request number instead and
-always cancel, which is the same thing for workflows that never run on a push.
+`inquisitor.yml` and `instruction-evals.yml` key theirs on the ref (Inquisitor) or the pull request
+number (Instruction Evals) and always cancel, which is the same thing for workflows that never run
+on a push.
 `publish.yml` is excluded on purpose: cancelling a release mid-flight is worse than queueing
 behind it.
 
@@ -550,7 +551,11 @@ would leave the wrappers permanently reported as unverified. PRs keep the filter
 
 ## 10. Inquisitor (`inquisitor.yml`)
 
-An adversarial AI reviewer with the opposite objective function from whoever produced the diff:
+An adversarial AI reviewer with the opposite objective function from whoever produced the diff.
+It runs on request, never on a pull request event: a maintainer starts it from the Actions tab
+(`Inquisitor`, Run workflow) on the branch to review, with the base branch to diff against (default
+`main`). A run therefore costs model time only when someone wants a verdict; a push or an opened PR
+starts nothing. Until this workflow is on `main`, GitHub does not offer the Run workflow button.
 it is rewarded for finding violations of committed rules, not for shipping. Three separations
 make it adversarial by construction — its own objective, its own context (the raw diff plus the
 committed law only, never the conversation that produced the change), its own runtime (a CI
@@ -607,8 +612,8 @@ Method and limits: `evals/consumer/README.md`.
 The always-available adversarial review lane: on every opened, reopened, or
 ready-for-review PR, the job requests a GitHub Copilot code review via the reviewer API.
 Copilot needs no repository secret and spends the maintainer's Copilot Free quota, so this
-lane works when the Inquisitor's does not; together they mean every PR gets at least one
-machine reviewer whenever either lane has credit. The job requests and then VERIFIES: the
+lane works when the Inquisitor's does not. The Inquisitor is not a per-PR lane any more, so the
+Copilot request is the only automatic machine reviewer. The job requests and then VERIFIES: the
 request API returns success even when GitHub silently drops the reviewer (observed live on
 this repo's PR #417 - a 2xx and then no review-request event at all, from the Actions token
 and from the maintainer's own token alike, with the equivalent ruleset parameter silently
