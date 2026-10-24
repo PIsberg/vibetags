@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The Inquisitor runs on request, not on every pull request.** `inquisitor.yml` now triggers on
+  `workflow_dispatch` (Actions, Inquisitor, Run workflow) with a `base` input, default `main`. A
+  push or an opened PR no longer starts a model review. The Copilot review lane is unchanged.
+
 ## [1.4.1] - 2026-10-24
 
 ### Added
