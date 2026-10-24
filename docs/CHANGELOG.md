@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-24
+
 ### Added
 
 - **VibeTags names an annotation processor the build dropped.** Once `maven-compiler-plugin`
@@ -6642,7 +6644,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/PIsberg/vibetags/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/PIsberg/vibetags/compare/v1.3.8...v1.4.0
 [1.3.8]: https://github.com/PIsberg/vibetags/compare/v1.3.7...v1.3.8
 [1.3.7]: https://github.com/PIsberg/vibetags/compare/v1.3.6...v1.3.7

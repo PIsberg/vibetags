@@ -28,8 +28,8 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("se.deversity.vibetags:vibetags-bom:1.4.0"))
-    ksp(platform("se.deversity.vibetags:vibetags-bom:1.4.0"))
+    implementation(platform("se.deversity.vibetags:vibetags-bom:1.4.1"))
+    ksp(platform("se.deversity.vibetags:vibetags-bom:1.4.1"))
 
     // compileOnly is enough: every @AI* annotation is RetentionPolicy.SOURCE.
     compileOnly("se.deversity.vibetags:vibetags-annotations")
