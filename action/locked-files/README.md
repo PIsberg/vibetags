@@ -93,7 +93,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: PIsberg/vibetags/action/locked-files@v1.4.0
+      - uses: PIsberg/vibetags/action/locked-files@v1.4.1
         with:
           build-command: mvn -B -q compile
 ```
