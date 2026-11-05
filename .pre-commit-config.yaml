@@ -43,3 +43,14 @@ repos:
     language: system
     files: \.java$
     require_serial: true
+# Offline: every `uses:` in a staged workflow has an entry in .github/workflows/actions.lock. It
+# does not check provenance (the Actions Lockfile workflow runs `gh actions-lock --verify` for
+# that), so it needs no token. Needs `gh extension install github/gh-actions-lock`; without it gh
+# exits 1 with "unknown command", which is a failure, not a skip. Fix a red run with
+# `gh actions-lock --no-narrow`, never without --no-narrow (docs/WORKFLOW.md, Actions Lockfile).
+  - id: actions-lock-coverage
+    name: Every workflow action is in actions.lock (gh actions-lock --verify-local)
+    entry: gh actions-lock --verify-local
+    language: system
+    pass_filenames: false
+    files: ^\.github/(workflows|actions)/
