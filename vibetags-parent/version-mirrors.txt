@@ -38,3 +38,4 @@ foojay-resolver.version         examples/**/settings.gradle*           foojay-re
 publish-maven.version           .github/workflows/publish.yml          MAVEN_VERSION: '([^']+)'
 publish-maven.sha512            .github/workflows/publish.yml          MAVEN_SHA512: '([^']+)'
 node.version                    .github/workflows/*.yml                node-version: '([^']+)'
+gh-actions-lock.version         .github/workflows/actions-lock.yml     GH_ACTIONS_LOCK_VERSION: '([^']+)'

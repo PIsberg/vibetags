@@ -139,6 +139,7 @@ finding its copy.
 | `maven-compiler-plugin.version` | See [Compile, test and package](#compile-test-and-package). | `examples/*/pom.xml`, `tools/demo/pom.xml`. |
 | `publish-maven.version`, `publish-maven.sha512` | The Maven `publish.yml` deploys on, and the SHA-512 Apache publishes for its `-bin.tar.gz`, so a runner image update cannot change the Maven a release is built with. It moved from 3.9.16 to 3.10.0 once `central-publishing-maven-plugin` 0.12.0 stopped zipping Maven 3.10's local-repository files into the bundle (#945). The `Central Bundle Shape` job in `build.yml` builds every published module's bundle with it on each pull request, so a bump that breaks bundling is a red pull request rather than a rejected release. Not named `maven.version`: Maven defines that itself, and a property would shadow it for every plugin. | `MAVEN_VERSION` and `MAVEN_SHA512` in the job `env` of `.github/workflows/publish.yml`; `build.yml` reads them from there. |
 | `node.version` | The Node that installs the pinned CLIs below. `EvalsNodePinTest` checks it against the claude CLI's `engines.node`. | `node-version` in `build.yml` (codex-rules job) and `instruction-evals.yml`. |
+| `gh-actions-lock.version` | The `github/gh-actions-lock` gh extension that verifies `.github/workflows/actions.lock` (see below). A precompiled extension installed by release tag, which Dependabot does not track, so `tools/bump-dependencies.sh` reads its latest GitHub release. | `GH_ACTIONS_LOCK_VERSION` in the job `env` of `.github/workflows/actions-lock.yml`. |
 
 ## Pinned outside the parent, deliberately
 
@@ -148,6 +149,13 @@ tooling from working and buy nothing, because none of them can be read from a po
 - **GitHub Actions** are pinned to commit SHAs, not tags, with the human-readable version in a
   trailing comment. Dependabot proposes the bumps. Pinning is what the OSSF Scorecard
   Pinned-Dependencies check wants, and it is also the only form that cannot be moved under you.
+  A SHA alone does not say where the commit came from, though: GitHub resolves it across the
+  whole fork network. `.github/workflows/actions.lock` records each action's tag, owner ID and
+  repository ID, and the actions our actions call (for example `actions/github-script` inside
+  `codecov/codecov-action`), and the `Actions Lockfile` workflow checks it on every pull request
+  (`docs/WORKFLOW.md`). Dependabot updates the lockfile in the same PR as the bump. A hand edit
+  to a `uses:` line needs `gh actions-lock --no-narrow` run afterwards; without `--no-narrow` the
+  tool rewrites every SHA to its tag.
 - **npm CLIs**, each in its own `package.json` with a committed lockfile of integrity hashes and
   installed with `npm ci`; Dependabot bumps both. `evals/package.json` pins
   `@anthropic-ai/claude-code`, the CLI the instruction evals run (`evals/README.md`).

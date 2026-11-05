@@ -60,7 +60,7 @@ copy (a new example, a new snippet) gets a row there; a row that stops matching 
 | `ksp.version` | `kotlin-stdlib.version` and `kotlinx-coroutines.version` follow what `symbol-processing-api` declares, so re-read its pom |
 | `scala.version` | stays on the 2.13 line: the example is about Java-only support |
 | pre-commit hook revs | `python -m pre_commit autoupdate` (gitleaks and pre-commit-hooks; the `checkstyle` and `vibetags-self-check` hooks are local, so their versions move with the Maven pins) |
-| GitHub Actions, npm CLIs | Dependabot owns them (`docs/DEPENDENCIES.md`, "Pinned outside the parent") |
+| GitHub Actions, npm CLIs | Dependabot owns them (`docs/DEPENDENCIES.md`, "Pinned outside the parent"). An action bumped by hand also needs `gh actions-lock --no-narrow` to update `.github/workflows/actions.lock`; Dependabot does that itself |
 
 Never touch `<revision>`: that is the VibeTags release version, owned by `tools/set-version.sh`
 and the `release` skill.
