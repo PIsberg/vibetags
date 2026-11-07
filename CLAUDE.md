@@ -58,6 +58,9 @@ cd examples/basic && mvn clean compile     # consumer fixture; library must be i
   [corpus/README.md](corpus/README.md) says what each asserts and what they have found.
 - Run `pre-commit run --all-files` after `git add`, before committing. It includes CI's
   self-check (`tools/self-check.sh`, 30–45 s), which catches a moved `.vibetags-locks` range.
+- After changing a `uses:` line, run `gh actions-lock --no-narrow` to update
+  `.github/workflows/actions.lock`. Never drop `--no-narrow`, whatever the tool's own message
+  says: without it every SHA pin becomes a tag ([docs/WORKFLOW.md](docs/WORKFLOW.md#14-actions-lockfile-actions-lockyml)).
 
 ## Reference docs (read on demand)
 

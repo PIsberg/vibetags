@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This document describes what happens during CI builds in `.github/workflows/`. Thirteen workflows: seven run on push, pull request, schedule, or release; mutation testing runs only when someone asks for it; the weekly perf ring runs on its own schedule; the demo recording runs when the code it demonstrates changes; the Copilot review lane requests an advisory reviewer on every PR and skips loudly when Copilot has no quota; the Inquisitor runs only when someone asks for it (`workflow_dispatch`), and the two Anthropic-backed workflows (Inquisitor, Instruction Evals) skip themselves, loudly, when neither the `ANTHROPIC_API_KEY` nor the `CLAUDE_CODE_OAUTH_TOKEN` secret is set.
+This document describes what happens during CI builds in `.github/workflows/`. Fourteen workflows: eight run on push, pull request, schedule, or release; mutation testing runs only when someone asks for it; the weekly perf ring runs on its own schedule; the demo recording runs when the code it demonstrates changes; the Copilot review lane requests an advisory reviewer on every PR and skips loudly when Copilot has no quota; the Inquisitor runs only when someone asks for it (`workflow_dispatch`), and the two Anthropic-backed workflows (Inquisitor, Instruction Evals) skip themselves, loudly, when neither the `ANTHROPIC_API_KEY` nor the `CLAUDE_CODE_OAUTH_TOKEN` secret is set.
 
 ## Overview
 
@@ -19,10 +19,11 @@ This document describes what happens during CI builds in `.github/workflows/`. T
 | Instruction Evals | `instruction-evals.yml` | PRs carrying the `run-instruction-evals` label, manual |
 | Copilot Review | `copilot-review.yml` | PR opened/reopened/ready-for-review |
 | Nightly Perf Ring | `nightly-perf.yml` | Weekly cron (Mondays 03:17 UTC), manual |
+| Actions Lockfile | `actions-lock.yml` | Push to `main`; every pull request |
 
 All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow except Scorecard is `contents: read`; Scorecard declares `read-all`, as its action requires. Jobs that need more (e.g. CodeQL writes `security-events`, publish writes `contents` to attach release assets) escalate explicitly.
 
-All third-party actions are pinned by full commit SHA with the version as a trailing comment — required by the OpenSSF Scorecard `Pinned-Dependencies` check.
+All third-party actions are pinned by full commit SHA with the version as a trailing comment — required by the OpenSSF Scorecard `Pinned-Dependencies` check. `.github/workflows/actions.lock` records where each of those commits comes from; see [14. Actions Lockfile](#14-actions-lockfile-actions-lockyml).
 
 ---
 
@@ -640,6 +641,38 @@ varied 1.93x). Deviations warn rather than fail: the committed baselines were ca
 different machine and JDK, so a hard gate would fail on environment rather than regression;
 a warning that repeats weekly is the signal to capture a fresh baseline and investigate.
 Sweep output uploads as an artifact either way.
+
+---
+
+## 14. Actions Lockfile (`actions-lock.yml`)
+
+Checks `.github/workflows/actions.lock`, GitHub's workflow dependency lockfile, with the
+`github/gh-actions-lock` gh extension at `gh-actions-lock.version` from the parent pom.
+
+A SHA pin fixes the bytes an action runs but not their origin: GitHub resolves
+`owner/action@<sha>` across the whole fork network, so a commit that exists only in a fork runs
+under the upstream name. The lockfile records each action's tag, commit, owner ID and repository
+ID, plus the actions our actions call, which no `uses:` line here names
+(`actions/github-script` inside `codecov/codecov-action`, `oven-sh/setup-bun` inside
+`anthropics/claude-code-action`). `gh actions-lock --verify` fails when a workflow uses an action
+the lockfile does not cover, when an entry is no longer used, or when an entry was edited by hand.
+
+- Triggers: push to `main`, every pull request.
+- Steps: harden runner → checkout → `gh extension install github/gh-actions-lock --pin v<version>`
+  → `gh actions-lock --verify`.
+- To fix a red run, run `gh actions-lock --no-narrow` and commit the lockfile. **Never omit
+  `--no-narrow`.** Without it the tool rewrites every `@<sha> # vX.Y.Z` line in all workflows
+  to `@vX.Y.Z`, which Scorecard counts as unpinned.
+- Dependabot regenerates the matching lockfile entry in its own action-bump PRs.
+- The `actions-lock-coverage` pre-commit hook runs the offline `gh actions-lock --verify-local`
+  when a commit touches `.github/workflows/` or `.github/actions/`. It checks coverage only, not
+  provenance, and it needs the extension installed (`gh extension install github/gh-actions-lock`).
+- Known gaps: the two local actions (`./.github/actions/verify-generated-files`,
+  `./action/locked-files`) are not followed, which is harmless while neither calls a remote
+  action; and `ossf/scorecard-action` runs a container image pinned by tag, not by digest, which
+  the lockfile cannot cover.
+- Blocking at run time is a separate repository policy, **Require lockfile** (Settings → Actions →
+  Policies). This workflow does not depend on it.
 
 ---
 
