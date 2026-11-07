@@ -21,10 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **The Inquisitor runs on request, not on every pull request.** `inquisitor.yml` now triggers on
-  `workflow_dispatch` (Actions, Inquisitor, Run workflow) with a `base` input, default `main`. A
-  push or an opened PR no longer starts a model review. The Copilot review lane is unchanged.
-- **PMD 7.28.0 -> 7.29.0 (#1025).** 7.29 fixes six security advisories, among them one in CPD
+- **PMD 7.28.0 -> 7.29.0 (#1025, #1039).** 7.29 fixes six security advisories, among them one in CPD
   run over untrusted source (GHSA-wj6q-xw9m-26p6), which CI does on every pull request. It also
   adds `LocalVariableDeclarationShouldBeAtStartOfBlock` to the codestyle category, which
   `pmd-ruleset.xml` imports whole. It fired 2826 times in the processor module, and the dependabot
@@ -33,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `VariableDeclarationUsageDistance`, and a `var` cannot be declared that way. With the exclusion,
   `pmd:check` passes on PMD 7.29.0 in `vibetags-annotations`, `vibetags`, `vibetags-cli`,
   `vibetags-ksp` and `load-tests`.
+- **The Inquisitor runs on request, not on every pull request.** `inquisitor.yml` now triggers on
+  `workflow_dispatch` (Actions, Inquisitor, Run workflow) with a `base` input, default `main`. A
+  push or an opened PR no longer starts a model review. The Copilot review lane is unchanged.
 
 ## [1.4.1] - 2026-10-24
 
