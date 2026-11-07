@@ -5,7 +5,7 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/actions-lock.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/build.yml':
         - 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
@@ -13,61 +13,61 @@ workflows:
         - 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         - 'codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/codeql.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
         - 'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/copilot-review.yml':
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/demo.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/dependency-review.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/fuzz.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/gradle-wrapper-validation.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'gradle/actions@3f5f9adaf7d9fecd50b5935e54106014257a94e6'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/inquisitor.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/instruction-evals.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/mutation.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/nightly-perf.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/publish.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
         - 'softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/scorecards.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         - 'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
         - 'ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e'
-        - 'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+        - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
 dependencies:
     'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9':
         ref: 'v6.1.0'
@@ -143,8 +143,8 @@ dependencies:
         commit: 'sha1-efb35369e0ad2afab669f228072c1b0d510eae64'
         owner_id: 2242
         repo_id: 204253808
-    'step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25':
-        ref: 'v2.22.1'
-        commit: 'sha1-ccd8616d44fd3846e67624a50d5aad6d37bf2d25'
+    'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43':
+        ref: 'v2.22.3'
+        commit: 'sha1-46b06cea07f9e64621fdf066ba77ac6915163d43'
         owner_id: 88700172
         repo_id: 422287306
