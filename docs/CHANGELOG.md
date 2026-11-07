@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CI verifies a workflow dependency lockfile.** Every action was already pinned to a commit
+  SHA, but GitHub resolves a SHA across the fork network, so a fork-only commit could run under
+  the upstream action's name, and the actions our actions call were pinned by nobody here.
+  `.github/workflows/actions.lock` now records each action's tag, owner and repository IDs,
+  including two called indirectly (`actions/github-script` via codecov-action, `oven-sh/setup-bun`
+  via claude-code-action), and the new `actions-lock.yml` workflow runs `gh actions-lock --verify`
+  on every pull request. Verified locally: the check exits 1 with no lockfile and with a `uses:`
+  SHA the lockfile lacks, exits 2 on a hand-edited lockfile entry, and 0 on this tree. Generated
+  with `--no-narrow`, which keeps every workflow's SHA pins as they were.
+
 ### Changed
 
 - **The Inquisitor runs on request, not on every pull request.** `inquisitor.yml` now triggers on

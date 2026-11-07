@@ -1,0 +1,52 @@
+# Workflow dependency lockfile: .github/workflows/actions.lock
+#
+# Every `uses:` in this repository is already pinned to a full commit SHA, which fixes the bytes
+# but not their origin: GitHub resolves a SHA across the whole fork network, so
+# `owner/action@<sha>` also runs a commit that exists only in somebody's fork. The lockfile
+# records, for each action, the tag the SHA was taken from and the owner and repository IDs it
+# belongs to, plus the actions our actions pull in (codecov-action's github-script,
+# claude-code-action's setup-bun), which no `uses:` line here names.
+#
+# `gh actions-lock --verify` fails when a workflow uses an action the lockfile does not cover, or
+# when a locked commit is no longer reachable from its upstream tag. Fix either with
+#   gh actions-lock --no-narrow
+# and commit the result. Never drop --no-narrow: without it the tool rewrites every
+# `@<sha> # vX.Y.Z` line to `@vX.Y.Z`, which Scorecard's Pinned-Dependencies check counts as
+# unpinned. Dependabot regenerates the matching lockfile entry in its own bump PRs.
+name: Actions Lockfile
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify actions.lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Mirrored from gh-actions-lock.version in vibetags-parent/pom.xml (version-mirrors.txt).
+      GH_ACTIONS_LOCK_VERSION: '0.4.1'
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install gh-actions-lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install github/gh-actions-lock --pin "v${GH_ACTIONS_LOCK_VERSION}"
+
+      - name: Verify every action is locked and every lock is reachable upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh actions-lock --verify

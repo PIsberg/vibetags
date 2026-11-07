@@ -22,8 +22,9 @@ INCLUDE_PRE=0
 [ "${1:-}" = "--include-prereleases" ] && INCLUDE_PRE=1
 
 # property → source, and optionally the release line it must stay on. A source is a Maven Central
-# group/artifact path, a plugins.gradle.org path (plugins:...), or one of the two non-Maven feeds
-# (gradle:distributions, node:lts).
+# group/artifact path, a plugins.gradle.org path (plugins:...), a GitHub repository's latest
+# release (github:owner/repo), or one of the two other non-Maven feeds (gradle:distributions,
+# node:lts).
 PINS="
 jspecify.version                        org/jspecify/jspecify
 slf4j.version                           org/slf4j/slf4j-api
@@ -72,6 +73,7 @@ lombok-mapstruct-binding.version        org/projectlombok/lombok-mapstruct-bindi
 foojay-resolver.version                 plugins:org/gradle/toolchains/foojay-resolver-convention/org.gradle.toolchains.foojay-resolver-convention.gradle.plugin
 publish-maven.version                   org/apache/maven/apache-maven 3.
 node.version                            node:lts
+gh-actions-lock.version                 github:github/gh-actions-lock
 "
 
 prop() { sed -n "s:.*<$1>\(.*\)</$1>.*:\1:p" "$PARENT" | head -n1; }
@@ -97,6 +99,12 @@ latest() {
       versions="$(curl -sf https://nodejs.org/dist/index.json)" || { echo "?"; return; }
       printf '%s\n' "$versions" | grep -o '"version":"v[0-9.]*"[^}]*"lts":"[A-Za-z]*"' \
         | sed -n 's/.*"version":"v\([0-9.]*\)".*/\1/; 1p'
+      return ;;
+    github:*)
+      # releases/latest already excludes drafts and pre-releases. Tags carry a leading v; the
+      # pom does not, because the workflow adds it back when it pins the extension.
+      versions="$(curl -sf "https://api.github.com/repos/${source#github:}/releases/latest")" || { echo "?"; return; }
+      printf '%s\n' "$versions" | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p'
       return ;;
     plugins:*)
       versions="$(metadata_versions "https://plugins.gradle.org/m2/${source#plugins:}")" || { echo "?"; return; } ;;

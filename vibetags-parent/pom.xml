@@ -125,7 +125,7 @@
         <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>
         <pitest-maven.version>1.30.1</pitest-maven.version>
         <pitest-junit5-plugin.version>1.2.3</pitest-junit5-plugin.version>
-        <error-prone.version>2.51.0</error-prone.version>
+        <error-prone.version>2.52.0</error-prone.version>
         <nullaway.version>0.14.3</nullaway.version>
         <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
 
@@ -159,6 +159,9 @@
         <publish-maven.sha512>908b1501bfb420bf7c8affb855534a9c407fd6099367bfb9f2f2dcb8e9799102bffb84518cde74c679bd76870247c6528683abdd620581bffa90f95d92d175aa</publish-maven.sha512>
         <!-- The Node that installs the pinned CLIs in build.yml and instruction-evals.yml. -->
         <node.version>24.22.0</node.version>
+        <!-- The gh extension actions-lock.yml verifies .github/workflows/actions.lock with. A
+             precompiled extension pinned by release tag; Dependabot cannot see it. -->
+        <gh-actions-lock.version>0.4.1</gh-actions-lock.version>
     </properties>
 
     <dependencyManagement>
