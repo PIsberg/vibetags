@@ -88,6 +88,11 @@
              first use is a symptom of that method's length, already covered by the size metrics
              above. The rule measures a gap that here is the loop itself. -->
         <exclude name="VariableDeclarationUsageDistance"/>
+        <!-- New in PMD 7.29.0, and 2826 findings in the processor module alone. It wants each
+             local declared, uninitialised, at the top of its block, which is the opposite of the
+             rule above, and a `var` cannot be written that way at all: `var` needs an initialiser,
+             and UseExplicitTypes is excluded so the module can use it. -->
+        <exclude name="LocalVariableDeclarationShouldBeAtStartOfBlock"/>
         <!-- EmptyControlStatement and UnnecessaryFullyQualifiedName are re-added below with
              properties, so they are excluded here only to be replaced, not to be switched off. -->
         <exclude name="EmptyControlStatement"/>
