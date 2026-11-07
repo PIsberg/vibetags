@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `workflow_dispatch` (Actions, Inquisitor, Run workflow) with a `base` input, default `main`. A
   push or an opened PR no longer starts a model review. The Copilot review lane is unchanged.
 
+### Fixed
+
+- **`llms.txt` stated 39 annotations; there are 44 (#1040).** `ProjectFactsConsistencyTest` checks every
+  maintained doc for a restated annotation, platform or output count, but it walked `.md` files
+  only, so the root `llms.txt`, the index an agent reads first, was never checked. It is scanned
+  now. Verified failing first: with the scan widened and the old line in place, the test fails
+  on line 30 of `llms.txt` ("39 @interface classes"); with the line corrected it passes. `llms.txt`
+  also links the docs it was missing (`LOAD-BEARING.md`, `PROCESSOR.md`, `MULTI-MODULE.md`,
+  `JVM-LANGUAGES.md`, `WORKFLOW.md`, `LOGGING.md`, the CLI README).
+
 ## [1.4.1] - 2026-10-24
 
 ### Added

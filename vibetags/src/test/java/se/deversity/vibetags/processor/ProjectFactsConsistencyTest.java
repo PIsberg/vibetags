@@ -108,7 +108,13 @@ class ProjectFactsConsistencyTest {
     private static final int PROSE_COUNT_GROUPS = 5;
 
     /**
-     * Every {@code .md} file under {@code root}, tolerating a file that disappears mid-walk.
+     * Every {@code .md} file under {@code root}, plus the root {@code llms.txt}, tolerating a file
+     * that disappears mid-walk.
+     *
+     * <p>{@code llms.txt} is the one hand-written doc that is not Markdown by extension, and it is
+     * the index an agent reads first. Filtering on {@code .md} alone left it outside every count
+     * check, so "the 39 {@code @interface} classes" sat in it after the set had grown to 44. Only
+     * the root copy: the examples' {@code llms.txt} files are processor output.
      *
      * <p>{@link Files#walk} throws {@link java.io.UncheckedIOException} out of its iterator when a
      * path it has listed can no longer be stat'ed, which fails the test with a
@@ -127,7 +133,7 @@ class ProjectFactsConsistencyTest {
         Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                if (file.toString().endsWith(".md")) {
+                if (file.toString().endsWith(".md") || file.equals(root.resolve("llms.txt"))) {
                     found.add(file);
                 }
                 return FileVisitResult.CONTINUE;
