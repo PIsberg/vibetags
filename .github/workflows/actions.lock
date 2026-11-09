@@ -9,21 +9,21 @@ workflows:
     '.github/workflows/build.yml':
         - 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
+        - 'actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78'
         - 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         - 'codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/codeql.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
+        - 'actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78'
         - 'github/codeql-action@9b3254085494b55a0f7c4c2b3d2d52cc712ce370'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/copilot-review.yml':
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/demo.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
+        - 'actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/dependency-review.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
@@ -31,7 +31,7 @@ workflows:
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/fuzz.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
+        - 'actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/gradle-wrapper-validation.yml':
@@ -49,17 +49,17 @@ workflows:
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/mutation.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
+        - 'actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/nightly-perf.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
+        - 'actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/publish.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
+        - 'actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78'
         - 'softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/scorecards.yml':
@@ -89,9 +89,9 @@ dependencies:
         commit: 'sha1-ed597411d8f924073f98dfc5c65a23a2325f34cd'
         owner_id: 44036562
         repo_id: 205262760
-    'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad':
-        ref: 'v6.1.0'
-        commit: 'sha1-b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
+    'actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78':
+        ref: 'v6.2.0'
+        commit: 'sha1-77dd5b2ce225ea11469928ac317850245a74ae78'
         owner_id: 44036562
         repo_id: 196057608
     'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1':
