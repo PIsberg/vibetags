@@ -40,7 +40,7 @@ workflows:
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/inquisitor.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
-        - 'anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d'
+        - 'anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/instruction-evals.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
@@ -104,9 +104,9 @@ dependencies:
         commit: 'sha1-cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         owner_id: 44036562
         repo_id: 192625955
-    'anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d':
-        ref: 'v1.0.266'
-        commit: 'sha1-d535f5172dec02b204866b393d6b20b9b2aaf98d'
+    'anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe':
+        ref: 'v1.0.269'
+        commit: 'sha1-61a9c274fa7110a66dfafc1bbbced03833eb25fe'
         owner_id: 76263028
         repo_id: 986421638
         uses:
