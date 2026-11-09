@@ -60,7 +60,7 @@ workflows:
     '.github/workflows/publish.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad'
-        - 'softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64'
+        - 'softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3'
         - 'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43'
     '.github/workflows/scorecards.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
@@ -138,9 +138,9 @@ dependencies:
         commit: 'sha1-0c5077e51419868618aeaa5fe8019c62421857d6'
         owner_id: 108928776
         repo_id: 512644635
-    'softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64':
-        ref: 'v3.0.3'
-        commit: 'sha1-efb35369e0ad2afab669f228072c1b0d510eae64'
+    'softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3':
+        ref: 'v3.0.4'
+        commit: 'sha1-8a0cd651e5b2365bd640854a3fa5dfc70e4875f3'
         owner_id: 2242
         repo_id: 204253808
     'step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43':
