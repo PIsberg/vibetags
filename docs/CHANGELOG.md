@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Routine dependency bumps (#1033, #1043-#1051), landed as one PR.** build-helper-maven-plugin
+  3.6.2 -> 3.7.0, flatten-maven-plugin 1.8.0 -> 1.9.0, pitest-maven 1.30.1 -> 1.30.2,
+  async-test-lib 1.14.0 -> 1.14.1, `@anthropic-ai/claude-code` (evals) 2.1.317 -> 2.1.319, and the
+  actions setup-java 6.2.0, harden-runner 2.22.4, action-gh-release 3.0.4, claude-code-action
+  1.0.269 and the codeql-action group. Both MojoHaus plugins now require Maven 3.9.0; the build
+  and `publish.yml` (Maven 3.10.0) already meet it.
 - **PMD 7.28.0 -> 7.29.0 (#1025, #1039).** 7.29 fixes six security advisories, among them one in CPD
   run over untrusted source (GHSA-wj6q-xw9m-26p6), which CI does on every pull request. It also
   adds `LocalVariableDeclarationShouldBeAtStartOfBlock` to the codestyle category, which
@@ -36,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`actions.lock` was stale on main, so `Verify actions.lock` failed on every pull request.** #1023
+  moved `gradle/actions/wrapper-validation` to a new SHA without its lockfile entry, which also gave
+  `Validate Gradle Wrapper` a `startup_failure` on main. Regenerated with
+  `gh actions-lock --no-narrow`; `gh actions-lock --verify` reports all 14 workflows valid.
 - **`llms.txt` stated 39 annotations; there are 44 (#1040).** `ProjectFactsConsistencyTest` checks every
   maintained doc for a restated annotation, platform or output count, but it walked `.md` files
   only, so the root `llms.txt`, the index an agent reads first, was never checked. It is scanned
