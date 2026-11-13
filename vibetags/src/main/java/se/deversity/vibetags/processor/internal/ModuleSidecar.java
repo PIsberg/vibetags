@@ -2827,6 +2827,27 @@ public final class ModuleSidecar {
         return false;
     }
 
+    /**
+     * The module paths, relative to {@code root}, of sidecars whose module directory no longer
+     * exists: the modules {@link #readAll(Path)} is about to retire. Like
+     * {@link #staleGranularStems(Path)} it must be asked before that read, which deletes the only
+     * record of them. The write cache needs the answer, because a departed module's nested output
+     * went with its directory and nothing will ever write it again.
+     */
+    public static Set<String> staleModulePaths(Path root) {
+        Set<String> paths = new LinkedHashSet<>();
+        for (Path p : listPaths(root)) {
+            String modulePath = readModulePathHeader(p);
+            if (modulePath == null || modulePath.isEmpty() || "_root_".equals(modulePath)) {
+                continue;
+            }
+            if (!moduleDirExists(root, modulePath)) {
+                paths.add(modulePath);
+            }
+        }
+        return paths;
+    }
+
     /** Whether a sidecar's module directory is still there, and if not, why not. */
     enum ModuleDir {
         EXISTS,

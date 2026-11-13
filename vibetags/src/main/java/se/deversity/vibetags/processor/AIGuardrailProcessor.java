@@ -565,10 +565,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                             // not leave the last run's digest vouching for files it may have
                             // half-written.
                             forgetSourceDigest();
+                            // Asked before generation, whose sidecar read retires these modules.
+                            Set<String> departedModules = ModuleSidecar.staleModulePaths(root);
                             generateFiles();
                             // Before the record, so an early-exited rebuild replays what it printed.
                             checkOrphansIfShortCircuited();
-                            forgetOptedOutOutputs();
+                            forgetOptedOutOutputs(departedModules);
                             recordSourceDigest();
                         }
                     }
@@ -874,12 +876,26 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * in the compiling module's own directory. Without it a platform that was opted out kept every
      * later build from being skipped; see {@link WriteCache#forgetMissingAt}. Only the two
      * directories this round resolves opt-ins in: a sibling module's are its own round's to judge.
-     * Before {@link #recordSourceDigest}, which flushes.
+     * The exception is a module that has left the build: no round of its own will come, its nested
+     * output went with its directory, and the record of it blocked the remaining modules the same
+     * way. Before {@link #recordSourceDigest}, which flushes.
+     *
+     * @param departedModules module paths whose directory was gone when this generation started
      */
-    private void forgetOptedOutOutputs() {
+    private void forgetOptedOutOutputs(Set<String> departedModules) {
         WriteCache cache = writeCache;
         if (cache == null) {
             return;
+        }
+        for (String modulePath : departedModules) {
+            try {
+                Path moduleDir = root.resolve(modulePath);
+                if (Files.notExists(moduleDir)) {
+                    cache.forgetMissingAt(moduleDir);
+                }
+            } catch (InvalidPathException unrepresentable) {
+                // A module path this filesystem cannot spell names no file the cache could hold.
+            }
         }
         Set<Path> dirs = new java.util.LinkedHashSet<>(List.of(root, compilationRoot()));
         for (Path dir : dirs) {
