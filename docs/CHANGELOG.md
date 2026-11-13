@@ -94,10 +94,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Gradle `srcDir`), compiled incrementally from files of the first root only: the partial-round
   guard walked only the roots the round compiled from, found no unread source, and took the other
   root's elements for deletions, so their rule files were swept and the aggregate stopped naming
-  them, exit 0. The guard now also walks the recording module's directory for an uncompiled source
-  that declares a missing element's own type, and refuses the round when it finds one. No sidecar
-  field was added. Verified failing first: `PartialRoundGuardrailLossTest` lost Beta's rule file
-  before the change; a file genuinely deleted from the second root still has its rule retired.
+  them, exit 0. The guard now also walks the module's directory for an uncompiled source that
+  declares a missing element's own type, and refuses the round when it finds one. Only the elements
+  the compiling module's own sidecar recorded start that walk: two modules configured from one root
+  build file share a directory, and a walk started by the other module's elements found its sources
+  and refused every round of the second (caught by `examples/gradle-shared-buildfile` in CI, now
+  also a `PartialRoundGuardrailLossTest` case). No sidecar field was added. Verified failing first:
+  `PartialRoundGuardrailLossTest` lost Beta's rule file before the change; a file genuinely
+  deleted from the second root still has its rule retired.
 - **A file VibeTags declined to write is retried, and its warning repeats.** A stray
   `VIBETAGS-START` line, a `greptile.json` that does not parse, a `.pr_agent.toml` that cannot be
   merged into and a hand-written whole-file output each got a warning and no write-cache record. The

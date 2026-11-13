@@ -194,6 +194,52 @@ class PartialRoundGuardrailLossTest {
     }
 
     /**
+     * Two modules that share one directory, as in a Gradle build configured entirely from the root
+     * build file: neither {@code core/} nor {@code app/} has a build file, so both resolve to the
+     * root and only {@code -Avibetags.module} tells them apart. Each module's sidecar then "describes"
+     * the other's rounds, so app's elements read as missing in core's round. The walk added for
+     * #1060 looked at the whole shared directory, found app's uncompiled source, and refused every
+     * core round as partial, so a clean build dropped app's guardrail from CLAUDE.md
+     * ({@code examples/gradle-shared-buildfile}, Gradle Build on PR #1064).
+     */
+    @Test
+    void aModuleSharingItsDirectoryWithAnotherIsNotTakenForAPartialRound(@TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.writeString(root.resolve("build.gradle"), "subprojects {}" + NL, StandardCharsets.UTF_8);
+        List<String> appWarnings = compileSharedDirectoryModule(root, "app", "Runner");
+        List<String> coreWarnings = compileSharedDirectoryModule(root, "core", "Ledger");
+
+        String claude = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(appWarnings.stream().noneMatch(w -> w.contains("did not compile every annotated source")),
+            "app's round compiled all of app: " + appWarnings);
+        assertTrue(coreWarnings.stream().noneMatch(w -> w.contains("did not compile every annotated source")),
+            "core's round compiled all of core; app's source in the shared directory is app's, not core's: "
+                + coreWarnings);
+        assertTrue(claude.contains("com.example.gsb.app.Runner") && claude.contains("com.example.gsb.core.Ledger"),
+            "both modules' guardrails belong in CLAUDE.md after a full build. Was:" + NL + claude);
+    }
+
+    private static List<String> compileSharedDirectoryModule(Path root, String module, String type)
+            throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        String pkg = "com.example.gsb." + module;
+        harness.writeSourceFile(
+            module + "/src/main/java/" + pkg.replace('.', '/') + "/" + type + ".java",
+            "package " + pkg + ";" + NL
+                + "import se.deversity.vibetags.annotations.AILocked;" + NL
+                + "@AILocked(reason = " + Q + type + " wire format" + Q + ")" + NL
+                + "public class " + type + " {}" + NL);
+        List<String> warnings = harness.compileReturningDiagnostics("-Avibetags.module=" + module)
+            .stream()
+            .filter(d -> d.getKind() == Diagnostic.Kind.WARNING
+                || d.getKind() == Diagnostic.Kind.MANDATORY_WARNING)
+            .map(d -> d.getMessage(null))
+            .toList();
+        VibeTagsLogger.shutdown();
+        return warnings;
+    }
+
+    /**
      * The other half of the same rule: with Beta's file deleted from the second root, nothing
      * explains its missing element, so the round is complete and Beta's rule file is retired.
      */

@@ -49,8 +49,9 @@ import java.util.stream.Stream;
  *   <li><b>An unread source explains it.</b> Under a source root this compilation actually
  *       compiled from, there is a {@code .java} file it did <em>not</em> compile which names the
  *       VibeTags annotation package. That file's guardrails cannot be in this round's output for
- *       one reason only: the round never read it. Failing that, anywhere under the module, an
- *       uncompiled {@code .java} file that names the package and declares the very type a missing
+ *       one reason only: the round never read it. Failing that, for the elements this module's
+ *       own sidecar recorded, anywhere under that sidecar's module directory, an uncompiled
+ *       {@code .java} file that names the package and declares the very type a missing
  *       element belongs to: a second source root of the same source set ({@code src/main/extra},
  *       added by build-helper or a Gradle {@code srcDir}) that the round compiled nothing from is
  *       otherwise never looked at, and its elements read as deleted (#1060).</li>
@@ -143,20 +144,25 @@ public final class PartialRoundDetector {
      * @param elementIdsSeen   the element ids this compilation produced
      * @param sourceSet        the source set this compilation compiles ({@code main}, {@code test}, ...)
      * @param moduleRoot       the compiling module's root directory; the VibeTags root for one module
+     * @param moduleId         this compilation's own sidecar id; only that sidecar's missing elements
+     *                         send the walk past the compiled roots into the module directory
      */
     public List<Path> unreadAnnotatedSources(Path root, Set<String> elementIdsSeen, String sourceSet,
-                                             Path moduleRoot) {
+                                             Path moduleRoot, String moduleId) {
         sourceRoots.removeIf(sourceRoot -> isGeneratedTree(root, sourceRoot));
         if (sourceRoots.isEmpty()) {
             return List.of();
         }
         Set<Path> recordingDirs = new LinkedHashSet<>();
-        Set<String> missing = missingRecordedElements(root, elementIdsSeen, sourceSet, moduleRoot, recordingDirs);
+        Set<String> ownMissing = new LinkedHashSet<>();
+        Set<String> missing = missingRecordedElements(root, elementIdsSeen, sourceSet, moduleRoot, moduleId,
+            recordingDirs, ownMissing);
         if (missing.isEmpty()) {
             return List.of(); // condition (1): nothing went missing, so nothing needs explaining
         }
         List<Path> unread = unreadSourcesNamingTheAnnotations();
-        return unread.isEmpty() ? unreadSourcesOfMissingElements(root, recordingDirs, missing) : unread;
+        return unread.isEmpty() && !ownMissing.isEmpty()
+            ? unreadSourcesOfMissingElements(root, recordingDirs, ownMissing) : unread;
     }
 
     /**
@@ -176,19 +182,30 @@ public final class PartialRoundDetector {
      * an annotated main source excluded from the build then stopped main writing for good. A
      * sidecar of another source set is skipped; the source set is read off the sidecar's own ids,
      * which do not drift the way the module id can.
+     *
+     * <p>The missing elements of the sidecar filed under {@code moduleId} itself are also collected
+     * into {@code ownMissing}, with that sidecar's directory in {@code recordingDirs}: those alone
+     * may send the walk into the whole module directory. Containment is too loose for that walk.
+     * Two modules configured from one root build file share a directory, each one's sidecar
+     * contains the other's sources, and walking it found the other module's files and refused
+     * every round of the second module as partial (examples/gradle-shared-buildfile).
      */
     private Set<String> missingRecordedElements(Path root, Set<String> elementIdsSeen, String sourceSet,
-                                                Path moduleRoot, Set<Path> recordingDirs) {
+                                                Path moduleRoot, String moduleId, Set<Path> recordingDirs,
+                                                Set<String> ownMissing) {
         Set<String> missing = new LinkedHashSet<>();
         for (ModuleSidecar sidecar : ModuleSidecar.peekAll(root)) {
             if (!describesThisCompilation(root, sidecar, moduleRoot)
                     || !ModuleSidecar.sanitizeId(sourceSet).equals(sourceSetOf(sidecar))) {
                 continue;
             }
+            boolean own = ModuleSidecar.sanitizeId(moduleId).equals(sidecar.getModuleId());
+            Path dir = own ? moduleDirOf(root, sidecar) : null;
             for (String recorded : sidecar.getElementIds()) {
-                if (!elementIdsSeen.contains(recorded) && missing.add(recorded)) {
-                    Path dir = moduleDirOf(root, sidecar);
+                if (!elementIdsSeen.contains(recorded)) {
+                    missing.add(recorded);
                     if (dir != null) {
+                        ownMissing.add(recorded);
                         recordingDirs.add(dir);
                     }
                 }
