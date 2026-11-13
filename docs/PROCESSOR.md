@@ -320,7 +320,16 @@ notes come from the walk, so they are recorded with the digest (`# source-diagno
 the `# source-digest:` one, each a `ReplayableDiagnostic`) and a skipped build prints them again, in
 its first round, anchored to the same element: same text, same file, line and column, same count for
 `-Werror` (#856). A build that printed more than 1000 is not recorded, and neither is one whose
-method-body scanner warned: those warnings sit on a local declaration no later build can name. The
+method-body scanner warned: those warnings sit on a local declaration no later build can name. Nor
+is a build with a guardrail annotation value that the round's own sources do not determine:
+`@AILocked(reason = Reasons.LEDGER)` renders the constant's value, and when `Reasons` comes off the
+classpath or `-sourcepath`, changing it changes no hashed byte. The same tree pass counts such
+values (`MethodBodyGuardrailScanner.valuesFromOutsideTheRound`). A value is accepted when it is
+spelled out (literals, class literals, operators over them), sits in an enum-typed attribute, or
+names an enum constant or a field that a source file of the round declares with a spelled-out
+initializer; anything else leaves the build unrecorded, so the next one walks and the fingerprint,
+which hashes the collected values, decides. Without the Tree API the question cannot be asked and
+the build is recorded as before. The
 warnings `generateFiles()` raises ahead of its own fingerprint short-circuit (a deprecated opt-in, an
 unidentified module) are raised again on the skipped path too (#859). The digest is cleared before every full
 generation, so one that fails part-way leaves nothing vouching for half-written files. If another
@@ -356,6 +365,24 @@ the retry. A successful write replaces the row. A removal that fails (an orphane
 open by an editor on Windows, a read-only directory) is recorded the same way and warned about, so
 the next build retries it instead of trusting the stale file (#867). Removing the row would not do: an absent entry
 counts as stable, and a file the writer never managed to write has none.
+
+A file the writer *declines* is recorded the same way: a stray `VIBETAGS-START` line with no end
+marker, a `greptile.json` that does not parse, a `.pr_agent.toml` it cannot splice into, a
+hand-written whole-file output. Each prints a WARNING and leaves the file alone, and without the
+row the next build of unchanged sources was skipped: the file never received its guardrails after
+it was repaired, and the warning was printed by the cold build only.
+
+### Opted-out outputs
+
+`allCachedFilesStable()` keeps the entry of a missing output, so the build after a deletion
+regenerates. That is right for a file something will write again and wrong for one whose opt-in
+was deleted, which is how a platform is opted out: nothing writes it again, and its entry kept
+every later build from short-circuiting. After a completed generation the processor therefore
+drops the entries of opt-in paths that are absent, at the root and in the compiling module's own
+directory (`WriteCache.forgetMissingAt`; a deleted granular directory takes the entries of the rule
+files that were in it), and the entries under the directory of a module that has left the build
+(`ModuleSidecar.staleModulePaths`, asked before the sidecar read retires it). An entry whose file
+exists is never dropped, and neither is a missing file under an opt-in that is still there.
 
 ## Check mode (CI drift enforcement)
 

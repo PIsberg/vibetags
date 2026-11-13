@@ -42,6 +42,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A file VibeTags declined to write is retried, and its warning repeats.** A stray
+  `VIBETAGS-START` line, a `greptile.json` that does not parse, a `.pr_agent.toml` that cannot be
+  merged into and a hand-written whole-file output each got a warning and no write-cache record. The
+  next build of unchanged sources was then skipped, so the file never received its guardrails after
+  the developer repaired it, and the warning was printed by the cold build only (a `-Werror` build
+  failed cold and passed on the rebuild). The declined file is now recorded like a failed write.
+- **An annotation value taken from a constant outside the compilation no longer goes stale.**
+  `@AILocked(reason = Reasons.LEDGER)` with `Reasons` in a dependency or on `-sourcepath`: changing
+  the constant changed no source the early exit hashes, so the rebuild was skipped and the
+  generated files kept the old text. A build with such a value no longer records a source digest;
+  the fingerprint short-circuit, which hashes the collected values, still applies. Values spelled
+  out in the source, enum constants and constants declared in the same compilation keep the exit.
+- **Opting out of a platform no longer disables every later short-circuit.** Deleting an opt-in
+  file (or a granular rules directory) left its write-cache entries behind, and a missing output
+  reads as "regenerate", so after one opt-out neither the early exit nor the fingerprint
+  short-circuit fired for the project again. The same happened to the remaining modules of a
+  reactor when a module with files of its own left the build. Entries of absent opt-ins and of
+  departed modules are now dropped after a completed generation.
 - **`actions.lock` was stale on main, so `Verify actions.lock` failed on every pull request.** #1023
   moved `gradle/actions/wrapper-validation` to a new SHA without its lockfile entry, which also gave
   `Validate Gradle Wrapper` a `startup_failure` on main. Regenerated with

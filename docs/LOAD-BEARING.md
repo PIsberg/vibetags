@@ -167,7 +167,9 @@ Beyond what the generated section below describes:
   declarations, which JSR 269 processing cannot reach at all; each one draws a WARNING instead of
   being a silent no-op. Best-effort by design: javac only (the Gradle wrapper is unwrapped via
   `SourcePositionResolver.treesFor`), and a unit is scanned only when it imports the annotations
-  package
+  package. The same pass counts guardrail annotation values the round's sources do not determine
+  (a constant off the classpath or `-sourcepath`); a build that has one records no source digest,
+  because the early exit would vouch for a value it never read
 - `GuardrailModel` — sorts every bucket by `TaggedElement.path()` when it snapshots. Load-bearing:
   `getElementsAnnotatedWith` returns a `Set` with no specified iteration order, so preserving the
   order the collector received makes generated output and the `BuildFingerprint` depend on which
