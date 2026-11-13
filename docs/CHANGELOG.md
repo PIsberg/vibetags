@@ -48,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Without the Tree API, a dependency constant no longer goes stale (#1062).** The fix for
+  `@AILocked(reason = Reasons.LEDGER)` with `Reasons` outside the round read the argument trees,
+  which ECJ does not expose, so an ECJ build still recorded its source digest and kept the old value
+  after the constant changed (measured with ECJ 3.46.100: `CLAUDE.md` said `ledger-v1` after the
+  constant became `ledger-v2`). Without the Tree API the round's source text is now read through the
+  file mapping the round already has: a value spelled out as a literal in one of the round's files
+  keeps the early exit, anything else does not. Verified failing first with the Tree API hidden
+  under javac (`SourceDigestWithoutTreeApiTest`), and with the real ECJ: no digest is recorded for the
+  constant and the new value is written, while a literal reason still records one.
 - **A no-op rebuild repeats the warnings about state still on disk (#1063).** A module generating
   as its own root while a reactor declares it, an unreadable sidecar, an opt-in or a granular
   opt-out a sibling has not compiled since, a sibling's missing rule file and an element claimed by

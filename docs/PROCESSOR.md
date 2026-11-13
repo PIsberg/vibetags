@@ -328,8 +328,11 @@ values (`MethodBodyGuardrailScanner.valuesFromOutsideTheRound`). A value is acce
 spelled out (literals, class literals, operators over them), sits in an enum-typed attribute, or
 names an enum constant or a field that a source file of the round declares with a spelled-out
 initializer; anything else leaves the build unrecorded, so the next one walks and the fingerprint,
-which hashes the collected values, decides. Without the Tree API the question cannot be asked and
-the build is recorded as before. The
+which hashes the collected values, decides. Without the Tree API (ECJ, a build tool's decorator the
+reflective unwrap cannot see through) the arguments cannot be read, so the round's source text is
+read instead: a value counts unless it appears spelled out in one of the round's files, a string as
+its Java literal, a number or boolean as a token; enum constants and class literals never count.
+Before #1062 nothing was counted there, and ECJ 3.46.100 kept a dependency constant's old value. The
 warnings `generateFiles()` raises ahead of its own fingerprint short-circuit (a deprecated opt-in, an
 unidentified module) are raised again on the skipped path too (#859), and so are the ones it raises
 after the short-circuit about state still on disk: a detached module, an unreadable sidecar, an

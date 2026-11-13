@@ -663,7 +663,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // Guardrails written where JSR 269 cannot see them (local/anonymous declarations)
             // are a silent no-op; the Tree API can still see them, so say so. Needs the live
             // round for the same reason the position resolver does.
-            bodyScanner.scanAndWarn(roundEnv);
+            bodyScanner.scanAndWarn(roundEnv, sources);
         } catch (RuntimeException e) {
             if (checkMode) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
