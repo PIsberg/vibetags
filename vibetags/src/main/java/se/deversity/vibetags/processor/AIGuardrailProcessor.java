@@ -897,7 +897,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * and everything it printed during the walk can be printed again. Validation's warnings and
      * notes are recorded with the digest and replayed (#856). The method-body scanner's are not: they
      * are anchored to a local declaration that has no {@code Element} to name, so a build that
-     * raised one still walks next time. Otherwise the digest stays cleared, and the next build walks.
+     * raised one still walks next time. Neither is a build with an annotation value that the round's
+     * sources do not determine, a constant off the classpath: the digest is of those sources, and
+     * would vouch for a value it never read. Otherwise the digest stays cleared, and the next build walks.
      */
     private void recordSourceDigest() {
         WriteCache cache = writeCache;
@@ -911,6 +913,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         boolean vouched = digest != null && roundsWithSources.get() == 1
             && liveErrors.get() == 0 && bodyScanner.warningsReported() == 0
+            && bodyScanner.valuesFromOutsideTheRound() == 0
             && diagnostics.size() <= MAX_REPLAYED_DIAGNOSTICS;
         cache.bindModule(currentModuleId());
         cache.setSourceDigest(vouched ? digest : null, vouched ? diagnostics : List.of());

@@ -469,6 +469,129 @@ class SourceDigestEarlyExitEndToEndTest {
         assertTrue(third.contains(UNCHANGED), "nothing changed since the second build:\n" + third);
     }
 
+    private static final String LEDGER_NAMING_A_CONSTANT = """
+        package com.example;
+
+        import se.deversity.vibetags.annotations.AILocked;
+
+        @AILocked(reason = com.lib.Reasons.LEDGER)
+        public class Ledger {
+        }
+        """;
+
+    /**
+     * An annotation value can come from outside the round: a constant in a dependency. Changing it
+     * changes what the files must say and no byte of any source the round was given, so the digest
+     * matched, the build was skipped, and CLAUDE.md kept the old reason for good.
+     */
+    @Test
+    void aValueTakenFromADependencyConstantFollowsTheDependency() throws IOException {
+        ProcessorTestHarness h = project(LEDGER_NAMING_A_CONSTANT);
+        String[] classpath = {"-classpath", System.getProperty("java.class.path")
+            + java.io.File.pathSeparator + compileReasons("ledger maths is audited")};
+        h.compileReturningDiagnostics(classpath);
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), "precondition:\n" + read("CLAUDE.md"));
+        compileReasons("ledger maths moved to the settlement service");
+
+        String second = notes(h.compileReturningDiagnostics(classpath));
+
+        assertFalse(second.contains(EARLY_EXIT), second);
+        assertTrue(read("CLAUDE.md").contains("ledger maths moved to the settlement service"), read("CLAUDE.md"));
+    }
+
+    @Test
+    void aValueTakenFromASourcePathConstantFollowsThatSource() throws IOException {
+        // The same constant read off -sourcepath: javac compiles Reasons.java implicitly, so it is a
+        // source of the build without being a source of the round, and the digest never reads it.
+        ProcessorTestHarness h = project(LEDGER_NAMING_A_CONSTANT);
+        writeReasons("ledger maths is audited");
+        String[] sourcePath = {"-sourcepath", root.resolve("lib-src").toString()};
+        h.compileReturningDiagnostics(sourcePath);
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), "precondition:\n" + read("CLAUDE.md"));
+        writeReasons("ledger maths moved to the settlement service");
+
+        String second = notes(h.compileReturningDiagnostics(sourcePath));
+
+        assertFalse(second.contains(EARLY_EXIT), second);
+        assertTrue(read("CLAUDE.md").contains("ledger maths moved to the settlement service"), read("CLAUDE.md"));
+    }
+
+    @Test
+    void aConstantWhoseInitializerNamesAnotherIsNotVouchedFor() throws IOException {
+        // Reasons is a source of the round, so its bytes are in the digest, but its value is not
+        // fixed by them: it names a constant from the dependency.
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AILocked;
+
+            @AILocked(reason = Ledger.REASON)
+            public class Ledger {
+                static final String REASON = "audited: " + com.lib.Reasons.LEDGER;
+            }
+            """);
+        String[] classpath = {"-classpath", System.getProperty("java.class.path")
+            + java.io.File.pathSeparator + compileReasons("first")};
+        h.compileReturningDiagnostics(classpath);
+        compileReasons("second");
+
+        h.compileReturningDiagnostics(classpath);
+
+        assertTrue(read("CLAUDE.md").contains("audited: second"), read("CLAUDE.md"));
+    }
+
+    @Test
+    void valuesTheRoundsOwnSourcesDetermineStillTakeTheExit() throws IOException {
+        // The guard above must not cost the exit where nothing can change behind the digest: an
+        // enum constant, a class literal, a concatenation of literals, and constants declared with
+        // literal initializers in this file and in another file of the same round.
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AIContext;
+            import se.deversity.vibetags.annotations.AILocked;
+            import se.deversity.vibetags.annotations.AITestDriven;
+
+            @AILocked(reason = Ledger.REASON)
+            @AIContext(focus = Topics.SETTLEMENT, avoids = "floating point" + " " + "money")
+            @AITestDriven(coverageGoal = 60 + 30, framework = AITestDriven.Framework.JUNIT_5)
+            public class Ledger {
+                static final String REASON = "ledger maths " + "is audited";
+            }
+            """);
+        h.writeSourceFile("src/main/java/com/example/Topics.java", """
+            package com.example;
+
+            final class Topics {
+                static final String SETTLEMENT = "settlement routing";
+            }
+            """);
+        h.compileReturningDiagnostics();
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), "precondition:\n" + read("CLAUDE.md"));
+
+        String second = notes(h.compileReturningDiagnostics());
+
+        assertTrue(second.contains(EARLY_EXIT), second);
+    }
+
+    /** Writes {@code com.lib.Reasons} with {@code LEDGER = value} under {@code lib-src}. */
+    private Path writeReasons(String value) throws IOException {
+        Path source = root.resolve("lib-src/com/lib/Reasons.java");
+        Files.createDirectories(source.getParent());
+        return Files.writeString(source, "package com.lib;\n\npublic final class Reasons {\n"
+            + "    public static final String LEDGER = \"" + value + "\";\n}\n", StandardCharsets.UTF_8);
+    }
+
+    /** Compiles {@link #writeReasons} into {@code lib-classes}, the dependency, and returns that directory. */
+    private Path compileReasons(String value) throws IOException {
+        Path source = writeReasons(value);
+        Path out = Files.createDirectories(root.resolve("lib-classes"));
+        int exit = javax.tools.ToolProvider.getSystemJavaCompiler()
+            .run(null, null, null, "-d", out.toString(), source.toString());
+        assertEquals(0, exit, "the dependency must compile");
+        return out;
+    }
+
     @Test
     void aHandEditedGeneratedBlockIsRegenerated() throws IOException {
         ProcessorTestHarness h = project(LEDGER);
