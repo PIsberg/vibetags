@@ -61,11 +61,20 @@ class MultiModuleCaseCollisionTest {
         harness.compile();
     }
 
-    /** Every rule file whose name folds to the colliding stem, by name, with its content. */
+    /**
+     * The rule file whose name folds to the colliding stem, keyed case-folded, with its content.
+     *
+     * <p>On a case-sensitive filesystem the two stems are two files, and keying both under one
+     * folded name let {@code Files.list} order decide which one was compared: the same commit passed
+     * three Linux Maven jobs and failed the Gradle one, comparing module {@code a}'s own
+     * {@code Payment} file there, which only {@code a}'s rounds write. Listed in name order, the
+     * lowercase {@code payment} file, the merge module {@code b} wrote, is the one kept, every time.
+     * On a case-insensitive filesystem there is one file and the order changes nothing.
+     */
     private Map<String, String> collidingFiles() throws IOException {
         Map<String, String> files = new TreeMap<>();
         try (var entries = Files.list(reactorRoot.resolve(".cursor/rules"))) {
-            for (Path p : entries.toList()) {
+            for (Path p : entries.sorted().toList()) {
                 String name = String.valueOf(p.getFileName());
                 // Keyed case-folded: on a case-insensitive filesystem the one file's entry takes
                 // the case of whichever name last wrote it, and that is not what is under test.
