@@ -177,6 +177,13 @@ release, toolchains included, and `BumpDependenciesTableTest` fails if the paren
 `vibetags-parent/pom.xml`, then run `python tools/sync-version-mirrors.py` to rewrite its copies.
 The procedure, with the gates that verify a bump, is the `bump-dependencies` skill.
 
+Dependabot edits the parent only, so its bump of a mirrored property (`maven-compiler-plugin`,
+`ksp`, `lombok`, `mapstruct`, `lombok-mapstruct-binding`) arrives with the copies behind and
+`BuildVersionParityTest` red. `.github/workflows/dependabot-mirrors.yml` runs the sync script on
+Dependabot's pull requests and pushes the result with a GitHub App token, once the App's
+`MIRROR_SYNC_APP_ID` and `MIRROR_SYNC_APP_KEY` are set as Dependabot secrets; until then it warns
+and pushes nothing, and the fix is the same command run by hand on the branch (#1038).
+
 The parent holds every version. Inside the Maven build nothing else holds any:
 
 - The managed poms inherit; `BuildVersionParityTest` fails if one grows a version literal.

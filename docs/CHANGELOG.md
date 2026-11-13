@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Dependabot bumps of a mirrored version can arrive green (#1038).** The new
+  `dependabot-mirrors.yml` runs `tools/sync-version-mirrors.py` on Dependabot's pull requests that
+  touch the parent pom and pushes the synced copies with a GitHub App token, so the push starts CI.
+  It needs a GitHub App with Contents write and its `MIRROR_SYNC_APP_ID` and `MIRROR_SYNC_APP_KEY`
+  as Dependabot secrets; until those exist it warns and changes nothing. Seen on #1024, where a
+  `ksp.version` bump failed 5 jobs on `BuildVersionParityTest`. Not yet run against a real bump.
 - **Routine dependency bumps (#1033, #1043-#1051), landed as one PR.** build-helper-maven-plugin
   3.6.2 -> 3.7.0, flatten-maven-plugin 1.8.0 -> 1.9.0, pitest-maven 1.30.1 -> 1.30.2,
   async-test-lib 1.14.0 -> 1.14.1, `@anthropic-ai/claude-code` (evals) 2.1.317 -> 2.1.319, and the

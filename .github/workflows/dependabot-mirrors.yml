@@ -1,0 +1,87 @@
+# Dependabot bumps of a mirrored version (#1038).
+#
+# Dependabot edits vibetags-parent/pom.xml only. Five of the properties it reaches there are also
+# copied into files that cannot read the pom (vibetags-parent/version-mirrors.txt): the KSP example
+# build and README snippets. A bump of one of them arrived with the copies behind, and
+# BuildVersionParityTest failed in every Maven and Gradle job until someone ran
+#   python tools/sync-version-mirrors.py
+# on the branch. This workflow runs that command on Dependabot's pull requests and pushes the
+# result.
+#
+# The push uses a GitHub App token, not GITHUB_TOKEN: a push made with GITHUB_TOKEN starts no
+# workflow, so the synced head would have no checks and could not merge. The App needs Contents
+# read and write on this repository, and its ID and private key are Dependabot secrets
+# (Settings, Secrets and variables, Dependabot): MIRROR_SYNC_APP_ID and MIRROR_SYNC_APP_KEY.
+# Until they exist the job reports the drift as a warning and pushes nothing, which leaves the
+# pull request red exactly as before.
+#
+# pull_request, not pull_request_target: Dependabot's runs get Dependabot secrets and a read-only
+# GITHUB_TOKEN, and the code checked out is the bump branch, which only Dependabot writes.
+name: Dependabot Version Mirrors
+
+on:
+  pull_request:
+    paths:
+      - vibetags-parent/pom.xml
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync mirrored versions
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Check the mirrored copies
+        id: check
+        run: |
+          if python3 tools/sync-version-mirrors.py --check; then
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report drift that cannot be pushed
+        if: steps.check.outputs.drift == 'true'
+        env:
+          HAS_APP: ${{ secrets.MIRROR_SYNC_APP_ID != '' && secrets.MIRROR_SYNC_APP_KEY != '' }}
+        run: |
+          if [ "$HAS_APP" != "true" ]; then
+            echo "::warning::Mirrored versions are stale and MIRROR_SYNC_APP_ID/MIRROR_SYNC_APP_KEY are not set as Dependabot secrets. Run 'python tools/sync-version-mirrors.py' on this branch and push."
+          fi
+          echo "has_app=$HAS_APP" >> "$GITHUB_ENV"
+
+      - name: Mint the App token
+        id: token
+        if: steps.check.outputs.drift == 'true' && env.has_app == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.MIRROR_SYNC_APP_ID }}
+          private-key: ${{ secrets.MIRROR_SYNC_APP_KEY }}
+          permission-contents: write
+
+      - name: Sync the copies and push them to the bump branch
+        if: steps.token.outputs.token != ''
+        env:
+          TOKEN: ${{ steps.token.outputs.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          python3 tools/sync-version-mirrors.py
+          python3 tools/sync-version-mirrors.py --check
+          git config user.name "vibetags-mirror-sync[bot]"
+          git config user.email "vibetags-mirror-sync[bot]@users.noreply.github.com"
+          git commit -a -m "build(deps): sync the mirrored copies of the bumped version" \
+            -m "Ran python tools/sync-version-mirrors.py on Dependabot's branch (#1038)."
+          git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${HEAD_REF}"

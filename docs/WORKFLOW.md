@@ -20,6 +20,7 @@ This document describes what happens during CI builds in `.github/workflows/`. F
 | Copilot Review | `copilot-review.yml` | PR opened/reopened/ready-for-review |
 | Nightly Perf Ring | `nightly-perf.yml` | Weekly cron (Mondays 03:17 UTC), manual |
 | Actions Lockfile | `actions-lock.yml` | Push to `main`; every pull request |
+| Dependabot Version Mirrors | `dependabot-mirrors.yml` | Dependabot pull requests touching `vibetags-parent/pom.xml` |
 
 All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow except Scorecard is `contents: read`; Scorecard declares `read-all`, as its action requires. Jobs that need more (e.g. CodeQL writes `security-events`, publish writes `contents` to attach release assets) escalate explicitly.
 
@@ -673,6 +674,26 @@ the lockfile does not cover, when an entry is no longer used, or when an entry w
   the lockfile cannot cover.
 - Blocking at run time is a separate repository policy, **Require lockfile** (Settings → Actions →
   Policies). This workflow does not depend on it.
+
+## 15. Dependabot Version Mirrors (`dependabot-mirrors.yml`)
+
+Keeps a Dependabot bump of a mirrored version from arriving red (#1038). Dependabot edits
+`vibetags-parent/pom.xml` only, and five of the properties it reaches there are copied into files
+that cannot read the pom (`vibetags-parent/version-mirrors.txt`), so `BuildVersionParityTest` failed
+in every Maven and Gradle job until someone ran `python tools/sync-version-mirrors.py` on the branch.
+
+- Triggers: pull requests touching `vibetags-parent/pom.xml`; the job runs only for
+  `dependabot[bot]` pull requests from this repository.
+- Steps: harden runner → checkout of the pull request head → `sync-version-mirrors.py --check` →
+  on drift, mint a token with `actions/create-github-app-token` → run the sync, commit and push to
+  the bump branch.
+- The push uses a GitHub App token because a push made with `GITHUB_TOKEN` starts no workflow, so
+  the synced head would have no checks and could not merge. The App needs Contents read and write on
+  this repository; its ID and private key are the Dependabot secrets `MIRROR_SYNC_APP_ID` and
+  `MIRROR_SYNC_APP_KEY`. **Not set up yet:** until both exist the job prints a warning naming the
+  command and pushes nothing.
+- `pull_request`, not `pull_request_target`: Dependabot's runs get Dependabot secrets and a
+  read-only `GITHUB_TOKEN`, and the checked-out code is the bump branch, which only Dependabot writes.
 
 ---
 
