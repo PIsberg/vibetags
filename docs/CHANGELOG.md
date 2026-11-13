@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The two local actions are locked too (#1031).** `build.yml` referred to
+  `./.github/actions/verify-generated-files` and `./action/locked-files`, which `gh actions-lock`
+  does not follow and warned about on every run, so a remote action either of them gained would
+  have run unlocked. Migrated with `gh actions-lock --no-narrow --migrate-local-actions` to the
+  `uses: $/…` form, which it follows; `--verify` reports all 15 workflows valid. The consumer-facing
+  `PIsberg/vibetags/action/locked-files@<tag>` path does not change.
 - **A documented rule for the Central resolution flake (#1041).** `docs/WORKFLOW.md` names the
   message, the three runs that hit it (two Maven jobs on `maven-pmd-plugin:3.28.0`, one Gradle job
   on `pmd-java:7.29.0`, each green on rerun) and the rule: rerun, do not change code. At about one a

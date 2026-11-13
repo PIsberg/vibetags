@@ -668,10 +668,13 @@ the lockfile does not cover, when an entry is no longer used, or when an entry w
 - The `actions-lock-coverage` pre-commit hook runs the offline `gh actions-lock --verify-local`
   when a commit touches `.github/workflows/` or `.github/actions/`. It checks coverage only, not
   provenance, and it needs the extension installed (`gh extension install github/gh-actions-lock`).
-- Known gaps: the two local actions (`./.github/actions/verify-generated-files`,
-  `./action/locked-files`) are not followed, which is harmless while neither calls a remote
-  action; and `ossf/scorecard-action` runs a container image pinned by tag, not by digest, which
-  the lockfile cannot cover.
+- The two same-repository actions are referenced as `uses: $/.github/actions/verify-generated-files`
+  and `uses: $/action/locked-files`, the form `gh actions-lock --migrate-local-actions` writes
+  (#1031). The tool follows that form and treats it as pinned to the calling commit, so a `uses:`
+  step either action gains is locked like any other; under `./` it was not followed at all. The
+  published path consumers use, `PIsberg/vibetags/action/locked-files@<tag>`, is unchanged.
+- Known gap: `ossf/scorecard-action` runs a container image pinned by tag, not by digest, which
+  the lockfile cannot cover (#1030, blocked upstream).
 - Blocking at run time is a separate repository policy, **Require lockfile** (Settings → Actions →
   Policies). This workflow does not depend on it.
 
