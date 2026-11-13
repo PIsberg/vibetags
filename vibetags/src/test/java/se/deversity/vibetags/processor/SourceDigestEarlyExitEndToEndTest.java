@@ -389,6 +389,209 @@ class SourceDigestEarlyExitEndToEndTest {
         assertTrue(read("CLAUDE.md").contains("Café rules."), "hand-authored text must survive");
     }
 
+    /**
+     * The same shape reached without an I/O failure: the writer declines a file it cannot merge
+     * into without guessing, warns, and returns. Nothing was recorded for the file, an absent entry
+     * counts as stable, and the opt-in is still "a file", so once the developer did what the warning
+     * asked, every later build with unchanged sources took the exit and the file never received
+     * its guardrails. Three files, one for each way of declining.
+     */
+    @Test
+    void aFileLeftUntouchedOverAStrayStartMarkerIsWrittenOnceTheMarkerIsRemoved() throws IOException {
+        assertDeclinedFileIsWrittenOnceRepaired("CLAUDE.md",
+            "# Notes\n\nPaste this line to opt in:\n\n<!-- VIBETAGS-START -->\n\n## Build\n\nmvn verify\n",
+            "# Notes\n\n## Build\n\nmvn verify\n");
+    }
+
+    @Test
+    void aGreptileConfigLeftUntouchedAsMalformedIsWrittenOnceItParses() throws IOException {
+        assertDeclinedFileIsWrittenOnceRepaired("greptile.json",
+            "{ \"labels\": [\"review\"], \n", "{ \"labels\": [\"review\"] }\n");
+    }
+
+    @Test
+    void aPrAgentConfigLeftUntouchedAsUnmergeableIsWrittenOnceItIsMergeable() throws IOException {
+        assertDeclinedFileIsWrittenOnceRepaired(".pr_agent.toml",
+            "[[pr_reviewer]]\nnum_code_suggestions = 3\n", "[pr_reviewer]\nnum_code_suggestions = 3\n");
+    }
+
+    private void assertDeclinedFileIsWrittenOnceRepaired(String file, String declined, String repaired)
+            throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve(file), declined, StandardCharsets.UTF_8);
+        String first = notes(h.compileReturningDiagnostics());
+        assertTrue(first.contains("untouched"),
+            "precondition: the writer declines " + file + " and says so\n" + first);
+        assertEquals(declined, read(file), "precondition: a declined file is left exactly as it was");
+        Files.writeString(root.resolve(file), repaired, StandardCharsets.UTF_8);
+
+        String second = notes(h.compileReturningDiagnostics());
+
+        assertFalse(second.contains(EARLY_EXIT), first + "\n---\n" + second);
+        assertTrue(read(file).contains("ledger maths is audited"), read(file));
+    }
+
+    /**
+     * And while it is not repaired, the warning is the only thing telling the developer that a
+     * file they opted in carries no guardrails. A rebuild that skips it turns a {@code -Werror}
+     * build that failed cold into one that passes (#859's shape).
+     */
+    @Test
+    void aFileStillLeftUntouchedIsWarnedAboutOnEveryRebuild() throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve("greptile.json"), "{ \"labels\": [\"review\"], \n", StandardCharsets.UTF_8);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.stream().anyMatch(w -> w.contains("untouched")), "precondition: " + first);
+
+        List<String> second = vibeTagsWarnings(h.compileReturningDiagnostics());
+
+        assertEquals(first, second, "the rebuild must warn exactly as the first build did");
+    }
+
+    /**
+     * Deleting an opt-in file is how a platform is opted out. The build after that has to walk,
+     * since the opt-in set changed, but the one after it has nothing left to regenerate: a record
+     * of a file nobody asks for any more must not keep every later build from being skipped.
+     */
+    @Test
+    void aPlatformOptedOutDoesNotKeepLaterRebuildsFromBeingSkipped() throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve("llms.txt"), "", StandardCharsets.UTF_8);
+        h.compileReturningDiagnostics();
+        assertTrue(read("llms.txt").contains("Ledger"), "precondition: llms.txt was written\n" + read("llms.txt"));
+        Files.delete(root.resolve("llms.txt"));
+
+        String second = notes(h.compileReturningDiagnostics());
+        String third = notes(h.compileReturningDiagnostics());
+
+        assertFalse(second.contains(EARLY_EXIT), "the opt-in set changed, so this build walks:\n" + second);
+        assertFalse(Files.exists(root.resolve("llms.txt")), "an opted-out file is never recreated");
+        assertTrue(third.contains(UNCHANGED), "nothing changed since the second build:\n" + third);
+    }
+
+    private static final String LEDGER_NAMING_A_CONSTANT = """
+        package com.example;
+
+        import se.deversity.vibetags.annotations.AILocked;
+
+        @AILocked(reason = com.lib.Reasons.LEDGER)
+        public class Ledger {
+        }
+        """;
+
+    /**
+     * An annotation value can come from outside the round: a constant in a dependency. Changing it
+     * changes what the files must say and no byte of any source the round was given, so the digest
+     * matched, the build was skipped, and CLAUDE.md kept the old reason for good.
+     */
+    @Test
+    void aValueTakenFromADependencyConstantFollowsTheDependency() throws IOException {
+        ProcessorTestHarness h = project(LEDGER_NAMING_A_CONSTANT);
+        String[] classpath = {"-classpath", System.getProperty("java.class.path")
+            + java.io.File.pathSeparator + compileReasons("ledger maths is audited")};
+        h.compileReturningDiagnostics(classpath);
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), "precondition:\n" + read("CLAUDE.md"));
+        compileReasons("ledger maths moved to the settlement service");
+
+        String second = notes(h.compileReturningDiagnostics(classpath));
+
+        assertFalse(second.contains(EARLY_EXIT), second);
+        assertTrue(read("CLAUDE.md").contains("ledger maths moved to the settlement service"), read("CLAUDE.md"));
+    }
+
+    @Test
+    void aValueTakenFromASourcePathConstantFollowsThatSource() throws IOException {
+        // The same constant read off -sourcepath: javac compiles Reasons.java implicitly, so it is a
+        // source of the build without being a source of the round, and the digest never reads it.
+        ProcessorTestHarness h = project(LEDGER_NAMING_A_CONSTANT);
+        writeReasons("ledger maths is audited");
+        String[] sourcePath = {"-sourcepath", root.resolve("lib-src").toString()};
+        h.compileReturningDiagnostics(sourcePath);
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), "precondition:\n" + read("CLAUDE.md"));
+        writeReasons("ledger maths moved to the settlement service");
+
+        String second = notes(h.compileReturningDiagnostics(sourcePath));
+
+        assertFalse(second.contains(EARLY_EXIT), second);
+        assertTrue(read("CLAUDE.md").contains("ledger maths moved to the settlement service"), read("CLAUDE.md"));
+    }
+
+    @Test
+    void aConstantWhoseInitializerNamesAnotherIsNotVouchedFor() throws IOException {
+        // Reasons is a source of the round, so its bytes are in the digest, but its value is not
+        // fixed by them: it names a constant from the dependency.
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AILocked;
+
+            @AILocked(reason = Ledger.REASON)
+            public class Ledger {
+                static final String REASON = "audited: " + com.lib.Reasons.LEDGER;
+            }
+            """);
+        String[] classpath = {"-classpath", System.getProperty("java.class.path")
+            + java.io.File.pathSeparator + compileReasons("first")};
+        h.compileReturningDiagnostics(classpath);
+        compileReasons("second");
+
+        h.compileReturningDiagnostics(classpath);
+
+        assertTrue(read("CLAUDE.md").contains("audited: second"), read("CLAUDE.md"));
+    }
+
+    @Test
+    void valuesTheRoundsOwnSourcesDetermineStillTakeTheExit() throws IOException {
+        // The guard above must not cost the exit where nothing can change behind the digest: an
+        // enum constant, a class literal, a concatenation of literals, and constants declared with
+        // literal initializers in this file and in another file of the same round.
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AIContext;
+            import se.deversity.vibetags.annotations.AILocked;
+            import se.deversity.vibetags.annotations.AITestDriven;
+
+            @AILocked(reason = Ledger.REASON)
+            @AIContext(focus = Topics.SETTLEMENT, avoids = "floating point" + " " + "money")
+            @AITestDriven(coverageGoal = 60 + 30, framework = AITestDriven.Framework.JUNIT_5)
+            public class Ledger {
+                static final String REASON = "ledger maths " + "is audited";
+            }
+            """);
+        h.writeSourceFile("src/main/java/com/example/Topics.java", """
+            package com.example;
+
+            final class Topics {
+                static final String SETTLEMENT = "settlement routing";
+            }
+            """);
+        h.compileReturningDiagnostics();
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), "precondition:\n" + read("CLAUDE.md"));
+
+        String second = notes(h.compileReturningDiagnostics());
+
+        assertTrue(second.contains(EARLY_EXIT), second);
+    }
+
+    /** Writes {@code com.lib.Reasons} with {@code LEDGER = value} under {@code lib-src}. */
+    private Path writeReasons(String value) throws IOException {
+        Path source = root.resolve("lib-src/com/lib/Reasons.java");
+        Files.createDirectories(source.getParent());
+        return Files.writeString(source, "package com.lib;\n\npublic final class Reasons {\n"
+            + "    public static final String LEDGER = \"" + value + "\";\n}\n", StandardCharsets.UTF_8);
+    }
+
+    /** Compiles {@link #writeReasons} into {@code lib-classes}, the dependency, and returns that directory. */
+    private Path compileReasons(String value) throws IOException {
+        Path source = writeReasons(value);
+        Path out = Files.createDirectories(root.resolve("lib-classes"));
+        int exit = javax.tools.ToolProvider.getSystemJavaCompiler()
+            .run(null, null, null, "-d", out.toString(), source.toString());
+        assertEquals(0, exit, "the dependency must compile");
+        return out;
+    }
+
     @Test
     void aHandEditedGeneratedBlockIsRegenerated() throws IOException {
         ProcessorTestHarness h = project(LEDGER);

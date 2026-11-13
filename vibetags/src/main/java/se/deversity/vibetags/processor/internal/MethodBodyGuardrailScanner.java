@@ -1,11 +1,25 @@
 package se.deversity.vibetags.processor.internal;
 
 import com.sun.source.tree.AnnotationTree;
+import com.sun.source.tree.AssignmentTree;
+import com.sun.source.tree.BinaryTree;
+import com.sun.source.tree.BlockTree;
 import com.sun.source.tree.ClassTree;
 import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.ConditionalExpressionTree;
+import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.ImportTree;
+import com.sun.source.tree.LambdaExpressionTree;
+import com.sun.source.tree.LiteralTree;
+import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.MethodTree;
+import com.sun.source.tree.NewArrayTree;
+import com.sun.source.tree.ParenthesizedTree;
 import com.sun.source.tree.Tree;
+import com.sun.source.tree.TypeCastTree;
+import com.sun.source.tree.UnaryTree;
+import com.sun.source.tree.VariableTree;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.TreeScanner;
 import com.sun.source.util.Trees;
@@ -16,9 +30,12 @@ import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.tools.Diagnostic;
 import java.lang.annotation.Annotation;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -39,6 +56,13 @@ import java.util.Set;
  * fully qualified without importing it is still caught by the qualified-name match inside the scan;
  * one that does neither is missed, which is the acceptable corner of a diagnostic that must never
  * produce a false positive.
+ *
+ * <p>The same pass answers a second question, for the early exit ({@link SourceDigest}): does any
+ * guardrail annotation in this round take a value from outside the round? {@code @AILocked(reason =
+ * Reasons.LEDGER)} renders the constant's value, and when {@code Reasons} comes off the classpath
+ * or the source path, no byte of any source this round was given changes when that value does. A
+ * build that recorded its source digest was then skipped on the next build, and the generated
+ * files kept the old text for good. See {@link #valuesFromOutsideTheRound()}.
  */
 public final class MethodBodyGuardrailScanner {
 
@@ -60,6 +84,20 @@ public final class MethodBodyGuardrailScanner {
     /** Warnings this scanner has reported; a build that warned may not be skipped next time (#834). */
     private int reported;
 
+    /** See {@link #valuesFromOutsideTheRound()}. */
+    private int outsideValues;
+
+    /** Each registered guardrail annotation by simple name, to read an attribute's declared type. */
+    private static final Map<String, Class<? extends Annotation>> BY_SIMPLE_NAME = bySimpleName();
+
+    private static Map<String, Class<? extends Annotation>> bySimpleName() {
+        Map<String, Class<? extends Annotation>> types = new HashMap<>();
+        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
+            types.put(type.getSimpleName(), type);
+        }
+        return Map.copyOf(types);
+    }
+
     private MethodBodyGuardrailScanner(@Nullable Trees trees) {
         this.trees = trees;
     }
@@ -72,6 +110,21 @@ public final class MethodBodyGuardrailScanner {
     /** How many warnings {@link #scanAndWarn} has reported so far. */
     public int warningsReported() {
         return reported;
+    }
+
+    /**
+     * How many guardrail annotation values {@link #scanAndWarn} found that the round's own sources
+     * do not determine; a build that has one may not be skipped next time.
+     *
+     * <p>A value counts unless it is spelled out where it is used (a literal, an enum constant, a
+     * class literal, or those combined), or names a constant that a source file of this round
+     * declares with a spelled-out initializer. Everything else is counted, including a constant
+     * whose own initializer names another: the rule errs towards a missed exit, never towards a
+     * false "unchanged". Always zero without the Tree API, where the question cannot be asked; a
+     * compiler that does not expose it keeps the exit it had.
+     */
+    public int valuesFromOutsideTheRound() {
+        return outsideValues;
     }
 
     /** A scanner that never reports — for tests and non-javac environments. */
@@ -103,7 +156,7 @@ public final class MethodBodyGuardrailScanner {
                     continue;
                 }
                 CompilationUnitTree unit = path.getCompilationUnit();
-                new BodyScanner(unit, importsGuardrails(unit)).scan(path.getLeaf(), null);
+                new BodyScanner(unit, importsGuardrails(unit), roots).scan(path.getLeaf(), null);
             } catch (RuntimeException ignored) {
                 // Advisory best-effort: an unscannable tree must never affect the build.
             }
@@ -129,11 +182,194 @@ public final class MethodBodyGuardrailScanner {
 
         private final CompilationUnitTree unit;
         private final boolean imported;
+        private final Set<? extends Element> roots;
         private int methodDepth;
+        /** Depth inside statements, whose annotations javac has not attributed yet during processing. */
+        private int statementDepth;
 
-        BodyScanner(CompilationUnitTree unit, boolean imported) {
+        BodyScanner(CompilationUnitTree unit, boolean imported, Set<? extends Element> roots) {
             this.unit = unit;
             this.imported = imported;
+            this.roots = roots;
+        }
+
+        @Override
+        public Void visitBlock(BlockTree block, Void p) {
+            statementDepth++;
+            try {
+                return super.visitBlock(block, null);
+            } finally {
+                statementDepth--;
+            }
+        }
+
+        @Override
+        public Void visitLambdaExpression(LambdaExpressionTree lambda, Void p) {
+            statementDepth++;
+            try {
+                return super.visitLambdaExpression(lambda, null);
+            } finally {
+                statementDepth--;
+            }
+        }
+
+        /**
+         * A guardrail annotation on a declaration processing can see: counts each value the round's
+         * sources do not determine. Annotations inside a statement are not looked at. They generate
+         * nothing, and their arguments are not attributed while processing runs, so asking for an
+         * argument's element there would make javac attribute the class early.
+         */
+        @Override
+        public Void visitAnnotation(AnnotationTree annotation, Void p) {
+            if (statementDepth == 0 && isGuardrail(annotation)) {
+                String name = annotation.getAnnotationType().toString();
+                Class<? extends Annotation> type = BY_SIMPLE_NAME.get(name.substring(name.lastIndexOf('.') + 1));
+                TreePath annotationPath = null;
+                for (ExpressionTree argument : annotation.getArguments()) {
+                    ExpressionTree value = argument instanceof AssignmentTree assigned
+                        ? assigned.getExpression() : argument;
+                    if (spelledOut(value) || isEnumAttribute(type, argument)) {
+                        continue;
+                    }
+                    if (annotationPath == null) {
+                        annotationPath = TreePath.getPath(unit, annotation);
+                    }
+                    if (annotationPath == null
+                            || !determinedByTheRound(new TreePath(annotationPath, argument), value)) {
+                        outsideValues++;
+                    }
+                }
+            }
+            return super.visitAnnotation(annotation, null);
+        }
+
+        private boolean isGuardrail(AnnotationTree annotation) {
+            String name = annotation.getAnnotationType().toString();
+            return name.startsWith(ANNOTATIONS_PACKAGE + ".")
+                || (imported && SIMPLE_NAMES.contains(name.substring(name.lastIndexOf('.') + 1)));
+        }
+
+        /**
+         * Whether the attribute {@code argument} sets is declared as an enum or an enum array: a
+         * name there can only be an enum constant, which the source spells out. Read off the
+         * annotation type itself, so the commonest name-shaped value
+         * ({@code framework = Framework.JUNIT_5}) costs no symbol lookup.
+         */
+        private boolean isEnumAttribute(@Nullable Class<? extends Annotation> type, ExpressionTree argument) {
+            if (type == null) {
+                return false;
+            }
+            String attribute = argument instanceof AssignmentTree assigned
+                ? assigned.getVariable().toString() : "value";
+            try {
+                Class<?> declared = type.getMethod(attribute).getReturnType();
+                Class<?> component = declared.isArray() ? declared.getComponentType() : declared;
+                return component.isEnum();
+            } catch (NoSuchMethodException | RuntimeException unknown) {
+                return false;
+            }
+        }
+
+        /** Whether {@code value} is written out in full: literals, class literals, and operators over them. */
+        private boolean spelledOut(@Nullable Tree value) {
+            if (value instanceof LiteralTree) {
+                return true;
+            }
+            if (value instanceof ParenthesizedTree parenthesized) {
+                return spelledOut(parenthesized.getExpression());
+            }
+            if (value instanceof UnaryTree unary) {
+                return spelledOut(unary.getExpression());
+            }
+            if (value instanceof BinaryTree binary) {
+                return spelledOut(binary.getLeftOperand()) && spelledOut(binary.getRightOperand());
+            }
+            if (value instanceof ConditionalExpressionTree conditional) {
+                return spelledOut(conditional.getCondition()) && spelledOut(conditional.getTrueExpression())
+                    && spelledOut(conditional.getFalseExpression());
+            }
+            if (value instanceof TypeCastTree cast) {
+                return spelledOut(cast.getExpression());
+            }
+            if (value instanceof NewArrayTree array) {
+                if (array.getInitializers() == null) {
+                    return false;
+                }
+                for (ExpressionTree element : array.getInitializers()) {
+                    if (!spelledOut(element)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return value instanceof MemberSelectTree select && select.getIdentifier().contentEquals("class");
+        }
+
+        /**
+         * Whether a value that is not spelled out is still fixed by this round's sources: every name
+         * in it is an enum constant, or a field a root type of this round declares with a spelled-out
+         * initializer. {@code parent} is the path of the tree {@code value} sits directly in.
+         */
+        private boolean determinedByTheRound(TreePath parent, Tree value) {
+            if (spelledOut(value)) {
+                return true;
+            }
+            // Trees compare by identity; equals() is that comparison, spelled the way PMD accepts.
+            TreePath here = parent.getLeaf().equals(value) ? parent : new TreePath(parent, value);
+            if (value instanceof ParenthesizedTree parenthesized) {
+                return determinedByTheRound(here, parenthesized.getExpression());
+            }
+            if (value instanceof UnaryTree unary) {
+                return determinedByTheRound(here, unary.getExpression());
+            }
+            if (value instanceof TypeCastTree cast) {
+                return determinedByTheRound(here, cast.getExpression());
+            }
+            if (value instanceof BinaryTree binary) {
+                return determinedByTheRound(here, binary.getLeftOperand())
+                    && determinedByTheRound(here, binary.getRightOperand());
+            }
+            if (value instanceof ConditionalExpressionTree conditional) {
+                return determinedByTheRound(here, conditional.getCondition())
+                    && determinedByTheRound(here, conditional.getTrueExpression())
+                    && determinedByTheRound(here, conditional.getFalseExpression());
+            }
+            if (value instanceof NewArrayTree array && array.getInitializers() != null) {
+                for (ExpressionTree element : array.getInitializers()) {
+                    if (!determinedByTheRound(here, element)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            Trees api = trees;
+            if (api == null || !(value instanceof IdentifierTree || value instanceof MemberSelectTree)) {
+                return false;
+            }
+            Element named = api.getElement(here);
+            if (named == null) {
+                return false;
+            }
+            if (named.getKind() == ElementKind.ENUM_CONSTANT) {
+                return true;
+            }
+            if (named.getKind() != ElementKind.FIELD || !roots.contains(outermostTypeOf(named))) {
+                return false;
+            }
+            return api.getTree(named) instanceof VariableTree declared && spelledOut(declared.getInitializer());
+        }
+
+        /** The top-level type {@code element} is declared in, or {@code null} when it has none. */
+        private @Nullable Element outermostTypeOf(Element element) {
+            Element current = element;
+            while (current != null && current.getKind() != ElementKind.PACKAGE) {
+                Element enclosing = current.getEnclosingElement();
+                if (enclosing == null || enclosing.getKind() == ElementKind.PACKAGE) {
+                    return current;
+                }
+                current = enclosing;
+            }
+            return null;
         }
 
         @Override

@@ -565,9 +565,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                             // not leave the last run's digest vouching for files it may have
                             // half-written.
                             forgetSourceDigest();
+                            // Asked before generation, whose sidecar read retires these modules.
+                            Set<String> departedModules = ModuleSidecar.staleModulePaths(root);
                             generateFiles();
                             // Before the record, so an early-exited rebuild replays what it printed.
                             checkOrphansIfShortCircuited();
+                            forgetOptedOutOutputs(departedModules);
                             recordSourceDigest();
                         }
                     }
@@ -869,12 +872,50 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
+     * Drops the write cache's record of every output whose opt-in has been deleted, at the root and
+     * in the compiling module's own directory. Without it a platform that was opted out kept every
+     * later build from being skipped; see {@link WriteCache#forgetMissingAt}. Only the two
+     * directories this round resolves opt-ins in: a sibling module's are its own round's to judge.
+     * The exception is a module that has left the build: no round of its own will come, its nested
+     * output went with its directory, and the record of it blocked the remaining modules the same
+     * way. Before {@link #recordSourceDigest}, which flushes.
+     *
+     * @param departedModules module paths whose directory was gone when this generation started
+     */
+    private void forgetOptedOutOutputs(Set<String> departedModules) {
+        WriteCache cache = writeCache;
+        if (cache == null) {
+            return;
+        }
+        for (String modulePath : departedModules) {
+            try {
+                Path moduleDir = root.resolve(modulePath);
+                if (Files.notExists(moduleDir)) {
+                    cache.forgetMissingAt(moduleDir);
+                }
+            } catch (InvalidPathException unrepresentable) {
+                // A module path this filesystem cannot spell names no file the cache could hold.
+            }
+        }
+        Set<Path> dirs = new java.util.LinkedHashSet<>(List.of(root, compilationRoot()));
+        for (Path dir : dirs) {
+            for (Path optIn : ServiceRegistry.buildServiceFileMap(dir).values()) {
+                if (Files.notExists(optIn)) {
+                    cache.forgetMissingAt(optIn);
+                }
+            }
+        }
+    }
+
+    /**
      * Records this compilation's source digest after a completed generation, when the next build
      * may be skipped on its strength: the round was digestible, it was the only round with sources,
      * and everything it printed during the walk can be printed again. Validation's warnings and
      * notes are recorded with the digest and replayed (#856). The method-body scanner's are not: they
      * are anchored to a local declaration that has no {@code Element} to name, so a build that
-     * raised one still walks next time. Otherwise the digest stays cleared, and the next build walks.
+     * raised one still walks next time. Neither is a build with an annotation value that the round's
+     * sources do not determine, a constant off the classpath: the digest is of those sources, and
+     * would vouch for a value it never read. Otherwise the digest stays cleared, and the next build walks.
      */
     private void recordSourceDigest() {
         WriteCache cache = writeCache;
@@ -888,6 +929,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         boolean vouched = digest != null && roundsWithSources.get() == 1
             && liveErrors.get() == 0 && bodyScanner.warningsReported() == 0
+            && bodyScanner.valuesFromOutsideTheRound() == 0
             && diagnostics.size() <= MAX_REPLAYED_DIAGNOSTICS;
         cache.bindModule(currentModuleId());
         cache.setSourceDigest(vouched ? digest : null, vouched ? diagnostics : List.of());

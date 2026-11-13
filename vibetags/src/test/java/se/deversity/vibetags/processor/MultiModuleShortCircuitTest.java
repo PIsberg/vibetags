@@ -89,4 +89,67 @@ class MultiModuleShortCircuitTest {
         assertTrue(shortCircuited(compileModule("b", "com.example.b.Ledger", B_SOURCE)),
             "module b must short-circuit on a no-op rebuild");
     }
+
+    /**
+     * A module that opts out of its own nested output, by deleting the module-level file, must walk
+     * once and then go back to short-circuiting: the write cache's record of the deleted file is
+     * not a file anything will write again.
+     */
+    @Test
+    void aModuleLevelOptOutDoesNotKeepTheModuleFromShortCircuiting() throws Exception {
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        Files.createDirectories(reactorRoot.resolve("a"));
+        Files.createFile(reactorRoot.resolve("a/CLAUDE.md"));
+        compileModule("a", "com.example.a.Payment", A_SOURCE);
+        compileModule("b", "com.example.b.Ledger", B_SOURCE);
+        ProcessorTestHarness.awaitFilesystemTick(reactorRoot);
+        compileModule("a", "com.example.a.Payment", A_SOURCE);
+        compileModule("b", "com.example.b.Ledger", B_SOURCE);
+        assertTrue(Files.readString(reactorRoot.resolve("a/CLAUDE.md")).contains("wire format"),
+            "precondition: the module's own file was written");
+        Files.delete(reactorRoot.resolve("a/CLAUDE.md"));
+
+        compileModule("a", "com.example.a.Payment", A_SOURCE);
+        compileModule("b", "com.example.b.Ledger", B_SOURCE);
+        ProcessorTestHarness.awaitFilesystemTick(reactorRoot);
+        compileModule("a", "com.example.a.Payment", A_SOURCE);
+        compileModule("b", "com.example.b.Ledger", B_SOURCE);
+
+        assertTrue(shortCircuited(compileModule("a", "com.example.a.Payment", A_SOURCE)),
+            "module a must short-circuit again once its opt-out has been taken in");
+        assertTrue(shortCircuited(compileModule("b", "com.example.b.Ledger", B_SOURCE)),
+            "and so must its sibling");
+    }
+
+    /**
+     * A module that left the build took its directory, and its nested output, with it. The modules
+     * that remain must go back to short-circuiting once the departure has been merged out.
+     */
+    @Test
+    void aDepartedModulesNestedOutputDoesNotKeepTheRestFromShortCircuiting() throws Exception {
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        Files.createDirectories(reactorRoot.resolve("b"));
+        Files.createFile(reactorRoot.resolve("b/CLAUDE.md"));
+        compileModule("a", "com.example.a.Payment", A_SOURCE);
+        compileModule("b", "com.example.b.Ledger", B_SOURCE);
+        ProcessorTestHarness.awaitFilesystemTick(reactorRoot);
+        compileModule("a", "com.example.a.Payment", A_SOURCE);
+        compileModule("b", "com.example.b.Ledger", B_SOURCE);
+        assertTrue(Files.readString(reactorRoot.resolve("b/CLAUDE.md")).contains("settlement timing"),
+            "precondition: the module's own file was written");
+        try (java.util.stream.Stream<Path> walk = Files.walk(reactorRoot.resolve("b"))) {
+            for (Path p : walk.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                Files.delete(p);
+            }
+        }
+
+        compileModule("a", "com.example.a.Payment", A_SOURCE);
+        ProcessorTestHarness.awaitFilesystemTick(reactorRoot);
+        compileModule("a", "com.example.a.Payment", A_SOURCE);
+
+        assertTrue(shortCircuited(compileModule("a", "com.example.a.Payment", A_SOURCE)),
+            "module a must short-circuit again once b's departure has been merged out");
+        assertTrue(!Files.readString(reactorRoot.resolve("CLAUDE.md")).contains("settlement timing"),
+            "and b's guardrails are gone from the root file");
+    }
 }
