@@ -448,6 +448,27 @@ class SourceDigestEarlyExitEndToEndTest {
         assertEquals(first, second, "the rebuild must warn exactly as the first build did");
     }
 
+    /**
+     * Deleting an opt-in file is how a platform is opted out. The build after that has to walk,
+     * since the opt-in set changed, but the one after it has nothing left to regenerate: a record
+     * of a file nobody asks for any more must not keep every later build from being skipped.
+     */
+    @Test
+    void aPlatformOptedOutDoesNotKeepLaterRebuildsFromBeingSkipped() throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve("llms.txt"), "", StandardCharsets.UTF_8);
+        h.compileReturningDiagnostics();
+        assertTrue(read("llms.txt").contains("Ledger"), "precondition: llms.txt was written\n" + read("llms.txt"));
+        Files.delete(root.resolve("llms.txt"));
+
+        String second = notes(h.compileReturningDiagnostics());
+        String third = notes(h.compileReturningDiagnostics());
+
+        assertFalse(second.contains(EARLY_EXIT), "the opt-in set changed, so this build walks:\n" + second);
+        assertFalse(Files.exists(root.resolve("llms.txt")), "an opted-out file is never recreated");
+        assertTrue(third.contains(UNCHANGED), "nothing changed since the second build:\n" + third);
+    }
+
     @Test
     void aHandEditedGeneratedBlockIsRegenerated() throws IOException {
         ProcessorTestHarness h = project(LEDGER);

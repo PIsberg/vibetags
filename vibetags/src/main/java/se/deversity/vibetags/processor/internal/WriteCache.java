@@ -541,6 +541,33 @@ public final class WriteCache {
     }
 
     /**
+     * Drops every entry at or under {@code optIn} whose file is gone, for an opt-in path that no
+     * longer exists: a deleted opt-in file, or a deleted granular directory and the rule files that
+     * were in it.
+     *
+     * <p>{@link #allCachedFilesStable()} keeps a missing output on purpose, so the build after a
+     * deletion regenerates. That holds for a file something will write again. Deleting the opt-in
+     * is how a platform is opted out (invariant 1), nothing ever writes the file again, and its
+     * entry then answered "not stable" on every later build: one opt-out, and neither the early
+     * exit nor the fingerprint short-circuit fired for that project again. The caller decides that
+     * the path is an opt-in and that it is absent; an entry whose file exists is kept regardless.
+     */
+    public synchronized void forgetMissingAt(Path optIn) {
+        loadIfNeeded();
+        String key = cacheKey(optIn);
+        String under = key + "/";
+        for (java.util.Iterator<String> it = entries.keySet().iterator(); it.hasNext();) {
+            String entry = it.next();
+            if ((entry.equals(key) || entry.startsWith(under))
+                    && Files.notExists(rootDir.resolve(entry).normalize())) {
+                it.remove();
+                touchedKeys.add(entry);
+                dirty = true;
+            }
+        }
+    }
+
+    /**
      * Persists the cache to disk if anything changed. No-op when nothing was recorded.
      *
      * <p>Merges rather than overwrites (#907): the file is re-read, and only what this instance

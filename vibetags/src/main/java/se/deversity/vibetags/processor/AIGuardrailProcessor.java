@@ -568,6 +568,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                             generateFiles();
                             // Before the record, so an early-exited rebuild replays what it printed.
                             checkOrphansIfShortCircuited();
+                            forgetOptedOutOutputs();
                             recordSourceDigest();
                         }
                     }
@@ -865,6 +866,28 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             cache.bindModule(currentModuleId());
             cache.setSourceDigest(null);
             cache.flush();
+        }
+    }
+
+    /**
+     * Drops the write cache's record of every output whose opt-in has been deleted, at the root and
+     * in the compiling module's own directory. Without it a platform that was opted out kept every
+     * later build from being skipped; see {@link WriteCache#forgetMissingAt}. Only the two
+     * directories this round resolves opt-ins in: a sibling module's are its own round's to judge.
+     * Before {@link #recordSourceDigest}, which flushes.
+     */
+    private void forgetOptedOutOutputs() {
+        WriteCache cache = writeCache;
+        if (cache == null) {
+            return;
+        }
+        Set<Path> dirs = new java.util.LinkedHashSet<>(List.of(root, compilationRoot()));
+        for (Path dir : dirs) {
+            for (Path optIn : ServiceRegistry.buildServiceFileMap(dir).values()) {
+                if (Files.notExists(optIn)) {
+                    cache.forgetMissingAt(optIn);
+                }
+            }
         }
     }
 

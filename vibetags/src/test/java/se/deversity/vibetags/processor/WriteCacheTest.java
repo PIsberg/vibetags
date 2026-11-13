@@ -864,4 +864,50 @@ class WriteCacheTest {
         assertTrue(new WriteCache(cachePath).isUnchanged(shared, "v2, rewritten by core"),
             "web never touched CLAUDE.md, so its stale v1 entry must not replace core's newer one");
     }
+
+    @Test
+    void forgetMissingAt_dropsTheMissingFileAndWhatWasUnderAMissingDirectory(@TempDir Path tmp) throws IOException {
+        Path cachePath = tmp.resolve(".vibetags-cache");
+        Path optedOut = Files.writeString(tmp.resolve("llms.txt"), "a");
+        Path rules = Files.createDirectories(tmp.resolve(".claude/rules"));
+        Path ruleA = Files.writeString(rules.resolve("a.md"), "a");
+        Path ruleB = Files.writeString(rules.resolve("b.md"), "b");
+        Path lookalike = Files.writeString(tmp.resolve("llms.txt.bak"), "c");
+        WriteCache cache = new WriteCache(cachePath);
+        for (Path file : new Path[] {optedOut, ruleA, ruleB, lookalike}) {
+            cache.recordWrite(file, Files.readString(file));
+        }
+        Files.delete(optedOut);
+        Files.delete(ruleA);
+        Files.delete(ruleB);
+        Files.delete(rules);
+        assertFalse(cache.allCachedFilesStable(), "precondition: a missing output is not stable");
+
+        cache.forgetMissingAt(optedOut);
+        cache.forgetMissingAt(rules);
+        cache.flush();
+
+        WriteCache next = new WriteCache(cachePath);
+        assertTrue(next.allCachedFilesStable(), "nothing is left on record for the two opted-out paths");
+        assertEquals(1, next.size(), "a file that merely shares the name's prefix is not under it");
+        assertTrue(next.isUnchanged(lookalike, "c"));
+    }
+
+    @Test
+    void forgetMissingAt_keepsAnEntryWhoseFileExists(@TempDir Path tmp) throws IOException {
+        // The caller is asked to pass only absent opt-ins, but a file that is there is one something
+        // may still write, and its record is what makes a later hand edit regenerate.
+        Path rules = Files.createDirectories(tmp.resolve(".claude/rules"));
+        Path kept = Files.writeString(rules.resolve("kept.md"), "kept");
+        Path gone = Files.writeString(rules.resolve("gone.md"), "gone");
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        cache.recordWrite(kept, "kept");
+        cache.recordWrite(gone, "gone");
+        Files.delete(gone);
+
+        cache.forgetMissingAt(rules);
+
+        assertEquals(1, cache.size());
+        assertTrue(cache.isUnchanged(kept, "kept"));
+    }
 }
