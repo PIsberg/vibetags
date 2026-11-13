@@ -574,6 +574,55 @@ class SourceDigestEarlyExitEndToEndTest {
         assertTrue(second.contains(EARLY_EXIT), second);
     }
 
+    /**
+     * An attribute left at its default takes its value from the annotations jar on the compile
+     * class path, which the digest did not hash (#1061). A build whose annotations artifact moved
+     * to a release with another default, the processor unchanged, was skipped and kept the old
+     * text. Here the move is a shadow {@code AILocked} ahead of the real one on the class path,
+     * identical but for the default.
+     */
+    @Test
+    void aDefaultThatChangesWithTheAnnotationsJarIsNotSkippedPast() throws IOException {
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AILocked;
+
+            @AILocked
+            public class Ledger {
+            }
+            """);
+        h.compileReturningDiagnostics();
+        assertTrue(read("CLAUDE.md").contains("Do not modify this code under any circumstances."),
+            "precondition: the default reason is rendered:\n" + read("CLAUDE.md"));
+
+        Path shadow = root.resolve("shadow-src/se/deversity/vibetags/annotations/AILocked.java");
+        Files.createDirectories(shadow.getParent());
+        Files.writeString(shadow, """
+            package se.deversity.vibetags.annotations;
+
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            import java.lang.annotation.Target;
+
+            @Retention(RetentionPolicy.SOURCE)
+            @Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
+            public @interface AILocked {
+                String reason() default "A default from the next annotations release.";
+            }
+            """, StandardCharsets.UTF_8);
+        Path shadowClasses = Files.createDirectories(root.resolve("shadow-classes"));
+        assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler()
+            .run(null, null, null, "-d", shadowClasses.toString(), shadow.toString()), "the shadow must compile");
+
+        String second = notes(h.compileReturningDiagnostics("-classpath",
+            shadowClasses + java.io.File.pathSeparator + System.getProperty("java.class.path")));
+
+        assertFalse(second.contains(EARLY_EXIT), "the annotations on the class path changed:\n" + second);
+        assertTrue(read("CLAUDE.md").contains("A default from the next annotations release."), read("CLAUDE.md"));
+    }
+
     /** Writes {@code com.lib.Reasons} with {@code LEDGER = value} under {@code lib-src}. */
     private Path writeReasons(String value) throws IOException {
         Path source = root.resolve("lib-src/com/lib/Reasons.java");

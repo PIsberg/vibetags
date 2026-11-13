@@ -3,7 +3,14 @@ package se.deversity.vibetags.processor.internal;
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIContext;
 
+import se.deversity.vibetags.processor.model.GuardrailAnnotations;
+
+import javax.annotation.processing.Filer;
+import javax.tools.FileObject;
+import javax.tools.StandardLocation;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -35,7 +42,10 @@ import java.util.stream.Stream;
  * another AI file turns on that, not on presence), the content of every {@code .vibetags-*}
  * configuration file there, for a kapt stub the {@code .kapt_metadata} beside it (#955), and for a
  * Groovy stub the {@code .groovy} file found to declare its type (#973): neither stub changes when
- * its type moves to another file, and the rule glob names that file.
+ * its type moves to another file, and the rule glob names that file. The annotation types themselves
+ * are in it as well, by the bytes of each one's class file on the compile class path: an attribute
+ * left at its default renders the default that artifact declares, and no source changes when a build
+ * moves to an annotations release whose default differs (#1061).
  * Taking in more than output depends on only costs a missed exit; taking in less is a false
  * "unchanged". Sidecars, the write cache and the locks report are outputs or run records with
  * checks of their own, and are left out because they change on every build. Lock files
@@ -65,6 +75,18 @@ public final class SourceDigest {
     public static @Nullable String of(String version, Map<String, String> options, String moduleId,
                                       boolean testRound, Path root, Path compilationRoot,
                                       Collection<Path> sourceFiles) {
+        return of(version, options, moduleId, testRound, root, compilationRoot, sourceFiles, "");
+    }
+
+    /**
+     * As {@link #of(String, Map, String, boolean, Path, Path, Collection)}, with the identity of the
+     * annotation types the compilation reads defaults from.
+     *
+     * @param annotations {@link #annotationsIdentity(Filer)}, or empty when it is not known
+     */
+    public static @Nullable String of(String version, Map<String, String> options, String moduleId,
+                                      boolean testRound, Path root, Path compilationRoot,
+                                      Collection<Path> sourceFiles, String annotations) {
         MessageDigest sha = sha256();
         // One instance for every file: getInstance does a provider lookup, and per file that was
         // most of what hashing a large round allocated. digest() resets it for the next file.
@@ -75,6 +97,9 @@ public final class SourceDigest {
         new TreeMap<>(options).forEach((key, value) -> line(sha, "option " + key + "=" + value));
         line(sha, "module " + moduleId);
         line(sha, "test " + testRound);
+        if (!annotations.isEmpty()) {
+            line(sha, "annotations " + annotations);
+        }
         // Mirror targets live in sibling modules, outside both directories hashed below.
         String mirrors = MirrorConfig.state(base);
         if (!mirrors.isEmpty()) {
@@ -199,7 +224,7 @@ public final class SourceDigest {
 
     /** SHA-256 of {@code file}, streamed through {@code buffer} rather than read into one array per file. */
     private static @Nullable String hashOf(MessageDigest fileSha, byte[] buffer, Path file) {
-        try (java.io.InputStream in = Files.newInputStream(file)) {
+        try (InputStream in = Files.newInputStream(file)) {
             for (int n = in.read(buffer); n >= 0; n = in.read(buffer)) {
                 fileSha.update(buffer, 0, n);
             }
@@ -208,6 +233,33 @@ public final class SourceDigest {
             fileSha.reset();
             return null;
         }
+    }
+
+    /**
+     * A hash of every guardrail annotation's class file as the compile class path supplies it, read
+     * through {@link Filer#getResource} so it is the copy javac takes defaults from, not the one on
+     * the processor path. A type the class path does not carry (read from a module path, or only off
+     * the processor path) is hashed as absent, which is stable and so keeps the exit it had.
+     */
+    public static String annotationsIdentity(Filer filer) {
+        MessageDigest sha = sha256();
+        byte[] buffer = new byte[8192];
+        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
+            line(sha, "type " + type.getName());
+            try {
+                FileObject file = filer.getResource(StandardLocation.CLASS_PATH,
+                    type.getPackageName(), type.getSimpleName() + ".class");
+                try (InputStream in = file.openInputStream()) {
+                    int read;
+                    while ((read = in.read(buffer)) != -1) {
+                        sha.update(buffer, 0, read);
+                    }
+                }
+            } catch (IOException | RuntimeException absent) {
+                line(sha, "absent");
+            }
+        }
+        return HexFormat.of().formatHex(sha.digest());
     }
 
     private static void line(MessageDigest sha, String text) {

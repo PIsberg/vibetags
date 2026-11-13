@@ -787,7 +787,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return null;
         }
         return SourceDigest.of(VERSION, processingEnv.getOptions(), currentModuleId(),
-            moduleIdentity != null && moduleIdentity.isTestSourceSet(), root, compilationRoot(), files);
+            moduleIdentity != null && moduleIdentity.isTestSourceSet(), root, compilationRoot(), files,
+            SourceDigest.annotationsIdentity(processingEnv.getFiler()));
     }
 
     /**

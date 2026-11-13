@@ -54,6 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A new annotations release with a changed default is no longer skipped past (#1061).** An
+  attribute left at its default renders the default the `vibetags-annotations` jar on the compile
+  class path declares, and the early exit did not hash that jar: moving to an annotations version
+  whose default differs, the processor unchanged, skipped the rebuild and kept the old text. The
+  source digest now hashes each guardrail annotation's class file as the compile class path supplies
+  it (`Filer.getResource`). Verified failing first with a shadow `AILocked` whose default differs
+  ahead of the real one on the class path.
 - **Without the Tree API, a dependency constant no longer goes stale (#1062).** The fix for
   `@AILocked(reason = Reasons.LEDGER)` with `Reasons` outside the round read the argument trees,
   which ECJ does not expose, so an ECJ build still recorded its source digest and kept the old value
