@@ -35,7 +35,10 @@ import java.util.Set;
  * have a JVM class path of their own tooling, so the check loses nothing where it was measured.
  * ECJ 3.46.100 with {@code -javaagent:lombok.jar=ECJ} and VibeTags alone on {@code -processorpath}
  * builds and prints nothing (its processor loader already delegates to the JVM class path), and
- * reports Lombok without the agent, where the build fails on the getter.
+ * reports Lombok without the agent, where the build fails on the getter. The Eclipse IDE 4.24 with
+ * {@code -javaagent:lombok.jar} and VibeTags on the project's factory path builds and prints nothing
+ * too: its factory-path loader already sees the agent's jar, so the first check answers. Without
+ * the agent it reports Lombok and the getter is undefined. Measured 2026-11-13 with Lombok 1.18.42.
  */
 public final class ProcessorCoexistence {
 

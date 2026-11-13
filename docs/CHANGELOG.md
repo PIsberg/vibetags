@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Inquisitor runs on request, not on every pull request.** `inquisitor.yml` now triggers on
   `workflow_dispatch` (Actions, Inquisitor, Run workflow) with a `base` input, default `main`. A
   push or an opened PR no longer starts a model review. The Copilot review lane is unchanged.
+- **The dropped-processor warning is measured in the Eclipse IDE (#990).** Eclipse 4.24 with
+  VibeTags on the factory path and Lombok 1.18.42 as `-javaagent`, built headless by a small
+  workspace application: no warning, the Lombok getter resolves and the guardrail block is written.
+  Without the agent the warning names `@lombok.Data` and the getter is undefined, so the check ran.
+  The debug log shows the factory-path loader itself sees the agent's jar. USAGE.md no longer says
+  the IDE was not run.
 
 ### Fixed
 
