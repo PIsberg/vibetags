@@ -162,7 +162,15 @@ public final class ElementNaming {
      * both in lock-step so a pointer can never drift from the file it references.
      */
     public static String granularQName(Element element) {
-        return qualifiedName(element).replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
+        return granularQName(qualifiedName(element));
+    }
+
+    /**
+     * As {@link #granularQName(Element)}, for a qualified name read from somewhere other than the
+     * element model, such as a source file's package declaration and file name.
+     */
+    public static String granularQName(String qualifiedName) {
+        return qualifiedName.replace('.', '-').replaceAll("[^a-zA-Z0-9-]", "-");
     }
 
     /**

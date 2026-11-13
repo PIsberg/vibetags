@@ -48,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An incremental round no longer deletes the guardrails of a second source root (#1060).** A
+  source set with two roots (`src/main/java` plus a `src/main/extra` added by build-helper or a
+  Gradle `srcDir`), compiled incrementally from files of the first root only: the partial-round
+  guard walked only the roots the round compiled from, found no unread source, and took the other
+  root's elements for deletions, so their rule files were swept and the aggregate stopped naming
+  them, exit 0. The guard now also walks the recording module's directory for an uncompiled source
+  that declares a missing element's own type, and refuses the round when it finds one. No sidecar
+  field was added. Verified failing first: `PartialRoundGuardrailLossTest` lost Beta's rule file
+  before the change; a file genuinely deleted from the second root still has its rule retired.
 - **A file VibeTags declined to write is retried, and its warning repeats.** A stray
   `VIBETAGS-START` line, a `greptile.json` that does not parse, a `.pr_agent.toml` that cannot be
   merged into and a hand-written whole-file output each got a warning and no write-cache record. The

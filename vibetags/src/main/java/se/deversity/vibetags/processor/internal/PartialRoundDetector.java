@@ -10,9 +10,15 @@ import javax.lang.model.util.Elements;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -43,7 +49,11 @@ import java.util.stream.Stream;
  *   <li><b>An unread source explains it.</b> Under a source root this compilation actually
  *       compiled from, there is a {@code .java} file it did <em>not</em> compile which names the
  *       VibeTags annotation package. That file's guardrails cannot be in this round's output for
- *       one reason only: the round never read it.</li>
+ *       one reason only: the round never read it. Failing that, anywhere under the module, an
+ *       uncompiled {@code .java} file that names the package and declares the very type a missing
+ *       element belongs to: a second source root of the same source set ({@code src/main/extra},
+ *       added by build-helper or a Gradle {@code srcDir}) that the round compiled nothing from is
+ *       otherwise never looked at, and its elements read as deleted (#1060).</li>
  * </ol>
  *
  * <p>Each condition alone has a false positive the other removes. A source excluded from
@@ -93,6 +103,12 @@ public final class PartialRoundDetector {
      */
     private static final String GENERATED_SEGMENT = "generated";
 
+    /** Build-output and tooling directories the module walk of condition (2) never enters. */
+    private static final Set<String> SKIPPED_DIRECTORIES = Set.of("target", "build", "out", "node_modules");
+
+    /** The keyword a package declaration starts with, trailing space included. */
+    private static final String PACKAGE_KEYWORD = "package ";
+
     private final Set<Path> compiledFiles = new LinkedHashSet<>();
     private final Set<Path> sourceRoots = new LinkedHashSet<>();
 
@@ -134,10 +150,13 @@ public final class PartialRoundDetector {
         if (sourceRoots.isEmpty()) {
             return List.of();
         }
-        if (!anyRecordedElementMissing(root, elementIdsSeen, sourceSet, moduleRoot)) {
+        Set<Path> recordingDirs = new LinkedHashSet<>();
+        Set<String> missing = missingRecordedElements(root, elementIdsSeen, sourceSet, moduleRoot, recordingDirs);
+        if (missing.isEmpty()) {
             return List.of(); // condition (1): nothing went missing, so nothing needs explaining
         }
-        return unreadSourcesNamingTheAnnotations();
+        List<Path> unread = unreadSourcesNamingTheAnnotations();
+        return unread.isEmpty() ? unreadSourcesOfMissingElements(root, recordingDirs, missing) : unread;
     }
 
     /**
@@ -158,20 +177,24 @@ public final class PartialRoundDetector {
      * sidecar of another source set is skipped; the source set is read off the sidecar's own ids,
      * which do not drift the way the module id can.
      */
-    private boolean anyRecordedElementMissing(Path root, Set<String> elementIdsSeen, String sourceSet,
-                                              Path moduleRoot) {
+    private Set<String> missingRecordedElements(Path root, Set<String> elementIdsSeen, String sourceSet,
+                                                Path moduleRoot, Set<Path> recordingDirs) {
+        Set<String> missing = new LinkedHashSet<>();
         for (ModuleSidecar sidecar : ModuleSidecar.peekAll(root)) {
             if (!describesThisCompilation(root, sidecar, moduleRoot)
                     || !ModuleSidecar.sanitizeId(sourceSet).equals(sourceSetOf(sidecar))) {
                 continue;
             }
             for (String recorded : sidecar.getElementIds()) {
-                if (!elementIdsSeen.contains(recorded)) {
-                    return true;
+                if (!elementIdsSeen.contains(recorded) && missing.add(recorded)) {
+                    Path dir = moduleDirOf(root, sidecar);
+                    if (dir != null) {
+                        recordingDirs.add(dir);
+                    }
                 }
             }
         }
-        return false;
+        return missing;
     }
 
     /**
@@ -195,13 +218,8 @@ public final class PartialRoundDetector {
      * identity case in the class comment covered.
      */
     private boolean describesThisCompilation(Path root, ModuleSidecar sidecar, Path moduleRoot) {
-        String modulePath = sidecar.getModulePath();
-        Path moduleDir;
-        try {
-            moduleDir = ("_root_".equals(modulePath) || modulePath.isEmpty())
-                ? root.toAbsolutePath().normalize()
-                : root.resolve(modulePath).toAbsolutePath().normalize();
-        } catch (RuntimeException notAPath) {
+        Path moduleDir = moduleDirOf(root, sidecar);
+        if (moduleDir == null) {
             return false;
         }
         Path module = moduleRoot.toAbsolutePath().normalize();
@@ -214,6 +232,18 @@ public final class PartialRoundDetector {
             }
         }
         return false;
+    }
+
+    /** The directory {@code sidecar} records its module at, or {@code null} when that is no path. */
+    private static @Nullable Path moduleDirOf(Path root, ModuleSidecar sidecar) {
+        String modulePath = sidecar.getModulePath();
+        try {
+            return ("_root_".equals(modulePath) || modulePath.isEmpty())
+                ? root.toAbsolutePath().normalize()
+                : root.resolve(modulePath).toAbsolutePath().normalize();
+        } catch (RuntimeException notAPath) {
+            return null;
+        }
     }
 
     /**
@@ -247,6 +277,134 @@ public final class PartialRoundDetector {
             }
         }
         return List.copyOf(unread);
+    }
+
+    /**
+     * The second half of condition (2): {@code .java} files anywhere under the module directory of
+     * a sidecar that recorded a missing element (the record's own module, so not the working
+     * directory a build without a build file falls back to) that this round did not compile, that name the annotation package, and that declare a type a missing
+     * element belongs to (its id is the type's, or starts with the type's and a dash, for a member
+     * or a nested type).
+     *
+     * <p>Narrower than the walk of the compiled roots on purpose. Any annotated uncompiled file
+     * would do there, because those roots are this source set's; here the walk also passes the
+     * module's other source sets and excluded files, and only the declaring file of an element
+     * this source set recorded is evidence about it. A deleted file is not on disk, and a file whose
+     * annotation was removed was compiled, so neither makes a genuine removal partial. Build output,
+     * generated-source trees and hidden directories are not walked. A root outside the module
+     * directory is still not seen.
+     */
+    private List<Path> unreadSourcesOfMissingElements(Path root, Set<Path> recordingDirs, Set<String> missing) {
+        Set<String> tokens = new HashSet<>();
+        for (String id : missing) {
+            tokens.addAll(List.of(id.split("-")));
+        }
+        Set<Path> unread = new LinkedHashSet<>();
+        int[] scanned = {0};
+        for (Path module : recordingDirs) {
+            walkForMissingElements(root, module, tokens, missing, unread, scanned);
+            if (unread.size() >= MAX_REPORTED || scanned[0] > MAX_FILES_SCANNED) {
+                break;
+            }
+        }
+        return List.copyOf(unread);
+    }
+
+    /** One module directory's walk for {@link #unreadSourcesOfMissingElements}, adding to {@code unread}. */
+    private void walkForMissingElements(Path root, Path module, Set<String> tokens, Set<String> missing,
+                                        Set<Path> unread, int[] scanned) {
+        try {
+            Files.walkFileTree(module, EnumSet.noneOf(FileVisitOption.class), MAX_WALK_DEPTH, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    return dir.equals(module) || !isSkippedDirectory(root, dir)
+                        ? FileVisitResult.CONTINUE : FileVisitResult.SKIP_SUBTREE;
+                }
+
+                @Override
+                public FileVisitResult visitFile(Path candidate, BasicFileAttributes attrs) {
+                    if (++scanned[0] > MAX_FILES_SCANNED) {
+                        return FileVisitResult.TERMINATE;
+                    }
+                    Path file = candidate.toAbsolutePath().normalize();
+                    if (!compiledFiles.contains(file) && declaresAMissingElement(file, tokens, missing)) {
+                        unread.add(file);
+                    }
+                    return unread.size() >= MAX_REPORTED ? FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path candidate, IOException unreadable) {
+                    return FileVisitResult.CONTINUE; // one unlistable entry says nothing about the rest
+                }
+            });
+        } catch (IOException | RuntimeException unwalkable) {
+            // As in the walk of the compiled roots: finding nothing is the answer, never an exception.
+        }
+    }
+
+    /**
+     * Whether {@code file} is a {@code .java} source naming the annotation package whose declared
+     * type a missing element id belongs to. The file name is checked against the ids' dash-separated
+     * tokens first, so the module's other sources are listed but never read.
+     */
+    private static boolean declaresAMissingElement(Path file, Set<String> tokens, Set<String> missing) {
+        Path name = file.getFileName();
+        String fileName = name == null ? "" : name.toString();
+        if (!fileName.endsWith(".java")) {
+            return false;
+        }
+        String stem = fileName.substring(0, fileName.length() - ".java".length());
+        if (!tokens.containsAll(List.of(ElementNaming.granularQName(stem).split("-")))
+                || !namesTheAnnotations(file)) {
+            return false;
+        }
+        String pkg = packageDeclaredIn(file);
+        String type = ElementNaming.granularQName(pkg == null || pkg.isEmpty() ? stem : pkg + "." + stem);
+        for (String id : missing) {
+            if (id.equals(type) || id.startsWith(type + "-")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The package {@code file} declares: the name on its first {@code package} line, empty when an
+     * {@code import} or the end of the file comes first (the default package), {@code null} when it
+     * cannot be read. Read as ISO-8859-1 for the reason {@link #namesTheAnnotations(Path)} gives.
+     */
+    private static @Nullable String packageDeclaredIn(Path file) {
+        try (BufferedReader reader = Files.newBufferedReader(file, StandardCharsets.ISO_8859_1)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (trimmed.startsWith(PACKAGE_KEYWORD)) {
+                    int end = trimmed.indexOf(';');
+                    String declared = end < 0 ? trimmed.substring(PACKAGE_KEYWORD.length())
+                        : trimmed.substring(PACKAGE_KEYWORD.length(), end);
+                    return declared.trim();
+                }
+                if (trimmed.startsWith("import ")) {
+                    return "";
+                }
+            }
+        } catch (IOException | RuntimeException unreadable) {
+            return null;
+        }
+        return "";
+    }
+
+    /**
+     * Directories the module walk does not enter: build output ({@code target}, {@code build},
+     * {@code out}), hidden directories ({@code .git}, {@code .gradle}, {@code .claude}),
+     * {@code node_modules}, and generated-source trees by the rule {@link #isGeneratedTree(Path, Path)}
+     * applies.
+     */
+    private static boolean isSkippedDirectory(Path root, Path dir) {
+        Path name = dir.getFileName();
+        String segment = name == null ? "" : name.toString();
+        return segment.startsWith(".") || SKIPPED_DIRECTORIES.contains(segment) || isGeneratedTree(root, dir);
     }
 
     /**

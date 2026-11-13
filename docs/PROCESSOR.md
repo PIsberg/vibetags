@@ -553,7 +553,12 @@ independent facts hold: a sidecar describing this compilation's own source tree 
 (a main round never consults the test source set's sidecar, whose elements it never produces, and a
 module round never consults a parent module's, such as a reactor root that compiles sources of its
 own) names an element the round did not produce, **and** a `.java` file under a source root the round did compile from
-was not compiled and names `se.deversity.vibetags.annotations`. Either fact alone is ambiguous —
+was not compiled and names `se.deversity.vibetags.annotations`. When no such file is found there,
+the module directory of the sidecar that recorded the missing element is walked for an uncompiled
+file that names the package and declares that element's own type: a second source root of the same
+source set (`src/main/extra`, added by build-helper or a Gradle `srcDir`) that the round compiled
+nothing from is found that way (#1060). Build output, generated-source trees and hidden directories
+are not walked, and a source root outside the module directory is still not seen. Either fact alone is ambiguous —
 the first is also what deleting an annotation looks like, the second is also what a source
 excluded from compilation looks like — and together they are not. When both hold, nothing is
 written, nothing is swept, no fingerprint is recorded, and a `WARNING` names the sources the round

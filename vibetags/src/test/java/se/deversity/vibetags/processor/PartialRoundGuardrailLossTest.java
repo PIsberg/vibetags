@@ -163,6 +163,58 @@ class PartialRoundGuardrailLossTest {
             "core's round compiled every source core has on record; the root's elements are not core's");
     }
 
+    /**
+     * Condition (2) walked only the source roots this round compiled from. A source set with a
+     * second root ({@code src/main/extra}, added by build-helper or a Gradle {@code srcDir}) that is
+     * compiled incrementally from the first root alone never had the second walked: its elements
+     * were missing, no unread file explained them, and the round was taken for a deletion. Beta's
+     * rule file was swept although Beta is still annotated on disk (#1060).
+     */
+    @Test
+    void aRoundThatCompilesOneOfTwoSourceRootsKeepsTheOtherRootsRuleFiles(@TempDir Path root)
+            throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Path alpha = write(root, "Alpha", "alpha-routing");
+        Path beta = writeUnder(root, "src/main/extra", "Beta", "@AIContext(focus = " + Q + "beta-routing" + Q + ")");
+        compileAll(root, alpha, beta);
+        assertTrue(Files.exists(rule(root, "Beta")), "precondition: Beta's rule file was written");
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Beta"),
+            "precondition: the full round indexed Beta in CLAUDE.md");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        compileSubset(root, alpha);
+
+        assertTrue(Files.exists(rule(root, "Beta")),
+            "Beta is still annotated in src/main/extra, a root this round compiled nothing from; "
+                + "the round was never shown it and must not retire its rule file");
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Beta"),
+            "the aggregate must keep indexing Beta as well");
+    }
+
+    /**
+     * The other half of the same rule: with Beta's file deleted from the second root, nothing
+     * explains its missing element, so the round is complete and Beta's rule file is retired.
+     */
+    @Test
+    void aSourceDeletedFromTheOtherRootStillHasItsRuleFileRetired(@TempDir Path root) throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Path alpha = write(root, "Alpha", "alpha-routing");
+        Path beta = writeUnder(root, "src/main/extra", "Beta", "@AIContext(focus = " + Q + "beta-routing" + Q + ")");
+        compileAll(root, alpha, beta);
+        assertTrue(Files.exists(rule(root, "Beta")), "precondition: Beta's rule file was written");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        Files.delete(beta);
+        compileSubset(root, alpha);
+
+        assertFalse(Files.exists(rule(root, "Beta")),
+            "Beta's source is gone from disk; its rule file must be retired, not kept as partial");
+    }
+
     private static Path lockedSource(Path root, String relative, String type, String reason) throws IOException {
         Path p = root.resolve(relative);
         Files.createDirectories(p.getParent());
