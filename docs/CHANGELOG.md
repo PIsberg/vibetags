@@ -48,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A no-op rebuild repeats the warnings about state still on disk (#1063).** A module generating
+  as its own root while a reactor declares it, an unreadable sidecar, an opt-in or a granular
+  opt-out a sibling has not compiled since, a sibling's missing rule file and an element claimed by
+  two regions were warned about only by a build that regenerated: `generateFiles()` raises them
+  after its fingerprint short-circuit, and the source-digest early exit skips it. A `-Werror` build
+  failed once and passed on the rebuild while the condition was still there. They are now raised
+  after the short-circuit and on the early exit too, read from the sidecars; the locked method is
+  unchanged. Verified failing first: 5 of the 6 cases in `ShortCircuitStateWarningTest` printed
+  nothing on the rebuild (the missing sibling rule file already repeated).
 - **An incremental round no longer deletes the guardrails of a second source root (#1060).** A
   source set with two roots (`src/main/java` plus a `src/main/extra` added by build-helper or a
   Gradle `srcDir`), compiled incrementally from files of the first root only: the partial-round

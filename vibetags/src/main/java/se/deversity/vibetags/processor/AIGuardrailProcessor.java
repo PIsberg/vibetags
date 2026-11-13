@@ -261,6 +261,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Set once the orphan check ran this build, wherever it was called from (#860). */
     private final AtomicBoolean orphansChecked = new AtomicBoolean();
 
+    /** Set once the post-read merge-state warnings ran this build, wherever from (#1063). */
+    private final AtomicBoolean mergeStateChecked = new AtomicBoolean();
+
     /** Explicit module name from {@code -Avibetags.module}; overrides the resolved identity. */
     private @Nullable String moduleIdOverride;
 
@@ -570,6 +573,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                             generateFiles();
                             // Before the record, so an early-exited rebuild replays what it printed.
                             checkOrphansIfShortCircuited();
+                            warnAboutMergeStateIfShortCircuited();
                             forgetOptedOutOutputs(departedModules);
                             recordSourceDigest();
                         }
@@ -816,7 +820,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * <p>That includes the ones {@code generateFiles()} raises ahead of its own short-circuit: the
      * two module-identity warnings (and, before #720, a deprecated-output warning). Every
      * no-op rebuild printed those before the early exit existed, and skipping them made a
-     * {@code -Werror} build fail cold and pass on the rebuild (#859).
+     * {@code -Werror} build fail cold and pass on the rebuild (#859). The warnings it raises after
+     * the short-circuit about state still on disk run here too, read from the sidecars rather than
+     * the model this exit never collected (#1063).
      */
     @AIContext(
         focus = "Every diagnostic generateFiles() raises before its fingerprint short-circuit must also be raised here",
@@ -857,8 +863,49 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         warnAboutHandAuthoredYamlKeys();
         warnAboutModuleIdCollision();
+        ModuleSidecar own = ModuleSidecar.loadFor(root, currentModuleId());
+        warnAboutMergeState(own != null && !own.getElementIds().isEmpty());
         VibeTagsLogger.shutdown(root);
         warnAboutOversizedRuleFiles();
+    }
+
+    /**
+     * The warnings {@code generateFiles()} raises after its fingerprint short-circuit that describe
+     * state still on disk (#1063): a module generating as its own root while a reactor declares it,
+     * and everything {@link #warnAboutPartialMerges} hosts (an unreadable sidecar, an opt-in or a
+     * granular opt-out a module has not compiled since, a sibling's missing rule file, an element
+     * claimed by two regions). Every one of them persists until the developer acts, so a rebuild that
+     * changes nothing must print them as the regenerating build did, or a {@code -Werror} build fails
+     * once and then passes. The sidecars are peeked, never pruned: both callers stand where nothing is
+     * stale, and a warning must not write. {@code regionReplaced} is not here: it compares this
+     * build's elements with the sidecar the write overwrote, an event rather than a state.
+     *
+     * @param contributes whether this compilation has annotated elements of its own to contribute
+     */
+    private void warnAboutMergeState(boolean contributes) {
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
+        warnIfDetachedFromReactor(compilationRoot(), contributes);
+        warnAboutPartialMerges(ServiceRegistry.resolveActiveServices(serviceFiles), serviceFiles,
+            ModuleSidecar.peekAll(root, log));
+    }
+
+    /**
+     * {@link #warnAboutMergeState} for a generation that returned at its fingerprint short-circuit.
+     * That return released the log, so it is reopened with the same options for the warnings and
+     * released again, as {@link #checkOrphansIfShortCircuited} does.
+     */
+    private void warnAboutMergeStateIfShortCircuited() {
+        if (mergeStateChecked.get()) {
+            return;
+        }
+        Logger released = log;
+        log = VibeTagsLogger.forRoot(root, logPath, logLevel);
+        try {
+            warnAboutMergeState(collector.anyAnnotationsFound());
+        } finally {
+            log = released;
+            VibeTagsLogger.shutdown(root);
+        }
     }
 
     /** Clears this module's recorded source digest, so nothing vouches for the next build yet. */
@@ -1566,9 +1613,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * modules, and let the developer run the full build that fixes it. A WARNING rather than a NOTE
      * because the file on disk is wrong until they do.
      */
+    @AIContext(
+        focus = "Every warning hosted here describes state still on disk: warnAboutMergeState raises it again on a rebuild that changes nothing",
+        avoids = "Hosting a warning about the write just made here: a no-op rebuild would repeat it on every build (#1063)")
     private void warnAboutPartialMerges(
             Set<String> activeServices, Map<String, Path> serviceFiles,
             List<ModuleSidecar> allSidecars) {
+        mergeStateChecked.set(true);
         warnAboutSidecarsThisRoundCouldNotRead(root);
         if (allSidecars.size() < 2) {
             return; // Single module: its own round is by definition current.
@@ -2188,7 +2239,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * merely lives inside another repository never trips it.
      */
     private void warnIfDetachedFromReactor(Path compilationRoot) {
-        if (!compilationRoot.equals(root) || !collector.anyAnnotationsFound()) {
+        warnIfDetachedFromReactor(compilationRoot, collector.anyAnnotationsFound());
+    }
+
+    /**
+     * As {@link #warnIfDetachedFromReactor(Path)}, with whether this compilation contributes
+     * annotated elements given rather than read off the collector, which a build that took the
+     * source-digest early exit never filled (#1063).
+     */
+    private void warnIfDetachedFromReactor(Path compilationRoot, boolean contributes) {
+        if (!compilationRoot.equals(root) || !contributes) {
             return; // already sharing a root with siblings, or nothing to contribute anyway
         }
         Path reactorRoot = ReactorRootDetector.findReactorRootAbove(root);

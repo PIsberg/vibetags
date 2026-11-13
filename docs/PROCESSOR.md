@@ -331,7 +331,11 @@ initializer; anything else leaves the build unrecorded, so the next one walks an
 which hashes the collected values, decides. Without the Tree API the question cannot be asked and
 the build is recorded as before. The
 warnings `generateFiles()` raises ahead of its own fingerprint short-circuit (a deprecated opt-in, an
-unidentified module) are raised again on the skipped path too (#859). The digest is cleared before every full
+unidentified module) are raised again on the skipped path too (#859), and so are the ones it raises
+after the short-circuit about state still on disk: a detached module, an unreadable sidecar, an
+opt-in or granular opt-out a sibling has not compiled since, a sibling's missing rule file, an
+element claimed by two regions. Those are raised again both after a fingerprint short-circuit and
+on the early exit, from the sidecars, which are peeked and never pruned there (#1063). The digest is cleared before every full
 generation, so one that fails part-way leaves nothing vouching for half-written files. If another
 processor generates sources after a skipped first round, the build leaves every file as it is, clears
 the digest, and the next build walks.
