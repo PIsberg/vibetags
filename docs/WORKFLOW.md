@@ -695,6 +695,21 @@ in every Maven and Gradle job until someone ran `python tools/sync-version-mirro
 - `pull_request`, not `pull_request_target`: Dependabot's runs get Dependabot secrets and a
   read-only `GITHUB_TOKEN`, and the checked-out code is the bump branch, which only Dependabot writes.
 
+## Known flake: an artifact Central has is reported missing
+
+A job occasionally fails resolving a plugin or library that is on Maven Central: Maven says
+`Could not find artifact <coordinates> in central`, Gradle `Could not find <coordinates>` with
+`repo.maven.apache.org` in the searched locations. Seen three times in two weeks (#1041): run
+40995787430 (ECJ job, `maven-pmd-plugin:3.28.0`, 2026-10-30), run 42154399907 (Jazzer job, the
+same plugin, 2026-11-06) and run 42555409466 (Gradle job, `pmd-java:7.29.0`, 2026-11-09). Each
+passed on rerun with no change. It is not the cache: `setup-java`'s `cache: maven` is keyed on the
+pom hash, so a bump branch starts cold, and a restored "not found" marker would fail the rerun too.
+
+- **Rule:** when a failed job's only error is that message for an artifact Central serves (open
+  `https://repo.maven.apache.org/maven2/<group path>/<artifact>/<version>/` to check), rerun the job.
+  Do not change code for it.
+- If it reaches main, or more than about one a week, reopen #1041 with the run ids.
+
 ---
 
 ## How the build verifies the annotation processor

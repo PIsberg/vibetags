@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A documented rule for the Central resolution flake (#1041).** `docs/WORKFLOW.md` names the
+  message, the three runs that hit it (two Maven jobs on `maven-pmd-plugin:3.28.0`, one Gradle job
+  on `pmd-java:7.29.0`, each green on rerun) and the rule: rerun, do not change code. At about one a
+  week a rerun costs less than a resolver change nobody has shown would help.
 - **Dependabot bumps of a mirrored version can arrive green (#1038).** The new
   `dependabot-mirrors.yml` runs `tools/sync-version-mirrors.py` on Dependabot's pull requests that
   touch the parent pom and pushes the synced copies with a GitHub App token, so the push starts CI.
