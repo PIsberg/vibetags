@@ -421,7 +421,7 @@ public final class GuardrailFileWriter {
                             + " after it, and the text after it is not a generated block, so the file was left"
                             + " untouched. Remove the stray start line, or add the end line after the generated block.");
                     debug("write.skip file={} reason=stray-start-marker", fileName);
-                    return false;
+                    return declined(filePath);
                 }
                 messager.printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
@@ -558,7 +558,7 @@ public final class GuardrailFileWriter {
             if (log != null) {
                 log.warn("write.skip file={} reason={} detail={}", fileName, outcome.skipReason(), outcome.detail());
             }
-            return false;
+            return declined(filePath);
         }
         if (merged.equals(existing)) {
             debug("write.skip file={} reason=identical-bytes bytes={} markers=json-values", fileName, merged.length());
@@ -625,7 +625,7 @@ public final class GuardrailFileWriter {
     private boolean writeHandWrittenWholeFile(Path filePath, String fileName, String content, String existing,
                                               @Nullable BasicFileAttributes existingAttrs) throws IOException {
         if (!PR_AGENT_FILE.equals(fileName)) {
-            return refuseHandWrittenWholeFile(fileName);
+            return refuseHandWrittenWholeFile(filePath, fileName);
         }
         String body = TomlValueSpans.bodyFrom(content);
         if (body == null) {
@@ -642,7 +642,7 @@ public final class GuardrailFileWriter {
                     + ". Its guardrails are not being updated until that is fixed.");
             debug("write.skip file={} reason={} detail={}", fileName,
                 String.valueOf(outcome.skipReason()), String.valueOf(outcome.detail()));
-            return false;
+            return declined(filePath);
         }
         if (merged.equals(existing)) {
             debug("write.skip file={} reason=identical-bytes bytes={} markers=toml-values", fileName, merged.length());
@@ -657,12 +657,31 @@ public final class GuardrailFileWriter {
     }
 
     /** Leaves a hand-written whole-file output alone and says so. Always {@code false}, "nothing written". */
-    private boolean refuseHandWrittenWholeFile(String fileName) {
+    private boolean refuseHandWrittenWholeFile(Path filePath, String fileName) {
         messager.printMessage(Diagnostic.Kind.WARNING,
             "VibeTags: left " + fileName + " untouched because it holds settings VibeTags did not write,"
                 + " and VibeTags writes this file whole. Its guardrails are not being written. To let"
                 + " VibeTags write it, move those settings elsewhere and leave the file empty.");
         debug("write.skip file={} reason=hand-written-whole-file", fileName);
+        return declined(filePath);
+    }
+
+    /**
+     * Records that this round declined to write {@code filePath} and warned about it, so the next
+     * build looks at the file again. Always {@code false}, the caller's "nothing written".
+     *
+     * <p>A declined file is in the position of one whose write failed (see
+     * {@link WriteCache#recordFailure}): the build is still recorded as clean, and a file with no
+     * entry counts as stable. Without a record, a rebuild of unchanged sources was skipped whole.
+     * The file stayed without its guardrails after the developer did what the warning asked, and
+     * until then the warning itself, the only notice that an opted-in file carries nothing, was
+     * printed by the cold build alone. Nothing to record in dry-run, which leaves the cache as it
+     * found it.
+     */
+    private boolean declined(Path filePath) {
+        if (!dryRun && writeCache != null) {
+            writeCache.recordFailure(filePath);
+        }
         return false;
     }
 

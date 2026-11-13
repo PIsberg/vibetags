@@ -389,6 +389,65 @@ class SourceDigestEarlyExitEndToEndTest {
         assertTrue(read("CLAUDE.md").contains("Café rules."), "hand-authored text must survive");
     }
 
+    /**
+     * The same shape reached without an I/O failure: the writer declines a file it cannot merge
+     * into without guessing, warns, and returns. Nothing was recorded for the file, an absent entry
+     * counts as stable, and the opt-in is still "a file", so once the developer did what the warning
+     * asked, every later build with unchanged sources took the exit and the file never received
+     * its guardrails. Three files, one for each way of declining.
+     */
+    @Test
+    void aFileLeftUntouchedOverAStrayStartMarkerIsWrittenOnceTheMarkerIsRemoved() throws IOException {
+        assertDeclinedFileIsWrittenOnceRepaired("CLAUDE.md",
+            "# Notes\n\nPaste this line to opt in:\n\n<!-- VIBETAGS-START -->\n\n## Build\n\nmvn verify\n",
+            "# Notes\n\n## Build\n\nmvn verify\n");
+    }
+
+    @Test
+    void aGreptileConfigLeftUntouchedAsMalformedIsWrittenOnceItParses() throws IOException {
+        assertDeclinedFileIsWrittenOnceRepaired("greptile.json",
+            "{ \"labels\": [\"review\"], \n", "{ \"labels\": [\"review\"] }\n");
+    }
+
+    @Test
+    void aPrAgentConfigLeftUntouchedAsUnmergeableIsWrittenOnceItIsMergeable() throws IOException {
+        assertDeclinedFileIsWrittenOnceRepaired(".pr_agent.toml",
+            "[[pr_reviewer]]\nnum_code_suggestions = 3\n", "[pr_reviewer]\nnum_code_suggestions = 3\n");
+    }
+
+    private void assertDeclinedFileIsWrittenOnceRepaired(String file, String declined, String repaired)
+            throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve(file), declined, StandardCharsets.UTF_8);
+        String first = notes(h.compileReturningDiagnostics());
+        assertTrue(first.contains("untouched"),
+            "precondition: the writer declines " + file + " and says so\n" + first);
+        assertEquals(declined, read(file), "precondition: a declined file is left exactly as it was");
+        Files.writeString(root.resolve(file), repaired, StandardCharsets.UTF_8);
+
+        String second = notes(h.compileReturningDiagnostics());
+
+        assertFalse(second.contains(EARLY_EXIT), first + "\n---\n" + second);
+        assertTrue(read(file).contains("ledger maths is audited"), read(file));
+    }
+
+    /**
+     * And while it is not repaired, the warning is the only thing telling the developer that a
+     * file they opted in carries no guardrails. A rebuild that skips it turns a {@code -Werror}
+     * build that failed cold into one that passes (#859's shape).
+     */
+    @Test
+    void aFileStillLeftUntouchedIsWarnedAboutOnEveryRebuild() throws IOException {
+        ProcessorTestHarness h = project(LEDGER);
+        Files.writeString(root.resolve("greptile.json"), "{ \"labels\": [\"review\"], \n", StandardCharsets.UTF_8);
+        List<String> first = vibeTagsWarnings(h.compileReturningDiagnostics());
+        assertTrue(first.stream().anyMatch(w -> w.contains("untouched")), "precondition: " + first);
+
+        List<String> second = vibeTagsWarnings(h.compileReturningDiagnostics());
+
+        assertEquals(first, second, "the rebuild must warn exactly as the first build did");
+    }
+
     @Test
     void aHandEditedGeneratedBlockIsRegenerated() throws IOException {
         ProcessorTestHarness h = project(LEDGER);
