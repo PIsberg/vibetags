@@ -523,7 +523,7 @@ public final class PartialRoundDetector {
      * {@code null} when the layout does not mirror the package, which is the one case where
      * walking would look somewhere this compilation never read from.
      */
-    private static @Nullable Path sourceRootOf(Path file, @Nullable String packageName) {
+    static @Nullable Path sourceRootOf(Path file, @Nullable String packageName) {
         Path dir = file.getParent();
         if (dir == null || packageName == null) {
             return null;
@@ -547,7 +547,7 @@ public final class PartialRoundDetector {
     }
 
     /** {@code element}'s package name, or {@code null} when the compiler will not say. */
-    private static @Nullable String packageNameOf(@Nullable Elements elements, Element element) {
+    static @Nullable String packageNameOf(@Nullable Elements elements, Element element) {
         if (element instanceof PackageElement pkg) {
             return pkg.getQualifiedName().toString();
         }

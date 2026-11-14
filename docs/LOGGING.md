@@ -26,7 +26,7 @@ Write events, not positions:
 - **A log event asserted in a test is a contract.** `GuardrailFileWriterLogContractTest` pins the
   writer's skip reasons and `ModuleSidecarLogContractTest` the sidecar reader's
   (`sidecar.skip` / `sidecar.prune`, with `stale-format`, `malformed`, `future-version`,
-  `module-gone`, `invalid-module-path`, `superseded`, `unreadable`), and
+  `module-gone`, `invalid-module-path`, `superseded`, `misread-source-set`, `unreadable`), and
   `RuleFileLengthWarnerTest` pins `validation.rule-file-over-limit file= chars= limit=`, the WARN for
   a generated `.devin/rules/` or `.windsurf/rules/` file over Devin Desktop's per-file character cap,
   and `validation.rule-file-over-limit file= bytes= limit=` for an `.agents/rules/` file over

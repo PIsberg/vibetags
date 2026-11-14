@@ -425,6 +425,105 @@ class SourceSetIsolationEndToEndTest {
             "and the class that stayed in main must be untouched: " + claude);
     }
 
+    /**
+     * A source root that is itself {@code src/}, packages directly below it (Eclipse's flat layout,
+     * build-helper {@code add-source} of {@code shared/src}). The source set used to be read from the
+     * directory after {@code src/}, which here is the first package segment: {@code com}, filed as a
+     * second source set of the module (#1068). A root ending in {@code src} is the main source set.
+     */
+    private void compileFlatSrc(String module, List<String[]> fqnAndSource) throws IOException {
+        ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
+        Files.createDirectories(reactorRoot.resolve(module));
+        Files.writeString(reactorRoot.resolve(module).resolve("pom.xml"),
+            "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
+        for (String[] pair : fqnAndSource) {
+            harness.writeSourceFile(module + "/src/" + pair[0].replace('.', '/') + ".java", pair[1]);
+        }
+        harness.compile();
+    }
+
+    @Test
+    void aFlatSrcRootIsTheMainSourceSetNotItsFirstPackageSegment() throws IOException {
+        setUpReactor("module-core");
+        compileFlatSrc("module-core", List.<String[]>of(new String[]{"com.example.core.IrNode", MAIN_SOURCE}));
+
+        assertEquals(List.of(".vibetags-mod-module-core"), sidecarNames(),
+            "a flat src/ root is module-core's main source set, not source set \"com\"");
+    }
+
+    /**
+     * The consequence that matters: a package whose first segment is a test source-set name made the
+     * round a test round, and with {@code TESTING.md} opted in its guardrails left {@code CLAUDE.md}.
+     */
+    @Test
+    void aFlatSrcPackageNamedTestIsNotRoutedAsTestCode() throws IOException {
+        setUpReactor("module-core");
+        Files.createFile(reactorRoot.resolve("TESTING.md"));
+        compileFlatSrc("module-core", List.<String[]>of(new String[]{"test.support.Fixtures", """
+            package test.support;
+
+            import se.deversity.vibetags.annotations.AIContext;
+
+            @AIContext(focus = "flat-src-fixture-routing")
+            public class Fixtures {
+            }
+            """}));
+
+        String claude = Files.readString(reactorRoot.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        String testing = Files.readString(reactorRoot.resolve("TESTING.md"), StandardCharsets.UTF_8);
+        assertTrue(claude.contains("flat-src-fixture-routing"),
+            "package test.support under a main root is main code; it belongs in CLAUDE.md: " + claude);
+        assertFalse(testing.contains("flat-src-fixture-routing"),
+            "and not in TESTING.md: " + testing);
+    }
+
+    /**
+     * The upgrade: a project built before the fix has {@code .vibetags-mod-module-core__com} on disk.
+     * The first build after it writes {@code .vibetags-mod-module-core}; the old sidecar, holding the
+     * same guardrails, must not render them a second time.
+     */
+    @Test
+    void aSidecarLeftUnderTheMisreadSourceSetDoesNotDuplicateTheRegion() throws IOException {
+        setUpReactor("module-core");
+        compileFlatSrc("module-core", List.<String[]>of(new String[]{"com.example.core.IrNode", MAIN_SOURCE}));
+        se.deversity.vibetags.processor.internal.ModuleSidecar current =
+            se.deversity.vibetags.processor.internal.ModuleSidecar.loadFor(reactorRoot, "module-core");
+        assertNotNull(current, "precondition: the main sidecar was written");
+        se.deversity.vibetags.processor.internal.ModuleSidecar legacy =
+            new se.deversity.vibetags.processor.internal.ModuleSidecar(
+                "module-core__com", current.getModulePath(), current.getRegionId());
+        current.getBodies().forEach(legacy::putBody);
+        legacy.save(reactorRoot);
+        Files.delete(reactorRoot.resolve(".vibetags-mod-module-core"));
+        VibeTagsLogger.shutdown();
+
+        compileFlatSrc("module-core", List.<String[]>of(new String[]{"com.example.core.IrNode", MAIN_SOURCE}));
+
+        String claude = Files.readString(reactorRoot.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertEquals(1, countOccurrences(claude, MAIN_REASON),
+            "the guardrail of the misread sidecar and the rebuilt one is rendered once: " + claude);
+
+        // And the old sidecar must not outlive the guardrail: an emptied source set keeps its last
+        // contribution until its sidecar is deleted, so a stale __com would hold a removed
+        // annotation in CLAUDE.md for good.
+        Files.delete(reactorRoot.resolve("module-core/src/com/example/core/IrNode.java"));
+        VibeTagsLogger.shutdown();
+        compileFlatSrc("module-core", List.<String[]>of(new String[]{"com.example.core.Parser", OTHER_MAIN_SOURCE}));
+
+        String after = Files.readString(reactorRoot.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(after.contains("parser core"), "precondition: the rebuild ran: " + after);
+        assertFalse(after.contains(MAIN_REASON),
+            "IrNode is gone from the source; the misread sidecar must not keep its guardrail: " + after
+                + " sidecars: " + sidecarNames());
+    }
+
+    private List<String> sidecarNames() throws IOException {
+        try (Stream<Path> files = Files.list(reactorRoot)) {
+            return files.map(f -> f.getFileName().toString())
+                .filter(n -> n.startsWith(".vibetags-mod-")).sorted().toList();
+        }
+    }
+
     private static int countOccurrences(String haystack, String needle) {
         int count = 0;
         for (int i = haystack.indexOf(needle); i >= 0; i = haystack.indexOf(needle, i + needle.length())) {

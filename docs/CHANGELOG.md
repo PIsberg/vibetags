@@ -97,6 +97,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   after the short-circuit and on the early exit too, read from the sidecars; the locked method is
   unchanged. Verified failing first: 5 of the 6 cases in `ShortCircuitStateWarningTest` printed
   nothing on the rebuild (the missing sibling rule file already repeated).
+- **A flat `src/` source root is the main source set (#1068).** A source root that is itself
+  `src/`, packages directly below it (Eclipse's flat layout, build-helper `add-source` of
+  `shared/src`), was read as the source set named by its first package segment:
+  `shared/src/com/...` wrote `.vibetags-mod-shared__com`, and a package `test.*`
+  made the round a test round, so with `TESTING.md` opted in its guardrails left `CLAUDE.md`
+  (measured). The source set is now read from the source root, not the package directory, so such
+  a root is `main`. The upgrade needed its own rule: the old `__com` sidecar is not retired by any
+  other, and it kept a deleted annotation's guardrail in `CLAUDE.md` for good (measured). A
+  non-main sidecar is now dropped (`sidecar.prune reason=misread-source-set`) when a sidecar of
+  its region written no earlier records a flat `src/` root.
 - **An incremental round keeps the guardrails of a source root outside the module (#1065).** The
   #1060 fix walked the module directory, so a second root outside it (`../shared/src` from
   build-helper `add-source`, a Gradle `srcDir("../common")`) was still never looked at: a round

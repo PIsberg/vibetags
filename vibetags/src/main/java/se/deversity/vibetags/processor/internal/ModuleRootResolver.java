@@ -72,7 +72,7 @@ public final class ModuleRootResolver {
         for (Element element : sources.roots()) {
             Path file = sources.fileOf(element);
             Path sourceDir = file != null ? file.getParent() : null;
-            if (sourceDir == null) continue;
+            if (file == null || sourceDir == null) continue;
             Path candidate = rootBySourceDir
                 .computeIfAbsent(sourceDir, dir -> Optional.ofNullable(nearestBuildFileAncestor(dir)))
                 .orElse(null);
@@ -81,7 +81,11 @@ public final class ModuleRootResolver {
                 moduleRoot = candidate;
             }
             if (moduleRoot.equals(candidate)) {
-                String sourceSet = sourceSetOf(moduleRoot, sourceDir);
+                // Read from the source root, not the package directory: under a root that is
+                // itself src/ the segment after src/ is the first package segment (#1068).
+                Path sourceRoot = PartialRoundDetector.sourceRootOf(
+                    file, PartialRoundDetector.packageNameOf(sources.elements(), element));
+                String sourceSet = sourceSetOf(moduleRoot, sourceRoot != null ? sourceRoot : sourceDir);
                 if (sourceSet != null) sourceSets.add(sourceSet);
             }
         }
@@ -191,7 +195,10 @@ public final class ModuleRootResolver {
      * its path relative to the module root: {@code src/main/java/...} → {@code "main"},
      * {@code src/test/java/...} → {@code "test"}, {@code src/integrationTest/java/...} →
      * {@code "integrationTest"}. Returns {@code null} for anything that does not follow the
-     * convention (generated sources under {@code target/} or {@code build/}, for instance).
+     * convention (generated sources under {@code target/} or {@code build/}, for instance), and for
+     * a source root that ends in {@code src}: {@code sourceDir} is the source root when the package
+     * is known, so a flat {@code src/} root is read as no source set rather than as its first
+     * package segment.
      */
     static @Nullable String sourceSetOf(Path moduleRoot, Path sourceDir) {
         Path rel;

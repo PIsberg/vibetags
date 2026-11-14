@@ -990,7 +990,75 @@ public final class ModuleSidecar {
             substituteSaved(root, saved, result, resultFiles, writtenAt);
         }
         dropSupersededRegions(result, resultFiles, writtenAt, prune, log);
+        dropMisreadSourceSets(root, result, resultFiles, writtenAt, prune, log);
         return result;
+    }
+
+    /**
+     * Drops a source-set sidecar written under a misread name, and deletes it when {@code prune} is
+     * set.
+     *
+     * <p>Before #1068 a source root that is itself {@code src/}, packages directly below it, had its
+     * source set read from the first package segment: {@code shared/src/com/...} was filed as
+     * {@code shared__com}, {@code shared/src/test/...} as {@code shared__test}. A build after the fix
+     * files the same sources as {@code shared}, and the old sidecar is not retired by any other rule:
+     * its module directory exists, its region is the module's own. Left in place it renders its
+     * guardrails a second time, and, because an emptied source set keeps its last contribution, it
+     * keeps an annotation that was deleted from the source in every generated file for good.
+     *
+     * <p>Such a sidecar is recognised by its sibling, not by its name: a non-main sidecar is retired
+     * when another sidecar of the same module and region, written no earlier, records a source root
+     * whose first {@code src} segment below the module directory is its last. A source root that
+     * is a flat {@code src/} cannot hold a {@code src/<set>/java} tree of a real second source set,
+     * so the pair is only ever the misread one. Freshness decides the direction: a sibling written
+     * earlier, or whose time cannot be read, retires nothing.
+     */
+    private static void dropMisreadSourceSets(Path root, List<ModuleSidecar> sidecars, List<Path> files,
+                                              List<Long> writtenAt, boolean prune, @Nullable Logger log) {
+        boolean[] misread = new boolean[sidecars.size()];
+        boolean any = false;
+        for (int i = 0; i < sidecars.size(); i++) {
+            ModuleSidecar candidate = sidecars.get(i);
+            if (ModuleIdentity.MAIN.equals(PartialRoundDetector.sourceSetOf(candidate))) {
+                continue;
+            }
+            for (int j = 0; j < sidecars.size() && !misread[i]; j++) {
+                ModuleSidecar sibling = sidecars.get(j);
+                long siblingAt = writtenAt.get(j);
+                misread[i] = j != i
+                    && sibling.regionId.equals(candidate.regionId)
+                    && siblingAt != Long.MAX_VALUE
+                    && siblingAt >= writtenAt.get(i)
+                    && recordsAFlatSrcRoot(root, sibling);
+            }
+            any |= misread[i];
+        }
+        if (!any) return;
+        for (int i = sidecars.size() - 1; i >= 0; i--) {
+            if (!misread[i]) continue;
+            logDropped(log, prune, files.get(i), "misread-source-set");
+            if (prune) tryDelete(files.get(i));
+            sidecars.remove(i);
+            files.remove(i);
+            writtenAt.remove(i);
+        }
+    }
+
+    /** True when {@code sidecar} records a source root below its module whose first {@code src} segment is its last. */
+    private static boolean recordsAFlatSrcRoot(Path root, ModuleSidecar sidecar) {
+        Path dir = PartialRoundDetector.moduleDirOf(root, sidecar);
+        if (dir == null) return false;
+        for (Path sourceRoot : PartialRoundDetector.recordedSourceRoots(root, sidecar)) {
+            if (!sourceRoot.startsWith(dir) || sourceRoot.equals(dir)) continue;
+            Path rel = dir.relativize(sourceRoot);
+            for (int k = 0; k < rel.getNameCount(); k++) {
+                if ("src".equals(rel.getName(k).toString())) {
+                    if (k == rel.getNameCount() - 1) return true;
+                    break;
+                }
+            }
+        }
+        return false;
     }
 
     /**
