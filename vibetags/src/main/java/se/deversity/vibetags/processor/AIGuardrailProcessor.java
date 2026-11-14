@@ -600,7 +600,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // Each root element mapped to its file once, for all three readers below (#857).
             RoundSources sources = RoundSources.of(processingEnv, roundEnv);
             if (moduleIdentity == null) {
-                moduleIdentity = ModuleRootResolver.fromRound(sources);
+                // A source root outside the module directory has no build file naming its module;
+                // the module's sidecar recorded it, and that decides (#1065).
+                moduleIdentity = ModuleRootResolver.withRecordedOwner(
+                    ModuleRootResolver.fromRound(sources), sources, root);
                 // Set on every attempt, not only a successful one, so a reused processor whose
                 // identity did not resolve this time cannot keep the last compilation's answer.
                 collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());

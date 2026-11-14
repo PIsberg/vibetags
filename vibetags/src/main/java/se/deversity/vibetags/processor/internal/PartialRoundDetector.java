@@ -256,29 +256,39 @@ public final class PartialRoundDetector {
      * A recorded value that is absolute or is not a path is skipped: the processor never writes one.
      */
     private static void addRecordedSourceRoots(Path root, ModuleSidecar sidecar, Set<Path> dirs) {
-        Path base = root.toAbsolutePath().normalize();
         Set<Path> covered = Set.copyOf(dirs);
+        for (Path sourceRoot : recordedSourceRoots(root, sidecar)) {
+            if (covered.stream().noneMatch(sourceRoot::startsWith) && Files.isDirectory(sourceRoot)) {
+                dirs.add(sourceRoot);
+            }
+        }
+    }
+
+    /**
+     * The source roots {@code sidecar} recorded, resolved against {@code root}. A recorded value that
+     * is absolute or is not a path is skipped: the processor never writes one.
+     */
+    static List<Path> recordedSourceRoots(Path root, ModuleSidecar sidecar) {
+        Path base = root.toAbsolutePath().normalize();
+        List<Path> roots = new ArrayList<>();
         for (String recorded : sidecar.getSourceRoots()) {
             try {
                 Path relative = Path.of(recorded);
-                if (relative.isAbsolute() || relative.getRoot() != null) {
-                    continue;
-                }
-                Path sourceRoot = base.resolve(relative).normalize();
-                if (covered.stream().noneMatch(sourceRoot::startsWith) && Files.isDirectory(sourceRoot)) {
-                    dirs.add(sourceRoot);
+                if (!relative.isAbsolute() && relative.getRoot() == null) {
+                    roots.add(base.resolve(relative).normalize());
                 }
             } catch (RuntimeException notAPath) {
-                // A hand-edited or foreign value: nothing to walk.
+                // A hand-edited or foreign value: nothing to resolve.
             }
         }
+        return roots;
     }
 
     /**
      * The source set {@code sidecar} records: {@code main} when its id is its region's, otherwise
      * what follows the separator ({@code core__test} in region {@code core} is {@code test}).
      */
-    private static String sourceSetOf(ModuleSidecar sidecar) {
+    static String sourceSetOf(ModuleSidecar sidecar) {
         String prefix = sidecar.getRegionId() + ModuleSidecar.SOURCE_SET_SEPARATOR;
         String id = sidecar.getModuleId();
         return id.startsWith(prefix) ? id.substring(prefix.length()) : ModuleIdentity.MAIN;
@@ -292,7 +302,8 @@ public final class PartialRoundDetector {
      * source kept out of any module's build then refused all of that module's rounds. A directory
      * strictly above the compiling module's own root is a parent module, not a record of this one.
      * The module's own directory, and any below it, still count, which is what keeps the drifted
-     * identity case in the class comment covered.
+     * identity case in the class comment covered. So does a source root the sidecar recorded: a round
+     * compiled from a root outside the module directory alone is that module's round too (#1065).
      */
     private boolean describesThisCompilation(Path root, ModuleSidecar sidecar, Path moduleRoot) {
         Path moduleDir = moduleDirOf(root, sidecar);
@@ -303,8 +314,9 @@ public final class PartialRoundDetector {
         if (module.startsWith(moduleDir) && !module.equals(moduleDir)) {
             return false;
         }
+        List<Path> recorded = recordedSourceRoots(root, sidecar);
         for (Path sourceRoot : sourceRoots) {
-            if (sourceRoot.startsWith(moduleDir)) {
+            if (sourceRoot.startsWith(moduleDir) || recorded.stream().anyMatch(sourceRoot::startsWith)) {
                 return true;
             }
         }
@@ -312,7 +324,7 @@ public final class PartialRoundDetector {
     }
 
     /** The directory {@code sidecar} records its module at, or {@code null} when that is no path. */
-    private static @Nullable Path moduleDirOf(Path root, ModuleSidecar sidecar) {
+    static @Nullable Path moduleDirOf(Path root, ModuleSidecar sidecar) {
         String modulePath = sidecar.getModulePath();
         try {
             return ("_root_".equals(modulePath) || modulePath.isEmpty())

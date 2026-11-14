@@ -244,11 +244,104 @@ class PartialRoundGuardrailLossTest {
     }
 
     /**
+     * The other direction of #1065: a round compiled from the outside root alone. No build file
+     * above {@code shared/src} names app, so the round resolved to the reactor root (or, with no
+     * parent pom, to a content hash), read the directory after {@code src/} as its source set, and
+     * was never measured against app's sidecar. It rewrote CLAUDE.md from Beta alone and Alpha's
+     * guardrail left it, with no warning when a parent pom was there. App's sidecar recorded
+     * {@code shared/src} as one of its roots, which is what now files the round under app.
+     */
+    @org.junit.jupiter.params.ParameterizedTest(name = "parent pom: {0}")
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void aRoundCompiledFromTheOutsideRootAloneKeepsTheModulesOtherGuardrails(boolean parentPom,
+                                                                              @TempDir Path root)
+            throws Exception {
+        Path[] sources = writeModuleWithAnOutsideRoot(root);
+        if (parentPom) {
+            Files.writeString(root.resolve("pom.xml"),
+                "<project><artifactId>parent</artifactId></project>", StandardCharsets.UTF_8);
+        }
+        compileAll(root, sources);
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Alpha"),
+            "precondition: the full round indexed Alpha in CLAUDE.md");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        List<String> warnings = compileSubsetCapturingWarnings(root, sources[1]);
+
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Alpha"),
+            "Alpha is still annotated in app/src/main/java; a round compiled from shared/src alone "
+                + "must not drop it from CLAUDE.md");
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("did not compile every annotated source")
+                && w.contains("Alpha.java")),
+            "the round must say it was partial and name the unread source: " + warnings);
+    }
+
+    /**
+     * The limits of that rule. A recorded root with a build file of its own is its own module, even
+     * when app compiles it too: a round of {@code shared} alone is filed under {@code shared}, not
+     * refused as a partial round of app. {@code shared/java} is the case that reaches the rule; a
+     * root under {@code shared/src} is settled by the build file before any sidecar is read.
+     */
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"shared/src", "shared/java"})
+    void aRecordedRootWithItsOwnBuildFileStaysItsOwnModule(String outsideRoot, @TempDir Path root)
+            throws Exception {
+        Path[] sources = writeModuleWithAnOutsideRoot(root, outsideRoot);
+        Files.writeString(root.resolve("shared/pom.xml"),
+            "<project><artifactId>shared</artifactId></project>", StandardCharsets.UTF_8);
+        compileAll(root, sources);
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-app")), "precondition: app's round recorded");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        List<String> warnings = compileSubsetCapturingWarnings(root, sources[1]);
+
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("did not compile every annotated source")),
+            "shared's round compiled all of shared: " + warnings);
+        // Any shared sidecar: a root named src/ with packages directly below it is read as source
+        // set "com" today, a separate defect (#1068).
+        try (java.util.stream.Stream<Path> files = Files.list(root)) {
+            assertTrue(files.anyMatch(f -> f.getFileName().toString().startsWith(".vibetags-mod-shared")),
+                "the round belongs to shared, whose pom.xml says so");
+        }
+    }
+
+    /** And a root two modules recorded is neither one's to claim. */
+    @Test
+    void aRootTwoModulesRecordedIsClaimedByNeither(@TempDir Path root) throws Exception {
+        Path[] sources = writeModuleWithAnOutsideRoot(root);
+        Files.writeString(root.resolve("pom.xml"),
+            "<project><artifactId>parent</artifactId></project>", StandardCharsets.UTF_8);
+        Files.createDirectories(root.resolve("lib"));
+        Files.writeString(root.resolve("lib/pom.xml"),
+            "<project><artifactId>lib</artifactId></project>", StandardCharsets.UTF_8);
+        Path gamma = writeUnder(root, "lib/src/main/java", "Gamma", "@AIContext(focus = " + Q + "gamma-routing" + Q + ")");
+        compileAll(root, sources);
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        compileAll(root, gamma, sources[1]);
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-lib")), "precondition: lib's round recorded");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        List<String> warnings = compileSubsetCapturingWarnings(root, sources[1]);
+
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("did not compile every annotated source")),
+            "app and lib both compile shared/src; the round must not be filed under either: " + warnings);
+    }
+
+    /**
      * Module {@code app} (its own {@code pom.xml}) with Alpha in {@code app/src/main/java} and Beta
      * in {@code shared/src}, a sibling directory with no build file of its own. Alpha comes first,
      * so the round resolves to {@code app}.
      */
     private static Path[] writeModuleWithAnOutsideRoot(Path root) throws IOException {
+        return writeModuleWithAnOutsideRoot(root, "shared/src");
+    }
+
+    /** As above, with Beta under {@code outsideRoot}. */
+    private static Path[] writeModuleWithAnOutsideRoot(Path root, String outsideRoot) throws IOException {
         Files.createDirectories(root.resolve(".claude/rules"));
         Files.createFile(root.resolve("CLAUDE.md"));
         Files.createDirectories(root.resolve("app"));
@@ -256,7 +349,7 @@ class PartialRoundGuardrailLossTest {
             "<project><artifactId>app</artifactId></project>", StandardCharsets.UTF_8);
         return new Path[]{
             writeUnder(root, "app/src/main/java", "Alpha", "@AIContext(focus = " + Q + "alpha-routing" + Q + ")"),
-            writeUnder(root, "shared/src", "Beta", "@AIContext(focus = " + Q + "beta-routing" + Q + ")"),
+            writeUnder(root, outsideRoot, "Beta", "@AIContext(focus = " + Q + "beta-routing" + Q + ")"),
         };
     }
 

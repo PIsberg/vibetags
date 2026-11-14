@@ -5,6 +5,7 @@ import org.jspecify.annotations.Nullable;
 import javax.lang.model.element.Element;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +91,82 @@ public final class ModuleRootResolver {
         boolean mixed = sourceSets.contains(ModuleIdentity.MAIN)
             && sourceSets.stream().anyMatch(ModuleIdentity::isTestSourceSetName);
         return new ModuleIdentity(moduleRoot, pickSourceSet(sourceSets), mixed);
+    }
+
+    /**
+     * {@code resolved}, or the module whose sidecar recorded the source roots this round's files sit
+     * in, when that module is not what the build files say.
+     *
+     * <p>A source root outside the module directory ({@code ../shared/src} added by build-helper, a
+     * Gradle {@code srcDir("../common")}) has no build file of its own above it, so a round compiled
+     * from it alone resolved to the reactor root, or to nothing, and was never measured against its
+     * module's sidecar: it rewrote the module's region from those files alone (#1065). The sidecar of
+     * the module's last full round records its roots ({@link ModuleSidecar#getSourceRoots()}), which
+     * is the only record of that ownership.
+     *
+     * <p>Returns the recorded owner only when it is unambiguous: every file of the round lies in that
+     * module's directory or in a root it recorded, at least one lies outside the directory, no other
+     * sidecar claims them as well, and the build files do not name a module of their own below the
+     * owner (a {@code shared/pom.xml} keeps {@code shared} its own module). A round whose files all
+     * sit under {@code <resolved>/src} returns {@code resolved} without reading a sidecar, so a
+     * conventional layout pays nothing.
+     */
+    public static @Nullable ModuleIdentity withRecordedOwner(@Nullable ModuleIdentity resolved,
+                                                             RoundSources sources, Path root) {
+        List<Path> files = new ArrayList<>();
+        for (Element element : sources.roots()) {
+            Path file = sources.fileOf(element);
+            if (file != null) {
+                files.add(file.toAbsolutePath().normalize());
+            }
+        }
+        if (files.isEmpty()) {
+            return resolved;
+        }
+        Path resolvedRoot = resolved == null ? null : resolved.root().toAbsolutePath().normalize();
+        if (resolvedRoot != null) {
+            Path conventional = resolvedRoot.resolve(SRC_DIR);
+            if (files.stream().allMatch(f -> f.startsWith(conventional))) {
+                return resolved;
+            }
+        }
+        ModuleIdentity owner = null;
+        try {
+            for (ModuleSidecar sidecar : ModuleSidecar.peekAll(root)) {
+                ModuleIdentity candidate = claimant(sidecar, root, files);
+                if (candidate == null) {
+                    continue;
+                }
+                if (owner != null && !owner.equals(candidate)) {
+                    return resolved; // two modules record these roots: not ours to choose
+                }
+                owner = candidate;
+            }
+        } catch (RuntimeException unreadable) {
+            return resolved; // a sidecar that cannot be read is no evidence of ownership
+        }
+        if (owner == null || (resolvedRoot != null && !owner.root().startsWith(resolvedRoot))) {
+            return resolved;
+        }
+        return owner;
+    }
+
+    /** The identity {@code sidecar} records, when it claims every one of {@code files} and records a root outside its directory that holds one. */
+    private static @Nullable ModuleIdentity claimant(ModuleSidecar sidecar, Path root, List<Path> files) {
+        Path dir = PartialRoundDetector.moduleDirOf(root, sidecar);
+        if (dir == null || sidecar.getSourceRoots().isEmpty()) {
+            return null;
+        }
+        List<Path> recorded = PartialRoundDetector.recordedSourceRoots(root, sidecar);
+        boolean outside = false;
+        for (Path file : files) {
+            boolean inRecordedRoot = recorded.stream().anyMatch(file::startsWith);
+            if (!file.startsWith(dir) && !inRecordedRoot) {
+                return null;
+            }
+            outside |= !file.startsWith(dir) && inRecordedRoot;
+        }
+        return outside ? new ModuleIdentity(dir, PartialRoundDetector.sourceSetOf(sidecar)) : null;
     }
 
     /**

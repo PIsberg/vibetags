@@ -106,8 +106,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   compiled from in its sidecar, under a new reserved `~roots` key that older readers skip, and the
   guard walks those roots for the module's own missing elements. Verified failing first:
   `PartialRoundGuardrailLossTest` dropped Beta from `CLAUDE.md` before the change; a file deleted
-  from the outside root is still retired. A sidecar written before this records no roots, so the
-  protection starts with the first full build after upgrading.
+  from the outside root is still retired. The other direction, a round compiled from
+  `shared/src` alone, resolved to the reactor root (or with no parent pom to a content hash), so it
+  was never measured against app's sidecar and rewrote `CLAUDE.md` without Alpha, silently when a
+  parent pom was there. The recorded roots now file that round under app
+  (`ModuleRootResolver.withRecordedOwner`), unless the root has a build file of its own or two
+  modules recorded it, and the guard refuses it. Verified failing first in both layouts; each of the
+  two exceptions went red when its check was removed. A sidecar written before this records no
+  roots, so the protection starts with the first full build after upgrading.
 - **An incremental round no longer deletes the guardrails of a second source root (#1060).** A
   source set with two roots (`src/main/java` plus a `src/main/extra` added by build-helper or a
   Gradle `srcDir`), compiled incrementally from files of the first root only: the partial-round
