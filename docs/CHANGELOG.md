@@ -89,6 +89,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   after the short-circuit and on the early exit too, read from the sidecars; the locked method is
   unchanged. Verified failing first: 5 of the 6 cases in `ShortCircuitStateWarningTest` printed
   nothing on the rebuild (the missing sibling rule file already repeated).
+- **An incremental round keeps the guardrails of a source root outside the module (#1065).** The
+  #1060 fix walked the module directory, so a second root outside it (`../shared/src` from
+  build-helper `add-source`, a Gradle `srcDir("../common")`) was still never looked at: a round
+  compiled from `app/src/main/java` alone read `shared/src`'s elements as deleted and rewrote
+  `CLAUDE.md` and app's sidecar without them, exit 0. (The root rule file survived, since a module
+  round never sweeps the shared root, #383.) Each full round now records the source roots it
+  compiled from in its sidecar, under a new reserved `~roots` key that older readers skip, and the
+  guard walks those roots for the module's own missing elements. Verified failing first:
+  `PartialRoundGuardrailLossTest` dropped Beta from `CLAUDE.md` before the change; a file deleted
+  from the outside root is still retired. A sidecar written before this records no roots, so the
+  protection starts with the first full build after upgrading.
 - **An incremental round no longer deletes the guardrails of a second source root (#1060).** A
   source set with two roots (`src/main/java` plus a `src/main/extra` added by build-helper or a
   Gradle `srcDir`), compiled incrementally from files of the first root only: the partial-round

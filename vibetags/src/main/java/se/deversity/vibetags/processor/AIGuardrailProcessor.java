@@ -2634,11 +2634,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * record what it would have written without {@code TESTING.md}. The name and parameters are
      * unchanged on purpose: one of the two call sites is inside the locked {@code generateFiles()},
      * and it has to stay byte-identical.
+     *
+     * <p>The source roots this round compiled from go in here for the same reason. The next round's
+     * partial-round guard walks them, which is the only way it reaches a root outside the module
+     * directory (#1065). Not a body, but a sidecar field recorded on both paths alike, and this is
+     * the one place both paths pass through without editing the locked method.
      */
     private void populateSidecarBodies(ModuleSidecar sidecar,
                                        Map<String, String> contentByService) {
         contentByService.forEach(sidecar::putBody);
         putUnroutedBodies(sidecar);
+        sidecar.setSourceRoots(sourceLedger.sourceRootsRelativeTo(root));
     }
 
     /**

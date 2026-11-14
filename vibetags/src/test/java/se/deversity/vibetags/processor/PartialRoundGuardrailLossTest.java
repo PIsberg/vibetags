@@ -194,6 +194,73 @@ class PartialRoundGuardrailLossTest {
     }
 
     /**
+     * The same source set with its second root outside the module directory: build-helper's
+     * {@code add-source} pointing at {@code ../shared/src}, or a Gradle {@code srcDir("../common")}.
+     * The walk of the module directory added for #1060 never reaches it, so a round compiled from
+     * the module's own root read Beta as deleted and rewrote CLAUDE.md and app's sidecar without it
+     * (#1065). The root rule file is not the measure here: a module round never sweeps the shared
+     * root (#383), so it survives either way.
+     */
+    @Test
+    void aRoundThatCompilesOneRootKeepsTheGuardrailsOfARootOutsideTheModule(@TempDir Path root)
+            throws Exception {
+        Path[] sources = writeModuleWithAnOutsideRoot(root);
+        compileAll(root, sources);
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Beta"),
+            "precondition: the full round indexed Beta in CLAUDE.md");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        List<String> warnings = compileSubsetCapturingWarnings(root, sources[0]);
+
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Beta"),
+            "Beta is still annotated in shared/src, a root of app's source set outside app/; the round "
+                + "compiled nothing from it and must not drop it from CLAUDE.md");
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("did not compile every annotated source")
+                && w.contains("Beta.java")),
+            "the round must say it was partial and name the unread source: " + warnings);
+    }
+
+    /**
+     * The control: with Beta's file deleted from the outside root nothing explains its missing
+     * element, so the round is complete and CLAUDE.md stops naming Beta.
+     */
+    @Test
+    void aSourceDeletedFromARootOutsideTheModuleIsStillRetired(@TempDir Path root) throws Exception {
+        Path[] sources = writeModuleWithAnOutsideRoot(root);
+        compileAll(root, sources);
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Beta"),
+            "precondition: the full round indexed Beta in CLAUDE.md");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        Files.delete(sources[1]);
+        List<String> warnings = compileSubsetCapturingWarnings(root, sources[0]);
+
+        assertFalse(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Beta"),
+            "Beta's source is gone from disk; CLAUDE.md must stop naming it");
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("did not compile every annotated source")),
+            "a genuine deletion is not a partial round: " + warnings);
+    }
+
+    /**
+     * Module {@code app} (its own {@code pom.xml}) with Alpha in {@code app/src/main/java} and Beta
+     * in {@code shared/src}, a sibling directory with no build file of its own. Alpha comes first,
+     * so the round resolves to {@code app}.
+     */
+    private static Path[] writeModuleWithAnOutsideRoot(Path root) throws IOException {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve("app"));
+        Files.writeString(root.resolve("app/pom.xml"),
+            "<project><artifactId>app</artifactId></project>", StandardCharsets.UTF_8);
+        return new Path[]{
+            writeUnder(root, "app/src/main/java", "Alpha", "@AIContext(focus = " + Q + "alpha-routing" + Q + ")"),
+            writeUnder(root, "shared/src", "Beta", "@AIContext(focus = " + Q + "beta-routing" + Q + ")"),
+        };
+    }
+
+    /**
      * Two modules that share one directory, as in a Gradle build configured entirely from the root
      * build file: neither {@code core/} nor {@code app/} has a build file, so both resolve to the
      * root and only {@code -Avibetags.module} tells them apart. Each module's sidecar then "describes"

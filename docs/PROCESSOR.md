@@ -568,8 +568,12 @@ recorded, for an uncompiled file that names the package and declares that elemen
 source set (`src/main/extra`, added by build-helper or a Gradle `srcDir`) that the round compiled
 nothing from is found that way (#1060). Another module's sidecar never starts this walk: modules
 configured from one root build file share a directory, and the walk would find each other's
-sources. Build output, generated-source trees and hidden directories are not walked, and a source
-root outside the module directory is still not seen (#1065). Either fact alone is ambiguous —
+sources. Build output, generated-source trees and hidden directories are not walked. The same
+search then covers the source roots that sidecar recorded: each full round stores the roots it
+compiled from (relative to the VibeTags root, under the reserved `~roots` key), which is what
+reaches a second root outside the module directory, `../shared/src` from build-helper or a Gradle
+`srcDir("../common")` (#1065). A sidecar written before that key existed records none, so such a
+root is seen from the first full round after upgrading. Either fact alone is ambiguous —
 the first is also what deleting an annotation looks like, the second is also what a source
 excluded from compilation looks like — and together they are not. When both hold, nothing is
 written, nothing is swept, no fingerprint is recorded, and a `WARNING` names the sources the round

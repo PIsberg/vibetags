@@ -54,7 +54,9 @@ import java.util.stream.Stream;
  *       {@code .java} file that names the package and declares the very type a missing
  *       element belongs to: a second source root of the same source set ({@code src/main/extra},
  *       added by build-helper or a Gradle {@code srcDir}) that the round compiled nothing from is
- *       otherwise never looked at, and its elements read as deleted (#1060).</li>
+ *       otherwise never looked at, and its elements read as deleted (#1060). The same search
+ *       runs over the source roots that sidecar recorded, which is what reaches a second root
+ *       outside the module directory ({@code ../shared/src}, #1065).</li>
  * </ol>
  *
  * <p>Each condition alone has a false positive the other removes. A source excluded from
@@ -65,8 +67,9 @@ import java.util.stream.Stream;
  * rules. That last case is the one worth protecting: a guard that refused every removal would
  * trade silent deletion for guardrails that can never be retired.
  *
- * <p>Nothing is persisted and no format changes: (1) reads sidecars that already record element
- * ids, and (2) reads the working tree. A build with in-memory sources (a JSR 199 string, most of
+ * <p>(1) reads sidecars that already record element ids, and (2) reads the working tree plus one
+ * thing persisted for it: the source roots a full round compiled from, which the processor stores
+ * in the sidecar ({@link #sourceRootsRelativeTo(Path)}, a reserved key older readers skip). A build with in-memory sources (a JSR 199 string, most of
  * this repository's own tests) resolves no source root at all and is therefore never partial,
  * which is also what keeps the cost at zero on the healthy path — the walk in (2) only runs once
  * (1) has already found something missing.
@@ -136,6 +139,32 @@ public final class PartialRoundDetector {
     }
 
     /**
+     * The source roots this round compiled from, relative to {@code root} with forward slashes and
+     * sorted, so the sidecar recording them does not churn. Generated-source trees are left out
+     * for the reason {@link #isGeneratedTree(Path, Path)} gives, and so is a root that has no path
+     * relative to {@code root} (another drive): an absolute path would tie a committed sidecar to
+     * one machine.
+     */
+    public List<String> sourceRootsRelativeTo(Path root) {
+        Path base = root.toAbsolutePath().normalize();
+        List<String> relative = new ArrayList<>();
+        for (Path sourceRoot : sourceRoots) {
+            if (isGeneratedTree(root, sourceRoot)) {
+                continue;
+            }
+            try {
+                String rel = base.relativize(sourceRoot.toAbsolutePath().normalize()).toString()
+                    .replace(java.io.File.separatorChar, '/');
+                relative.add(rel.isEmpty() ? "." : rel);
+            } catch (IllegalArgumentException noRelativePath) {
+                // Another drive or file system: nothing portable to record.
+            }
+        }
+        relative.sort(null);
+        return relative;
+    }
+
+    /**
      * The annotated sources this compilation never read, or empty when this round saw everything
      * its module has — which includes every build that compiles from memory, and every build whose
      * module has no record to be measured against yet.
@@ -153,6 +182,8 @@ public final class PartialRoundDetector {
         if (sourceRoots.isEmpty()) {
             return List.of();
         }
+        // The module directory of this compilation's own sidecar, then the source roots it
+        // recorded: the directories the walk for its missing elements covers.
         Set<Path> recordingDirs = new LinkedHashSet<>();
         Set<String> ownMissing = new LinkedHashSet<>();
         Set<String> missing = missingRecordedElements(root, elementIdsSeen, sourceSet, moduleRoot, moduleId,
@@ -188,7 +219,9 @@ public final class PartialRoundDetector {
      * may send the walk into the whole module directory. Containment is too loose for that walk.
      * Two modules configured from one root build file share a directory, each one's sidecar
      * contains the other's sources, and walking it found the other module's files and refused
-     * every round of the second module as partial (examples/gradle-shared-buildfile).
+     * every round of the second module as partial (examples/gradle-shared-buildfile). The source
+     * roots that sidecar recorded join its directory in {@code recordingDirs}; they are the same
+     * module's own, so the same reasoning holds for them (#1065).
      */
     private Set<String> missingRecordedElements(Path root, Set<String> elementIdsSeen, String sourceSet,
                                                 Path moduleRoot, String moduleId, Set<Path> recordingDirs,
@@ -210,8 +243,35 @@ public final class PartialRoundDetector {
                     }
                 }
             }
+            if (dir != null && !ownMissing.isEmpty()) {
+                addRecordedSourceRoots(root, sidecar, recordingDirs);
+            }
         }
         return missing;
+    }
+
+    /**
+     * Adds the source roots {@code sidecar} recorded to {@code dirs}, resolved against {@code root},
+     * less any already inside a directory in {@code dirs} (the walk of that directory covers it).
+     * A recorded value that is absolute or is not a path is skipped: the processor never writes one.
+     */
+    private static void addRecordedSourceRoots(Path root, ModuleSidecar sidecar, Set<Path> dirs) {
+        Path base = root.toAbsolutePath().normalize();
+        Set<Path> covered = Set.copyOf(dirs);
+        for (String recorded : sidecar.getSourceRoots()) {
+            try {
+                Path relative = Path.of(recorded);
+                if (relative.isAbsolute() || relative.getRoot() != null) {
+                    continue;
+                }
+                Path sourceRoot = base.resolve(relative).normalize();
+                if (covered.stream().noneMatch(sourceRoot::startsWith) && Files.isDirectory(sourceRoot)) {
+                    dirs.add(sourceRoot);
+                }
+            } catch (RuntimeException notAPath) {
+                // A hand-edited or foreign value: nothing to walk.
+            }
+        }
     }
 
     /**
@@ -309,7 +369,8 @@ public final class PartialRoundDetector {
      * this source set recorded is evidence about it. A deleted file is not on disk, and a file whose
      * annotation was removed was compiled, so neither makes a genuine removal partial. Build output,
      * generated-source trees and hidden directories are not walked. A root outside the module
-     * directory is still not seen.
+     * directory is reached through the source roots the sidecar recorded (#1065); one a sidecar
+     * written before that does not record is still not seen.
      */
     private List<Path> unreadSourcesOfMissingElements(Path root, Set<Path> recordingDirs, Set<String> missing) {
         Set<String> tokens = new HashSet<>();

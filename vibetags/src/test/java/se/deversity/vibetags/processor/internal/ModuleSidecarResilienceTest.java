@@ -305,6 +305,43 @@ class ModuleSidecarResilienceTest {
             "an unrecognised comment key must not become a body, and must not stop the parse");
     }
 
+    /**
+     * The source roots a round compiled from survive the file, with forward slashes whichever
+     * system wrote them, and are never read back as a service body: the partial-round guard walks
+     * them to reach a root outside the module directory (#1065), and a body would be rendered into
+     * the aggregate.
+     */
+    @Test
+    void theSourceRootsRoundTripThroughTheFile(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        ModuleSidecar saved = new ModuleSidecar("app", "app");
+        saved.putBody("claude", "body");
+        saved.setSourceRoots(List.of("app/src/main/java", "..\\shared", "", "shared/src"));
+        saved.save(root);
+
+        ModuleSidecar loaded = ModuleSidecar.load(root.resolve(".vibetags-mod-app"));
+        assertNotNull(loaded);
+        assertEquals(List.of("app/src/main/java", "../shared", "shared/src"), List.copyOf(loaded.getSourceRoots()));
+        assertEquals(java.util.Set.of("claude"), loaded.getBodies().keySet(),
+            "the recorded roots must not come back as a body");
+    }
+
+    /** A sidecar written before #1065 records no roots and still loads, with none. */
+    @Test
+    void aSidecarWithoutSourceRootsLoadsWithNone(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core"));
+        Files.writeString(root.resolve(".vibetags-mod-core"),
+            "# version=3\nmoduleId=core\nmodulePath=core\nregionId=core\n"
+                + "claude=" + java.util.Base64.getEncoder().encodeToString(
+                    "body".getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                + "\n# end\n");
+
+        ModuleSidecar loaded = ModuleSidecar.load(root.resolve(".vibetags-mod-core"));
+        assertNotNull(loaded);
+        assertTrue(loaded.getSourceRoots().isEmpty());
+        assertEquals("body", loaded.getBodies().get("claude"));
+    }
+
     // ---------------------------------------------------------------- the pre-trailer format
 
     /**
