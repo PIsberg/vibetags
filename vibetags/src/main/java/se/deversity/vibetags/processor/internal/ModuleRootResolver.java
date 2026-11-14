@@ -110,6 +110,12 @@ public final class ModuleRootResolver {
      * owner (a {@code shared/pom.xml} keeps {@code shared} its own module). A round whose files all
      * sit under {@code <resolved>/src} returns {@code resolved} without reading a sidecar, so a
      * conventional layout pays nothing.
+     *
+     * <p>Only a module below the VibeTags root claims, and only roots inside it. The root module and
+     * a module compiled from outside the root both record an empty module path, and a module
+     * compiled from outside the root records {@code ../src}: letting that record claim moved a
+     * rebuild of unchanged out-of-tree sources from its content-hash id to {@code _root_}, so it
+     * missed the early exit and wrote a second sidecar for the same sources.
      */
     public static @Nullable ModuleIdentity withRecordedOwner(@Nullable ModuleIdentity resolved,
                                                              RoundSources sources, Path root) {
@@ -151,13 +157,24 @@ public final class ModuleRootResolver {
         return owner;
     }
 
-    /** The identity {@code sidecar} records, when it claims every one of {@code files} and records a root outside its directory that holds one. */
+    /**
+     * The identity {@code sidecar} records, when it is a module below the VibeTags root, claims every
+     * one of {@code files}, and records a root inside the VibeTags root but outside its directory
+     * that holds one.
+     */
     private static @Nullable ModuleIdentity claimant(ModuleSidecar sidecar, Path root, List<Path> files) {
-        Path dir = PartialRoundDetector.moduleDirOf(root, sidecar);
-        if (dir == null || sidecar.getSourceRoots().isEmpty()) {
+        String modulePath = sidecar.getModulePath();
+        if (modulePath.isEmpty() || "_root_".equals(modulePath) || sidecar.getSourceRoots().isEmpty()) {
             return null;
         }
-        List<Path> recorded = PartialRoundDetector.recordedSourceRoots(root, sidecar);
+        Path dir = PartialRoundDetector.moduleDirOf(root, sidecar);
+        Path base = root.toAbsolutePath().normalize();
+        if (dir == null || !dir.startsWith(base)) {
+            return null;
+        }
+        List<Path> recorded = PartialRoundDetector.recordedSourceRoots(root, sidecar).stream()
+            .filter(r -> r.startsWith(base))
+            .toList();
         boolean outside = false;
         for (Path file : files) {
             boolean inRecordedRoot = recorded.stream().anyMatch(file::startsWith);

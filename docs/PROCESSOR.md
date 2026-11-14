@@ -578,7 +578,8 @@ alone: no build file above it names the module, so it used to resolve to the rea
 nothing, and rewrite the module's region from those files. A round whose files all lie in one
 module's directory or in roots that module recorded, at least one outside the directory, is now
 filed under that module, unless a build file below it names another module or a second module
-recorded the same root (`ModuleRootResolver.withRecordedOwner`; a conventional `src/` round never
+recorded the same root. Only a module below the VibeTags root claims, and only roots inside it, so
+sources compiled from outside the root keep their content-hash id (`ModuleRootResolver.withRecordedOwner`; a conventional `src/` round never
 reads a sidecar for this). A sidecar written before that key existed records none, so such a root
 is seen from the first full round after upgrading. Either fact alone is ambiguous —
 the first is also what deleting an annotation looks like, the second is also what a source

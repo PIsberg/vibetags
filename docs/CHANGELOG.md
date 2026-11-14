@@ -111,7 +111,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was never measured against app's sidecar and rewrote `CLAUDE.md` without Alpha, silently when a
   parent pom was there. The recorded roots now file that round under app
   (`ModuleRootResolver.withRecordedOwner`), unless the root has a build file of its own or two
-  modules recorded it, and the guard refuses it. Verified failing first in both layouts; each of the
+  modules recorded it, and the guard refuses it. Only a module below the VibeTags root claims, and
+  only roots inside it: the first version let a module compiled from outside the root claim its
+  recorded `../src`, which moved an unchanged rebuild from its content-hash id to `_root_`, missed
+  the early exit and wrote a second sidecar (caught by the load tests' `IncrementalRebuildStressTest`
+  in CI, pinned by `SourceDigestEarlyExitEndToEndTest`). Verified failing first in both layouts; each of the
   two exceptions went red when its check was removed. A sidecar written before this records no
   roots, so the protection starts with the first full build after upgrading.
 - **An incremental round no longer deletes the guardrails of a second source root (#1060).** A

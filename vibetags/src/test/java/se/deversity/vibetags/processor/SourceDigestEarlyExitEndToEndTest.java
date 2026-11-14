@@ -303,6 +303,39 @@ class SourceDigestEarlyExitEndToEndTest {
         return lines.stream().sorted().toList();
     }
 
+    /**
+     * Sources outside the VibeTags root with no build file above them, the load tests' layout. The
+     * first build files the round under a content hash and records {@code ../src} as its source root.
+     * Reading that record back as module ownership (#1065) moved the second build to {@code _root_}:
+     * a new module id, so no early exit, and a second sidecar for the same sources. Only a sidecar
+     * whose module a build file named may claim a recorded root.
+     */
+    @Test
+    void aRebuildOfSourcesNoBuildFileNamesKeepsItsModuleAndTakesTheExit() throws IOException {
+        Path vibetagsRoot = Files.createDirectories(root.resolve("project"));
+        Files.writeString(vibetagsRoot.resolve("CLAUDE.md"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = new ProcessorTestHarness(vibetagsRoot, false);
+        Path source = root.resolve("src/com/example/Ledger.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, LEDGER, StandardCharsets.UTF_8);
+        h.addSourceFile(source);
+        h.compileReturningDiagnostics();
+        List<String> sidecarsBefore = sidecarNames(vibetagsRoot);
+        assertEquals(1, sidecarsBefore.size(), "precondition: one module recorded: " + sidecarsBefore);
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
+
+        assertTrue(notes(second).contains(EARLY_EXIT),
+            "nothing changed, so the rebuild must take the exit:\n" + notes(second));
+        assertEquals(sidecarsBefore, sidecarNames(vibetagsRoot), "the rebuild must not file itself under a new module");
+    }
+
+    private static List<String> sidecarNames(Path dir) throws IOException {
+        try (java.util.stream.Stream<Path> files = Files.list(dir)) {
+            return files.map(f -> f.getFileName().toString()).filter(n -> n.startsWith(".vibetags-mod-")).sorted().toList();
+        }
+    }
+
     @Test
     void aRebuildRepeatsTheUnidentifiedModuleWarning() throws IOException {
         // The same shape for warnIfModuleUnidentifiable: sources outside the VibeTags root beside
