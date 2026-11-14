@@ -990,6 +990,8 @@ fail the build otherwise.
 
 ## 📕 Mentioned in Publications
 
+### Books and talks
+
 **[Vibe Architecture: Designing, Scaling, and Guardrailing Large-Scale Systems in the Age of AI
 Orchestration](https://www.amazon.com/dp/B0HF3MLBB8)** by Peter Isberg (first edition, 2026).
 
@@ -1003,6 +1005,23 @@ on why AI coding agents need context files, and how VibeTags compiles one set of
 into each platform's guardrail file. The deck is a single self-contained HTML file: open it in a
 browser, with no network access or build step needed. GitHub shows the source, so download the file
 or view it through a static HTML preview to present it.
+
+### Articles
+
+**[Green on Someone Else's Code: Corpus Evaluation for Tools and AI Agents](https://www.linkedin.com/pulse/green-someone-elses-code-corpus-evaluation-tools-ai-agents-isberg-letdf/)**
+by Peter Isberg.
+
+How to evaluate a tool or an agent against a corpus of other people's code: borrowing an answer
+key, the control build, why a zero needs a denominator, and what a gate would have to see to fail.
+VibeTags runs the same kind of evaluation on every pull request; [corpus/README.md](corpus/README.md)
+says what it asserts and what it has found.
+
+**[Surviving Vulnerageddon: A Coder's 7-Layer Prepper Guide](https://www.linkedin.com/pulse/surviving-vulnerageddon-coders-7-layer-prepper-guide-peter-isberg-ccrbf/)**
+by Peter Isberg.
+
+Supply-chain hardening for a library in seven layers, starting from an honest dependency
+inventory, GitHub Actions pinned by SHA, and a locked-down CI runner. This repository's SHA pins
+and `.github/workflows/actions.lock` are that practice applied here.
 
 ## 💛 Support VibeTags
 
