@@ -5,6 +5,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/se.deversity.vibetags/vibetags-processor.svg)](https://central.sonatype.com/artifact/se.deversity.vibetags/vibetags-processor)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/PIsberg/vibetags/badge)](https://securityscorecards.dev/viewer/?uri=github.com/PIsberg/vibetags)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13275/badge)](https://www.bestpractices.dev/projects/13275)
+[![Security: A — Skills Directory](https://www.skillsdirectory.com/api/skills/pisberg-vibetags-guardrails-b7e7fa47/badge)](https://www.skillsdirectory.com/skills/pisberg-vibetags-guardrails-b7e7fa47)
 [![Build and Test](https://github.com/PIsberg/vibetags/actions/workflows/build.yml/badge.svg)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
 [![ArchUnit](https://img.shields.io/badge/ArchUnit-passing-brightgreen?logo=apachemaven&logoColor=white)](https://github.com/PIsberg/vibetags/blob/main/vibetags/src/test/java/se/deversity/vibetags/processor/ArchitectureRulesTest.java)
 [![Java 21 | 25 | 26](https://img.shields.io/badge/Java-21%20%7C%2025%20%7C%2026-orange?logo=openjdk)](https://github.com/PIsberg/vibetags/actions/workflows/build.yml)
