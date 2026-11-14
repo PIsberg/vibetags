@@ -77,7 +77,9 @@ for the community standard.
 ### Publications
 
 [`publications/vibetags-deck.html`](publications/vibetags-deck.html) is the 32-slide talk "AI Context
-& VibeTags" (standalone HTML, linked from the README's Mentioned in Publications section).
+& VibeTags" (standalone HTML, linked from the README's Mentioned in Publications section). The same
+section links the Vibe Architecture book and two LinkedIn articles, on corpus evaluation and on
+supply-chain hardening.
 
 ## Not reference material
 
