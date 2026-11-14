@@ -21,6 +21,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The two local actions are locked too (#1031).** `build.yml` referred to
+  `./.github/actions/verify-generated-files` and `./action/locked-files`, which `gh actions-lock`
+  does not follow and warned about on every run, so a remote action either of them gained would
+  have run unlocked. Migrated with `gh actions-lock --no-narrow --migrate-local-actions` to the
+  `uses: $/…` form, which it follows; `--verify` reports all 15 workflows valid. The consumer-facing
+  `PIsberg/vibetags/action/locked-files@<tag>` path does not change.
+- **A documented rule for the Central resolution flake (#1041).** `docs/WORKFLOW.md` names the
+  message, the three runs that hit it (two Maven jobs on `maven-pmd-plugin:3.28.0`, one Gradle job
+  on `pmd-java:7.29.0`, each green on rerun) and the rule: rerun, do not change code. At about one a
+  week a rerun costs less than a resolver change nobody has shown would help.
+- **Dependabot bumps of a mirrored version can arrive green (#1038).** The new
+  `dependabot-mirrors.yml` runs `tools/sync-version-mirrors.py` on Dependabot's pull requests that
+  touch the parent pom and pushes the synced copies with a GitHub App token, so the push starts CI.
+  It needs a GitHub App with Contents write and its `MIRROR_SYNC_APP_ID` and `MIRROR_SYNC_APP_KEY`
+  as Dependabot secrets; until those exist it warns and changes nothing. Seen on #1024, where a
+  `ksp.version` bump failed 5 jobs on `BuildVersionParityTest`. Not yet run against a real bump.
 - **Routine dependency bumps (#1033, #1043-#1051), landed as one PR.** build-helper-maven-plugin
   3.6.2 -> 3.7.0, flatten-maven-plugin 1.8.0 -> 1.9.0, pitest-maven 1.30.1 -> 1.30.2,
   async-test-lib 1.14.0 -> 1.14.1, `@anthropic-ai/claude-code` (evals) 2.1.317 -> 2.1.319, and the
@@ -39,9 +55,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The Inquisitor runs on request, not on every pull request.** `inquisitor.yml` now triggers on
   `workflow_dispatch` (Actions, Inquisitor, Run workflow) with a `base` input, default `main`. A
   push or an opened PR no longer starts a model review. The Copilot review lane is unchanged.
+- **The dropped-processor warning is measured in the Eclipse IDE (#990).** Eclipse 4.24 with
+  VibeTags on the factory path and Lombok 1.18.42 as `-javaagent`, built headless by a small
+  workspace application: no warning, the Lombok getter resolves and the guardrail block is written.
+  Without the agent the warning names `@lombok.Data` and the getter is undefined, so the check ran.
+  The debug log shows the factory-path loader itself sees the agent's jar. USAGE.md no longer says
+  the IDE was not run.
 
 ### Fixed
 
+- **A new annotations release with a changed default is no longer skipped past (#1061).** An
+  attribute left at its default renders the default the `vibetags-annotations` jar on the compile
+  class path declares, and the early exit did not hash that jar: moving to an annotations version
+  whose default differs, the processor unchanged, skipped the rebuild and kept the old text. The
+  source digest now hashes each guardrail annotation's class file as the compile class path supplies
+  it (`Filer.getResource`). Verified failing first with a shadow `AILocked` whose default differs
+  ahead of the real one on the class path.
+- **A changed default on the module path is no longer skipped past either (#1066).** A JPMS consumer that
+  `requires se.deversity.vibetags.annotations` has the jar on the module path, not the class path,
+  so the #1061 lookup found none of the 44 class files, hashed each as absent on every build, and the
+  early exit kept the old default. The digest now falls back to `Filer.getResource` on
+  `MODULE_PATH`; a class-path build hashes exactly the bytes it did. Verified failing first: a
+  consumer with a `module-info.java`, the annotations only on `--module-path`, took the exit
+  (`source digest 0c80fa76979b`) after its jar's `AILocked` default changed; it now regenerates, and
+  a third, unchanged build still takes the exit.
+- **Without the Tree API, a dependency constant no longer goes stale (#1062).** The fix for
+  `@AILocked(reason = Reasons.LEDGER)` with `Reasons` outside the round read the argument trees,
+  which ECJ does not expose, so an ECJ build still recorded its source digest and kept the old value
+  after the constant changed (measured with ECJ 3.46.100: `CLAUDE.md` said `ledger-v1` after the
+  constant became `ledger-v2`). Without the Tree API the round's source text is now read through the
+  file mapping the round already has: a value spelled out as a literal in one of the round's files
+  keeps the early exit, anything else does not. Verified failing first with the Tree API hidden
+  under javac (`SourceDigestWithoutTreeApiTest`), and with the real ECJ: no digest is recorded for the
+  constant and the new value is written, while a literal reason still records one.
+- **A no-op rebuild repeats the warnings about state still on disk (#1063).** A module generating
+  as its own root while a reactor declares it, an unreadable sidecar, an opt-in or a granular
+  opt-out a sibling has not compiled since, a sibling's missing rule file and an element claimed by
+  two regions were warned about only by a build that regenerated: `generateFiles()` raises them
+  after its fingerprint short-circuit, and the source-digest early exit skips it. A `-Werror` build
+  failed once and passed on the rebuild while the condition was still there. They are now raised
+  after the short-circuit and on the early exit too, read from the sidecars; the locked method is
+  unchanged. Verified failing first: 5 of the 6 cases in `ShortCircuitStateWarningTest` printed
+  nothing on the rebuild (the missing sibling rule file already repeated).
+- **An incremental round keeps the guardrails of a source root outside the module (#1065).** The
+  #1060 fix walked the module directory, so a second root outside it (`../shared/src` from
+  build-helper `add-source`, a Gradle `srcDir("../common")`) was still never looked at: a round
+  compiled from `app/src/main/java` alone read `shared/src`'s elements as deleted and rewrote
+  `CLAUDE.md` and app's sidecar without them, exit 0. (The root rule file survived, since a module
+  round never sweeps the shared root, #383.) Each full round now records the source roots it
+  compiled from in its sidecar, under a new reserved `~roots` key that older readers skip, and the
+  guard walks those roots for the module's own missing elements. Verified failing first:
+  `PartialRoundGuardrailLossTest` dropped Beta from `CLAUDE.md` before the change; a file deleted
+  from the outside root is still retired. The other direction, a round compiled from
+  `shared/src` alone, resolved to the reactor root (or with no parent pom to a content hash), so it
+  was never measured against app's sidecar and rewrote `CLAUDE.md` without Alpha, silently when a
+  parent pom was there. The recorded roots now file that round under app
+  (`ModuleRootResolver.withRecordedOwner`), unless the root has a build file of its own or two
+  modules recorded it, and the guard refuses it. Only a module below the VibeTags root claims, and
+  only roots inside it: the first version let a module compiled from outside the root claim its
+  recorded `../src`, which moved an unchanged rebuild from its content-hash id to `_root_`, missed
+  the early exit and wrote a second sidecar (caught by the load tests' `IncrementalRebuildStressTest`
+  in CI, pinned by `SourceDigestEarlyExitEndToEndTest`). Verified failing first in both layouts; each of the
+  two exceptions went red when its check was removed. A sidecar written before this records no
+  roots, so the protection starts with the first full build after upgrading.
+- **An incremental round no longer deletes the guardrails of a second source root (#1060).** A
+  source set with two roots (`src/main/java` plus a `src/main/extra` added by build-helper or a
+  Gradle `srcDir`), compiled incrementally from files of the first root only: the partial-round
+  guard walked only the roots the round compiled from, found no unread source, and took the other
+  root's elements for deletions, so their rule files were swept and the aggregate stopped naming
+  them, exit 0. The guard now also walks the module's directory for an uncompiled source that
+  declares a missing element's own type, and refuses the round when it finds one. Only the elements
+  the compiling module's own sidecar recorded start that walk: two modules configured from one root
+  build file share a directory, and a walk started by the other module's elements found its sources
+  and refused every round of the second (caught by `examples/gradle-shared-buildfile` in CI, now
+  also a `PartialRoundGuardrailLossTest` case). No sidecar field was added. Verified failing first:
+  `PartialRoundGuardrailLossTest` lost Beta's rule file before the change; a file genuinely
+  deleted from the second root still has its rule retired.
 - **A file VibeTags declined to write is retried, and its warning repeats.** A stray
   `VIBETAGS-START` line, a `greptile.json` that does not parse, a `.pr_agent.toml` that cannot be
   merged into and a hand-written whole-file output each got a warning and no write-cache record. The

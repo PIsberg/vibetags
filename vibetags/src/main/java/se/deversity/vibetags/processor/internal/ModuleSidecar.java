@@ -21,6 +21,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -159,6 +160,14 @@ public final class ModuleSidecar {
     /** Key holding the annotated element ids this module+source-set contributed. */
     private static final String KEY_ELEMENT_IDS = "~elements";
     /**
+     * Key holding the source roots this module+source-set compiled from, relative to the VibeTags
+     * root with forward slashes, newline separated. Read only by {@link PartialRoundDetector}: a
+     * root outside the module directory is otherwise never walked, and a round compiled from the
+     * module's own root read that root's elements as deleted (#1065). Reserved like the rest, so an
+     * older reader leaves it unstored.
+     */
+    private static final String KEY_SOURCE_ROOTS = "~roots";
+    /**
      * Key prefix for one granular rule file's contribution from this module+source-set, keyed by
      * stem. Read back by {@link #mergeGranular} so a rule file several modules write ends up with
      * all of their rules instead of the last writer's (issue #365).
@@ -243,6 +252,9 @@ public final class ModuleSidecar {
      * (see {@code DestructiveRewriteWarner}).
      */
     private final Set<String> elementIds = new LinkedHashSet<>();
+
+    /** The source roots behind {@link #KEY_SOURCE_ROOTS}; empty in a sidecar written before #1065. */
+    private final Set<String> sourceRoots = new LinkedHashSet<>();
 
     // --- Lean indexed-root state (transient; NEVER persisted by save(), so the on-disk sidecar
     // format is unchanged). Populated by readAll() only when the reactor root opts into the lean
@@ -357,6 +369,14 @@ public final class ModuleSidecar {
         }
     }
 
+    /** Records the source roots this round compiled from, relative to the VibeTags root. */
+    public void setSourceRoots(Collection<String> roots) {
+        sourceRoots.clear();
+        for (String r : roots) {
+            if (!r.isBlank()) sourceRoots.add(portable(r));
+        }
+    }
+
     public String getModuleId() { return moduleId; }
     public String getModulePath() { return modulePath; }
     public String getRegionId() { return regionId; }
@@ -365,6 +385,7 @@ public final class ModuleSidecar {
     public Map<String, String> getUnroutedBodies() { return Collections.unmodifiableMap(unroutedBodies); }
     public Set<String> getGranularStems() { return Collections.unmodifiableSet(granularStems); }
     public Set<String> getElementIds() { return Collections.unmodifiableSet(elementIds); }
+    public Set<String> getSourceRoots() { return Collections.unmodifiableSet(sourceRoots); }
     public Map<String, GranularContribution> getGranularContributions() {
         return Collections.unmodifiableMap(granularUnits);
     }
@@ -436,6 +457,9 @@ public final class ModuleSidecar {
         }
         if (!elementIds.isEmpty()) {
             appendEncoded(sb, KEY_ELEMENT_IDS, String.join("\n", elementIds));
+        }
+        if (!sourceRoots.isEmpty()) {
+            appendEncoded(sb, KEY_SOURCE_ROOTS, String.join("\n", sourceRoots));
         }
 
         sb.append(TRAILER).append('\n');
@@ -643,6 +667,7 @@ public final class ModuleSidecar {
             Map<String, String> unroutedBodies = new LinkedHashMap<>();
             Set<String> granularStems = new LinkedHashSet<>();
             Set<String> elementIds = new LinkedHashSet<>();
+            Set<String> sourceRoots = new LinkedHashSet<>();
             Map<String, GranularContribution> granularUnits = new LinkedHashMap<>();
             Map<String, GranularContribution> moduleGranularUnits = new LinkedHashMap<>();
             Map<String, String> granularNaming = new LinkedHashMap<>();
@@ -684,6 +709,10 @@ public final class ModuleSidecar {
                 } else if (KEY_ELEMENT_IDS.equals(key)) {
                     for (String id : decode(val).split("\n", -1)) {
                         if (!id.isBlank()) elementIds.add(id);
+                    }
+                } else if (KEY_SOURCE_ROOTS.equals(key)) {
+                    for (String sourceRoot : decode(val).split("\n", -1)) {
+                        if (!sourceRoot.isBlank()) sourceRoots.add(portable(sourceRoot));
                     }
                 } else if (key.startsWith(KEY_MODULE_GRANULAR_NAMING_PREFIX)) {
                     moduleGranularNaming.put(key.substring(KEY_MODULE_GRANULAR_NAMING_PREFIX.length()), decode(val));
@@ -729,6 +758,7 @@ public final class ModuleSidecar {
             s.unroutedBodies.putAll(unroutedBodies);
             s.granularStems.addAll(granularStems);
             s.elementIds.addAll(elementIds);
+            s.sourceRoots.addAll(sourceRoots);
             // Naming lines may precede or follow their contribution; attach once both are in.
             granularNaming.forEach((stem, naming) ->
                 granularUnits.computeIfPresent(stem, (k, c) -> c.withNaming(naming)));
@@ -1781,6 +1811,7 @@ public final class ModuleSidecar {
                 return Kind.ELEMENTS;
             }
             if (KEY_GRANULAR_STEMS.equals(k)
+                    || KEY_SOURCE_ROOTS.equals(k)
                     || k.startsWith(KEY_MODULE_GRANULAR_NAMING_PREFIX)
                     || k.startsWith(KEY_GRANULAR_NAMING_PREFIX)
                     || k.startsWith(KEY_MODULE_GRANULAR_UNIT_PREFIX)

@@ -744,7 +744,7 @@ jobs:
           mvn test -B -Pe2e
 
       - name: Verify Generated AI Config Files
-        uses: ./.github/actions/verify-generated-files
+        uses: $/.github/actions/verify-generated-files
         with:
           working-directory: examples/basic
 
@@ -854,7 +854,7 @@ jobs:
           mvn test -B -Pe2e
 
       - name: Verify Generated AI Config Files
-        uses: ./.github/actions/verify-generated-files
+        uses: $/.github/actions/verify-generated-files
         with:
           working-directory: examples/basic
 
@@ -1626,7 +1626,7 @@ jobs:
           retention-days: 7
 
       - name: Verify Generated AI Config Files
-        uses: ./.github/actions/verify-generated-files
+        uses: $/.github/actions/verify-generated-files
         with:
           working-directory: examples/basic
 
@@ -1820,7 +1820,7 @@ jobs:
         run: python3 -m unittest discover -s action/locked-files -v
 
       - name: Guard @AILocked elements against this PR's diff
-        uses: ./action/locked-files
+        uses: $/action/locked-files
         with:
           working-directory: .
           build-command: mvn -B -q -f vibetags/pom.xml clean test-compile -Pself-annotate

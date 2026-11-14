@@ -299,7 +299,10 @@ processor therefore also decides earlier: on the first round that has sources it
 file the round was given, with everything else output depends on (`SourceDigest`: the processor
 version, every `-A` option, the module and source set, which opt-in files exist and as what kind at
 the root and the module root, whether `AGENTS.md` carries a marker pair, which decides whether it is
-written beside another AI file, the reactor's `.vibetags-mirror` targets, and the content of every `.vibetags-*` configuration file there). When
+written beside another AI file, the reactor's `.vibetags-mirror` targets, the content of every `.vibetags-*` configuration file there,
+and the bytes of each guardrail annotation's class file on the compile class path, or on the
+module path for a JPMS consumer that `requires se.deversity.vibetags.annotations`, because an
+attribute left at its default renders the default that artifact declares (#1061, #1066)). When
 that key matches the one the last clean run of the module recorded (`# source-digest:` under the
 module's `# module:` line in `.vibetags-cache`), and the checks the fingerprint short-circuit makes
 still hold (sidecar stamp, no stale sidecar, every cached output byte-stable), the walk is skipped
@@ -328,10 +331,17 @@ values (`MethodBodyGuardrailScanner.valuesFromOutsideTheRound`). A value is acce
 spelled out (literals, class literals, operators over them), sits in an enum-typed attribute, or
 names an enum constant or a field that a source file of the round declares with a spelled-out
 initializer; anything else leaves the build unrecorded, so the next one walks and the fingerprint,
-which hashes the collected values, decides. Without the Tree API the question cannot be asked and
-the build is recorded as before. The
+which hashes the collected values, decides. Without the Tree API (ECJ, a build tool's decorator the
+reflective unwrap cannot see through) the arguments cannot be read, so the round's source text is
+read instead: a value counts unless it appears spelled out in one of the round's files, a string as
+its Java literal, a number or boolean as a token; enum constants and class literals never count.
+Before #1062 nothing was counted there, and ECJ 3.46.100 kept a dependency constant's old value. The
 warnings `generateFiles()` raises ahead of its own fingerprint short-circuit (a deprecated opt-in, an
-unidentified module) are raised again on the skipped path too (#859). The digest is cleared before every full
+unidentified module) are raised again on the skipped path too (#859), and so are the ones it raises
+after the short-circuit about state still on disk: a detached module, an unreadable sidecar, an
+opt-in or granular opt-out a sibling has not compiled since, a sibling's missing rule file, an
+element claimed by two regions. Those are raised again both after a fingerprint short-circuit and
+on the early exit, from the sidecars, which are peeked and never pruned there (#1063). The digest is cleared before every full
 generation, so one that fails part-way leaves nothing vouching for half-written files. If another
 processor generates sources after a skipped first round, the build leaves every file as it is, clears
 the digest, and the next build walks.
@@ -553,7 +563,25 @@ independent facts hold: a sidecar describing this compilation's own source tree 
 (a main round never consults the test source set's sidecar, whose elements it never produces, and a
 module round never consults a parent module's, such as a reactor root that compiles sources of its
 own) names an element the round did not produce, **and** a `.java` file under a source root the round did compile from
-was not compiled and names `se.deversity.vibetags.annotations`. Either fact alone is ambiguous —
+was not compiled and names `se.deversity.vibetags.annotations`. When no such file is found there,
+the module directory of the compiling module's own sidecar is walked, for the elements that sidecar
+recorded, for an uncompiled file that names the package and declares that element's own type: a second source root of the same
+source set (`src/main/extra`, added by build-helper or a Gradle `srcDir`) that the round compiled
+nothing from is found that way (#1060). Another module's sidecar never starts this walk: modules
+configured from one root build file share a directory, and the walk would find each other's
+sources. Build output, generated-source trees and hidden directories are not walked. The same
+search then covers the source roots that sidecar recorded: each full round stores the roots it
+compiled from (relative to the VibeTags root, under the reserved `~roots` key), which is what
+reaches a second root outside the module directory, `../shared/src` from build-helper or a Gradle
+`srcDir("../common")` (#1065). The same record identifies a round compiled from such a root
+alone: no build file above it names the module, so it used to resolve to the reactor root, or to
+nothing, and rewrite the module's region from those files. A round whose files all lie in one
+module's directory or in roots that module recorded, at least one outside the directory, is now
+filed under that module, unless a build file below it names another module or a second module
+recorded the same root. Only a module below the VibeTags root claims, and only roots inside it, so
+sources compiled from outside the root keep their content-hash id (`ModuleRootResolver.withRecordedOwner`; a conventional `src/` round never
+reads a sidecar for this). A sidecar written before that key existed records none, so such a root
+is seen from the first full round after upgrading. Either fact alone is ambiguous —
 the first is also what deleting an annotation looks like, the second is also what a source
 excluded from compilation looks like — and together they are not. When both hold, nothing is
 written, nothing is swept, no fingerprint is recorded, and a `WARNING` names the sources the round

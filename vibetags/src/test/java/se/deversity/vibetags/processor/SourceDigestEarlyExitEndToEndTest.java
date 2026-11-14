@@ -303,6 +303,39 @@ class SourceDigestEarlyExitEndToEndTest {
         return lines.stream().sorted().toList();
     }
 
+    /**
+     * Sources outside the VibeTags root with no build file above them, the load tests' layout. The
+     * first build files the round under a content hash and records {@code ../src} as its source root.
+     * Reading that record back as module ownership (#1065) moved the second build to {@code _root_}:
+     * a new module id, so no early exit, and a second sidecar for the same sources. Only a sidecar
+     * whose module a build file named may claim a recorded root.
+     */
+    @Test
+    void aRebuildOfSourcesNoBuildFileNamesKeepsItsModuleAndTakesTheExit() throws IOException {
+        Path vibetagsRoot = Files.createDirectories(root.resolve("project"));
+        Files.writeString(vibetagsRoot.resolve("CLAUDE.md"), "", StandardCharsets.UTF_8);
+        ProcessorTestHarness h = new ProcessorTestHarness(vibetagsRoot, false);
+        Path source = root.resolve("src/com/example/Ledger.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, LEDGER, StandardCharsets.UTF_8);
+        h.addSourceFile(source);
+        h.compileReturningDiagnostics();
+        List<String> sidecarsBefore = sidecarNames(vibetagsRoot);
+        assertEquals(1, sidecarsBefore.size(), "precondition: one module recorded: " + sidecarsBefore);
+
+        List<Diagnostic<? extends JavaFileObject>> second = h.compileReturningDiagnostics();
+
+        assertTrue(notes(second).contains(EARLY_EXIT),
+            "nothing changed, so the rebuild must take the exit:\n" + notes(second));
+        assertEquals(sidecarsBefore, sidecarNames(vibetagsRoot), "the rebuild must not file itself under a new module");
+    }
+
+    private static List<String> sidecarNames(Path dir) throws IOException {
+        try (java.util.stream.Stream<Path> files = Files.list(dir)) {
+            return files.map(f -> f.getFileName().toString()).filter(n -> n.startsWith(".vibetags-mod-")).sorted().toList();
+        }
+    }
+
     @Test
     void aRebuildRepeatsTheUnidentifiedModuleWarning() throws IOException {
         // The same shape for warnIfModuleUnidentifiable: sources outside the VibeTags root beside
@@ -572,6 +605,170 @@ class SourceDigestEarlyExitEndToEndTest {
         String second = notes(h.compileReturningDiagnostics());
 
         assertTrue(second.contains(EARLY_EXIT), second);
+    }
+
+    /**
+     * An attribute left at its default takes its value from the annotations jar on the compile
+     * class path, which the digest did not hash (#1061). A build whose annotations artifact moved
+     * to a release with another default, the processor unchanged, was skipped and kept the old
+     * text. Here the move is a shadow {@code AILocked} ahead of the real one on the class path,
+     * identical but for the default.
+     */
+    @Test
+    void aDefaultThatChangesWithTheAnnotationsJarIsNotSkippedPast() throws IOException {
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AILocked;
+
+            @AILocked
+            public class Ledger {
+            }
+            """);
+        h.compileReturningDiagnostics();
+        assertTrue(read("CLAUDE.md").contains("Do not modify this code under any circumstances."),
+            "precondition: the default reason is rendered:\n" + read("CLAUDE.md"));
+
+        Path shadow = root.resolve("shadow-src/se/deversity/vibetags/annotations/AILocked.java");
+        Files.createDirectories(shadow.getParent());
+        Files.writeString(shadow, """
+            package se.deversity.vibetags.annotations;
+
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            import java.lang.annotation.Target;
+
+            @Retention(RetentionPolicy.SOURCE)
+            @Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
+            public @interface AILocked {
+                String reason() default "A default from the next annotations release.";
+            }
+            """, StandardCharsets.UTF_8);
+        Path shadowClasses = Files.createDirectories(root.resolve("shadow-classes"));
+        assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler()
+            .run(null, null, null, "-d", shadowClasses.toString(), shadow.toString()), "the shadow must compile");
+
+        String second = notes(h.compileReturningDiagnostics("-classpath",
+            shadowClasses + java.io.File.pathSeparator + System.getProperty("java.class.path")));
+
+        assertFalse(second.contains(EARLY_EXIT), "the annotations on the class path changed:\n" + second);
+        assertTrue(read("CLAUDE.md").contains("A default from the next annotations release."), read("CLAUDE.md"));
+    }
+
+    /**
+     * The same move as above in a JPMS build, where the annotations are on the module path and not
+     * on the class path (#1066). A lookup of the class path alone found none of them, hashed every
+     * type as absent on both builds, and took the exit past the changed default.
+     */
+    @Test
+    void aDefaultThatChangesWithTheAnnotationsOnTheModulePathIsNotSkippedPast() throws IOException {
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AILocked;
+
+            @AILocked
+            public class Ledger {
+            }
+            """);
+        h.writeSourceFile("src/main/java/module-info.java", """
+            module com.example {
+                requires static se.deversity.vibetags.annotations;
+            }
+            """);
+        Path emptyClassPath = Files.createDirectories(root.resolve("empty-class-path"));
+        Path released = annotationsModuleJar(root.resolve("annotations-released.jar"), null);
+        String first = notes(h.compileReturningDiagnostics(
+            "-classpath", emptyClassPath.toString(), "--module-path", released.toString()));
+        assertTrue(read("CLAUDE.md").contains("Do not modify this code under any circumstances."),
+            "precondition: the default reason is rendered from the module path:\n" + first + read("CLAUDE.md"));
+
+        Path shadow = root.resolve("shadow-src/se/deversity/vibetags/annotations/AILocked.java");
+        Files.createDirectories(shadow.getParent());
+        Files.writeString(shadow, """
+            package se.deversity.vibetags.annotations;
+
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            import java.lang.annotation.Target;
+
+            @Retention(RetentionPolicy.SOURCE)
+            @Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
+            public @interface AILocked {
+                String reason() default "A default from the next annotations release.";
+            }
+            """, StandardCharsets.UTF_8);
+        Path shadowClasses = Files.createDirectories(root.resolve("shadow-classes"));
+        assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler()
+            .run(null, null, null, "-d", shadowClasses.toString(), shadow.toString()), "the shadow must compile");
+        Path next = annotationsModuleJar(root.resolve("annotations-next.jar"),
+            shadowClasses.resolve("se/deversity/vibetags/annotations/AILocked.class"));
+
+        String second = notes(h.compileReturningDiagnostics(
+            "-classpath", emptyClassPath.toString(), "--module-path", next.toString()));
+
+        assertFalse(second.contains(EARLY_EXIT), "the annotations on the module path changed:\n" + second);
+        assertTrue(read("CLAUDE.md").contains("A default from the next annotations release."), read("CLAUDE.md"));
+
+        String third = notes(h.compileReturningDiagnostics(
+            "-classpath", emptyClassPath.toString(), "--module-path", next.toString()));
+        assertTrue(third.contains(EARLY_EXIT), "nothing changed since the second build:\n" + third);
+    }
+
+    /**
+     * A copy of the annotations jar this test runs against, as an automatic module named the way the
+     * real jar's manifest names it, with {@code AILocked.class} replaced by {@code lockedClass} when
+     * that is given. Read from wherever the test class path supplies the annotations, a jar or a
+     * classes directory.
+     */
+    private static Path annotationsModuleJar(Path jar, @org.jspecify.annotations.Nullable Path lockedClass)
+            throws IOException {
+        String pkg = "se/deversity/vibetags/annotations/";
+        java.util.Map<String, byte[]> classes = new java.util.TreeMap<>();
+        Path source;
+        try {
+            source = Path.of(se.deversity.vibetags.annotations.AILocked.class.getProtectionDomain()
+                .getCodeSource().getLocation().toURI());
+        } catch (java.net.URISyntaxException e) {
+            throw new IOException(e);
+        }
+        if (Files.isDirectory(source)) {
+            try (java.util.stream.Stream<Path> files = Files.list(source.resolve(pkg))) {
+                for (Path f : (Iterable<Path>) files::iterator) {
+                    if (f.toString().endsWith(".class")) {
+                        classes.put(pkg + f.getFileName(), Files.readAllBytes(f));
+                    }
+                }
+            }
+        } else {
+            try (java.util.jar.JarFile in = new java.util.jar.JarFile(source.toFile())) {
+                for (java.util.jar.JarEntry e : java.util.Collections.list(in.entries())) {
+                    if (e.getName().startsWith(pkg) && e.getName().endsWith(".class")) {
+                        try (java.io.InputStream body = in.getInputStream(e)) {
+                            classes.put(e.getName(), body.readAllBytes());
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue(classes.containsKey(pkg + "AILocked.class"), "the annotations were found at " + source);
+        if (lockedClass != null) {
+            classes.put(pkg + "AILocked.class", Files.readAllBytes(lockedClass));
+        }
+        java.util.jar.Manifest manifest = new java.util.jar.Manifest();
+        manifest.getMainAttributes().put(java.util.jar.Attributes.Name.MANIFEST_VERSION, "1.0");
+        manifest.getMainAttributes().putValue("Automatic-Module-Name", "se.deversity.vibetags.annotations");
+        try (java.util.jar.JarOutputStream out =
+                 new java.util.jar.JarOutputStream(Files.newOutputStream(jar), manifest)) {
+            for (java.util.Map.Entry<String, byte[]> c : classes.entrySet()) {
+                out.putNextEntry(new java.util.jar.JarEntry(c.getKey()));
+                out.write(c.getValue());
+                out.closeEntry();
+            }
+        }
+        return jar;
     }
 
     /** Writes {@code com.lib.Reasons} with {@code LEDGER = value} under {@code lib-src}. */

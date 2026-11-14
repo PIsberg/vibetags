@@ -12,6 +12,10 @@
 - **Focus**: Every diagnostic generateFiles() raises before its fingerprint short-circuit must also be raised here
 - **Avoid**: Adding one there without a call here: a no-op rebuild that takes the early exit drops it in silence (#859)
 
+### Rules for method warnAboutPartialMerges
+- **Focus**: Every warning hosted here describes state still on disk: warnAboutMergeState raises it again on a rebuild that changes nothing
+- **Avoid**: Hosting a warning about the write just made here: a no-op rebuild would repeat it on every build (#1063)
+
 ## Core Functionality
 - **Sensitivity**: critical
 - **Note**: Runs inside every consumer's javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build

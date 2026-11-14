@@ -29,10 +29,20 @@ import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -62,7 +72,8 @@ import java.util.Set;
  * Reasons.LEDGER)} renders the constant's value, and when {@code Reasons} comes off the classpath
  * or the source path, no byte of any source this round was given changes when that value does. A
  * build that recorded its source digest was then skipped on the next build, and the generated
- * files kept the old text for good. See {@link #valuesFromOutsideTheRound()}.
+ * files kept the old text for good. See {@link #valuesFromOutsideTheRound()}. Without the Tree API
+ * the same question is answered from the round's source text instead (#1062).
  */
 public final class MethodBodyGuardrailScanner {
 
@@ -81,6 +92,12 @@ public final class MethodBodyGuardrailScanner {
 
     private final @Nullable Trees trees;
 
+    /** Whether the text fallback counts values without the Tree API; false in a no-op scanner. */
+    private final boolean countsWithoutTrees;
+
+    /** The source text the fallback has read, by file, so each file is read once per build. */
+    private final Map<Path, String> sourceTexts = new HashMap<>();
+
     /** Warnings this scanner has reported; a build that warned may not be skipped next time (#834). */
     private int reported;
 
@@ -98,13 +115,17 @@ public final class MethodBodyGuardrailScanner {
         return Map.copyOf(types);
     }
 
-    private MethodBodyGuardrailScanner(@Nullable Trees trees) {
+    private MethodBodyGuardrailScanner(@Nullable Trees trees, boolean countsWithoutTrees) {
         this.trees = trees;
+        this.countsWithoutTrees = countsWithoutTrees;
     }
 
-    /** A scanner for {@code env}, or a no-op one when no compiler exposes the Tree API. */
+    /**
+     * A scanner for {@code env}. Without the Tree API it warns about nothing, and answers
+     * {@link #valuesFromOutsideTheRound()} from the source text.
+     */
     public static MethodBodyGuardrailScanner forEnv(ProcessingEnvironment env) {
-        return new MethodBodyGuardrailScanner(SourcePositionResolver.treesFor(env));
+        return new MethodBodyGuardrailScanner(SourcePositionResolver.treesFor(env), true);
     }
 
     /** How many warnings {@link #scanAndWarn} has reported so far. */
@@ -120,24 +141,33 @@ public final class MethodBodyGuardrailScanner {
      * class literal, or those combined), or names a constant that a source file of this round
      * declares with a spelled-out initializer. Everything else is counted, including a constant
      * whose own initializer names another: the rule errs towards a missed exit, never towards a
-     * false "unchanged". Always zero without the Tree API, where the question cannot be asked; a
-     * compiler that does not expose it keeps the exit it had.
+     * false "unchanged". Without the Tree API (ECJ, a build tool's decorator no unwrap sees through)
+     * the argument trees cannot be read, so a value counts unless the round's source text spells it
+     * out: see {@link #countValuesWithoutTrees}. Before #1062 nothing was counted there, and a
+     * dependency constant's old value was kept for good.
      */
     public int valuesFromOutsideTheRound() {
         return outsideValues;
     }
 
-    /** A scanner that never reports — for tests and non-javac environments. */
+    /** A scanner that never reports and counts nothing, for tests. */
     public static MethodBodyGuardrailScanner noop() {
-        return new MethodBodyGuardrailScanner(null);
+        return new MethodBodyGuardrailScanner(null, false);
     }
 
     /**
      * Scans this round's root elements for guardrail annotations on local or anonymous
      * declarations, reporting each as a WARNING anchored at the annotation itself.
+     *
+     * @param sources the round's element-to-file mapping, which the fallback without the Tree API
+     *                reads files through, so no element is mapped to its file twice (#857)
      */
-    public void scanAndWarn(RoundEnvironment roundEnv) {
+    public void scanAndWarn(RoundEnvironment roundEnv, RoundSources sources) {
         if (trees == null) {
+            Elements utils = sources.elements();
+            if (countsWithoutTrees && utils != null) {
+                countValuesWithoutTrees(roundEnv, sources, utils);
+            }
             return;
         }
         Set<? extends Element> roots;
@@ -161,6 +191,161 @@ public final class MethodBodyGuardrailScanner {
                 // Advisory best-effort: an unscannable tree must never affect the build.
             }
         }
+    }
+
+    /**
+     * {@link #valuesFromOutsideTheRound()} without the Tree API (#1062). Each value a guardrail
+     * annotation sets explicitly counts unless the round's source text spells it out: a string as
+     * its Java literal, a number or boolean as a token, in the annotated element's own file or
+     * another file of the round. Enum constants and class literals are names the source carries, so
+     * they never count. A value written any other way (a constant, a concatenation, a text block)
+     * counts, and so does one that cannot be checked because a file cannot be read: the rule errs
+     * towards a missed exit, never towards a false "unchanged". Defaults are not looked at; they
+     * come from the annotation type, not from the round.
+     */
+    private void countValuesWithoutTrees(RoundEnvironment roundEnv, RoundSources sources, Elements utils) {
+        try {
+            Set<? extends Element> roots = roundEnv.getRootElements();
+            for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
+                TypeElement annotation = utils.getTypeElement(type.getCanonicalName());
+                if (annotation == null) {
+                    continue;
+                }
+                for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
+                    for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
+                        if (!annotation.equals(mirror.getAnnotationType().asElement())) {
+                            continue;
+                        }
+                        for (AnnotationValue value : mirror.getElementValues().values()) {
+                            if (!spelledOutInTheRound(value.getValue(), element, roots, sources)) {
+                                outsideValues++;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (RuntimeException unanswerable) {
+            outsideValues++; // a round this cannot read is not one to vouch for
+        }
+    }
+
+    private boolean spelledOutInTheRound(@Nullable Object value, Element element, Set<? extends Element> roots,
+                                         RoundSources sources) {
+        if (value instanceof VariableElement || value instanceof TypeMirror) {
+            return true; // an enum constant or a class literal: the source names it
+        }
+        if (value instanceof java.util.List<?> list) {
+            for (Object item : list) {
+                Object inner = item instanceof AnnotationValue av ? av.getValue() : item;
+                if (!spelledOutInTheRound(inner, element, roots, sources)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (value instanceof String text) {
+            return appearsInTheRound(javaLiteral(text), false, element, roots, sources);
+        }
+        if (value instanceof Boolean || value instanceof Integer || value instanceof Long
+                || value instanceof Short || value instanceof Byte) {
+            return appearsInTheRound(String.valueOf(value), true, element, roots, sources);
+        }
+        return false;
+    }
+
+    private boolean appearsInTheRound(String token, boolean word, Element element, Set<? extends Element> roots,
+                                      RoundSources sources) {
+        if (contains(textOf(topLevel(element), sources), token, word)) {
+            return true;
+        }
+        for (Element root : roots) {
+            if (contains(textOf(root, sources), token, word)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The outermost type around {@code element}, which names its source file; itself when top-level. */
+    private static Element topLevel(Element element) {
+        Element current = element;
+        while (current.getEnclosingElement() != null
+                && (current.getEnclosingElement().getKind().isClass()
+                    || current.getEnclosingElement().getKind().isInterface()
+                    || current.getEnclosingElement().getKind().isExecutable()
+                    || current.getEnclosingElement().getKind().isField())) {
+            current = current.getEnclosingElement();
+        }
+        return current;
+    }
+
+    /**
+     * The text of the file a root element was declared in, or {@code null} for an in-memory source
+     * or an unreadable file. Read as ISO-8859-1, which cannot fail on any byte: every token looked
+     * for is matched against its own encoding of the same characters only where they are ASCII, and
+     * a non-ASCII value that does not match counts, which is the safe direction.
+     */
+    private @Nullable String textOf(Element element, RoundSources sources) {
+        Path file = sources.fileOf(element);
+        if (file == null) {
+            return null;
+        }
+        String cached = sourceTexts.get(file);
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            String text = Files.readString(file, StandardCharsets.ISO_8859_1);
+            sourceTexts.put(file, text);
+            return text;
+        } catch (IOException | RuntimeException unreadable) {
+            return null;
+        }
+    }
+
+    /**
+     * Whether {@code text} contains {@code token}; for a {@code word}, only where it is not part of
+     * a longer identifier or number ({@code 9} is not found in {@code 90}).
+     */
+    static boolean contains(@Nullable String text, String token, boolean word) {
+        if (text == null || token.isEmpty()) {
+            return false;
+        }
+        int from = 0;
+        while (true) {
+            int at = text.indexOf(token, from);
+            if (at < 0) {
+                return false;
+            }
+            int end = at + token.length();
+            boolean before = at == 0 || !Character.isJavaIdentifierPart(text.charAt(at - 1));
+            boolean after = end >= text.length() || !Character.isJavaIdentifierPart(text.charAt(end));
+            if (!word || (before && after)) {
+                return true;
+            }
+            from = at + 1;
+        }
+    }
+
+    /**
+     * {@code value} as the Java string literal that spells it most plainly: quotes, with a backslash
+     * before a quote or a backslash and the usual escapes for newline, tab and carriage return. A
+     * value written another way (a Unicode escape, a text block) does not match, and so counts.
+     */
+    static String javaLiteral(String value) {
+        StringBuilder literal = new StringBuilder(value.length() + 2).append('"');
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '"' -> literal.append("\\\"");
+                case '\\' -> literal.append("\\\\");
+                case '\n' -> literal.append("\\n");
+                case '\t' -> literal.append("\\t");
+                case '\r' -> literal.append("\\r");
+                default -> literal.append(c);
+            }
+        }
+        return literal.append('"').toString();
     }
 
     private static boolean importsGuardrails(CompilationUnitTree unit) {

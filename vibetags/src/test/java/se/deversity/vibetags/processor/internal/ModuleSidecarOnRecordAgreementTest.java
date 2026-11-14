@@ -123,6 +123,14 @@ class ModuleSidecarOnRecordAgreementTest {
     }
 
     @Test
+    @DisplayName("an undecodable source-root list is rejected by both reads alike")
+    void undecodableSourceRoots() throws IOException {
+        Path sidecar = write("roots", "# version=3\nmoduleId=roots\nmodulePath=roots\n~elements="
+            + b64("com.example.A") + "\n~roots=@@not-base64@@\n# end\n");
+        assertNull(agreesPerFile(sidecar), "a value load cannot decode makes the file malformed");
+    }
+
+    @Test
     @DisplayName("an element list that decodes to blank lines only records nothing")
     void blankElementLines() throws IOException {
         agreesPerFile(write("blank", "# version=3\nmoduleId=blank\nmodulePath=blank\n~elements="

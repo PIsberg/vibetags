@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The early exit's key (#834). A key that stays the same when an input changed is a false
@@ -170,5 +171,25 @@ class SourceDigestTest {
         Path missing = root.resolve("Gone.java");
         assertNull(SourceDigest.of("1.0", Map.of(), "core", false, root, root, List.of(source, missing)),
             "a source that cannot be hashed cannot be vouched for");
+    }
+
+    /**
+     * The module-path lookup names the annotations module, and a JPMS consumer requires it by the
+     * name the annotations jar declares. If the two builds of that jar renamed it, the lookup would
+     * miss on every build and the digest would go back to hashing every type as absent (#1066).
+     */
+    @Test
+    void theModulePathLookupNamesTheModuleTheAnnotationsJarDeclares() throws IOException {
+        Path repo = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        while (repo != null && !Files.isRegularFile(repo.resolve("vibetags-parent/pom.xml"))) {
+            repo = repo.getParent();
+        }
+        assertNotNull(repo, "could not locate the repository root from " + System.getProperty("user.dir"));
+        String pom = Files.readString(repo.resolve("vibetags-annotations/pom.xml"), StandardCharsets.UTF_8);
+        String gradle = Files.readString(repo.resolve("vibetags-annotations/build.gradle"), StandardCharsets.UTF_8);
+        assertTrue(pom.contains("<Automatic-Module-Name>" + SourceDigest.ANNOTATIONS_MODULE + "</Automatic-Module-Name>"),
+            "vibetags-annotations/pom.xml must declare Automatic-Module-Name " + SourceDigest.ANNOTATIONS_MODULE);
+        assertTrue(gradle.contains("'Automatic-Module-Name': '" + SourceDigest.ANNOTATIONS_MODULE + "'"),
+            "vibetags-annotations/build.gradle must declare Automatic-Module-Name " + SourceDigest.ANNOTATIONS_MODULE);
     }
 }
