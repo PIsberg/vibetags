@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-11-14
+
+**Upgrade note: if you commit your `.vibetags-mod-*` sidecars, each one gains a line on the first
+build.** It is a `~roots=` entry, the module's source roots in base64 (see the partial-round fix
+under Fixed). Nothing else in the generated files moves: the consumer sweep built five downstream
+repositories at 1.4.2, and every other generated file matched the 1.4.1 output byte for byte, apart
+from one codekarta change that came from its own new annotation. Commit the new line; an older
+processor skips it.
+
 ### Added
 
 - **CI verifies a workflow dependency lockfile.** Every action was already pinned to a commit
@@ -6808,7 +6817,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/PIsberg/vibetags/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/PIsberg/vibetags/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/PIsberg/vibetags/compare/v1.3.8...v1.4.0
 [1.3.8]: https://github.com/PIsberg/vibetags/compare/v1.3.7...v1.3.8
