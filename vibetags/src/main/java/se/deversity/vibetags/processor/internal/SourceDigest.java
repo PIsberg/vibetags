@@ -236,30 +236,55 @@ public final class SourceDigest {
     }
 
     /**
-     * A hash of every guardrail annotation's class file as the compile class path supplies it, read
-     * through {@link Filer#getResource} so it is the copy javac takes defaults from, not the one on
-     * the processor path. A type the class path does not carry (read from a module path, or only off
-     * the processor path) is hashed as absent, which is stable and so keeps the exit it had.
+     * The module the annotations jar declares through its {@code Automatic-Module-Name} manifest
+     * entry ({@code vibetags-annotations/pom.xml}). A JPMS consumer {@code requires} it by this name,
+     * and a module-path lookup has to name it.
+     */
+    static final String ANNOTATIONS_MODULE = "se.deversity.vibetags.annotations";
+
+    /**
+     * A hash of every guardrail annotation's class file as the compile class path supplies it, or,
+     * failing that, the module path, read through {@link Filer#getResource} so it is the copy javac
+     * takes defaults from, not the one on the processor path. The module path is the second lookup
+     * because a JPMS consumer has the annotations there and not on the class path, and a class-path
+     * lookup alone hashed every type as absent on every build and took the exit past a changed
+     * default (#1066). A type neither path carries (only off the processor path) is hashed as
+     * absent, which is stable and so keeps the exit it had.
      */
     public static String annotationsIdentity(Filer filer) {
         MessageDigest sha = sha256();
         byte[] buffer = new byte[8192];
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
             line(sha, "type " + type.getName());
-            try {
-                FileObject file = filer.getResource(StandardLocation.CLASS_PATH,
-                    type.getPackageName(), type.getSimpleName() + ".class");
-                try (InputStream in = file.openInputStream()) {
-                    int read;
-                    while ((read = in.read(buffer)) != -1) {
-                        sha.update(buffer, 0, read);
-                    }
-                }
-            } catch (IOException | RuntimeException absent) {
+            String classFile = type.getSimpleName() + ".class";
+            if (!hashResource(sha, buffer, filer, StandardLocation.CLASS_PATH, type.getPackageName(), classFile)
+                    && !hashResource(sha, buffer, filer, StandardLocation.MODULE_PATH,
+                        ANNOTATIONS_MODULE + "/" + type.getPackageName(), classFile)) {
                 line(sha, "absent");
             }
         }
         return HexFormat.of().formatHex(sha.digest());
+    }
+
+    /**
+     * Feeds the bytes of one resource to {@code sha}; false, with nothing fed, when {@code location}
+     * does not carry it. A read that fails part way leaves a partial hash, which can only make the
+     * digest differ from the last build and so cost a regeneration, never skip one.
+     */
+    private static boolean hashResource(MessageDigest sha, byte[] buffer, Filer filer, StandardLocation location,
+                                        String moduleAndPkg, String relativeName) {
+        try {
+            FileObject file = filer.getResource(location, moduleAndPkg, relativeName);
+            try (InputStream in = file.openInputStream()) {
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    sha.update(buffer, 0, read);
+                }
+            }
+            return true;
+        } catch (IOException | RuntimeException absent) {
+            return false;
+        }
     }
 
     private static void line(MessageDigest sha, String text) {

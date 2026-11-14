@@ -300,8 +300,9 @@ file the round was given, with everything else output depends on (`SourceDigest`
 version, every `-A` option, the module and source set, which opt-in files exist and as what kind at
 the root and the module root, whether `AGENTS.md` carries a marker pair, which decides whether it is
 written beside another AI file, the reactor's `.vibetags-mirror` targets, the content of every `.vibetags-*` configuration file there,
-and the bytes of each guardrail annotation's class file on the compile class path, because an
-attribute left at its default renders the default that artifact declares (#1061)). When
+and the bytes of each guardrail annotation's class file on the compile class path, or on the
+module path for a JPMS consumer that `requires se.deversity.vibetags.annotations`, because an
+attribute left at its default renders the default that artifact declares (#1061, #1066)). When
 that key matches the one the last clean run of the module recorded (`# source-digest:` under the
 module's `# module:` line in `.vibetags-cache`), and the checks the fingerprint short-circuit makes
 still hold (sidecar stamp, no stale sidecar, every cached output byte-stable), the walk is skipped

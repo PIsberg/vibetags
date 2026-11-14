@@ -623,6 +623,121 @@ class SourceDigestEarlyExitEndToEndTest {
         assertTrue(read("CLAUDE.md").contains("A default from the next annotations release."), read("CLAUDE.md"));
     }
 
+    /**
+     * The same move as above in a JPMS build, where the annotations are on the module path and not
+     * on the class path (#1066). A lookup of the class path alone found none of them, hashed every
+     * type as absent on both builds, and took the exit past the changed default.
+     */
+    @Test
+    void aDefaultThatChangesWithTheAnnotationsOnTheModulePathIsNotSkippedPast() throws IOException {
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AILocked;
+
+            @AILocked
+            public class Ledger {
+            }
+            """);
+        h.writeSourceFile("src/main/java/module-info.java", """
+            module com.example {
+                requires static se.deversity.vibetags.annotations;
+            }
+            """);
+        Path emptyClassPath = Files.createDirectories(root.resolve("empty-class-path"));
+        Path released = annotationsModuleJar(root.resolve("annotations-released.jar"), null);
+        String first = notes(h.compileReturningDiagnostics(
+            "-classpath", emptyClassPath.toString(), "--module-path", released.toString()));
+        assertTrue(read("CLAUDE.md").contains("Do not modify this code under any circumstances."),
+            "precondition: the default reason is rendered from the module path:\n" + first + read("CLAUDE.md"));
+
+        Path shadow = root.resolve("shadow-src/se/deversity/vibetags/annotations/AILocked.java");
+        Files.createDirectories(shadow.getParent());
+        Files.writeString(shadow, """
+            package se.deversity.vibetags.annotations;
+
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            import java.lang.annotation.Target;
+
+            @Retention(RetentionPolicy.SOURCE)
+            @Target({ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.FIELD})
+            public @interface AILocked {
+                String reason() default "A default from the next annotations release.";
+            }
+            """, StandardCharsets.UTF_8);
+        Path shadowClasses = Files.createDirectories(root.resolve("shadow-classes"));
+        assertEquals(0, javax.tools.ToolProvider.getSystemJavaCompiler()
+            .run(null, null, null, "-d", shadowClasses.toString(), shadow.toString()), "the shadow must compile");
+        Path next = annotationsModuleJar(root.resolve("annotations-next.jar"),
+            shadowClasses.resolve("se/deversity/vibetags/annotations/AILocked.class"));
+
+        String second = notes(h.compileReturningDiagnostics(
+            "-classpath", emptyClassPath.toString(), "--module-path", next.toString()));
+
+        assertFalse(second.contains(EARLY_EXIT), "the annotations on the module path changed:\n" + second);
+        assertTrue(read("CLAUDE.md").contains("A default from the next annotations release."), read("CLAUDE.md"));
+
+        String third = notes(h.compileReturningDiagnostics(
+            "-classpath", emptyClassPath.toString(), "--module-path", next.toString()));
+        assertTrue(third.contains(EARLY_EXIT), "nothing changed since the second build:\n" + third);
+    }
+
+    /**
+     * A copy of the annotations jar this test runs against, as an automatic module named the way the
+     * real jar's manifest names it, with {@code AILocked.class} replaced by {@code lockedClass} when
+     * that is given. Read from wherever the test class path supplies the annotations, a jar or a
+     * classes directory.
+     */
+    private static Path annotationsModuleJar(Path jar, @org.jspecify.annotations.Nullable Path lockedClass)
+            throws IOException {
+        String pkg = "se/deversity/vibetags/annotations/";
+        java.util.Map<String, byte[]> classes = new java.util.TreeMap<>();
+        Path source;
+        try {
+            source = Path.of(se.deversity.vibetags.annotations.AILocked.class.getProtectionDomain()
+                .getCodeSource().getLocation().toURI());
+        } catch (java.net.URISyntaxException e) {
+            throw new IOException(e);
+        }
+        if (Files.isDirectory(source)) {
+            try (java.util.stream.Stream<Path> files = Files.list(source.resolve(pkg))) {
+                for (Path f : (Iterable<Path>) files::iterator) {
+                    if (f.toString().endsWith(".class")) {
+                        classes.put(pkg + f.getFileName(), Files.readAllBytes(f));
+                    }
+                }
+            }
+        } else {
+            try (java.util.jar.JarFile in = new java.util.jar.JarFile(source.toFile())) {
+                for (java.util.jar.JarEntry e : java.util.Collections.list(in.entries())) {
+                    if (e.getName().startsWith(pkg) && e.getName().endsWith(".class")) {
+                        try (java.io.InputStream body = in.getInputStream(e)) {
+                            classes.put(e.getName(), body.readAllBytes());
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue(classes.containsKey(pkg + "AILocked.class"), "the annotations were found at " + source);
+        if (lockedClass != null) {
+            classes.put(pkg + "AILocked.class", Files.readAllBytes(lockedClass));
+        }
+        java.util.jar.Manifest manifest = new java.util.jar.Manifest();
+        manifest.getMainAttributes().put(java.util.jar.Attributes.Name.MANIFEST_VERSION, "1.0");
+        manifest.getMainAttributes().putValue("Automatic-Module-Name", "se.deversity.vibetags.annotations");
+        try (java.util.jar.JarOutputStream out =
+                 new java.util.jar.JarOutputStream(Files.newOutputStream(jar), manifest)) {
+            for (java.util.Map.Entry<String, byte[]> c : classes.entrySet()) {
+                out.putNextEntry(new java.util.jar.JarEntry(c.getKey()));
+                out.write(c.getValue());
+                out.closeEntry();
+            }
+        }
+        return jar;
+    }
+
     /** Writes {@code com.lib.Reasons} with {@code LEDGER = value} under {@code lib-src}. */
     private Path writeReasons(String value) throws IOException {
         Path source = root.resolve("lib-src/com/lib/Reasons.java");

@@ -71,6 +71,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source digest now hashes each guardrail annotation's class file as the compile class path supplies
   it (`Filer.getResource`). Verified failing first with a shadow `AILocked` whose default differs
   ahead of the real one on the class path.
+- **A changed default on the module path is no longer skipped past either (#1066).** A JPMS consumer that
+  `requires se.deversity.vibetags.annotations` has the jar on the module path, not the class path,
+  so the #1061 lookup found none of the 44 class files, hashed each as absent on every build, and the
+  early exit kept the old default. The digest now falls back to `Filer.getResource` on
+  `MODULE_PATH`; a class-path build hashes exactly the bytes it did. Verified failing first: a
+  consumer with a `module-info.java`, the annotations only on `--module-path`, took the exit
+  (`source digest 0c80fa76979b`) after its jar's `AILocked` default changed; it now regenerates, and
+  a third, unchanged build still takes the exit.
 - **Without the Tree API, a dependency constant no longer goes stale (#1062).** The fix for
   `@AILocked(reason = Reasons.LEDGER)` with `Reasons` outside the round read the argument trees,
   which ECJ does not expose, so an ECJ build still recorded its source digest and kept the old value
