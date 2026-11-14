@@ -116,6 +116,26 @@ class ModuleSidecarLogContractTest {
     }
 
     @Test
+    @DisplayName("a source-set sidecar filed under a misread name says misread-source-set")
+    void aMisreadSourceSetSaysSo(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core"));
+        ModuleSidecar misread = new ModuleSidecar("core__com", "core", "core");
+        misread.putBody("claude", "old");
+        misread.save(root);
+        Files.setLastModifiedTime(root.resolve(SIDECAR_PREFIX + "core__com"),
+            java.nio.file.attribute.FileTime.fromMillis(1_700_000_000_000L));
+        ModuleSidecar flat = new ModuleSidecar("core", "core", "core");
+        flat.putBody("claude", "new");
+        flat.setSourceRoots(java.util.List.of("core/src"));
+        flat.save(root);
+
+        ModuleSidecar.readAll(root, logger);
+
+        assertTrue(logged("sidecar.prune reason=misread-source-set path=" + SIDECAR_PREFIX + "core__com"),
+            "the sidecar a flat src/ root was misfiled under is retired by name (#1068):\n" + dump());
+    }
+
+    @Test
     @DisplayName("a module path this filesystem cannot spell is named separately")
     void anUnrepresentableModulePathSaysSo(@TempDir Path root) throws IOException {
         write(root, "nul", "# version=2\nmoduleId=nul\nmodulePath=core" + (char) 0

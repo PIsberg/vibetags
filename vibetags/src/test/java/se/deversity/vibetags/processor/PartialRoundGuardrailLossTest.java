@@ -299,12 +299,8 @@ class PartialRoundGuardrailLossTest {
 
         assertTrue(warnings.stream().noneMatch(w -> w.contains("did not compile every annotated source")),
             "shared's round compiled all of shared: " + warnings);
-        // Any shared sidecar: a root named src/ with packages directly below it is read as source
-        // set "com" today, a separate defect (#1068).
-        try (java.util.stream.Stream<Path> files = Files.list(root)) {
-            assertTrue(files.anyMatch(f -> f.getFileName().toString().startsWith(".vibetags-mod-shared")),
-                "the round belongs to shared, whose pom.xml says so");
-        }
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-shared")),
+            "the round belongs to shared, whose pom.xml says so");
     }
 
     /** And a root two modules recorded is neither one's to claim. */
