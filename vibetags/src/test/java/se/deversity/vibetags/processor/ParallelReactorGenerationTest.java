@@ -188,6 +188,69 @@ class ParallelReactorGenerationTest {
             "a single-module build has no sibling to race and must not get a lock file");
     }
 
+    @Test
+    void theRootRoundOfAGradleRootWithSubprojectsLocksOnItsFirstBuild() throws IOException {
+        // #1081. No sibling has locked yet, so there is no lock file to go by, but settings.gradle
+        // declares a subproject that compiles alongside the root. Generating unlocked here is the
+        // first-build race #1074 left open.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve("module-cli"));
+        Files.writeString(root.resolve("settings.gradle"),
+            "rootProject.name = 'app'\ninclude 'module-cli'\n", StandardCharsets.UTF_8);
+        rootModule("build.gradle", "plugins { id 'java' }").compile();
+
+        assertTrue(Files.exists(root.resolve(".vibetags-generate.lock")),
+            "the root round of a root that declares subprojects must generate under the lock");
+    }
+
+    @Test
+    void theRootRoundOfAMavenRootWithModulesLocksOnItsFirstBuild() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve("module-cli"));
+        rootModule("pom.xml", "<project><artifactId>app</artifactId>"
+            + "<modules><module>module-cli</module></modules></project>").compile();
+
+        assertTrue(Files.exists(root.resolve(".vibetags-generate.lock")),
+            "the root round of a pom that declares modules must generate under the lock");
+    }
+
+    @Test
+    void theRootRoundLocksWhenOnlyADeclaredSubprojectOptedIn() throws IOException {
+        // The module-only opt-in of #1074, seen from the root round: the root has no AI file, the
+        // subproject does, and both rounds write the shared sidecars and cache at the root.
+        Files.createDirectories(root.resolve("module-cli"));
+        Files.createFile(root.resolve("module-cli").resolve("CLAUDE.md"));
+        Files.writeString(root.resolve("settings.gradle.kts"), "include(\"module-cli\")\n", StandardCharsets.UTF_8);
+        rootModule("build.gradle.kts", "plugins { java }").compile();
+
+        assertTrue(Files.exists(root.resolve(".vibetags-generate.lock")),
+            "a subproject's opt-in is enough for the root round to share root state with it");
+    }
+
+    @Test
+    void aSingleProjectGradleBuildCreatesNoLockFile() throws IOException {
+        // A settings.gradle that only names the root project declares no sibling to race.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.writeString(root.resolve("settings.gradle"), "rootProject.name = 'app'\n", StandardCharsets.UTF_8);
+        rootModule("build.gradle", "plugins { id 'java' }").compile();
+
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("com.example.app.App"),
+            "precondition: the root round generated");
+        assertFalse(Files.exists(root.resolve(".vibetags-generate.lock")),
+            "a Gradle build with no subproject must not get a lock file");
+    }
+
+    @Test
+    void aRootWithSubprojectsButNoOptInCreatesNoLockFile() throws IOException {
+        // Invariant 1: declaring subprojects is not an opt-in.
+        Files.createDirectories(root.resolve("module-cli"));
+        Files.writeString(root.resolve("settings.gradle"), "include 'module-cli'\n", StandardCharsets.UTF_8);
+        rootModule("build.gradle", "plugins { id 'java' }").compile();
+
+        assertFalse(Files.exists(root.resolve(".vibetags-generate.lock")),
+            "a project that never opted in must have nothing written, the lock file included");
+    }
+
     /** Holds the generation lock as a sibling would, and asserts {@code module} waits for it. */
     private void assertWaitsForASiblingsGeneration(ProcessorTestHarness module, String name) throws Exception {
         List<Throwable> failures = new ArrayList<>();
@@ -210,8 +273,12 @@ class ParallelReactorGenerationTest {
 
     /** The root project itself, with a build file and sources of its own. */
     private ProcessorTestHarness rootModule() throws IOException {
-        Files.writeString(root.resolve("pom.xml"), "<project><artifactId>app</artifactId></project>",
-            StandardCharsets.UTF_8);
+        return rootModule("pom.xml", "<project><artifactId>app</artifactId></project>");
+    }
+
+    /** The root project, with the named build file and sources of its own. */
+    private ProcessorTestHarness rootModule(String buildFile, String buildContent) throws IOException {
+        Files.writeString(root.resolve(buildFile), buildContent, StandardCharsets.UTF_8);
         ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
         harness.writeSourceFile("src/main/java/com/example/app/App.java", """
             package com.example.app;

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -163,5 +164,53 @@ class ReactorRootDetectorTest {
             "  <modules><module>payments-core</module><module>payments-api</module></modules>\n");
 
         assertEquals(root, ReactorRootDetector.findReactorRootAbove(module));
+    }
+
+    // declaredModules: the root round's "do I have siblings?" signal (#1081). A false positive costs
+    // one lock file in an opted-in project; a false negative is the first-build race itself.
+
+    @Test
+    void declaredModulesListsAMavenParentsModulesAcrossLines(@TempDir Path root) throws IOException {
+        write(root.resolve("pom.xml"), """
+            <project>
+              <modules>
+                <module>payments-core</module>
+                <module> payments/api </module>
+              </modules>
+            </project>
+            """);
+
+        assertEquals(List.of("payments-core", "payments/api"), ReactorRootDetector.declaredModules(root));
+    }
+
+    @Test
+    void declaredModulesListsMaven4Subprojects(@TempDir Path root) throws IOException {
+        write(root.resolve("pom.xml"),
+            "<project><subprojects><subproject>payments-core</subproject></subprojects></project>");
+
+        assertEquals(List.of("payments-core"), ReactorRootDetector.declaredModules(root));
+    }
+
+    @Test
+    void declaredModulesListsGradleIncludesFromBothSettingsDialects(@TempDir Path root) throws IOException {
+        write(root.resolve("settings.gradle"), "rootProject.name = 'app'\ninclude ':payments:core', 'cli'\n");
+        write(root.resolve("settings.gradle.kts"), "include(\"api\")\n");
+
+        assertEquals(List.of("payments/core", "cli", "api"), ReactorRootDetector.declaredModules(root));
+    }
+
+    @Test
+    void declaredModulesIsEmptyForASingleProjectBuild(@TempDir Path root) throws IOException {
+        write(root.resolve("pom.xml"), "<project><artifactId>app</artifactId></project>");
+        write(root.resolve("settings.gradle"), "rootProject.name = 'app'\n");
+
+        assertEquals(List.of(), ReactorRootDetector.declaredModules(root));
+    }
+
+    @Test
+    void declaredModulesOfAnUndecodablePomIsEmptyRatherThanAnError(@TempDir Path root) throws IOException {
+        Files.write(root.resolve("pom.xml"), new byte[]{(byte) 0xC3, (byte) 0x28, (byte) 0xA9});
+
+        assertEquals(List.of(), ReactorRootDetector.declaredModules(root));
     }
 }
