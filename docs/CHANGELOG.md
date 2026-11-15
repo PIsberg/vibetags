@@ -32,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Windows, for the rest of a Gradle or Maven daemon. The guard now releases it when the failing
   round is the last one. `ProcessorFailureGuardTest` throws from inside generation and asserts the
   round left no logger configured; it failed before the change.
+- **Mirrored rule files honour `-Avibetags.module` (#1076).** `MirrorWriter` derived the source
+  module's id from the directory layout, so two modules whose layouts collide (`libs/core` and
+  `libs_core` both lay out as `libs_core`) and that were each given an id of their own still wrote
+  and cleaned up under one `mirrored-<id>-` prefix, and each compile deleted the other's mirrored
+  files. It now uses the region id the processor resolved. A module that already sets
+  `-Avibetags.module` and mirrors into a target mirrors under the new name from the next build;
+  the files under the old layout-derived name are no longer anyone's to clean up, so delete them by
+  hand. `MirrorEndToEndTest` compiles the colliding pair and failed before the change.
 
 ## [1.4.2] - 2026-11-14
 

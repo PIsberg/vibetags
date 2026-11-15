@@ -63,7 +63,7 @@ public final class MirrorWriter {
                              @Nullable RoleConfig roles,
                              GuardrailFileWriter writer,
                              @Nullable Messager messager) {
-        write(moduleRoot, vibetagsRoot, collector, projectName, generatedHeader, roles, writer, messager, "");
+        write(moduleRoot, vibetagsRoot, collector, projectName, generatedHeader, roles, writer, messager, null, "");
     }
 
     /**
@@ -75,6 +75,11 @@ public final class MirrorWriter {
      *        {@code mirrored-<id>__test-}, because a namespace keyed on the module alone had each
      *        round delete what the other had mirrored: the target's rules flapped between the two
      *        halves of every build, and check mode failed on whichever half it ran after.
+     * @param regionId the module's region id as the processor resolved it, which honours
+     *        {@code -Avibetags.module}; {@code null} derives it from the directory layout. When it was
+     *        derived here unconditionally, two modules whose layouts collide and that were each given an id
+     *        of their own still wrote and cleaned up under one prefix, so each compile deleted the
+     *        other's mirrored files (#1076).
      */
     public static void write(Path moduleRoot,
                              Path vibetagsRoot,
@@ -84,6 +89,7 @@ public final class MirrorWriter {
                              @Nullable RoleConfig roles,
                              GuardrailFileWriter writer,
                              @Nullable Messager messager,
+                             @Nullable String regionId,
                              String sourceSetSuffix) {
         if (moduleRoot == null || vibetagsRoot == null || moduleRoot.equals(vibetagsRoot)) {
             // No module identity (in-memory/non-javac compile) or the module IS the root: there is
@@ -95,9 +101,9 @@ public final class MirrorWriter {
             return;
         }
 
-        String regionId = ModuleSidecar.computeModuleId(moduleRoot, vibetagsRoot);
-        String moduleId = regionId + sourceSetSuffix;
-        Set<String> shadowing = shadowingPrefixes(vibetagsRoot, regionId);
+        String region = regionId != null ? regionId : ModuleSidecar.computeModuleId(moduleRoot, vibetagsRoot);
+        String moduleId = region + sourceSetSuffix;
+        Set<String> shadowing = shadowingPrefixes(vibetagsRoot, region);
         int written = 0;
 
         for (MirrorConfig target : targets) {

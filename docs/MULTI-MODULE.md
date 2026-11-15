@@ -513,7 +513,8 @@ Mechanics:
   (`.claude/rules/`, `.cursor/rules/`, …). Aggregate files are not mirrored — a module's own
   `CLAUDE.md` is its to own, and merging siblings into the root aggregate is what the sidecar
   merge already does.
-- Filenames carry the reserved prefix `mirrored-<sourceModuleId>-`; a non-primary source set of the
+- Filenames carry the reserved prefix `mirrored-<sourceModuleId>-`, where the id is the one the
+  module's sidecar uses, `-Avibetags.module` included (#1076); a non-primary source set of the
   module mirrors under `mirrored-<sourceModuleId>__<sourceSet>-` (the test round of `core` writes
   `mirrored-core__test-…`), so the main and test rounds of one module never clean up each other's
   files. Modules of a reactor compile in separate javac invocations, so each source module must be
