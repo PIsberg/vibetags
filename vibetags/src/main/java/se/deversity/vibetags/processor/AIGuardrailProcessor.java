@@ -2211,10 +2211,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      *       directory has (the root files are then absent, but the sidecars and the cache are not,
      *       #1074), or when the lock file is already there, which a sibling that locked left
      *       behind.</li>
-     *   <li>The root's own round locks only when that lock file is there. Gradle compiles a root
-     *       project with sources alongside its subprojects, and once one of them has locked the
-     *       root round races it like any module (#1074). A single-module build never meets the
-     *       file, so the most common layout there is gets no lock file of its own.</li>
+     *   <li>The root's own round locks when that lock file is there, or when the root's build
+     *       declares subprojects and the root or one of them has opted in. Gradle compiles a root
+     *       project with sources alongside its subprojects, so the root round races them like any
+     *       module (#1074), and on the first build, before any of them has left the lock file
+     *       behind, the build file is the only signal there is (#1081). A single-module build
+     *       declares no subproject and never meets the file, so the most common layout there is
+     *       gets no lock file of its own.</li>
      * </ul>
      * A project with no opt-in anywhere gets no lock file: file presence is the only opt-in
      * (invariant 1), and the third-party corpus asserts a project that never opted in is left with
@@ -2229,10 +2232,41 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         Path compilationRoot = compilationRoot();
         if (compilationRoot.equals(root)) {
+            return declaresAnOptedInReactor();
+        }
+        return optedIn(root) || optedIn(compilationRoot);
+    }
+
+    /**
+     * Whether the root's build declares subprojects, and the root or one of those subprojects has
+     * opted into a platform (#1081). Module paths come from a build file, so one that resolves
+     * outside the root, or is not a valid path, is skipped rather than looked at.
+     */
+    private boolean declaresAnOptedInReactor() {
+        List<String> modules = ReactorRootDetector.declaredModules(root);
+        if (modules.isEmpty()) {
             return false;
         }
-        return !ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)).isEmpty()
-            || !ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(compilationRoot)).isEmpty();
+        if (optedIn(root)) {
+            return true;
+        }
+        Path base = root.normalize();
+        for (String module : modules) {
+            try {
+                Path dir = base.resolve(module).normalize();
+                if (dir.startsWith(base) && !dir.equals(base) && Files.isDirectory(dir) && optedIn(dir)) {
+                    return true;
+                }
+            } catch (InvalidPathException notAPath) {
+                // A module entry this platform cannot express is no evidence of a sibling.
+            }
+        }
+        return false;
+    }
+
+    /** Whether {@code dir} holds any platform's opt-in file. */
+    private static boolean optedIn(Path dir) {
+        return !ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(dir)).isEmpty();
     }
 
     /**
@@ -2348,7 +2382,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (!Files.isRegularFile(settings)) {
                 continue;
             }
-            for (String included : gradleIncludes(settings)) {
+            for (String included : ReactorRootDetector.gradleIncludes(settings)) {
                 Path dir = root.resolve(included);
                 if (!Files.isDirectory(dir) || !Files.isDirectory(dir.resolve("src"))) {
                     continue; // Nothing there to compile, so nothing to collapse.
@@ -2375,34 +2409,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             log.warn("module.collapsed subprojects={} root={} reason=no-build-file-of-their-own",
                 collapsing, root);
         }
-    }
-
-    /** Directory names a Gradle settings file includes, with the leading colon path flattened. */
-    private static List<String> gradleIncludes(Path settings) {
-        List<String> names = new java.util.ArrayList<>();
-        try {
-            for (String line : Files.readAllLines(settings, java.nio.charset.StandardCharsets.UTF_8)) {
-                String trimmed = line.trim();
-                if (!trimmed.startsWith("include")) {
-                    continue;
-                }
-                java.util.regex.Matcher m =
-                    java.util.regex.Pattern.compile("['\"]([^'\"]+)['\"]").matcher(trimmed);
-                while (m.find()) {
-                    String name = m.group(1);
-                    while (name.startsWith(":")) {
-                        name = name.substring(1);
-                    }
-                    name = name.replace(':', '/');
-                    if (!name.isBlank()) {
-                        names.add(name);
-                    }
-                }
-            }
-        } catch (IOException | RuntimeException unreadable) {
-            return List.of(); // A diagnostic must never be the thing that fails a build.
-        }
-        return names;
     }
 
     /**

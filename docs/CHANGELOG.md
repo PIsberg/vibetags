@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The root round of a reactor locks on its first build too (#1081).** The #1074 fix below locked
+  the root's own round only once `.vibetags-generate.lock` existed, so on the first parallel build
+  of a Gradle root project with sources (or after `git clean` removed the gitignored file), the root
+  round could start before any subproject had locked and generate unlocked beside them. It now also
+  locks when its build declares subprojects (`<module>` or `<subproject>` in `pom.xml`, `include` in
+  `settings.gradle(.kts)`) and the root or one of those subprojects opted in. A single-module build
+  and a project with no opt-in still get no lock file. Three new `ParallelReactorGenerationTest`
+  cases (Gradle root, Maven root, subproject-only opt-in) failed before the change; two more pin
+  that neither a settings file naming only the root project nor an unopted reactor gets a lock.
 - **Two more kinds of round generate under the reactor's generation lock (#1074).** A module whose
   own directory opted in, under a root that did not, still saves its sidecar and flushes
   `.vibetags-cache` at the root, and took no lock, so a sibling's flush could drop its changes. And
