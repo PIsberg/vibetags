@@ -616,7 +616,7 @@ touch .greptile/config.json                        # Greptile (@AIIgnore paths; 
 touch greptile.json                                # Greptile (legacy form; only a span inside two values is VibeTags')
 mkdir -p .github && touch .github/copilot-instructions.md  # GitHub Copilot
 touch AGENTS.md                              # Codex CLI, and 20+ other agents (see note below)
-touch llms.txt llms-full.txt                 # Windsurf Cascade / llms.txt standard
+touch llms.txt                               # llms.txt standard (llms-full.txt is deprecated)
 
 mvn compile                                  # VibeTags populates all opted-in files
 ```
@@ -846,17 +846,20 @@ VibeTags generates two files following the [llms.txt standard](https://llmstxt.o
 
 | File | Role | Best for |
 |---|---|---|
-| `llms.txt` | **The Map** — concise directory, one bullet per rule | Windsurf Cascade, agents with limited context |
-| `llms-full.txt` | **The Book** — fully expanded reference with all details | Claude 4.6, Gemini 1.5 Pro, Windsurf Cascade with large context |
+| `llms.txt` | **The Map** — concise directory, one bullet per rule | Agents you point at it by hand; the standard names it as a website index |
+| `llms-full.txt` | **The Book** — fully expanded reference with all details | **Deprecated** (#1071): no tool documents reading it, and the standard never names it; VibeTags stops writing it in the next major version |
 
 Both files follow the standard hierarchy: `# ProjectName` (H1), `> summary blockquote`, informational text, and `## Section` resource groups.
 
 **Opt in** by creating the files:
 
 ```bash
-touch llms.txt llms-full.txt
+touch llms.txt
 mvn compile
 ```
+
+`llms-full.txt` still works as an opt-in, but every build that has it prints a deprecation warning
+naming `llms.txt` as the replacement ([PLATFORMS.md](docs/PLATFORMS.md#deprecated-outputs)).
 
 **Sample `llms.txt` output:**
 

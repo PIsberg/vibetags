@@ -147,7 +147,7 @@ touch greptile.json                                # Greptile (legacy form; only
 touch AGENTS.md                            # Codex CLI (see note below — only generated when sole)
 mkdir -p .github && touch .github/copilot-instructions.md  # Copilot
 mkdir -p .github/instructions               # GitHub Copilot (granular per-class rules)
-touch llms.txt llms-full.txt               # Windsurf Cascade / llms.txt standard
+touch llms.txt                             # llms.txt standard (llms-full.txt is deprecated, #1071)
 touch .windsurfrules                       # Devin Desktop, formerly Windsurf (traditional, legacy)
 mkdir -p .devin/rules                      # Devin Desktop (granular per-class rules, preferred directory)
 # mkdir -p .windsurf/rules                 # Devin Desktop (granular, fallback directory; both load, pick one)

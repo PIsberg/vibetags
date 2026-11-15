@@ -1166,14 +1166,20 @@ jobs:
           # that would be buying a clean number with two minutes of CI, so the family is named and
           # skipped instead. Everything else, "stated nowhere" included, still fails here.
           #
-          # Until #645 and #720 the deprecation warning (#641) was excluded here too and asserted
-          # present. They removed every deprecated output, so nothing prints it and nothing
-          # here may.
+          # The deprecation warning is excluded too, and asserted present instead (#1071). This
+          # reactor opts into llms-full.txt, deprecated until the next major version removes it
+          # (#1084), on purpose: a build that opts in is exactly the build that must print it.
+          # DeprecatedServicesTest pins the line's shape. #720 removed the rows this used to count.
           #
           # The log goes to RUNNER_TEMP so it can never dirty the tree the drift gate just checked.
           ./gradlew clean build --no-daemon > "$RUNNER_TEMP/gmm-build.log" 2>&1
           unexpected=$(grep "warning: VibeTags" "$RUNNER_TEMP/gmm-build.log" \
-            | grep -vE "\.java:[0-9]+: warning:" | grep -v "was opted into after" | sort -u)
+            | grep -vE "\.java:[0-9]+: warning:" | grep -v "was opted into after" \
+            | grep -v "an opted-in output is deprecated" | sort -u)
+          if ! grep -q "an opted-in output is deprecated" "$RUNNER_TEMP/gmm-build.log"; then
+            echo "::error::the reactor opts into llms-full.txt, which is deprecated, and was not warned about it."
+            exit 1
+          fi
           if [ -n "$unexpected" ]; then
             echo "::error::a warm build of an in-sync reactor emitted unexpected processor warnings."
             echo "$unexpected"
