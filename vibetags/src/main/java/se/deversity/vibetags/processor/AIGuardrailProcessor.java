@@ -2240,7 +2240,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * at least one family, so the advisory default is completely untouched.
      */
     private void enforceGuardrails() {
-        if (enforceFamilies.isEmpty() && !baselineUpdate) {
+        // Check mode writes none of the files VibeTags manages, and the baseline is one (#1077).
+        // The update is dropped rather than the run failed: the named families are still checked
+        // against the baseline on disk, so the gate a CI run asked for keeps working.
+        boolean update = baselineUpdate && !checkMode;
+        if (baselineUpdate && checkMode) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: -Avibetags.baseline.update is ignored in check mode, which writes nothing;"
+                    + " .vibetags-baseline is left as it is. Record it in a build without -Avibetags.check.");
+            if (log != null) {
+                log.warn("enforce.baseline.skip module={} reason=check-mode", currentModuleId());
+            }
+        }
+        if (enforceFamilies.isEmpty() && !update) {
             return;
         }
         GuardrailEnforcer enforcer = new GuardrailEnforcer(processingEnv.getMessager(), log);
@@ -2249,7 +2261,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             // first-time adopter does not have to name the families twice.
             ? enforcer.parseFamilies(GuardrailEnforcer.ALL)
             : enforceFamilies;
-        enforcer.enforce(collector.model(), families, root, currentModuleId(), baselineUpdate);
+        enforcer.enforce(collector.model(), families, root, currentModuleId(), update);
     }
 
     /** Reports rounds that remove guardrails rather than add them (see the class javadoc there). */

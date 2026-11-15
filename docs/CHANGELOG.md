@@ -40,6 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `-Avibetags.module` and mirrors into a target mirrors under the new name from the next build;
   the files under the old layout-derived name are no longer anyone's to clean up, so delete them by
   hand. `MirrorEndToEndTest` compiles the colliding pair and failed before the change.
+- **Check mode no longer writes `.vibetags-baseline` (#1077).** Check mode promises to write none
+  of the files VibeTags manages, but enforcement runs before the check-mode branch, so
+  `-Avibetags.check=true` with `-Avibetags.baseline.update=true` recorded a fresh baseline, and a
+  changed `@AIContract` signature was approved by the very run meant to catch it. The update is now
+  ignored with a warning in check mode, and the families `-Avibetags.enforce` names are still
+  checked against the baseline on disk. Two new `EnforcingModeEndToEndTest` cases failed before the
+  change.
 
 ## [1.4.2] - 2026-11-14
 

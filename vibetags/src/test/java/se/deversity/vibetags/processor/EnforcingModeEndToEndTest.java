@@ -160,6 +160,39 @@ class EnforcingModeEndToEndTest {
     }
 
     @Test
+    void checkModeNeverWritesTheBaseline() throws IOException {
+        // #1077. Check mode writes none of the files VibeTags manages, and -Avibetags.baseline.update
+        // beside it must not be the exception: enforcement ran before the check-mode branch and
+        // recorded a baseline a CI run was only meant to verify.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        List<Diagnostic<? extends JavaFileObject>> diagnostics =
+            compile(CONTRACT_V1, "-Avibetags.check=true", "-Avibetags.baseline.update=true");
+
+        assertFalse(Files.exists(root.resolve(".vibetags-baseline")),
+            "check mode recorded a baseline");
+        assertTrue(warns(diagnostics, "-Avibetags.baseline.update is ignored in check mode"),
+            () -> "the ignored option must be named: " + diagnostics);
+    }
+
+    @Test
+    void checkModeStillEnforcesAgainstTheRecordedBaselineWhenAskedToUpdateIt() throws IOException {
+        // #1077. Ignoring the update must not turn the gate off: the families named are still
+        // checked against the baseline on disk, which stays as it was.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        compile(CONTRACT_V1, "-Avibetags.baseline.update=true");
+        Path baseline = root.resolve(".vibetags-baseline");
+        String recorded = Files.readString(baseline);
+
+        List<Diagnostic<? extends JavaFileObject>> broken = compile(CONTRACT_V2_BROKEN,
+            "-Avibetags.check=true", "-Avibetags.enforce=contract", "-Avibetags.baseline.update=true");
+
+        assertTrue(errors(broken, "@AIContract violation"),
+            () -> "the changed signature must still fail the check: " + broken);
+        assertEquals(recorded, Files.readString(baseline),
+            "check mode approved the changed signature by rewriting the baseline");
+    }
+
+    @Test
     void aConstructorAndAMethodNamedLikeItsClassAreSeparateEntries() throws IOException {
         Files.createFile(root.resolve("CLAUDE.md"));
         compile(NAMESAKE_V1, "-Avibetags.baseline.update=true");
