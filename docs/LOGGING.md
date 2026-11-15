@@ -26,8 +26,10 @@ Write events, not positions:
 - **A log event asserted in a test is a contract.** `GuardrailFileWriterLogContractTest` pins the
   writer's skip reasons and `ModuleSidecarLogContractTest` the sidecar reader's
   (`sidecar.skip` / `sidecar.prune`, with `stale-format`, `malformed`, `future-version`,
-  `module-gone`, `invalid-module-path`, `superseded`, `misread-source-set`, `unreadable`), and
-  `RuleFileLengthWarnerTest` pins `validation.rule-file-over-limit file= chars= limit=`, the WARN for
+  `module-gone`, `invalid-module-path`, `superseded`, `misread-source-set`, `unreadable`),
+  `DeprecatedServicesTest` pins `platform.deprecated key= file= replacement=`, the WARN a build with a
+  deprecated output opted in writes once per file (`replacement=none` where nothing replaces it;
+  #1071), and `RuleFileLengthWarnerTest` pins `validation.rule-file-over-limit file= chars= limit=`, the WARN for
   a generated `.devin/rules/` or `.windsurf/rules/` file over Devin Desktop's per-file character cap,
   and `validation.rule-file-over-limit file= bytes= limit=` for an `.agents/rules/` file over
   Antigravity's byte cap (#850: the key names the unit, so a byte count is never logged as chars), with

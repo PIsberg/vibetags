@@ -54,8 +54,8 @@ fails the build for a generated `.yaml` with no declaration, so this is hard to 
 | `.qwen/commands/refactor.md` | Qwen (`/refactor` command; its own opt-in, not implied by `QWEN.md`) | Markdown command template |
 | `.trae/rules/*.md` | TraeCode, formerly Trae IDE (granular; it can also import `AGENTS.md` and `CLAUDE.md`, see [below](#trae-is-now-traecode-and-can-import-agentsmd-and-claudemd)) | YAML front-matter + Markdown |
 | `.roo/rules/*.md` | Zoo Code (fork of the retired Roo Code; reads the same paths), granular | Markdown |
-| `llms.txt` | Windsurf Cascade, all LLM agents | Markdown (concise map/directory) |
-| `llms-full.txt` | Windsurf Cascade, large-context LLMs | Markdown (full reference book) |
+| `llms.txt` | The llms.txt standard (a website convention; no tool documents reading it from a repository) | Markdown (concise map/directory) |
+| `llms-full.txt` | None documented (**deprecated**, see [below](#deprecated-outputs)) | Markdown (full reference book) |
 | `.windsurfrules` | Devin Desktop, formerly Windsurf (legacy single file, still read; see [below](#windsurf-is-now-devin-desktop)) | Markdown |
 | `.windsurf/rules/*.md` | Devin Desktop, formerly Windsurf (granular, the fallback directory) | YAML front-matter + Markdown |
 | `.devin/rules/*.md` | Devin Desktop (granular, the preferred directory) | YAML front-matter (`trigger: glob`) + Markdown |
@@ -174,8 +174,8 @@ Roo Code, Trae, Continue, Kiro, Gemini, JetBrains AI Assistant and Cline name no
 
 VibeTags follows the [llms.txt standard](https://llmstxt.org/) for LLM agent discovery:
 
-- **`llms.txt`** — The Map: A concise directory listing all guardrail rules with links to the annotated class. Intended for LLM agents (e.g., Windsurf Cascade) to quickly understand the project's AI interaction rules without bloating the context window.
-- **`llms-full.txt`** — The Book: A single expanded file with all rule details. Intended for large-context LLMs (Claude 4.6, Gemini 1.5 Pro) that can ingest the entire ruleset at once.
+- **`llms.txt`** — The Map: A concise directory listing all guardrail rules with links to the annotated class. The standard names this file, as a website's index; no coding tool documents loading it from a repository on its own, so point a tool at it by hand.
+- **`llms-full.txt`** — The Book: A single expanded file with all rule details. **Deprecated** (#1071): llmstxt.org never names it and no vendor documents a tool that reads it, so VibeTags stops writing it in the next major version ([below](#deprecated-outputs)).
 
 Both files follow the llms.txt format hierarchy: `# Title`, `> Summary blockquote`, informational text, and `## H2` resource sections.
 
@@ -297,6 +297,26 @@ implicitly by `QWEN.md`, adding a `/refactor` command to projects that never ask
 an ordinary file-presence opt-in: regenerated when it exists, never created.
 `QwenRefactorCommandOptInEndToEndTest` pins it.
 
+### Deprecated outputs
+
+These are still written, and an existing project's output does not change, but they stop being
+written in the next major version, tracked in
+[#1084](https://github.com/PIsberg/vibetags/issues/1084). Each names a file no tool documents
+reading. They are not simply removed: removing a service stops an opted-in consumer's file
+regenerating, and that file then sits in the repository looking current while it drifts from the
+annotations. So a build that has one opted in gets one compiler warning per compilation naming the
+file and its replacement (including a rebuild the early exit skips, #859), `vibetags.log` records a
+`platform.deprecated key=... file=... replacement=...` event per file, the "no AI config files found"
+note does not offer it, and `vibetags init --list` marks it `[deprecated, use ...]`. A build with
+`-Werror` fails on the warning; that is the point of it, and moving off the file clears it.
+
+To move off one: create the replacement, move any hand-written content outside the VibeTags markers
+across, then delete the deprecated file.
+
+| Output | Replacement | Evidence |
+|---|---|---|
+| `llms-full.txt` | `llms.txt`, which VibeTags also writes and the standard names, or an instruction file your tool reads (#1071). | **Never documented as a repository input.** [llmstxt.org](https://llmstxt.org/) (fetched 2026-11-14, `/` and `/index.md`) never uses the name `llms-full.txt`: it names `llms.txt` and links one project's "full version". This table used to attribute the file to Windsurf Cascade, but the Devin Desktop (formerly Windsurf) context-awareness page, `docs.devin.ai/desktop/context-awareness/overview` (2026-11-15), names `llms.txt` only as its own docs-site index and no repository file Cascade reads on its own. Every other hit for a repository-root `llms-full.txt` was a docs site publishing `/llms-full.txt` (Mintlify and others) or a guide telling users to point a tool at the file by hand. | [llms.txt standard](https://llmstxt.org/), [Devin Desktop context awareness](https://docs.devin.ai/desktop/context-awareness/overview) |
+
 ### Outputs removed in 1.4
 
 These were deprecated in 1.3.5 (#641, and #664 to #677 and #845 after it), with a compiler warning
@@ -379,8 +399,7 @@ read them. The file also reaches past Cursor: Cline's loader reads it, so a warn
 projects to drop a file another tool still uses. A new project on Cursor should opt into
 `.cursor/rules/`; with `.cursorrules` present as well, `.cursorrules` collapses to the scoped-rules
 index and keeps only the safety tier inline. The file gets a deprecation warning when Cursor says it
-no longer reads it, through the `DeprecatedServices` table 1.4 removed with its last row (#720),
-restored from git history.
+no longer reads it, through the `DeprecatedServices` table ([Deprecated outputs](#deprecated-outputs)).
 
 ### Cursor and Trae read `globs:` as a comma-separated string
 

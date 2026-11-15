@@ -172,7 +172,37 @@ class InitCommandTest {
             assertFalse(out().contains(file), "still lists " + file + ":\n" + out());
         }
         assertTrue(out().contains("gemini_md -> GEMINI.md"), "the replacements are still offered:\n" + out());
-        assertFalse(out().contains("deprecated"), "nothing is deprecated after #720:\n" + out());
+    }
+
+    /**
+     * A deprecated output is one the next major version stops writing, and the processor already
+     * leaves it out of the "no AI config files found" suggestions. The CLI has to say the same thing,
+     * or a new project opts into one on the CLI's say-so (#1071).
+     */
+    @Test
+    void list_marksEveryDeprecatedKeyWithItsReplacement() {
+        run("init", "--list");
+
+        for (String key : se.deversity.vibetags.processor.internal.DeprecatedServices.keys()) {
+            String line = out().lines().filter(l -> l.startsWith("  " + key + " -> ")).findFirst()
+                .orElseThrow(() -> new AssertionError(key + " is not listed:\n" + out()));
+            assertTrue(line.contains("[deprecated"), "unmarked deprecated key: " + line);
+        }
+        assertTrue(out().lines().anyMatch(l -> l.startsWith("  llms_full -> ") && l.contains("use llms.txt")),
+            "the marker names the replacement:\n" + out());
+        assertTrue(out().lines().filter(l -> l.startsWith("  llms -> ") || l.startsWith("  claude -> "))
+                .noneMatch(l -> l.contains("deprecated")),
+            "a current platform is not marked:\n" + out());
+    }
+
+    @Test
+    void platforms_deprecatedKeyIsCreatedButWarnedAbout() {
+        int code = run("init", "--platforms", "llms_full");
+
+        assertEquals(0, code, "the user asked for it by name, so it is still created:\n" + err());
+        assertTrue(Files.isRegularFile(dir.resolve("llms-full.txt")));
+        assertTrue(err().contains("llms_full") && err().contains("deprecated") && err().contains("llms.txt"),
+            "the warning names the key and its replacement:\n" + err());
     }
 
     @Test

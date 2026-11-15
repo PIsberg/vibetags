@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- **`llms-full.txt` is deprecated, and removed in the next major version (#1071, #1084).** No tool
+  documents reading a repository-root `llms-full.txt`, and the llms.txt standard (llmstxt.org) never
+  names the file; PLATFORMS.md attributed it to Windsurf Cascade, but Devin Desktop's docs name
+  `llms.txt` only as their own site index. VibeTags still writes it, and an existing project's
+  output does not change, but every build that opts in now gets one compiler WARNING naming
+  `llms.txt` as the replacement, including a rebuild the early exit skips, and `vibetags.log`
+  records `platform.deprecated key=llms_full file=llms-full.txt replacement=llms.txt`. **A build
+  with `-Werror` that opts into `llms-full.txt` now fails**; delete the file (keep `llms.txt`) to
+  clear it. The "no AI config files found" note no longer offers it, and `vibetags init --list`
+  marks it `[deprecated, use llms.txt]`. This restores `DeprecatedServices`, which 1.4.0 removed
+  with its last row (#720). `DeprecatedServicesTest`, a `SourceDigestEarlyExitEndToEndTest` case
+  and two `InitCommandTest` cases pin it; the early-exit case failed before the change.
+
 ### Fixed
 
 - **The root round of a reactor locks on its first build too (#1081).** The #1074 fix below locked

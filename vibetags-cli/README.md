@@ -86,13 +86,17 @@ Opt-in platform keys (file presence = opt-in):
   cursor -> .cursorrules
   cursor_granular -> .cursor/rules
   ...
+  llms_full -> llms-full.txt  [deprecated, use llms.txt]
+  ...
   windsurf -> .windsurfrules
   windsurf_granular -> .windsurf/rules
   zed -> .rules
 ```
 
 The list is sorted by key. `[active]` marks a platform whose opt-in file already exists in this
-project.
+project. `[deprecated, use ...]` marks an output VibeTags stops writing in the next major version,
+with its replacement; `init --platforms` still creates one you name, and warns
+([docs/PLATFORMS.md](../docs/PLATFORMS.md#deprecated-outputs)).
 
 ### Activate platforms
 

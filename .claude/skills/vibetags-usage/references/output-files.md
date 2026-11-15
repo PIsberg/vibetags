@@ -33,8 +33,8 @@ Part of the `vibetags-usage` skill; [SKILL.md](../SKILL.md) holds setup and the 
 | `.rules` | Zed Editor |
 | `.continue/rules/*.md` | Continue (granular per-class rules) |
 | `.tabnine/guidelines/*.md` | Tabnine (granular per-class rules) |
-| `llms.txt` | Windsurf Cascade / all LLM agents |
-| `llms-full.txt` | Large-context LLMs (Claude, Gemini) |
+| `llms.txt` | llms.txt standard (a website convention; point a tool at it by hand) |
+| `llms-full.txt` | **Deprecated** (#1071): no tool documents reading it; replaced by `llms.txt`, removed in the next major version |
 | `.codeiumignore` | Codeium (Devin Desktop reads it under this legacy name) |
 | `.clinerules/*.md` | Cline AI assistant (granular per-class rules, `paths:` front matter) |
 | `.clinerules/+vibetags-safety.md` | Cline AI assistant (written with the directory: the always-loaded safety tier, no front matter) |
