@@ -256,10 +256,15 @@ root (empty, never read; gitignore it like the sidecars). The second module wait
 the first has written, so every merge sees every saved sidecar. Details that matter when reading a
 log:
 
-- **Only module rounds of an opted-in root lock.** The root's own round and a single-module build
-  never race a sibling, and a root with no opt-in gets no root files to race over, so none of them
-  takes the lock or creates the file: a project that never opted in still has nothing written to it
-  (invariant 1). The module test is the one the root sweep uses (`maySweepRoot`).
+- **Which rounds lock.** A module round locks when the root opted into anything, or when its own
+  directory did: a module-only opt-in writes no root files, but it still saves its sidecar and
+  flushes `.vibetags-cache` at the root (#1074). Any round, the root's own included, also locks once
+  `.vibetags-generate.lock` exists, which the first sibling to lock leaves behind; that covers a
+  Gradle root project that has sources of its own and compiles alongside its subprojects. A
+  single-module build never meets the file and never creates it, and a project that never opted in
+  still has nothing written to it (invariant 1). The first parallel build of a root project with
+  sources can still race if the root round starts before any sibling has locked; every later build
+  is covered.
 - **It works within one JVM as well as across processes.** A file lock belongs to the whole JVM, so
   a second module in the same build process gets `OverlappingFileLockException` instead of waiting,
   whichever classloader loaded each processor. The lock polls `tryLock()` every 10 ms, which waits

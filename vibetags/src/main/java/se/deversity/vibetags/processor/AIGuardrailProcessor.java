@@ -2197,16 +2197,36 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * Whether this round writes root files a sibling module may be writing at the same time, and so
-     * generates under {@link GenerationLock} (#908). A module round of a reactor does, when the root
-     * has opted into anything. The root's own round and a single module have no sibling to race. A
-     * root with no opt-in gets no root files, and must not get a lock file either: file presence is
-     * the only opt-in (invariant 1), and the third-party corpus asserts a project that never opted
-     * in is left with nothing written at all.
+     * Whether this round writes root state a sibling module may be writing at the same time, and so
+     * generates under {@link GenerationLock} (#908). Generation saves a sidecar and flushes
+     * {@code .vibetags-cache} at the root, so the lock covers more than the root's own opt-ins:
+     * <ul>
+     *   <li>A module round of a reactor locks when the root has opted into anything, when its own
+     *       directory has (the root files are then absent, but the sidecars and the cache are not,
+     *       #1074), or when the lock file is already there, which a sibling that locked left
+     *       behind.</li>
+     *   <li>The root's own round locks only when that lock file is there. Gradle compiles a root
+     *       project with sources alongside its subprojects, and once one of them has locked the
+     *       root round races it like any module (#1074). A single-module build never meets the
+     *       file, so the most common layout there is gets no lock file of its own.</li>
+     * </ul>
+     * A project with no opt-in anywhere gets no lock file: file presence is the only opt-in
+     * (invariant 1), and the third-party corpus asserts a project that never opted in is left with
+     * nothing written at all.
      */
     private boolean sharesRootWithSiblings() {
-        return !maySweepRoot(compilationRoot())
-            && !ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)).isEmpty();
+        if (moduleIdentity == null) {
+            return false;
+        }
+        if (Files.exists(root.resolve(GenerationLock.FILE_NAME))) {
+            return true;
+        }
+        Path compilationRoot = compilationRoot();
+        if (compilationRoot.equals(root)) {
+            return false;
+        }
+        return !ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(root)).isEmpty()
+            || !ServiceRegistry.resolveActiveServices(ServiceRegistry.buildServiceFileMap(compilationRoot)).isEmpty();
     }
 
     /**

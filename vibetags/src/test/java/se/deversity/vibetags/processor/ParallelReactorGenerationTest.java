@@ -143,6 +143,86 @@ class ParallelReactorGenerationTest {
     }
 
     @Test
+    void aModuleThatOptedInOnItsOwnGeneratesUnderTheLock() throws Exception {
+        // #1074. The root has no opt-in, but module-core does. Its round still saves a sidecar and
+        // flushes .vibetags-cache at the root, the same shared files a sibling flushes, so the
+        // flush must wait for a sibling's generation like any other module round's.
+        Files.createDirectories(root.resolve("module-core"));
+        Files.createFile(root.resolve("module-core").resolve("CLAUDE.md"));
+        ProcessorTestHarness core = module("module-core", "com.example.core.IrNode", LOCKED_SOURCE);
+
+        assertWaitsForASiblingsGeneration(core, "module-core");
+
+        assertTrue(Files.exists(root.resolve(".vibetags-cache")),
+            "precondition: the round writes shared state at the root, which is what needs the lock");
+        assertTrue(Files.readString(root.resolve("module-core").resolve("CLAUDE.md"), StandardCharsets.UTF_8)
+            .contains("com.example.core.IrNode"), "module-core's own CLAUDE.md must still be generated");
+    }
+
+    @Test
+    void theRootsOwnRoundWaitsForASiblingModule() throws Exception {
+        // #1074. Gradle compiles a root project that has sources of its own alongside its
+        // subprojects. The root round reads every sidecar and writes the root files, so once a
+        // sibling module exists it races that sibling exactly as two modules would.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        module("module-cli", "com.example.cli.KartaCli", AUDITED_SOURCE).compile();
+        ProcessorTestHarness rootModule = rootModule();
+
+        assertWaitsForASiblingsGeneration(rootModule, "root");
+
+        String claude = Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+        assertTrue(claude.contains("com.example.app.App") && claude.contains("com.example.cli.KartaCli"),
+            () -> "both regions must be merged once the root round runs:\n" + claude);
+    }
+
+    @Test
+    void aSingleModuleBuildCreatesNoLockFile() throws IOException {
+        // The root round of a project with no sibling module has nothing to race: no lock file
+        // appears in the most common layout there is.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        rootModule().compile();
+
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("com.example.app.App"),
+            "precondition: the root round generated");
+        assertFalse(Files.exists(root.resolve(".vibetags-generate.lock")),
+            "a single-module build has no sibling to race and must not get a lock file");
+    }
+
+    /** Holds the generation lock as a sibling would, and asserts {@code module} waits for it. */
+    private void assertWaitsForASiblingsGeneration(ProcessorTestHarness module, String name) throws Exception {
+        List<Throwable> failures = new ArrayList<>();
+        CountDownLatch done = new CountDownLatch(1);
+        Thread build;
+        try (GenerationLock sibling = GenerationLock.acquire(root, "module-sibling", null)) {
+            assertTrue(sibling.held(), "precondition: the sibling holds the generation lock");
+            build = new Thread(() -> {
+                run(module, failures);
+                done.countDown();
+            }, name);
+            build.start();
+            assertFalse(done.await(2, TimeUnit.SECONDS),
+                name + " generated while a sibling held the generation lock: " + failures);
+        }
+        assertTrue(done.await(60, TimeUnit.SECONDS), name + " must finish once the lock is free");
+        build.join();
+        assertTrue(failures.isEmpty(), () -> name + " threw: " + failures);
+    }
+
+    /** The root project itself, with a build file and sources of its own. */
+    private ProcessorTestHarness rootModule() throws IOException {
+        Files.writeString(root.resolve("pom.xml"), "<project><artifactId>app</artifactId></project>",
+            StandardCharsets.UTF_8);
+        ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
+        harness.writeSourceFile("src/main/java/com/example/app/App.java", """
+            package com.example.app;
+            import se.deversity.vibetags.annotations.AILocked;
+            @AILocked(reason = "entry point")
+            public class App {}
+            """);
+        return harness;
+    }
+
+    @Test
     void anEarlyExitedRoundClearsItsDigestUnderTheLock() throws Exception {
         // #916. A round skipped as unchanged that then sees another processor's generated sources
         // clears its recorded digest and flushes the cache. That flush re-reads and rewrites the
@@ -236,6 +316,13 @@ class ParallelReactorGenerationTest {
         import se.deversity.vibetags.annotations.AILocked;
         @AILocked(reason = "core IR node")
         public class IrNode {}
+        """;
+
+    private static final String AUDITED_SOURCE = """
+        package com.example.cli;
+        import se.deversity.vibetags.annotations.AIAudit;
+        @AIAudit(checkFor = {"Path Traversal"})
+        public class KartaCli {}
         """;
 
     private ProcessorTestHarness module(String name, String fqn, String source) throws IOException {

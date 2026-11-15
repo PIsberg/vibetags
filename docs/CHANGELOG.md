@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two more kinds of round generate under the reactor's generation lock (#1074).** A module whose
+  own directory opted in, under a root that did not, still saves its sidecar and flushes
+  `.vibetags-cache` at the root, and took no lock, so a sibling's flush could drop its changes. And
+  a Gradle root project with sources of its own compiles alongside its subprojects and merges every
+  sidecar into the root files, but the root's own round never locked. A module round now also locks
+  when its own directory opted in, and every round, the root's included, locks once
+  `.vibetags-generate.lock` exists, which the first sibling to lock leaves behind. A single-module
+  build still gets no lock file. Tested by `ParallelReactorGenerationTest`, which holds the lock and
+  asserts both rounds wait for it; both failed before the change.
+
 ## [1.4.2] - 2026-11-14
 
 **Upgrade note: if you commit your `.vibetags-mod-*` sidecars, each one gains a line on the first
