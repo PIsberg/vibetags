@@ -7,5 +7,5 @@ paths: ["**/VibeTagsLogger.java"]
 
 ## Thread-Safety Guarantee
 - **Strategy**: THREAD_LOCAL
-- **Note**: Per-thread project-root tracking partitions Logback loggers by root, so parallel compilations never detach each other's appenders (VibeTagsLoggerAsyncTest proves it)
+- **Note**: Logback loggers are partitioned by root and by compiling thread, so parallel compilations, two modules sharing one root included, never detach each other's appenders (VibeTagsLoggerAsyncTest and VibeTagsLoggerConcurrencyTest prove it)
 <!-- VIBETAGS-END -->

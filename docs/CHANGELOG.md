@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.vibetags-generate.lock` exists, which the first sibling to lock leaves behind. A single-module
   build still gets no lock file. Tested by `ParallelReactorGenerationTest`, which holds the lock and
   asserts both rounds wait for it; both failed before the change.
+- **Two modules sharing one root no longer silence each other's `vibetags.log` (#1079).** Under
+  `mvn -T` or Gradle `--parallel` in one JVM, both modules configured the same Logback logger,
+  keyed only by the root. The second module's setup replaced the first one's appender, and with it
+  any per-module `-Avibetags.log.path`, and the first module to finish stopped the appender the
+  other was still logging through, so its later events, log-contract events among them, were
+  dropped. The logger is now keyed by root and compiling thread. Two new
+  `VibeTagsLoggerConcurrencyTest` cases (a sibling shutting down mid-compilation; two log paths
+  under one root) failed before the change.
 
 ## [1.4.2] - 2026-11-14
 

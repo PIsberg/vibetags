@@ -68,7 +68,7 @@ import java.nio.file.Paths;
  */
 @AIThreadSafe(
     strategy = AIThreadSafe.Strategy.THREAD_LOCAL,
-    note = "Per-thread project-root tracking partitions Logback loggers by root, so parallel compilations never detach each other's appenders (VibeTagsLoggerAsyncTest proves it)"
+    note = "Logback loggers are partitioned by root and by compiling thread, so parallel compilations, two modules sharing one root included, never detach each other's appenders (VibeTagsLoggerAsyncTest and VibeTagsLoggerConcurrencyTest prove it)"
 )
 public final class VibeTagsLogger {
 
@@ -169,13 +169,21 @@ public final class VibeTagsLogger {
     }
 
     /**
-     * Suffixes the logger name with an absolute path hash to isolate concurrent parallel test threads.
+     * The Logback logger one compilation logs through: the root's absolute path hash, then the
+     * compiling thread. The root alone was not enough (#1079): two modules of {@code mvn -T} or
+     * Gradle {@code --parallel} compile in one JVM against one {@code -Avibetags.root}, and sharing
+     * a logger, the second module's {@link #forRoot} replaced the first one's appender (and so its
+     * log path) and the first to finish stopped the other's in {@link #shutdown(Path)}, dropping
+     * every event it logged after. A compilation runs its rounds on one thread and two never share
+     * one at once, so the thread separates them. Sequential compilations on one thread reuse the
+     * name, which keeps the number of Logback loggers bounded by roots times threads.
      */
     private static String getLoggerName(@Nullable Path projectRoot) {
         if (projectRoot == null) {
             return LOGGER_NAME;
         }
-        return LOGGER_NAME + "." + (projectRoot.toAbsolutePath().normalize().hashCode() & Integer.MAX_VALUE);
+        return LOGGER_NAME + "." + (projectRoot.toAbsolutePath().normalize().hashCode() & Integer.MAX_VALUE)
+            + ".t" + Thread.currentThread().threadId();
     }
 
     /**
