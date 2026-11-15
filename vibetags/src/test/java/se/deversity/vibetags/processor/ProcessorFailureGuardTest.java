@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.processing.RoundEnvironment;
@@ -21,6 +22,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -100,6 +102,44 @@ class ProcessorFailureGuardTest {
                 .filter(d -> d.getKind() == Diagnostic.Kind.WARNING)
                 .anyMatch(d -> d.getMessage(null).contains("guardrail generation failed")),
             "Expected a WARNING noting that guardrail generation failed and was skipped");
+    }
+
+    @Test
+    @ResourceLock(ParallelReactorGenerationTest.SEAM_LOCK)
+    void aFailureDuringGenerationStillReleasesTheLog(@TempDir Path tempDir) throws IOException {
+        // #1075. A RuntimeException in the final round skips every shutdown on the normal exit
+        // paths of generation, so the guard must release the log itself: otherwise the appender
+        // stays attached and vibetags.log stays open (locked on Windows) for the rest of a daemon.
+        Files.createFile(tempDir.resolve("CLAUDE.md"));
+        ProcessorTestHarness harness = new ProcessorTestHarness(tempDir, false);
+        harness.writeSourceFile("src/main/java/com/example/Locked.java", """
+            package com.example;
+            import se.deversity.vibetags.annotations.AILocked;
+            @AILocked(reason = "core logic")
+            public class Locked {}
+            """);
+        String thread = Thread.currentThread().getName();
+        AIGuardrailProcessor.setAfterSidecarRead(() -> {
+            if (thread.equals(Thread.currentThread().getName())) {
+                throw new IllegalStateException(BOOM);
+            }
+        });
+        List<Diagnostic<? extends JavaFileObject>> diagnostics;
+        try {
+            diagnostics = harness.compileWithReturningDiagnostics(new AIGuardrailProcessor());
+        } finally {
+            AIGuardrailProcessor.setAfterSidecarRead(null);
+        }
+
+        assertTrue(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.WARNING
+                && d.getMessage(null).contains("guardrail generation failed")),
+            () -> "precondition: the fault fired inside generation and was downgraded: " + diagnostics);
+        try {
+            assertNull(VibeTagsLogger.currentFor(tempDir),
+                "the failed round left its logger configured, with its appender and file handle open");
+        } finally {
+            VibeTagsLogger.shutdown(tempDir);
+        }
     }
 
     private static final class StringSource extends SimpleJavaFileObject {

@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dropped. The logger is now keyed by root and compiling thread. Two new
   `VibeTagsLoggerConcurrencyTest` cases (a sibling shutting down mid-compilation; two log paths
   under one root) failed before the change.
+- **A failure in the final round now releases `vibetags.log` (#1075).** `process()` downgrades a
+  `RuntimeException` to a warning, but every exit that releases the log sits on a path a throw
+  skips, so a generation that failed left the appender attached and the file open, locked on
+  Windows, for the rest of a Gradle or Maven daemon. The guard now releases it when the failing
+  round is the last one. `ProcessorFailureGuardTest` throws from inside generation and asserts the
+  round left no logger configured; it failed before the change.
 
 ## [1.4.2] - 2026-11-14
 

@@ -677,6 +677,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     "VibeTags: guardrail generation failed and was skipped (build not affected): " + e);
                 if (log != null) log.error("Guardrail generation failed; skipping. Build is unaffected.", e);
             }
+            // The exits of the final round each release the log, and a throw skips them all: the
+            // appender stayed attached and vibetags.log open, locked on Windows, for the rest of a
+            // daemon (#1075). An earlier round's failure leaves the final round to release it.
+            if (roundEnv.processingOver()) {
+                VibeTagsLogger.shutdown(root);
+            }
         }
         return false; // allow other processors to see the same annotations
     }
