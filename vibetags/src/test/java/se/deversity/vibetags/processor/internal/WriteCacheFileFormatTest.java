@@ -235,6 +235,52 @@ class WriteCacheFileFormatTest {
     }
 
     @Test
+    void aModuleWhoseContextAlreadyMatchesDoesNotRewriteTheCache(@TempDir Path dir) throws IOException {
+        // #1080. The processor binds its run context in init(), before any module is known. In a
+        // cache that keeps one section per module there is no unbound section to compare against,
+        // so bindContext marked the cache dirty on every build, and a flush that changed nothing
+        // (clearing a digest that was never set) rewrote the file anyway.
+        Path file = dir.resolve(CACHE);
+        WriteCache first = new WriteCache(file);
+        first.bindContext("ctx");
+        first.bindModule("mod-a");
+        first.setBuildFingerprint("aaaa1111");
+        first.flush();
+        String written = Files.readString(file, StandardCharsets.UTF_8);
+        java.nio.file.attribute.FileTime old = java.nio.file.attribute.FileTime.fromMillis(1_000_000_000_000L);
+        Files.setLastModifiedTime(file, old);
+
+        WriteCache next = new WriteCache(file);
+        next.bindContext("ctx");
+        next.bindModule("mod-a");
+        next.setSourceDigest(null);
+        next.flush();
+
+        assertEquals(written, Files.readString(file, StandardCharsets.UTF_8), "precondition: nothing changed");
+        assertEquals(old, Files.getLastModifiedTime(file),
+            "a build whose module context already matched rewrote .vibetags-cache with the same bytes");
+    }
+
+    @Test
+    void aModuleWhoseContextChangedStillRewritesTheCache(@TempDir Path dir) throws IOException {
+        // The other half of #1080: deferring the check to bindModule must not lose a real change.
+        Path file = dir.resolve(CACHE);
+        WriteCache first = new WriteCache(file);
+        first.bindContext("ctx-one");
+        first.bindModule("mod-a");
+        first.setBuildFingerprint("aaaa1111");
+        first.flush();
+
+        WriteCache next = new WriteCache(file);
+        next.bindContext("ctx-two");
+        next.bindModule("mod-a");
+        next.flush();
+
+        assertTrue(Files.readString(file, StandardCharsets.UTF_8).contains("# context: ctx-two"),
+            "the module's header must converge on the new context");
+    }
+
+    @Test
     void aRecordedWriteIsRecognisedAsUnchangedOnlyForTheSameBody(@TempDir Path dir) throws IOException {
         Path generated = dir.resolve("CLAUDE.md");
         Files.writeString(generated, "body", StandardCharsets.UTF_8);

@@ -47,6 +47,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ignored with a warning in check mode, and the families `-Avibetags.enforce` names are still
   checked against the baseline on disk. Two new `EnforcingModeEndToEndTest` cases failed before the
   change.
+- **An unchanged module build no longer rewrites `.vibetags-cache` (#1080).** The processor binds
+  its run context in `init()`, before the module is known. In a cache with one section per module
+  that compared the context with no section at all, marked the cache dirty on every build, and the
+  next flush rewrote the file with the bytes it already held. The comparison now waits for the
+  module, which `bindModule()` already made. `WriteCacheFileFormatTest` pins both halves: no rewrite
+  when the module's context matches (failed before the change), a rewrite when it changed.
 
 ## [1.4.2] - 2026-11-14
 

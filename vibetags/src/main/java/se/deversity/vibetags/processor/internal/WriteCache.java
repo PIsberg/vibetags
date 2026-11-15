@@ -354,6 +354,12 @@ public final class WriteCache {
         loadIfNeeded();
         this.currentContext = context;
         Section section = sections.get(currentModule);
+        if (section == null && LEGACY_SECTION.equals(currentModule) && !sections.isEmpty()) {
+            // A per-module cache bound before its module is known, as the processor's init() binds
+            // it. There is no unbound section to converge, and bindModule() compares this context
+            // with the module's own; marking dirty here rewrote the file on every build (#1080).
+            return;
+        }
         if (section == null || !context.equals(section.storedContext)) {
             // The persisted header must converge on the new context even when nothing else
             // changes this run — otherwise the same mismatch re-fires on every later compile.
