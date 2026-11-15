@@ -107,7 +107,7 @@ public final class ModuleOutputWriter {
         // that contributes only to the reactor-root aggregate still has guardrails worth mirroring
         // into a test module that asked for them (issue #312).
         MirrorWriter.write(moduleRoot, vibetagsRoot, collector, projectName, generatedHeader,
-            roles, writer, messager, sourceSetSuffix(regionId, moduleId));
+            roles, writer, messager, regionId, sourceSetSuffix(regionId, moduleId));
 
         if (moduleRoot == null || moduleRoot.equals(vibetagsRoot) || moduleActive.isEmpty()) {
             return; // module is the root, or nothing opted in here

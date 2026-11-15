@@ -71,13 +71,13 @@ class MirrorEndToEndTest {
     }
 
     /** Compiles one module (real pom.xml + file-backed source) into the shared reactor root. */
-    private void compileModule(String module, String fqn, String source) throws IOException {
+    private void compileModule(String module, String fqn, String source, String... options) throws IOException {
         ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
         Files.createDirectories(reactorRoot.resolve(module));
         Files.writeString(reactorRoot.resolve(module).resolve("pom.xml"),
             "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
         harness.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java", source);
-        harness.compile();
+        harness.compile(options);
     }
 
     /** Makes {@code module} a mirror target with the given config body. */
@@ -168,6 +168,23 @@ class MirrorEndToEndTest {
         assertTrue(Files.exists(mirrored("app-tests", "app-fhe", "com-example-fhe-NativeBridge")),
             "app-runtime's compile must not clean up app-fhe's mirrored namespace");
         assertTrue(Files.exists(mirrored("app-tests", "app-runtime", "com-example-runtime-KeyContext")));
+    }
+
+    @Test
+    void modulesDisambiguatedByAModuleOverride_mirrorUnderTheirOwnIds() throws IOException {
+        // #1076. libs/core and libs_core both lay out as the id libs_core, so each is given its own
+        // with -Avibetags.module. Mirroring recomputed the id from the layout instead: both wrote
+        // and cleaned up under mirrored-libs_core-, and the second compile deleted the first's file.
+        mirrorTarget("app-tests", "");
+        compileModule("libs/core", "com.example.fhe.NativeBridge", FHE_SOURCE, "-Avibetags.module=core-a");
+        compileModule("libs_core", "com.example.runtime.KeyContext", RUNTIME_SOURCE, "-Avibetags.module=core-b");
+
+        assertTrue(Files.exists(mirrored("app-tests", "core-a", "com-example-fhe-NativeBridge")),
+            "libs/core mirrors under the id its -Avibetags.module gave it, and libs_core's compile keeps it");
+        assertTrue(Files.exists(mirrored("app-tests", "core-b", "com-example-runtime-KeyContext")),
+            "libs_core mirrors under the id its -Avibetags.module gave it");
+        assertFalse(Files.exists(mirrored("app-tests", "libs_core", "com-example-runtime-KeyContext")),
+            "the layout id the override replaced must not be used for the mirrored filename");
     }
 
     @Test

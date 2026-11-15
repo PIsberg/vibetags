@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two more kinds of round generate under the reactor's generation lock (#1074).** A module whose
+  own directory opted in, under a root that did not, still saves its sidecar and flushes
+  `.vibetags-cache` at the root, and took no lock, so a sibling's flush could drop its changes. And
+  a Gradle root project with sources of its own compiles alongside its subprojects and merges every
+  sidecar into the root files, but the root's own round never locked. A module round now also locks
+  when its own directory opted in, and every round, the root's included, locks once
+  `.vibetags-generate.lock` exists, which the first sibling to lock leaves behind. A single-module
+  build still gets no lock file. Tested by `ParallelReactorGenerationTest`, which holds the lock and
+  asserts both rounds wait for it; both failed before the change.
+- **Two modules sharing one root no longer silence each other's `vibetags.log` (#1079).** Under
+  `mvn -T` or Gradle `--parallel` in one JVM, both modules configured the same Logback logger,
+  keyed only by the root. The second module's setup replaced the first one's appender, and with it
+  any per-module `-Avibetags.log.path`, and the first module to finish stopped the appender the
+  other was still logging through, so its later events, log-contract events among them, were
+  dropped. The logger is now keyed by root and compiling thread. Two new
+  `VibeTagsLoggerConcurrencyTest` cases (a sibling shutting down mid-compilation; two log paths
+  under one root) failed before the change.
+- **A failure in the final round now releases `vibetags.log` (#1075).** `process()` downgrades a
+  `RuntimeException` to a warning, but every exit that releases the log sits on a path a throw
+  skips, so a generation that failed left the appender attached and the file open, locked on
+  Windows, for the rest of a Gradle or Maven daemon. The guard now releases it when the failing
+  round is the last one. `ProcessorFailureGuardTest` throws from inside generation and asserts the
+  round left no logger configured; it failed before the change.
+- **Mirrored rule files honour `-Avibetags.module` (#1076).** `MirrorWriter` derived the source
+  module's id from the directory layout, so two modules whose layouts collide (`libs/core` and
+  `libs_core` both lay out as `libs_core`) and that were each given an id of their own still wrote
+  and cleaned up under one `mirrored-<id>-` prefix, and each compile deleted the other's mirrored
+  files. It now uses the region id the processor resolved. A module that already sets
+  `-Avibetags.module` and mirrors into a target mirrors under the new name from the next build;
+  the files under the old layout-derived name are no longer anyone's to clean up, so delete them by
+  hand. `MirrorEndToEndTest` compiles the colliding pair and failed before the change.
+- **Check mode no longer writes `.vibetags-baseline` (#1077).** Check mode promises to write none
+  of the files VibeTags manages, but enforcement runs before the check-mode branch, so
+  `-Avibetags.check=true` with `-Avibetags.baseline.update=true` recorded a fresh baseline, and a
+  changed `@AIContract` signature was approved by the very run meant to catch it. The update is now
+  ignored with a warning in check mode, and the families `-Avibetags.enforce` names are still
+  checked against the baseline on disk. Two new `EnforcingModeEndToEndTest` cases failed before the
+  change.
+- **An unchanged module build no longer rewrites `.vibetags-cache` (#1080).** The processor binds
+  its run context in `init()`, before the module is known. In a cache with one section per module
+  that compared the context with no section at all, marked the cache dirty on every build, and the
+  next flush rewrote the file with the bytes it already held. The comparison now waits for the
+  module, which `bindModule()` already made. `WriteCacheFileFormatTest` pins both halves: no rewrite
+  when the module's context matches (failed before the change), a rewrite when it changed.
+
 ## [1.4.2] - 2026-11-14
 
 **Upgrade note: if you commit your `.vibetags-mod-*` sidecars, each one gains a line on the first

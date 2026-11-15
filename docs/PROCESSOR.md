@@ -17,7 +17,7 @@ Passed via `<compilerArg>-A...</compilerArg>` in Maven or `compilerArgs` in Grad
 | `vibetags.cache` | `true` | Set to `false` to disable the per-file write cache (`.vibetags-cache`) |
 | `vibetags.check` | `false` | Opt-in check mode: verify generated files are in sync with the annotations instead of writing them; drift is reported as a compile **error** (CI enforcement). Writes none of the files VibeTags manages in the project — no output files, no sidecars, no cache. Dependency manifests still go to `CLASS_OUTPUT`; see below |
 | `vibetags.enforce` | (off) | Opt-in **enforcing mode**: comma-separated families (`locked`, `contract`, `publicapi`, or `all`) whose guarded elements must match `.vibetags-baseline`. A drift is a compile **error**. See below |
-| `vibetags.baseline.update` | `false` | Record the current shapes into `.vibetags-baseline` instead of checking them. The only thing that writes that file |
+| `vibetags.baseline.update` | `false` | Record the current shapes into `.vibetags-baseline` instead of checking them. The only thing that writes that file. Ignored, with a warning, under `vibetags.check`, which writes nothing; the families `vibetags.enforce` names are then checked against the baseline on disk |
 | `vibetags.exclude` | (none) | Comma-separated globs over an element's path; a match is collected but never published. See below |
 | `vibetags.manifest.origin` | read from `.vibetags-manifest` | The `group:artifact:version` stamped into published manifests, overriding the marker file's first line |
 | `vibetags.manifest.dir` | (off) | Read dependency manifests from a directory of extracted `*.json` files instead of, or in addition to, the compile classpath |

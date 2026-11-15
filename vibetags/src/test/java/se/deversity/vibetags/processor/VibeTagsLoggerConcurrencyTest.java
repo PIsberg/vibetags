@@ -75,4 +75,84 @@ class VibeTagsLoggerConcurrencyTest {
             assertTrue(future.get(), "Each isolated logging task must pass cleanly without interference or file locks.");
         }
     }
+
+    @Test
+    void aSiblingSharingTheRootDoesNotSilenceAModuleStillCompiling(@TempDir Path root) throws Exception {
+        // #1079. Two modules of mvn -T or gradle --parallel compile in one JVM against one
+        // -Avibetags.root. The module that finishes first shuts its logger down while the other is
+        // still generating, and the other's later events must still reach the log.
+        CountDownLatch bothConfigured = new CountDownLatch(2);
+        CountDownLatch siblingDone = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> stillCompiling = pool.submit(() -> {
+                Logger log = VibeTagsLogger.forRoot(root, "vibetags.log", "INFO");
+                bothConfigured.countDown();
+                await(bothConfigured);
+                await(siblingDone);
+                log.info("module-core still generating");
+                VibeTagsLogger.shutdown(root);
+                return null;
+            });
+            Future<?> finishedFirst = pool.submit(() -> {
+                Logger log = VibeTagsLogger.forRoot(root, "vibetags.log", "INFO");
+                bothConfigured.countDown();
+                await(bothConfigured);
+                log.info("module-cli done");
+                VibeTagsLogger.shutdown(root);
+                siblingDone.countDown();
+                return null;
+            });
+            finishedFirst.get(30, TimeUnit.SECONDS);
+            stillCompiling.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        String content = Files.readString(root.resolve("vibetags.log"));
+        assertTrue(content.contains("module-cli done"), () -> "precondition: the first module logged:\n" + content);
+        assertTrue(content.contains("module-core still generating"),
+            () -> "the sibling's shutdown stopped the appender of a module still compiling:\n" + content);
+    }
+
+    @Test
+    void eachModuleKeepsItsOwnLogPathWhenTheyShareTheRoot(@TempDir Path root) throws Exception {
+        // #1079. Module options may name different log files under one root; the second module to
+        // configure its logger must not take over the first one's.
+        CountDownLatch bothConfigured = new CountDownLatch(2);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> core = pool.submit(() -> {
+                Logger log = VibeTagsLogger.forRoot(root, "core.log", "INFO");
+                bothConfigured.countDown();
+                await(bothConfigured);
+                log.info("from module-core");
+                VibeTagsLogger.shutdown(root);
+                return null;
+            });
+            Future<?> cli = pool.submit(() -> {
+                Logger log = VibeTagsLogger.forRoot(root, "cli.log", "INFO");
+                bothConfigured.countDown();
+                await(bothConfigured);
+                log.info("from module-cli");
+                VibeTagsLogger.shutdown(root);
+                return null;
+            });
+            core.get(30, TimeUnit.SECONDS);
+            cli.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        String coreLog = Files.exists(root.resolve("core.log")) ? Files.readString(root.resolve("core.log")) : "";
+        String cliLog = Files.exists(root.resolve("cli.log")) ? Files.readString(root.resolve("cli.log")) : "";
+        assertTrue(coreLog.contains("from module-core") && !coreLog.contains("from module-cli"),
+            () -> "core.log must hold module-core's events only:\n" + coreLog);
+        assertTrue(cliLog.contains("from module-cli") && !cliLog.contains("from module-core"),
+            () -> "cli.log must hold module-cli's events only:\n" + cliLog);
+    }
+
+    private static void await(CountDownLatch latch) throws InterruptedException {
+        assertTrue(latch.await(30, TimeUnit.SECONDS), "a module thread never reached the rendezvous");
+    }
 }
