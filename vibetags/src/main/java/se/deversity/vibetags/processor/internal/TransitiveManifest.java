@@ -183,7 +183,7 @@ public final class TransitiveManifest {
     public static String toJson(String packageName, String origin, List<TransitiveRule> rules,
                                 String producedByVersion) {
         List<TransitiveRule> sorted = new ArrayList<>(rules);
-        java.util.Collections.sort(sorted);
+        sorted.sort(se.deversity.vibetags.processor.internal.content.TransitiveRules.ORDER);
 
         StringBuilder sb = new StringBuilder(512);
         sb.append("{\n")

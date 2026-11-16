@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.internal.content.TransitiveRules;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.SourceLocation;
@@ -27,7 +28,8 @@ import java.util.Set;
  * Maven and Gradle, between an IDE and a command line, and between machines, so identical sources
  * would produce different {@code CLAUDE.md} content and a different {@code BuildFingerprint}
  * depending on who compiled them. Every bucket is ordered by element identity (path, then kind),
- * the locked positions likewise, and inherited rules by their natural order after deduplication.
+ * the locked positions likewise, and inherited rules by {@code TransitiveRules.ORDER} after
+ * deduplication.
  * {@code OutputOrderDeterminismTest} and {@code GuardrailModelOrderTest} pin it.
  *
  * <p>The model's constructor only assigns, so this ordering holds only if every model is built
@@ -101,7 +103,7 @@ public final class GuardrailModelBuilder {
         // modules of a reactor legitimately import the same library. Sorted for the same reason the
         // buckets are: discovery order is import-walk order, which is not stable across builds.
         List<TransitiveRule> rules = new ArrayList<>(new LinkedHashSet<>(transitiveRules));
-        Collections.sort(rules);
+        rules.sort(TransitiveRules.ORDER);
         return new GuardrailModel(sortedBuckets, sortedByKey(lockedPositions), rules, elementIds,
             totalAnnotatedReferences, !sortedBuckets.isEmpty());
     }

@@ -22,7 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `processor.internal`. The builder that sorts and derives a model becomes `GuardrailModelBuilder`,
   and `GuardrailModel` keeps fields and accessors only; an `ArchitectureRulesTest` rule lets no
   other class call its constructor, so no model can skip the sort that keeps generated output
-  identical on every machine. Generated files are unaffected.
+  identical on every machine. `TransitiveRule` is no longer `Comparable`: its attribute summary
+  and sort order become `TransitiveRules.memberSummary` and `TransitiveRules.ORDER`. Generated
+  files are unaffected.
 
 ### Deprecated
 

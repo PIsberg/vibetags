@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.model;
 
 import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import org.junit.jupiter.api.Test;
+import se.deversity.vibetags.processor.internal.content.TransitiveRules;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -59,12 +60,12 @@ class TransitiveRuleTest {
         members.put("focus", "f");
         members.put("avoids", "a");
         assertEquals("focus=f; avoids=a",
-            rule("com.acme.api", "@AIContext", "o", members).memberSummary());
+            TransitiveRules.memberSummary(rule("com.acme.api", "@AIContext", "o", members)));
     }
 
     @Test
     void memberSummaryIsEmptyWithoutMembers() {
-        assertEquals("", rule("com.acme.api", "@AIContext", "o", Map.of()).memberSummary());
+        assertEquals("", TransitiveRules.memberSummary(rule("com.acme.api", "@AIContext", "o", Map.of())));
     }
 
     @Test
@@ -78,7 +79,7 @@ class TransitiveRuleTest {
         TransitiveRule d = rule("com.a.api", "@AIContext", "p", Map.of());
 
         List<TransitiveRule> sorted = new ArrayList<>(List.of(b, d, c, a));
-        java.util.Collections.sort(sorted);
+        sorted.sort(TransitiveRules.ORDER);
         assertEquals(List.of(a, d, c, b), sorted);
     }
 

@@ -1179,7 +1179,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
 
         List<TransitiveRule> rules = new java.util.ArrayList<>(reader.rules());
-        java.util.Collections.sort(rules);
+        rules.sort(se.deversity.vibetags.processor.internal.content.TransitiveRules.ORDER);
         int total = rules.size();
         int dropped = 0;
         if (maxTransitiveAdvisory > 0) {

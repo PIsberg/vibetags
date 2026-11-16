@@ -7,6 +7,7 @@ import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.processor.internal.content.AnnotationDescriptor;
 import se.deversity.vibetags.processor.internal.content.AnnotationDescriptors;
 import se.deversity.vibetags.processor.internal.content.ContentHash;
+import se.deversity.vibetags.processor.internal.content.TransitiveRules;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.model.SourceLocation;
@@ -105,7 +106,7 @@ public final class BuildFingerprint {
               .append(rule.annotation()).append(':')
               .append(rule.origin()).append(':')
               .append(rule.tier().name()).append(':')
-              .append(rule.memberSummary()).append(';');
+              .append(TransitiveRules.memberSummary(rule)).append(';');
         }
         sb.append('}')
             // Source positions of locked elements. They are content of .vibetags-locks, which

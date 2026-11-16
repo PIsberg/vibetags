@@ -445,9 +445,9 @@ class TransitiveGuardrailLifecycleE2ETest {
      * the second library without its publish opt-in and this test fails. That reshuffling the two
      * {@code import} lines does not change a byte is a stability pin, and measurement says it is
      * currently guarded by more than one layer — with {@code Collections.sort} deleted from
-     * {@code GuardrailModel} the output stayed identical under both an import swap and a reversed
+     * {@code GuardrailModelBuilder} the output stayed identical under both an import swap and a reversed
      * classpath, so nothing reachable from a real compile perturbs the order in the first place.
-     * The sort remains the documented guarantee and {@code TransitiveRule.compareTo} is what
+     * The sort remains the documented guarantee and {@code TransitiveRules.ORDER} is what
      * {@code TransitiveSection} relies on to group by package; this test guards the observable end
      * of that, not the sort itself. Recorded here so the next person does not read a passing test
      * as proof the sort is exercised.

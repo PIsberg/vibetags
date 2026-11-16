@@ -93,7 +93,7 @@ public final class GuardrailModel {
 
     /**
      * Guardrails that arrived from dependency JARs rather than from this project's sources, sorted
-     * by {@link TransitiveRule}'s natural order. Empty unless the project opted in with a
+     * by {@code TransitiveRules.ORDER}. Empty unless the project opted in with a
      * {@code .vibetags-transitive} marker file.
      */
     private final List<TransitiveRule> transitiveRules;

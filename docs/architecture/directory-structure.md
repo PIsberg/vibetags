@@ -40,6 +40,7 @@ vibetags/
 │   │   │   │   │       ├── ElementFiles.java          # which element a file glob may stand for
 │   │   │   │   │       ├── ElementKinds.java          # ElementTag lookup by name, class/interface tests
 │   │   │   │   │       ├── RoleConfig.java            # .vibetags-roles routing
+│   │   │   │   │       ├── TransitiveRules.java       # inherited-rule summary text and sort order
 │   │   │   │   │       ├── annotations/               # one AI*Formatter per annotation
 │   │   │   │   │       └── platforms/                 # one PlatformRenderer per output file
 │   │   │   │   └── model/                        # The compiler-free seam: internal → model ← content

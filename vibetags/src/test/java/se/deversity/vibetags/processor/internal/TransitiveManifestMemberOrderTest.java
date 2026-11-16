@@ -99,11 +99,12 @@ class TransitiveManifestMemberOrderTest {
 
     @Test
     void theRenderedSummaryFollowsTheSameOrder() {
-        // memberSummary() is what reaches both the generated files and the build fingerprint, so
+        // TransitiveRules.memberSummary is what reaches both the generated files and the build fingerprint, so
         // ordering that stopped at the map would still churn every consumer's committed output.
         Map<String, String> members = TransitiveManifest.membersOf(instanceOf(AIContext.class));
-        String summary = new se.deversity.vibetags.processor.model.TransitiveRule(
-            "o", "p", "@AIContext", TransitiveManifest.tierOf("@AIContext"), members).memberSummary();
+        String summary = se.deversity.vibetags.processor.internal.content.TransitiveRules.memberSummary(
+            new se.deversity.vibetags.processor.model.TransitiveRule(
+                "o", "p", "@AIContext", TransitiveManifest.tierOf("@AIContext"), members));
         assertEquals("avoids=a; focus=f", summary);
     }
 
