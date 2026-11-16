@@ -92,7 +92,7 @@ public final class TransitiveManifestWriter {
     public static Map<String, List<TransitiveRule>> rulesByPackage(GuardrailModel model, String origin) {
         Map<String, List<TransitiveRule>> byPackage = new LinkedHashMap<>();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
-            String label = GuardrailAnnotations.label(type);
+            String label = AnnotationLabels.label(type);
             for (TaggedElement element : model.of(type)) {
                 if (element.kind() != ElementTag.PACKAGE) {
                     continue;

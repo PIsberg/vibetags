@@ -30,6 +30,7 @@ vibetags/
 │   │   │   │   │   ├── ServiceRegistry.java           # Service map + file-existence opt-in
 │   │   │   │   │   ├── ElementNaming.java             # elementPath / displayName helpers
 │   │   │   │   │   ├── GuardrailContentBuilder.java   # Thin coordinator delegating to PlatformRenderers
+│   │   │   │   │   ├── AnnotationLabels.java          # the @AI... label of an annotation type
 │   │   │   │   │   ├── GuardrailModelBuilder.java     # the only maker of a GuardrailModel; sorts it
 │   │   │   │   │   ├── GuardrailModelViews.java       # safety/testing halves, -Avibetags.exclude view
 │   │   │   │   │   ├── GuardrailFileWriter.java       # Marker-aware atomic writes + cache + streaming compare

@@ -85,7 +85,7 @@ public final class GuardrailModelViews {
     public static Map<String, Set<TaggedElement>> labeledSets(GuardrailModel model) {
         Map<String, Set<TaggedElement>> labeled = new LinkedHashMap<>();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
-            labeled.put(GuardrailAnnotations.label(type), model.of(type));
+            labeled.put(AnnotationLabels.label(type), model.of(type));
         }
         return labeled;
     }
