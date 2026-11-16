@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 // CPD-OFF
 
 import se.deversity.vibetags.annotations.AIIgnore;
+import se.deversity.vibetags.processor.internal.content.ElementFiles;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.Escape;
@@ -55,7 +56,7 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
             // for an unrelated file of that name, and never for the file its code is in (#926). It
             // is still excluded wherever a platform can name it in prose; AILockedFormatter treats
             // .aiexclude the same way.
-            if (element.ownsSourceFile()) {
+            if (ElementFiles.ownsSourceFile(element)) {
                 sb.append("**/").append(element.sourceFile()).append('\n');
             }
             return;

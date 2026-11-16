@@ -20,7 +20,7 @@ class ElementFilesTest {
 
     /** The one line that names the code under test, so moving it changes nothing else here. */
     private static boolean owns(TaggedElement element) {
-        return element.ownsSourceFile();
+        return ElementFiles.ownsSourceFile(element);
     }
 
     private static TaggedElement.Builder type(String simpleName, ElementTag kind) {

@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   written first and shown red against a mutant of the behaviour they pin. `RoleConfig`, which
   reads `.vibetags-roles`, compiles its globs and memoises matches, is a service rather than data
   and now lives in `processor.internal.content`, as does `ContentHash`, the fingerprint hash
-  function. Generated files are unaffected.
+  function. `TaggedElement.ownsSourceFile()` becomes `ElementFiles.ownsSourceFile(element)` beside
+  the formatters that call it, and the element's file-name defaults are resolved in its builder,
+  so its constructor only assigns. Generated files are unaffected.
 
 ### Deprecated
 
