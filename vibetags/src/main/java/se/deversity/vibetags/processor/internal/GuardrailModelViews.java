@@ -31,7 +31,7 @@ public final class GuardrailModelViews {
      * this round's sources, so they are nobody's test-code guardrails and stay where they were.
      */
     public static GuardrailModel safetyOnly(GuardrailModel model) {
-        GuardrailModelBuilder view = partition(model, true);
+        GuardrailModelBuilder view = bucketsWhere(model, GuardrailAnnotations.SAFETY::contains);
         model.lockedPositions().forEach(view::lockedPosition);
         view.transitiveRules(model.transitiveRules());
         return view.build();
@@ -44,7 +44,7 @@ public final class GuardrailModelViews {
      * {@link GuardrailAnnotations#ALL}.
      */
     public static GuardrailModel withoutSafety(GuardrailModel model) {
-        return partition(model, false).build();
+        return bucketsWhere(model, type -> !GuardrailAnnotations.SAFETY.contains(type)).build();
     }
 
     /**
@@ -90,10 +90,12 @@ public final class GuardrailModelViews {
         return labeled;
     }
 
-    private static GuardrailModelBuilder partition(GuardrailModel model, boolean safety) {
+    /** A builder holding every bucket of {@code model} whose annotation type {@code keep} accepts. */
+    private static GuardrailModelBuilder bucketsWhere(GuardrailModel model,
+                                                      Predicate<Class<? extends Annotation>> keep) {
         GuardrailModelBuilder view = new GuardrailModelBuilder();
         model.buckets().forEach((type, bucket) -> {
-            if (GuardrailAnnotations.SAFETY.contains(type) == safety) {
+            if (keep.test(type)) {
                 bucket.forEach(element -> view.add(type, element));
             }
         });
