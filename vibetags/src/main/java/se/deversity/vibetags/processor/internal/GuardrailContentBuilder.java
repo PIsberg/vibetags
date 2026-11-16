@@ -2,7 +2,7 @@ package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.processor.model.GuardrailModel;
-import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.internal.content.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import java.util.Map;
 import java.util.Set;

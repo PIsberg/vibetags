@@ -3,7 +3,7 @@ package se.deversity.vibetags.processor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.internal.content.RoleConfig;
 
 import javax.lang.model.element.Element;
 import se.deversity.vibetags.processor.model.TaggedElement;

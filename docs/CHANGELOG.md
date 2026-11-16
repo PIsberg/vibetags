@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The `model` package holds data only (internal; no output changes).** Logic that lived in the
+  compiler-free model moves to the layer that uses it, one commit per class, each behind tests
+  written first and shown red against a mutant of the behaviour they pin. `RoleConfig`, which
+  reads `.vibetags-roles`, compiles its globs and memoises matches, is a service rather than data
+  and now lives in `processor.internal.content`. Generated files are unaffected.
+
 ### Deprecated
 
 - **`llms-full.txt` is deprecated, and removed in the next major version (#1071, #1084).** No tool

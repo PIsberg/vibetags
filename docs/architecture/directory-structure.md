@@ -34,6 +34,7 @@ vibetags/
 │   │   │   │   │   ├── GranularRulesWriter.java       # Per-class .mdc/.md + orphan cleanup
 │   │   │   │   │   ├── WriteCache.java                # 0.7.1: per-file content cache (.vibetags-cache sidecar)
 │   │   │   │   │   └── content/                       # Rendering — compiler-free, reads the model only
+│   │   │   │   │       ├── RoleConfig.java            # .vibetags-roles routing
 │   │   │   │   │       ├── annotations/               # one AI*Formatter per annotation
 │   │   │   │   │       └── platforms/                 # one PlatformRenderer per output file
 │   │   │   │   └── model/                        # The compiler-free seam: internal → model ← content
@@ -41,7 +42,6 @@ vibetags/
 │   │   │   │       ├── TaggedElement.java             # one annotated element as plain data
 │   │   │   │       ├── ElementTag.java                # name-for-name mirror of ElementKind
 │   │   │   │       ├── GuardrailAnnotations.java      # the single ordered annotation registry
-│   │   │   │       ├── RoleConfig.java                # .vibetags-roles routing
 │   │   │   │       ├── SourceLocation.java            # file + line range for .vibetags-locks
 │   │   │   │       └── ContentHash.java               # the shared 8-hex content hash
 │   │   │   └── resources/META-INF/services/

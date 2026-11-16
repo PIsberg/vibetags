@@ -1,4 +1,4 @@
-package se.deversity.vibetags.processor.model;
+package se.deversity.vibetags.processor.internal.content;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

@@ -105,7 +105,7 @@ the `Messager`.
 
 **The seam (`processor/model/`)** is plain data: `GuardrailModel` (the buckets), `TaggedElement`
 (one annotated element, with its name forms precomputed and its `@AI*` annotation instances carried
-as-is), `ElementTag`, `SourceLocation`, `RoleConfig`, `GuardrailAnnotations.ALL`.
+as-is), `ElementTag`, `SourceLocation`, `GuardrailAnnotations.ALL`.
 
 **Below the seam (`processor/internal/content/`)** is rendering, and it never sees a compiler.
 `AnnotationFormatter.format(TaggedElement, …)` and `PlatformRenderer.render(GuardrailModel, …)` are
