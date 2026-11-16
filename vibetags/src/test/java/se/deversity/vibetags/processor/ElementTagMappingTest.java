@@ -53,6 +53,26 @@ class ElementTagMappingTest {
         }
     }
 
+    /**
+     * UNKNOWN has no {@code ElementKind} twin, so the loops above never reach it. Pinned here:
+     * it is neither a class nor an interface, so it can never stand for a source file, and its
+     * own name maps back to it.
+     */
+    @Test
+    void unknown_isNeitherClassNorInterfaceAndRoundTripsByName() {
+        assertEquals(false, ElementTag.UNKNOWN.isClass());
+        assertEquals(false, ElementTag.UNKNOWN.isInterface());
+        assertEquals(ElementTag.UNKNOWN, ElementTag.fromName("UNKNOWN"));
+    }
+
+    @Test
+    void fromName_isCaseSensitive() {
+        // Callers pass ElementKind.name(), which is upper case; a lower-cased heading must not
+        // map back to a constant.
+        assertNull(ElementTag.fromName("class"));
+        assertEquals(ElementTag.CLASS, ElementTag.fromName("CLASS"));
+    }
+
     @Test
     void fromName_returnsNullForAnUnknownName() {
         assertNull(ElementTag.fromName("NOT_A_KIND"));
