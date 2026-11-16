@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -161,11 +162,11 @@ public final class GranularSections {
             min = Math.min(min, e.lines().size());
         }
         int prefix = 0;
-        while (prefix < min && sameAt(all, prefix, true)) {
+        while (prefix < min && sameFromStart(all, prefix)) {
             prefix++;
         }
         int suffix = 0;
-        while (prefix + suffix < min && sameAt(all, suffix, false)) {
+        while (prefix + suffix < min && sameFromEnd(all, suffix)) {
             suffix++;
         }
         List<String> first = all.get(0);
@@ -179,13 +180,21 @@ public final class GranularSections {
         return new Shared(prefix, suffix, lines);
     }
 
-    /** True when every stanza has the same line at offset {@code i} from the start (or the end). */
-    private static boolean sameAt(List<List<String>> all, int i, boolean fromStart) {
-        List<String> head = all.get(0);
-        String ref = fromStart ? head.get(i) : head.get(head.size() - 1 - i);
+    /** True when every stanza has the same line at offset {@code i} from its start. */
+    private static boolean sameFromStart(List<List<String>> all, int i) {
+        return allAgree(all, lines -> lines.get(i));
+    }
+
+    /** True when every stanza has the same line at offset {@code i} from its end. */
+    private static boolean sameFromEnd(List<List<String>> all, int i) {
+        return allAgree(all, lines -> lines.get(lines.size() - 1 - i));
+    }
+
+    /** True when {@code lineOf} picks the same line out of every stanza. */
+    private static boolean allAgree(List<List<String>> all, Function<List<String>, String> lineOf) {
+        String ref = lineOf.apply(all.get(0));
         for (int k = 1; k < all.size(); k++) {
-            List<String> lines = all.get(k);
-            String v = fromStart ? lines.get(i) : lines.get(lines.size() - 1 - i);
+            String v = lineOf.apply(all.get(k));
             if (!ref.equals(v)) {
                 return false;
             }
