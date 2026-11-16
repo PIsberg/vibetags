@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -83,7 +82,6 @@ class ConcurrentBuildTest {
         // --- launch threads ---
         ExecutorService pool = Executors.newFixedThreadPool(threadCount);
         CountDownLatch startGate = new CountDownLatch(1); // all threads start simultaneously
-        AtomicInteger successCount = new AtomicInteger(0);
         List<Future<ThreadResult>> futures = new ArrayList<>();
 
         for (int t = 0; t < threadCount; t++) {

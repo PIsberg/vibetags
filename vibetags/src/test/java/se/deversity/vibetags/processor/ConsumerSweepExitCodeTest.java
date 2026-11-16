@@ -75,7 +75,7 @@ class ConsumerSweepExitCodeTest {
     @Test
     @DisplayName("a sweep with a failing consumer does not report success")
     void aSweepWithAFailingBuildExitsNonZero() throws Exception {
-        Path script = requireScript();
+        requireScript();
         Path root = Files.createTempDirectory("sweep-exit-fail");
         // Clean, so the dirty guard lets it through to a build, and the build cannot succeed:
         // the pom declares the version property the bump needs and nothing else Maven wants.
