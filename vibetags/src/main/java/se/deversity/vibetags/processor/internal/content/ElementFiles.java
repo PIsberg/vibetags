@@ -25,7 +25,7 @@ public final class ElementFiles {
         String fileName = dot < 0 ? sourceFile : sourceFile.substring(0, dot);
         ElementTag kind = element.kind();
         String simpleName = element.simpleName();
-        return (kind.isClass() || kind.isInterface()) && element.fileStem().equals(simpleName)
+        return (ElementKinds.isClass(kind) || ElementKinds.isInterface(kind)) && element.fileStem().equals(simpleName)
             && fileName.equals(simpleName);
     }
 }

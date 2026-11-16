@@ -45,6 +45,7 @@ import se.deversity.vibetags.annotations.AITemporary;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadAffinity;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.processor.internal.content.ElementKinds;
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import se.deversity.vibetags.processor.model.GuardrailModel;
@@ -804,7 +805,7 @@ public final class AnnotationCollector {
      */
     private static ElementTag tagOf(Element e) {
         ElementKind kind = e.getKind();
-        ElementTag tag = ElementTag.fromName(kind != null ? kind.name() : null);
+        ElementTag tag = ElementKinds.fromName(kind != null ? kind.name() : null);
         return tag != null ? tag : ElementTag.UNKNOWN;
     }
 }

@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and now lives in `processor.internal.content`, as does `ContentHash`, the fingerprint hash
   function. `TaggedElement.ownsSourceFile()` becomes `ElementFiles.ownsSourceFile(element)` beside
   the formatters that call it, and the element's file-name defaults are resolved in its builder,
-  so its constructor only assigns. Generated files are unaffected.
+  so its constructor only assigns. `ElementTag` keeps its constants only: `fromName`, `isClass` and
+  `isInterface` become static methods on `ElementKinds`. Generated files are unaffected.
 
 ### Deprecated
 

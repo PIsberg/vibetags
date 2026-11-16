@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import se.deversity.vibetags.processor.internal.content.ElementKinds;
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AITestDriven;
@@ -146,7 +147,7 @@ final class ClaudeTestDrivenSection {
     /** True when {@code loc} is the Maven mirror-convention test path for a TYPE element. */
     private static boolean isConventionPath(TaggedElement e, String loc) {
         ElementTag kind = e.kind();
-        if (!kind.isClass() && !kind.isInterface()) {
+        if (!ElementKinds.isClass(kind) && !ElementKinds.isInterface(kind)) {
             return false;
         }
         String fqnPath = e.path().replace('.', '/');

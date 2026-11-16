@@ -36,6 +36,7 @@ vibetags/
 │   │   │   │   │   └── content/                       # Rendering — compiler-free, reads the model only
 │   │   │   │   │       ├── ContentHash.java           # the shared 8-hex content hash
 │   │   │   │   │       ├── ElementFiles.java          # which element a file glob may stand for
+│   │   │   │   │       ├── ElementKinds.java          # ElementTag lookup by name, class/interface tests
 │   │   │   │   │       ├── RoleConfig.java            # .vibetags-roles routing
 │   │   │   │   │       ├── annotations/               # one AI*Formatter per annotation
 │   │   │   │   │       └── platforms/                 # one PlatformRenderer per output file
