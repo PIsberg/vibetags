@@ -3,6 +3,7 @@ package se.deversity.vibetags.processor.internal.content.platforms;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.processor.GuardrailModels;
+import se.deversity.vibetags.processor.internal.GuardrailModelViews;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -77,7 +78,7 @@ class TestingRendererTest {
 
     /**
      * A heading that can never have anything under it is worse than no heading. The content
-     * builder hands this renderer {@code model.withoutSafety()}, so the locked section is empty by
+     * builder hands this renderer {@code GuardrailModelViews.withoutSafety(model)}, so the locked section is empty by
      * construction, and a reader who meets "LOCKED FILES (DO NOT EDIT)" with nothing beneath it
      * reads "no test file is locked" two lines after the preamble said the locked ones are
      * somewhere else. An opted-in file holding only a header is a shape this repository has
@@ -88,7 +89,7 @@ class TestingRendererTest {
      */
     @Test
     void aSectionWithNothingUnderItIsNotPrinted() {
-        String routed = render(GuardrailModels.everyAnnotation().withoutSafety(), MAIN_ROUND.asTestRound());
+        String routed = render(GuardrailModelViews.withoutSafety(GuardrailModels.everyAnnotation()), MAIN_ROUND.asTestRound());
         assertNotNull(routed);
         assertFalse(routed.contains("LOCKED FILES"),
             "the routed model has no locked element, so this heading can only mislead:\n" + routed);

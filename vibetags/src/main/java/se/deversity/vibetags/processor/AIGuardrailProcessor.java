@@ -16,6 +16,7 @@ import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.content.GranularPairing;
 import se.deversity.vibetags.processor.internal.GuardrailEnforcer;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
+import se.deversity.vibetags.processor.internal.GuardrailModelViews;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
@@ -2457,7 +2458,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         log.info("processor.origin version={} origin={}", VERSION, ProcessorVersion.origin());
         log.info("Active services ({}): {}", activeServices.size(),
             activeServices.stream().sorted().collect(Collectors.joining(", ")));
-        collector.model().labeledSets().forEach(this::logSet);
+        GuardrailModelViews.labeledSets(collector.model()).forEach(this::logSet);
     }
 
     private void logSet(String label, Set<TaggedElement> elements) {
@@ -2722,7 +2723,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return;
         }
         GuardrailModel model = collector.model();
-        int moved = model.withoutSafety().totalAnnotatedReferences();
+        int moved = GuardrailModelViews.withoutSafety(model).totalAnnotatedReferences();
         if (moved == 0) {
             // Nothing left the always-loaded files, so the routed body is the unrouted one.
             if (log != null) {
@@ -2740,7 +2741,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             });
         if (log != null) {
             log.info("testing.route sourceSet={} routed={} moved={} kept={}", sourceSet, routed[0], moved,
-                model.safetyOnly().totalAnnotatedReferences());
+                GuardrailModelViews.safetyOnly(model).totalAnnotatedReferences());
         }
     }
 

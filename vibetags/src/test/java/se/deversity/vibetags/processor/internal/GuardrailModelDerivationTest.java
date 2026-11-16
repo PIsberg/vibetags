@@ -44,15 +44,15 @@ class GuardrailModelDerivationTest {
     }
 
     private static GuardrailModel excluding(GuardrailModel model, Predicate<TaggedElement> excluded) {
-        return model.excluding(excluded);
+        return GuardrailModelViews.excluding(model, excluded);
     }
 
     private static GuardrailModel withoutSafety(GuardrailModel model) {
-        return model.withoutSafety();
+        return GuardrailModelViews.withoutSafety(model);
     }
 
     private static Map<String, Set<TaggedElement>> labeled(GuardrailModel model) {
-        return model.labeledSets();
+        return GuardrailModelViews.labeledSets(model);
     }
 
     // -----------------------------------------------------------------------------------------

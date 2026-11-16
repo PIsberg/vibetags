@@ -570,7 +570,7 @@ public final class AnnotationCollector {
         }
         GuardrailModel m = publishedMemo;
         if (m == null) {
-            m = model().excluding(exclusions::excludes);
+            m = GuardrailModelViews.excluding(model(), exclusions::excludes);
             publishedMemo = m;
         }
         return m;

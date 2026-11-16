@@ -8,6 +8,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.annotations.AIPrivacy;
 import se.deversity.vibetags.annotations.AISecure;
 import se.deversity.vibetags.processor.GuardrailModels;
+import se.deversity.vibetags.processor.internal.GuardrailModelViews;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -42,8 +43,8 @@ class GuardrailModelViewsTest {
 
     @Test
     void everyAnnotationLandsInExactlyOneView() {
-        GuardrailModel safety = full.safetyOnly();
-        GuardrailModel rest = full.withoutSafety();
+        GuardrailModel safety = GuardrailModelViews.safetyOnly(full);
+        GuardrailModel rest = GuardrailModelViews.withoutSafety(full);
 
         List<String> wrong = new ArrayList<>();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
@@ -60,8 +61,8 @@ class GuardrailModelViewsTest {
 
     @Test
     void theTwoViewsAddUpToTheModel() {
-        GuardrailModel safety = full.safetyOnly();
-        GuardrailModel rest = full.withoutSafety();
+        GuardrailModel safety = GuardrailModelViews.safetyOnly(full);
+        GuardrailModel rest = GuardrailModelViews.withoutSafety(full);
 
         assertEquals(SAFETY.size(), safety.totalAnnotatedReferences());
         assertEquals(full.totalAnnotatedReferences(),
@@ -84,8 +85,8 @@ class GuardrailModelViewsTest {
             .lockedPosition(locked, new SourceLocation("src/test/java/Fixture.java", 12, 14))
             .build();
 
-        assertEquals(model.lockedPosition(locked), model.safetyOnly().lockedPosition(locked));
-        assertTrue(model.safetyOnly().lockedPosition(locked) != null, "the position must survive the view");
+        assertEquals(model.lockedPosition(locked), GuardrailModelViews.safetyOnly(model).lockedPosition(locked));
+        assertTrue(GuardrailModelViews.safetyOnly(model).lockedPosition(locked) != null, "the position must survive the view");
     }
 
     /**
@@ -101,7 +102,7 @@ class GuardrailModelViewsTest {
             .transitiveRule(inherited)
             .build();
 
-        assertEquals(List.of(inherited), model.safetyOnly().transitiveRules());
-        assertFalse(model.withoutSafety().anyTransitiveRules());
+        assertEquals(List.of(inherited), GuardrailModelViews.safetyOnly(model).transitiveRules());
+        assertFalse(GuardrailModelViews.withoutSafety(model).anyTransitiveRules());
     }
 }

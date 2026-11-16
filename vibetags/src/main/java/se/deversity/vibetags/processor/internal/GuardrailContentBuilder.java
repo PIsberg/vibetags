@@ -231,8 +231,8 @@ public final class GuardrailContentBuilder {
 
         RoutedViews(GuardrailModel model, boolean routed) {
             this.model = model;
-            this.safetyOnly = routed ? model.safetyOnly() : null;
-            this.withoutSafety = routed ? model.withoutSafety() : null;
+            this.safetyOnly = routed ? GuardrailModelViews.safetyOnly(model) : null;
+            this.withoutSafety = routed ? GuardrailModelViews.withoutSafety(model) : null;
         }
 
         GuardrailModel of(String serviceKey) {

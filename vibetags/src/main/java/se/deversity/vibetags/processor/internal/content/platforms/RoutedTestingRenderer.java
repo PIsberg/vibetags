@@ -56,7 +56,7 @@ public final class RoutedTestingRenderer implements PlatformRenderer {
     /**
      * Drops the locked heading when nothing can appear under it.
      *
-     * <p>The content builder renders this file from {@code model.withoutSafety()}, so its locked
+     * <p>The content builder renders this file from {@code GuardrailModelViews.withoutSafety(model)}, so its locked
      * bucket is empty by construction and the heading is a standing lie: a reader meets "LOCKED
      * FILES (DO NOT EDIT)" with nothing beneath it two lines after the preamble said the locked
      * guardrails are in the always-loaded files, and concludes no test file is locked. The test

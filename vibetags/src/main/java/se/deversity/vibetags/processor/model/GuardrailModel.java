@@ -176,15 +176,16 @@ public final class GuardrailModel {
     }
 
     /**
-     * Every non-empty bucket keyed by its {@code @AI...} label, in collection order. Driven by
-     * {@link GuardrailAnnotations#ALL}, so a newly added annotation appears here with no edit.
+     * Every non-empty bucket, keyed in {@link GuardrailAnnotations#ALL} order, each ordered by
+     * element identity. Unmodifiable.
      */
-    public Map<String, Set<TaggedElement>> labeledSets() {
-        Map<String, Set<TaggedElement>> labeled = new LinkedHashMap<>();
-        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
-            labeled.put(GuardrailAnnotations.label(type), of(type));
-        }
-        return labeled;
+    public Map<Class<? extends Annotation>, Set<TaggedElement>> buckets() {
+        return buckets;
+    }
+
+    /** The recorded source position of each locked element, ordered by element identity. Unmodifiable. */
+    public Map<TaggedElement, SourceLocation> lockedPositions() {
+        return lockedPositions;
     }
 
     /**
@@ -217,72 +218,6 @@ public final class GuardrailModel {
             total += bucket.size();
         }
         return total;
-    }
-
-    /**
-     * This model with only the {@linkplain GuardrailAnnotations#SAFETY safety annotations} in it:
-     * what the always-loaded files render for a test round whose other guardrails went to
-     * {@code TESTING.md}.
-     *
-     * <p>Locked positions and inherited rules come along. The positions belong to {@code @AILocked}
-     * elements, which are all here; inherited rules come from dependency JARs rather than from
-     * this round's sources, so they are nobody's test-code guardrails and stay where they were.
-     */
-    public GuardrailModel safetyOnly() {
-        Builder view = partition(true);
-        lockedPositions.forEach(view::lockedPosition);
-        view.transitiveRules(transitiveRules);
-        return view.build();
-    }
-
-    /**
-     * This model with the {@linkplain GuardrailAnnotations#SAFETY safety annotations} taken out:
-     * what {@code TESTING.md} renders. With {@link #safetyOnly()} it splits the buckets in two with
-     * nothing in both and nothing in neither, which {@code GuardrailModelViewsTest} holds to
-     * {@link GuardrailAnnotations#ALL}.
-     */
-    public GuardrailModel withoutSafety() {
-        return partition(false).build();
-    }
-
-    /**
-     * This model with every element {@code excluded} accepts left out of every bucket: what
-     * {@code -Avibetags.exclude} publishes.
-     *
-     * <p>A derived view rather than a filter at collection time, and the distinction is the feature.
-     * The collected model is what {@code PartialRoundDetector} compares the source ledger against,
-     * so removing an element from it makes the round look as though it was never shown that source
-     * and invariant 17 refuses to write anything (issue #792). Dropping it here instead leaves the
-     * round complete and only the output smaller.
-     *
-     * <p>Locked positions follow their elements, so an excluded element leaves no entry behind in
-     * {@code .vibetags-locks}. Transitive rules are kept whole: they are a dependency's text rather
-     * than this project's elements, and no pattern over local names should silently drop them.
-     */
-    public GuardrailModel excluding(java.util.function.Predicate<TaggedElement> excluded) {
-        Builder view = builder();
-        buckets.forEach((type, bucket) -> bucket.forEach(element -> {
-            if (!excluded.test(element)) {
-                view.add(type, element);
-            }
-        }));
-        lockedPositions.forEach((element, position) -> {
-            if (!excluded.test(element)) {
-                view.lockedPosition(element, position);
-            }
-        });
-        view.transitiveRules(transitiveRules);
-        return view.build();
-    }
-
-    private Builder partition(boolean safety) {
-        Builder view = builder();
-        buckets.forEach((type, bucket) -> {
-            if (GuardrailAnnotations.SAFETY.contains(type) == safety) {
-                bucket.forEach(element -> view.add(type, element));
-            }
-        });
-        return view;
     }
 
     // -----------------------------------------------------------------------------------------
