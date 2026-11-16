@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.internal.content.TransitiveRules;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import se.deversity.vibetags.processor.model.GuardrailModel;
@@ -41,6 +42,9 @@ public final class GuardrailModelBuilder {
      * The element's own value identity: the same {@code (path, kind)} pair {@code equals} uses, so
      * the ordering can never disagree with set membership.
      */
+    @AILocked(reason = "Fixes the order of every bucket, so changing it rewrites every consuming build's "
+        + "generated files and fingerprint with nothing failing to name the cause. Path then kind; "
+        + "GuardrailModelOrderTest pins the tie-break.")
     private static final Comparator<TaggedElement> BY_IDENTITY =
         Comparator.comparing(TaggedElement::path).thenComparing(e -> e.kind().name());
 

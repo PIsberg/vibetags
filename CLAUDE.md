@@ -82,6 +82,9 @@ answers; use it when the topic is not below.
     <file path="se.deversity.vibetags.processor.AIGuardrailProcessor.generateFiles()">
       <reason>Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output</reason>
     </file>
+    <file path="se.deversity.vibetags.processor.internal.GuardrailModelBuilder.BY_IDENTITY">
+      <reason>Fixes the order of every bucket, so changing it rewrites every consuming build&#39;s generated files and fingerprint with nothing failing to name the cause. Path then kind; GuardrailModelOrderTest pins the tie-break.</reason>
+    </file>
     <file path="se.deversity.vibetags.processor.internal.TransitiveManifest.RESOURCE_PACKAGE">
       <reason>Must stay a valid Java package name. javac&#39;s CLASS_PATH location skips archive directories that are not package identifiers, so moving these manifests under META-INF/ leaves Filer.getResource listing zero entries and transitive discovery fails silently while the conventional location looks correct. TransitiveManifestPathTest pins the working path.</reason>
     </file>

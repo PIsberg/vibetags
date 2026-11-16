@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and sort order become `TransitiveRules.memberSummary` and `TransitiveRules.ORDER`.
   `GuardrailAnnotations.label` becomes `AnnotationLabels.label`, leaving the registry as constants.
   Generated files are unaffected.
+- **`GuardrailModelBuilder.BY_IDENTITY` is `@AILocked` (internal).** The comparator fixes the order
+  of every bucket, so a change to it rewrites every consuming build's generated files and fingerprint
+  with nothing failing to name the cause. Its lock entry is always loaded, so the budget
+  `ProjectFactsConsistencyTest` holds this repository's own `CLAUDE.md` block to rises from 7,000 to
+  7,300 bytes; the block is 7,296.
 
 ### Deprecated
 
