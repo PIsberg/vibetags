@@ -704,7 +704,7 @@ public final class AnnotationCollector {
         });
 
         Map<Element, TaggedElement> tagged = new LinkedHashMap<>();
-        GuardrailModel.Builder model = GuardrailModel.builder();
+        GuardrailModelBuilder model = new GuardrailModelBuilder();
         buckets.forEach((type, elements) -> {
             for (Element e : elements) {
                 model.add(type, materialize(e, builders, tagged, signatures, fileNames, resolver));

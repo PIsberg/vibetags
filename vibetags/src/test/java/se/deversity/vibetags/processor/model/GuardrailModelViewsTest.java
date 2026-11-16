@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.model;
 
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.AIAudit;
 import se.deversity.vibetags.annotations.AICore;
@@ -80,7 +81,7 @@ class GuardrailModelViewsTest {
     @Test
     void lockedPositionsFollowTheLockedElements() {
         TaggedElement locked = GuardrailModels.element(AILocked.class);
-        GuardrailModel model = GuardrailModel.builder()
+        GuardrailModel model = new GuardrailModelBuilder()
             .add(AILocked.class, locked)
             .lockedPosition(locked, new SourceLocation("src/test/java/Fixture.java", 12, 14))
             .build();
@@ -97,7 +98,7 @@ class GuardrailModelViewsTest {
     void inheritedRulesStayWithTheAlwaysLoadedView() {
         TransitiveRule inherited = new TransitiveRule("lib-1.0.jar", "com.example.lib", "@AIContext",
             TransitiveRule.Tier.ADVISORY, Map.of("focus", "inherited"));
-        GuardrailModel model = GuardrailModel.builder()
+        GuardrailModel model = new GuardrailModelBuilder()
             .add(AILocked.class, GuardrailModels.element(AILocked.class))
             .transitiveRule(inherited)
             .build();

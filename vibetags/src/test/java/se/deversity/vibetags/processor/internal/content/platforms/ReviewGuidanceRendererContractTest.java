@@ -6,6 +6,7 @@ import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -39,7 +40,7 @@ class ReviewGuidanceRendererContractTest {
         AILocked locked = mock(AILocked.class);
         when(locked.reason()).thenReturn("settlement contract");
         when(element.annotation(AILocked.class)).thenReturn(locked);
-        return GuardrailModel.builder().add(AILocked.class, element).build();
+        return new GuardrailModelBuilder().add(AILocked.class, element).build();
     }
 
     /** The heading suffix and product name that are allowed to differ, and nothing else. */

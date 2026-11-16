@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.model;
 
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -119,7 +120,7 @@ class TransitiveRuleTest {
     void theModelDeduplicatesAndSortsWhatItIsGiven() {
         TransitiveRule a = rule("com.b.api", "@AIContext", "o", Map.of());
         TransitiveRule b = rule("com.a.api", "@AIContext", "o", Map.of());
-        GuardrailModel model = GuardrailModel.builder()
+        GuardrailModel model = new GuardrailModelBuilder()
             .transitiveRule(a).transitiveRule(b).transitiveRule(a)
             .transitiveRule(null)
             .build();

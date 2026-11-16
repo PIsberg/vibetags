@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.model;
 
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.annotations.AIContext;
 import se.deversity.vibetags.annotations.AILocked;
@@ -51,9 +52,9 @@ class GuardrailModelOrderTest {
         TaggedElement field = element("com.acme.Point.x", ElementTag.FIELD);
         TaggedElement component = element("com.acme.Point.x", ElementTag.RECORD_COMPONENT);
 
-        GuardrailModel fieldFirst = GuardrailModel.builder()
+        GuardrailModel fieldFirst = new GuardrailModelBuilder()
             .add(AILocked.class, field).add(AILocked.class, component).build();
-        GuardrailModel componentFirst = GuardrailModel.builder()
+        GuardrailModel componentFirst = new GuardrailModelBuilder()
             .add(AILocked.class, component).add(AILocked.class, field).build();
 
         List<ElementTag> expected = List.of(ElementTag.FIELD, ElementTag.RECORD_COMPONENT);
@@ -67,7 +68,7 @@ class GuardrailModelOrderTest {
         TaggedElement method = element("com.acme.Alpha.run()", ElementTag.METHOD);
         TaggedElement type = element("com.acme.Zulu", ElementTag.CLASS);
 
-        GuardrailModel model = GuardrailModel.builder()
+        GuardrailModel model = new GuardrailModelBuilder()
             .add(AIContext.class, type).add(AIContext.class, method).build();
 
         List<String> paths = new ArrayList<>();
@@ -85,12 +86,30 @@ class GuardrailModelOrderTest {
         TransitiveRule beta = rule(Map.of("focus", "beta"));
         TransitiveRule alpha = rule(Map.of("focus", "alpha"));
 
-        GuardrailModel betaFirst = GuardrailModel.builder()
+        GuardrailModel betaFirst = new GuardrailModelBuilder()
             .transitiveRule(beta).transitiveRule(alpha).build();
-        GuardrailModel alphaFirst = GuardrailModel.builder()
+        GuardrailModel alphaFirst = new GuardrailModelBuilder()
             .transitiveRule(alpha).transitiveRule(beta).build();
 
         assertEquals(List.of(alpha, beta), betaFirst.transitiveRules());
         assertEquals(List.of(alpha, beta), alphaFirst.transitiveRules());
+    }
+
+    /**
+     * {@code lockedPositions()} is public, so its iteration order is visible to every caller and
+     * is documented as element identity: it must not depend on the order positions were recorded.
+     */
+    @Test
+    void lockedPositionsIterateInIdentityOrderNotArrival() {
+        TaggedElement zulu = element("com.acme.Zulu", ElementTag.CLASS);
+        TaggedElement alpha = element("com.acme.Alpha", ElementTag.CLASS);
+        SourceLocation at = new SourceLocation("src/main/java/X.java", 1, 2);
+
+        GuardrailModel model = new GuardrailModelBuilder()
+            .add(AILocked.class, zulu).add(AILocked.class, alpha)
+            .lockedPosition(zulu, at).lockedPosition(alpha, at)
+            .build();
+
+        assertEquals(List.of(alpha, zulu), new ArrayList<>(model.lockedPositions().keySet()));
     }
 }

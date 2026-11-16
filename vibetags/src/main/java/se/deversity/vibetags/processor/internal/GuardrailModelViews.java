@@ -31,7 +31,7 @@ public final class GuardrailModelViews {
      * this round's sources, so they are nobody's test-code guardrails and stay where they were.
      */
     public static GuardrailModel safetyOnly(GuardrailModel model) {
-        GuardrailModel.Builder view = partition(model, true);
+        GuardrailModelBuilder view = partition(model, true);
         model.lockedPositions().forEach(view::lockedPosition);
         view.transitiveRules(model.transitiveRules());
         return view.build();
@@ -62,7 +62,7 @@ public final class GuardrailModelViews {
      * than this project's elements, and no pattern over local names should silently drop them.
      */
     public static GuardrailModel excluding(GuardrailModel model, Predicate<TaggedElement> excluded) {
-        GuardrailModel.Builder view = GuardrailModel.builder();
+        GuardrailModelBuilder view = new GuardrailModelBuilder();
         model.buckets().forEach((type, bucket) -> bucket.forEach(element -> {
             if (!excluded.test(element)) {
                 view.add(type, element);
@@ -90,8 +90,8 @@ public final class GuardrailModelViews {
         return labeled;
     }
 
-    private static GuardrailModel.Builder partition(GuardrailModel model, boolean safety) {
-        GuardrailModel.Builder view = GuardrailModel.builder();
+    private static GuardrailModelBuilder partition(GuardrailModel model, boolean safety) {
+        GuardrailModelBuilder view = new GuardrailModelBuilder();
         model.buckets().forEach((type, bucket) -> {
             if (GuardrailAnnotations.SAFETY.contains(type) == safety) {
                 bucket.forEach(element -> view.add(type, element));

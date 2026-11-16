@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -54,7 +55,7 @@ public final class GuardrailModels {
      * has to make all 44 decisions rather than short-circuiting on an empty model.
      */
     public static GuardrailModel everyAnnotation() {
-        GuardrailModel.Builder builder = GuardrailModel.builder();
+        GuardrailModelBuilder builder = new GuardrailModelBuilder();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
             builder.add(type, element(type));
         }
@@ -77,7 +78,7 @@ public final class GuardrailModels {
      * switch a formatter writes over an enum member.
      */
     public static GuardrailModel everyAnnotationWithMembersUnset() {
-        GuardrailModel.Builder builder = GuardrailModel.builder();
+        GuardrailModelBuilder builder = new GuardrailModelBuilder();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
             builder.add(type, unsetElement(type));
         }
@@ -96,7 +97,7 @@ public final class GuardrailModels {
      * argument (#507).
      */
     public static GuardrailModel everyAnnotationWithOptionalMembersUnset() {
-        GuardrailModel.Builder builder = GuardrailModel.builder();
+        GuardrailModelBuilder builder = new GuardrailModelBuilder();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
             builder.add(type, optionalUnsetElementFor(type));
         }

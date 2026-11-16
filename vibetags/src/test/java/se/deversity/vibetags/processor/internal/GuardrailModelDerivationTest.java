@@ -39,8 +39,8 @@ class GuardrailModelDerivationTest {
 
     // ---- the only lines that name where the code under test lives --------------------------
 
-    private static GuardrailModel.Builder builder() {
-        return GuardrailModel.builder();
+    private static GuardrailModelBuilder builder() {
+        return new GuardrailModelBuilder();
     }
 
     private static GuardrailModel excluding(GuardrailModel model, Predicate<TaggedElement> excluded) {

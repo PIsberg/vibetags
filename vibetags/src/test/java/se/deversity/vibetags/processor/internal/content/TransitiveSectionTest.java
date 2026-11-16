@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal.content;
 
 import org.junit.jupiter.api.Test;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TransitiveRule;
 
@@ -26,7 +27,7 @@ class TransitiveSectionTest {
     }
 
     private static GuardrailModel modelWith(TransitiveRule... rules) {
-        GuardrailModel.Builder b = GuardrailModel.builder();
+        GuardrailModelBuilder b = new GuardrailModelBuilder();
         for (TransitiveRule r : rules) {
             b.transitiveRule(r);
         }

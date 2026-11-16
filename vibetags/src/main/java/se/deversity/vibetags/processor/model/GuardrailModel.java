@@ -47,12 +47,7 @@ import se.deversity.vibetags.annotations.AIThreadAffinity;
 import se.deversity.vibetags.annotations.AIThreadSafe;
 
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,16 +70,25 @@ import java.util.Set;
  * write cache missed for no reason. Sorting on the element's own stable identity makes the output a
  * function of the annotations and nothing else. {@code OutputOrderDeterminismTest} pins it.
  *
+ * <p><strong>This class holds data and computes nothing.</strong> The sorting, the deduplication
+ * and the derived values ({@link #elementIds()}, {@link #totalAnnotatedReferences()},
+ * {@link #anyAnnotationsFound()}) are all done by {@code internal.GuardrailModelBuilder}, and
+ * {@code ArchitectureRulesTest} lets no other class call the constructor, so a model that skipped
+ * the sort cannot be made.
+ *
  * <p>Immutable. A model handed to the renderers cannot be changed by them, which is what makes the
  * parallel write phase safe without any copying.
  */
 public final class GuardrailModel {
 
     /** An empty model — no annotations found. */
-    public static final GuardrailModel EMPTY = builder().build();
+    public static final GuardrailModel EMPTY =
+        new GuardrailModel(Map.of(), Map.of(), List.of(), Set.of(), 0, false);
 
     private final Map<Class<? extends Annotation>, Set<TaggedElement>> buckets;
     private final Map<TaggedElement, SourceLocation> lockedPositions;
+    private final Set<String> elementIds;
+    private final int totalAnnotatedReferences;
     private final boolean anyAnnotationsFound;
 
     /**
@@ -95,50 +99,23 @@ public final class GuardrailModel {
     private final List<TransitiveRule> transitiveRules;
 
     /**
-     * The element's own value identity — the same {@code (path, kind)} pair {@code equals} uses, so
-     * the ordering can never disagree with set membership.
+     * Assignment only, behind unmodifiable views so no caller can change the model through a
+     * collection it handed in or got back. Every argument arrives already sorted, deduplicated
+     * and derived from {@code internal.GuardrailModelBuilder}, the only permitted caller
+     * ({@code ArchitectureRulesTest}).
      */
-    private static final Comparator<TaggedElement> BY_IDENTITY =
-        Comparator.comparing(TaggedElement::path).thenComparing(e -> e.kind().name());
-
-    private GuardrailModel(Builder b) {
-        Map<Class<? extends Annotation>, Set<TaggedElement>> copy = new LinkedHashMap<>();
-        boolean any = false;
-        for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
-            Set<TaggedElement> bucket = b.buckets.get(type);
-            if (bucket == null || bucket.isEmpty()) {
-                continue;
-            }
-            copy.put(type, Collections.unmodifiableSet(sorted(bucket)));
-            any = true;
-        }
-        this.buckets = Collections.unmodifiableMap(copy);
-        this.lockedPositions = Collections.unmodifiableMap(sortedByKey(b.lockedPositions));
-        this.anyAnnotationsFound = any;
-        // Deduplicated: the same manifest is reachable through several import prefixes, and two
-        // modules of a reactor legitimately import the same library. Sorted for the same reason the
-        // buckets are — discovery order is import-walk order, which is not stable across builds.
-        List<TransitiveRule> rules = new ArrayList<>(new LinkedHashSet<>(b.transitiveRules));
-        Collections.sort(rules);
-        this.transitiveRules = Collections.unmodifiableList(rules);
-    }
-
-    /** The bucket ordered by element identity, in a set that keeps that order on iteration. */
-    private static Set<TaggedElement> sorted(Set<TaggedElement> bucket) {
-        List<TaggedElement> ordered = new ArrayList<>(bucket);
-        ordered.sort(BY_IDENTITY);
-        return new LinkedHashSet<>(ordered);
-    }
-
-    /** Same, for the locked-position map that feeds the {@code .vibetags-locks} report. */
-    private static Map<TaggedElement, SourceLocation> sortedByKey(Map<TaggedElement, SourceLocation> positions) {
-        List<TaggedElement> keys = new ArrayList<>(positions.keySet());
-        keys.sort(BY_IDENTITY);
-        Map<TaggedElement, SourceLocation> ordered = new LinkedHashMap<>();
-        for (TaggedElement key : keys) {
-            ordered.put(key, positions.get(key));
-        }
-        return ordered;
+    public GuardrailModel(Map<Class<? extends Annotation>, Set<TaggedElement>> buckets,
+                          Map<TaggedElement, SourceLocation> lockedPositions,
+                          List<TransitiveRule> transitiveRules,
+                          Set<String> elementIds,
+                          int totalAnnotatedReferences,
+                          boolean anyAnnotationsFound) {
+        this.buckets = Collections.unmodifiableMap(buckets);
+        this.lockedPositions = Collections.unmodifiableMap(lockedPositions);
+        this.transitiveRules = Collections.unmodifiableList(transitiveRules);
+        this.elementIds = Collections.unmodifiableSet(elementIds);
+        this.totalAnnotatedReferences = totalAnnotatedReferences;
+        this.anyAnnotationsFound = anyAnnotationsFound;
     }
 
     /** The elements carrying {@code type}, ordered by {@link TaggedElement#path()}; empty when none do. */
@@ -190,7 +167,7 @@ public final class GuardrailModel {
 
     /**
      * Every annotated element, deduplicated, identified by the same stable name the granular rule
-     * files are named after.
+     * files are named after, in bucket order. Unmodifiable, and the same set on every call.
      *
      * <p>Persisted per module so the next compilation can tell "this module's annotations changed"
      * from "this compilation could not see this module's sources" — the difference between an edit
@@ -198,13 +175,7 @@ public final class GuardrailModel {
      * granular service is active, since the check has to work for aggregate-only projects too.
      */
     public Set<String> elementIds() {
-        Set<String> ids = new LinkedHashSet<>();
-        for (Set<TaggedElement> bucket : buckets.values()) {
-            for (TaggedElement element : bucket) {
-                ids.add(element.granularQName());
-            }
-        }
-        return ids;
+        return elementIds;
     }
 
     /**
@@ -213,11 +184,7 @@ public final class GuardrailModel {
      * large projects avoid repeated StringBuilder grow-and-copy reallocation.
      */
     public int totalAnnotatedReferences() {
-        int total = 0;
-        for (Set<TaggedElement> bucket : buckets.values()) {
-            total += bucket.size();
-        }
-        return total;
+        return totalAnnotatedReferences;
     }
 
     // -----------------------------------------------------------------------------------------
@@ -269,51 +236,4 @@ public final class GuardrailModel {
     public Set<TaggedElement> bannedApi()          { return of(AIBannedApi.class); }
     public Set<TaggedElement> threadAffinity()     { return of(AIThreadAffinity.class); }
     public Set<TaggedElement> keepInSync()         { return of(AIKeepInSync.class); }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /** Accumulates buckets and locked positions; see {@code AnnotationCollector.model()}. */
-    public static final class Builder {
-        private final Map<Class<? extends Annotation>, Set<TaggedElement>> buckets = new LinkedHashMap<>();
-        private final Map<TaggedElement, SourceLocation> lockedPositions = new LinkedHashMap<>();
-        private final List<TransitiveRule> transitiveRules = new ArrayList<>();
-
-        private Builder() {}
-
-        /** Records a guardrail inherited from a dependency JAR; {@code null} is ignored. */
-        public Builder transitiveRule(@Nullable TransitiveRule rule) {
-            if (rule != null) {
-                transitiveRules.add(rule);
-            }
-            return this;
-        }
-
-        /** Records every rule of {@code rules}; a {@code null} collection is ignored. */
-        public Builder transitiveRules(@Nullable Collection<TransitiveRule> rules) {
-            if (rules != null) {
-                rules.forEach(this::transitiveRule);
-            }
-            return this;
-        }
-
-        /** Appends {@code element} to {@code type}'s bucket, preserving insertion order. */
-        public Builder add(Class<? extends Annotation> type, TaggedElement element) {
-            buckets.computeIfAbsent(type, k -> new LinkedHashSet<>()).add(element);
-            return this;
-        }
-
-        /** Records a locked element's source position; {@code null} positions are ignored. */
-        public Builder lockedPosition(TaggedElement element, @Nullable SourceLocation location) {
-            if (location != null) {
-                lockedPositions.put(element, location);
-            }
-            return this;
-        }
-
-        public GuardrailModel build() {
-            return new GuardrailModel(this);
-        }
-    }
 }

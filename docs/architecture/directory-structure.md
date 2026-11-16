@@ -30,6 +30,8 @@ vibetags/
 │   │   │   │   │   ├── ServiceRegistry.java           # Service map + file-existence opt-in
 │   │   │   │   │   ├── ElementNaming.java             # elementPath / displayName helpers
 │   │   │   │   │   ├── GuardrailContentBuilder.java   # Thin coordinator delegating to PlatformRenderers
+│   │   │   │   │   ├── GuardrailModelBuilder.java     # the only maker of a GuardrailModel; sorts it
+│   │   │   │   │   ├── GuardrailModelViews.java       # safety/testing halves, -Avibetags.exclude view
 │   │   │   │   │   ├── GuardrailFileWriter.java       # Marker-aware atomic writes + cache + streaming compare
 │   │   │   │   │   ├── GranularRulesWriter.java       # Per-class .mdc/.md + orphan cleanup
 │   │   │   │   │   ├── WriteCache.java                # 0.7.1: per-file content cache (.vibetags-cache sidecar)

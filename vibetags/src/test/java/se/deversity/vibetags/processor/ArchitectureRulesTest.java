@@ -1,6 +1,8 @@
 package se.deversity.vibetags.processor;
 
+import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaConstructorCall;
 import com.tngtech.archunit.core.domain.JavaField;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -10,8 +12,10 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
+import se.deversity.vibetags.processor.model.GuardrailModel;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -224,4 +228,25 @@ public class ArchitectureRulesTest {
                     .that().resideInAPackage("..processor.internal.content..")
                     .should().dependOnClassesThat().resideInAPackage("se.deversity.vibetags.processor.internal")
                     .as("the content layer must depend on the model, not on the javac-facing internals");
+
+    /**
+     * {@code GuardrailModel}'s constructor only assigns. The sort that makes generated output
+     * identical on every machine (buckets by path then kind, inherited rules after deduplication)
+     * runs in {@link GuardrailModelBuilder}, so a model constructed anywhere else would skip it, and
+     * nothing else would notice: the determinism tests only ever see models that went through the
+     * builder. Matched on the owner rather than a parameter list, so a changed constructor
+     * signature cannot quietly turn this rule into one that matches nothing.
+     */
+    @ArchTest
+    static final ArchRule ONLY_THE_BUILDER_CONSTRUCTS_A_MODEL =
+            noClasses()
+                    .that().doNotBelongToAnyOf(GuardrailModelBuilder.class, GuardrailModel.class)
+                    .should().callConstructorWhere(new DescribedPredicate<JavaConstructorCall>(
+                            "a constructor of GuardrailModel") {
+                        @Override
+                        public boolean test(JavaConstructorCall call) {
+                            return call.getTargetOwner().isEquivalentTo(GuardrailModel.class);
+                        }
+                    })
+                    .as("only GuardrailModelBuilder may construct a GuardrailModel, so no model can skip its sort");
 }

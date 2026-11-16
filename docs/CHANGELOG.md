@@ -19,7 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so its constructor only assigns. `ElementTag` keeps its constants only: `fromName`, `isClass` and
   `isInterface` become static methods on `ElementKinds`. `GuardrailModel`'s derived views
   (`safetyOnly`, `withoutSafety`, `excluding`, `labeledSets`) become `GuardrailModelViews` in
-  `processor.internal`. Generated files are unaffected.
+  `processor.internal`. The builder that sorts and derives a model becomes `GuardrailModelBuilder`,
+  and `GuardrailModel` keeps fields and accessors only; an `ArchitectureRulesTest` rule lets no
+  other class call its constructor, so no model can skip the sort that keeps generated output
+  identical on every machine. Generated files are unaffected.
 
 ### Deprecated
 
