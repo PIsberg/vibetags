@@ -101,7 +101,7 @@ public final class GranularBody implements CharSequence {
     public String toString() {
         String r = rendered;
         if (r == null) {
-            r = GranularSections.render(entries, false);
+            r = GranularSections.renderPerClass(entries);
             rendered = r;
         }
         return r;
