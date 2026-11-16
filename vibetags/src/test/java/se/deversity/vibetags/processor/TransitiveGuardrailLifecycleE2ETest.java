@@ -594,6 +594,43 @@ class TransitiveGuardrailLifecycleE2ETest {
             "a cap of 1 should leave exactly one advisory rule:\n" + capped);
     }
 
+    /**
+     * Which advisory rules survive the cap is decided by package order, not by the order
+     * {@code -Avibetags.manifest.packages} lists the packages in.
+     *
+     * <p>The reader keeps the listed order, so without the processor's own sort ahead of the cap,
+     * a cap of 1 keeps whichever library was named first, and two builds naming the same libraries
+     * in a different order write different guardrails. Ordered by package, crypto's
+     * {@code @AIContext} comes first and is the one kept. Deleting that sort left every other
+     * transitive test green (measured 2026-11-16); this one goes red.
+     */
+    @Test
+    void theAdvisoryCapKeepsTheSameRuleWhicheverOrderThePackagesAreListedIn() throws Exception {
+        Path crypto = buildLibraryJar(tmp.resolve("crypto"), "com.acme:crypto-core:2.4.0");
+        Path ledger = buildLedgerLibraryJar(tmp.resolve("ledger"), "com.acme:ledger-api:1.1.0");
+        String noSource = "package app;\npublic class App {}\n";
+
+        for (String listed : List.of("com.acme.crypto.api,com.acme.ledger.api",
+                                     "com.acme.ledger.api,com.acme.crypto.api")) {
+            Path app = consumerRoot(tmp.resolve(listed.startsWith("com.acme.crypto") ? "crypto-first" : "ledger-first"),
+                true);
+            compile(app,
+                List.of("-classpath", classpathWith(crypto, ledger),
+                        "-Avibetags.manifest.packages=" + listed,
+                        "-Avibetags.manifest.max=1"),
+                sourceFile(app, "app/App.java", noSource));
+            String claude = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+
+            assertTrue(claude.contains("Never construct a raw Cipher")
+                    && claude.contains("Postings are append-only"),
+                "both safety rules survive any cap (listed " + listed + "):\n" + claude);
+            assertTrue(claude.contains("Key exchange is non-blocking"),
+                "the first advisory rule in package order is the one kept (listed " + listed + "):\n" + claude);
+            assertFalse(claude.contains("Amounts are minor units"),
+                "the cap of 1 is spent before the ledger package (listed " + listed + "):\n" + claude);
+        }
+    }
+
     /** Compiles the fixture library and copies its manifests into a standalone directory. */
     private static Path extractManifests(Path tmp, String origin) throws IOException {
         Path classes = compileLibrary(tmp.resolve("lib"), origin);
