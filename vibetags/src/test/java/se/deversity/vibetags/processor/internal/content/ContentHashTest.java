@@ -1,7 +1,6 @@
 package se.deversity.vibetags.processor.internal.content;
 
 import org.junit.jupiter.api.Test;
-import se.deversity.vibetags.processor.model.ContentHash;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

@@ -35,7 +35,7 @@ import se.deversity.vibetags.processor.internal.ProcessorCoexistence;
 import se.deversity.vibetags.processor.internal.ReplayableDiagnostic;
 import se.deversity.vibetags.processor.internal.RoundSources;
 import se.deversity.vibetags.processor.internal.ProcessorVersion;
-import se.deversity.vibetags.processor.model.ContentHash;
+import se.deversity.vibetags.processor.internal.content.ContentHash;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.internal.content.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;

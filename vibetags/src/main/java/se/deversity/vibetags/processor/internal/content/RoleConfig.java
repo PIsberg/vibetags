@@ -1,7 +1,6 @@
 package se.deversity.vibetags.processor.internal.content;
 
 import org.jspecify.annotations.Nullable;
-import se.deversity.vibetags.processor.model.ContentHash;
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
