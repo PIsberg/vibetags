@@ -290,16 +290,17 @@ public final class ElementNaming {
         List<? extends VariableElement> parameters = executable.getParameters();
         StringJoiner joined = new StringJoiner(",", "(", ")");
         for (int i = 0; i < parameters.size(); i++) {
+            TypeMirror type = parameters.get(i).asType();
             boolean varargs = executable.isVarArgs() && i == parameters.size() - 1;
-            joined.add(typeString(parameters.get(i).asType(), varargs));
+            joined.add(varargs ? varargsTypeString(type) : typeString(type));
         }
         return signature.append(joined).toString();
     }
 
     /**
      * Renders a type the way javac's own {@code toString()} does: qualified names for declared
-     * types, type arguments kept and comma-separated with no spaces, and a trailing {@code ...}
-     * for the last parameter of a varargs method.
+     * types, type arguments kept and comma-separated with no spaces. The last parameter of a
+     * varargs method goes through {@link #varargsTypeString} instead.
      *
      * <p><b>With one deliberate exception: type-use annotations are dropped.</b> javac renders an
      * annotated parameter as {@code java.lang.@org.jspecify.annotations.Nullable String}, and
@@ -315,19 +316,16 @@ public final class ElementNaming {
      * libraries and asserts that annotations are the <em>only</em> thing this renders differently
      * from javac.
      */
-    private static String typeString(TypeMirror type, boolean varargs) {
-        if (varargs && type instanceof ArrayType array) {
-            return typeString(array.getComponentType(), false) + "...";
-        }
+    private static String typeString(TypeMirror type) {
         if (type instanceof ArrayType array) {
-            return typeString(array.getComponentType(), false) + "[]";
+            return typeString(array.getComponentType()) + "[]";
         }
         if (type instanceof WildcardType wildcard) {
             if (wildcard.getExtendsBound() != null) {
-                return "? extends " + typeString(wildcard.getExtendsBound(), false);
+                return "? extends " + typeString(wildcard.getExtendsBound());
             }
             if (wildcard.getSuperBound() != null) {
-                return "? super " + typeString(wildcard.getSuperBound(), false);
+                return "? super " + typeString(wildcard.getSuperBound());
             }
             return "?";
         }
@@ -337,7 +335,7 @@ public final class ElementNaming {
             if (!arguments.isEmpty()) {
                 StringJoiner joined = new StringJoiner(",", "<", ">");
                 for (TypeMirror argument : arguments) {
-                    joined.add(typeString(argument, false));
+                    joined.add(typeString(argument));
                 }
                 sb.append(joined);
             }
@@ -360,6 +358,18 @@ public final class ElementNaming {
         // language version adds. toString() is all that is left, with any annotations taken back
         // off so an exotic type cannot smuggle one into the identity either.
         return stripAnnotations(type.toString());
+    }
+
+    /**
+     * The last parameter of a varargs method: its array type with a trailing {@code ...} in place of
+     * {@code []}, as javac renders it. A varargs parameter is always an array; anything else is
+     * rendered as {@link #typeString} would.
+     */
+    private static String varargsTypeString(TypeMirror type) {
+        if (type instanceof ArrayType array) {
+            return typeString(array.getComponentType()) + "...";
+        }
+        return typeString(type);
     }
 
     /**
