@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with nothing failing to name the cause. Its lock entry is always loaded, so the budget
   `ProjectFactsConsistencyTest` holds this repository's own `CLAUDE.md` block to rises from 7,000 to
   7,300 bytes; the block is 7,296.
+- **Gradle wrapper 9.8.1 → 9.9.1 (11 wrappers).** `gradle.version` in the parent moves to the
+  current release (services.gradle.org/versions/current), and `tools/sync-version-mirrors.py`
+  rewrites every `gradle-wrapper.properties`. 9.9 also ships a new `gradlew.bat` template, whose
+  error branches now exit through `exitWithErrorLevel`, and a new `gradle-wrapper.jar` (SHA-256
+  `621008af...`, the checksum Gradle publishes for 9.9.1); both are what 9.9.1's own `wrapper`
+  task writes, and all 11 copies are byte-identical. `gradlew` is unchanged.
 
 ### Deprecated
 
