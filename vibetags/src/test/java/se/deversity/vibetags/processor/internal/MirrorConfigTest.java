@@ -207,4 +207,18 @@ class MirrorConfigTest {
         assertEquals(List.of(), MirrorConfig.discover(root),
             "a stray config under target/ or src/ is not a module and must not be picked up");
     }
+
+    @Test
+    void discoverReturnsTargetsDepthFirstWithSiblingsSorted(@TempDir Path root) throws IOException {
+        // Written out of order on purpose: the walk, not creation order, decides the result.
+        write(root.resolve("b"));
+        write(root.resolve("a").resolve("x"));
+        write(root.resolve("a"));
+
+        List<Path> found = MirrorConfig.discover(root).stream().map(MirrorConfig::targetDir).toList();
+        Path base = root.toAbsolutePath().normalize();
+        assertEquals(List.of(base.resolve("a"), base.resolve("a").resolve("x"), base.resolve("b")), found,
+            "a directory's own target comes before the targets below it, and siblings sort by name. "
+                + "Mirroring and the build key follow this order, so a different one is a different build");
+    }
 }
