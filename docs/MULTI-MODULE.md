@@ -549,8 +549,11 @@ Mechanics:
 - A config VibeTags cannot use counts as absent: an unreadable file, or one with a source line that
   is not a valid path on this OS (on Windows, a line such as `../modules/*` written without its
   `glob =` key). The whole file is ignored rather than the one line, because dropping the only source
-  line would mean "mirror from every module". Other targets in the reactor are unaffected. Nothing
-  warns about an ignored config yet (#1098).
+  line would mean "mirror from every module". Other targets in the reactor are unaffected. Every
+  build warns about each ignored config, naming the file and, for a bad line, its number:
+  `VibeTags: app-tests/.vibetags-mirror is ignored: line 2 is not a valid path on this system`
+  (#1098). A rebuild that changes nothing warns again, like every warning about state on disk, and
+  `vibetags.log` records `mirror.skip file= reason=unusable-config detail=`.
 
 Removing a `.vibetags-mirror` stops future mirroring but leaves the already-written `mirrored-*`
 files in place — same semantics as deleting any other opt-in file. Delete them to be rid of them.

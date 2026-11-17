@@ -230,6 +230,44 @@ class MirrorConfigTest {
     }
 
     @Test
+    void unusableNamesTheLineThatIsNotAPath(@TempDir Path root) throws IOException {
+        // The config is treated as absent (above), which used to be silent (#1098): say which file
+        // and which line, so the developer can find a mistake that leaves the build green.
+        Files.createDirectories(root.resolve("b"));
+        Path config = root.resolve("b").resolve(MirrorConfig.FILE_NAME);
+        Files.writeString(config, "# sources\n../a\nbad" + (char) 0 + "line\n", StandardCharsets.UTF_8);
+
+        List<MirrorConfig.Unusable> unusable = MirrorConfig.unusable(root);
+
+        assertEquals(1, unusable.size(), "one unusable config: " + unusable);
+        assertEquals(config.toAbsolutePath().normalize(), unusable.get(0).file());
+        assertTrue(unusable.get(0).reason().contains("line 3"),
+            "the reason names the line, counting comments and blank lines as the editor does: " + unusable);
+    }
+
+    @Test
+    void unusableNamesAConfigThatIsNotUtf8(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("b"));
+        Files.write(root.resolve("b").resolve(MirrorConfig.FILE_NAME), new byte[] {'.', '.', '/', (byte) 0xC3, '(', '\n'});
+
+        List<MirrorConfig.Unusable> unusable = MirrorConfig.unusable(root);
+
+        assertEquals(1, unusable.size(), "one unusable config: " + unusable);
+        assertTrue(unusable.get(0).reason().contains("UTF-8"), "the reason says what is wrong with it: " + unusable);
+    }
+
+    @Test
+    void unusableIsEmptyWhenEveryConfigLoadsOrNoneExists(@TempDir Path root) throws IOException {
+        assertEquals(List.of(), MirrorConfig.unusable(root), "no config, nothing to report");
+        write(root.resolve("a"));
+        Files.createDirectories(root.resolve("b"));
+        Files.writeString(root.resolve("b").resolve(MirrorConfig.FILE_NAME), "../a\nglob = **/b/**/*.java\n",
+            StandardCharsets.UTF_8);
+
+        assertEquals(List.of(), MirrorConfig.unusable(root), "configs that load are not reported");
+    }
+
+    @Test
     void discoverReturnsTargetsDepthFirstWithSiblingsSorted(@TempDir Path root) throws IOException {
         // Written out of order on purpose: the walk, not creation order, decides the result.
         write(root.resolve("b"));

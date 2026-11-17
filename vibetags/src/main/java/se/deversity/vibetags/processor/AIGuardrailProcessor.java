@@ -1632,6 +1632,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             List<ModuleSidecar> allSidecars) {
         mergeStateChecked.set(true);
         warnAboutSidecarsThisRoundCouldNotRead(root);
+        warnAboutUnusableMirrorConfigs();
         if (allSidecars.size() < 2) {
             return; // Single module: its own round is by definition current.
         }
@@ -1674,6 +1675,24 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         warnAboutGranularOptedOutSinceAModuleLastCompiled(activeServices, allSidecars);
         warnAboutSiblingRuleFilesThatAreMissing(activeServices, serviceFiles, allSidecars);
         warnAboutElementsClaimedByTwoRegions(allSidecars);
+    }
+
+    /**
+     * Warns about each {@code .vibetags-mirror} that exists but cannot be used (#1098). Mirroring
+     * treats such a config as absent, so its module receives no mirrored rules while the build stays
+     * green. Before every module's own early return, since a reactor with one annotated module still
+     * mirrors.
+     */
+    private void warnAboutUnusableMirrorConfigs() {
+        for (MirrorConfig.Unusable config : MirrorConfig.unusable(root)) {
+            String file = config.relativeTo(root);
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: " + file + " is ignored: " + config.reason()
+                    + ". Its module receives no mirrored rules until it is fixed.");
+            if (log != null) {
+                log.warn("mirror.skip file={} reason=unusable-config detail={}", file, config.reason());
+            }
+        }
     }
 
     /**

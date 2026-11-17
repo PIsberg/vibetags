@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,6 +94,35 @@ class MirrorEndToEndTest {
     }
 
     // ------------------------------------------------------------------
+
+    @Test
+    void unusableConfig_isWarnedAboutWhileAValidSiblingTargetStillReceivesItsRules() throws IOException {
+        // #1098: a config with a line that is not a path is ignored, and the build used to stay green
+        // with no word about it. A NUL is invalid on every OS; on Windows ../modules/* is too.
+        mirrorTarget("app-tests", "# mirror everything\n");
+        Files.createDirectories(reactorRoot.resolve("app-broken").resolve(".claude/rules"));
+        Files.writeString(reactorRoot.resolve("app-broken").resolve(".vibetags-mirror"),
+            "../app-fhe\nbad" + (char) 0 + "line\n", StandardCharsets.UTF_8);
+
+        ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
+        Files.createDirectories(reactorRoot.resolve("app-fhe"));
+        Files.writeString(reactorRoot.resolve("app-fhe").resolve("pom.xml"),
+            "<project><artifactId>app-fhe</artifactId></project>", StandardCharsets.UTF_8);
+        harness.writeSourceFile("app-fhe/src/main/java/com/example/fhe/NativeBridge.java", FHE_SOURCE);
+        java.util.List<String> warnings = harness.compileReturningDiagnostics().stream()
+            .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.WARNING)
+            .map(d -> d.getMessage(null))
+            .filter(m -> m.contains(".vibetags-mirror"))
+            .toList();
+
+        assertEquals(1, warnings.size(), "one warning for the one unusable config: " + warnings);
+        assertTrue(warnings.get(0).contains("app-broken/.vibetags-mirror") && warnings.get(0).contains("line 2"),
+            "the warning names the file and the line to fix: " + warnings);
+        assertTrue(Files.exists(mirrored("app-tests", "app-fhe", "com-example-fhe-NativeBridge")),
+            "the valid sibling target still receives its mirrored rules");
+        assertFalse(Files.exists(mirrored("app-broken", "app-fhe", "com-example-fhe-NativeBridge")),
+            "nothing is mirrored into the target whose config could not be used");
+    }
 
     @Test
     void emptyConfig_mirrorsEveryModuleIntoTheTarget() throws IOException {

@@ -161,6 +161,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A `.vibetags-mirror` VibeTags cannot use is warned about (#1098).** A config that could not be
+  read, or that held a source line that is not a valid path on this OS (on Windows, `../modules/*`
+  written without its `glob =` key), was ignored in silence: its module got no mirrored rules and
+  the build stayed green. Every build now warns once per such config, naming the file and the line,
+  and a rebuild that changes nothing warns again (#1063). `MirrorConfig.unusable` reports them;
+  the warning is hosted with the other warnings about state on disk. Tests in `MirrorConfigTest`,
+  `MirrorEndToEndTest` and `ShortCircuitStateWarningTest` failed first against a stub that
+  reported nothing.
 - **The detached-module warning (#296) reads module declarations the way the rest of the build does
   (#1096).** `ReactorRootDetector.findReactorRootAbove` matched a literal `<module>path</module>`
   substring, so a module declared as a Maven 4 `<subproject>` or as a whitespace-padded

@@ -138,6 +138,17 @@ class ShortCircuitStateWarningTest {
             locked("com.example.svc", "AuthUtil", "Token order")), "could not be read this round");
     }
 
+    @Test
+    void anUnusableMirrorConfigIsWarnedAboutOnTheRebuild(@TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve("app-tests"));
+        Files.writeString(root.resolve("app-tests").resolve(".vibetags-mirror"), "bad" + (char) 0 + "line\n",
+            StandardCharsets.UTF_8);
+
+        assertWarnedOnBothBuilds(module(root, "svc", "com.example.svc.AuthUtil",
+            locked("com.example.svc", "AuthUtil", "Token order")), ".vibetags-mirror is ignored");
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static void assertWarnedOnBothBuilds(ProcessorTestHarness harness, String fragment) throws IOException {
