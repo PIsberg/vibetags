@@ -354,7 +354,8 @@ public final class GuardrailFileWriter {
             return;
         }
         debug("write.commit file={} bytes={}", fileName(filePath), finalContent.length());
-        BasicFileAttributes written = writeContentWithBackup(filePath, finalContent, mergedFrom != null);
+        Move move = mergedFrom == null ? GuardrailFileWriter::moveIntoAbsent : GuardrailFileWriter::replaceAtomically;
+        BasicFileAttributes written = writeContentWithBackup(filePath, finalContent, move);
         if (writeCache != null) {
             writeCache.recordWrite(filePath, bodyForCache, written);
         }
@@ -569,12 +570,13 @@ public final class GuardrailFileWriter {
     private boolean writeSharedJsonValues(Path filePath, String fileName, String content, boolean hasNewRules,
                                           List<JsonValueSpans.SharedKey> sharedKeys) throws IOException {
         BasicFileAttributes existingAttrs = attributesOrNull(filePath);
+        BasicFileAttributes mergedFrom = existingAttrs;
         String existing;
         try {
             existing = Files.readString(filePath, StandardCharsets.UTF_8);
         } catch (NoSuchFileException e) {
             existing = "";
-            existingAttrs = null;
+            mergedFrom = null;
         }
         java.util.Map<String, String> bodies = JsonValueSpans.bodiesFrom(content);
         if (bodies == null) {
@@ -607,7 +609,7 @@ public final class GuardrailFileWriter {
         }
         debug("write.update file={} reason=json-values-differ oldBytes={} newBytes={} markers=json-values",
             fileName, existing.length(), merged.length());
-        writeAndCache(filePath, merged, content, existingAttrs);
+        writeAndCache(filePath, merged, content, mergedFrom);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
         return true;
     }
@@ -1303,7 +1305,7 @@ public final class GuardrailFileWriter {
                     // Atomic, like every other write: an in-place write interrupted halfway left
                     // the developer's remaining text truncated (#875).
                     try {
-                        writeContentWithBackup(p, bom + content + "\n", true);
+                        writeContentWithBackup(p, bom + content + "\n", GuardrailFileWriter::replaceAtomically);
                     } catch (IOException e) {
                         recordFailedScrub(p, e);
                         return false;
@@ -1342,12 +1344,9 @@ public final class GuardrailFileWriter {
     }
 
     /**
-     * Stages {@code finalContent} beside {@code filePath} and moves it into place.
-     *
-     * @param replace whether the move may replace a file already there; when {@code false} a file
-     *                found at the target throws {@link AppearedDuringWrite} and is left untouched
+     * Stages {@code finalContent} beside {@code filePath} and moves it into place with {@code move}.
      */
-    private BasicFileAttributes writeContentWithBackup(Path filePath, String finalContent, boolean replace)
+    private BasicFileAttributes writeContentWithBackup(Path filePath, String finalContent, Move move)
             throws IOException {
         // Create the staging file with a fresh random name in the TARGET directory (so the atomic
         // move stays on the same filesystem). Files.createTempFile creates it atomically with
@@ -1366,19 +1365,26 @@ public final class GuardrailFileWriter {
             // recorded against this content (see noteCurrent). A rename keeps both, so these are
             // the attributes the target has for as long as it holds these bytes.
             BasicFileAttributes written = Files.readAttributes(tmp, BasicFileAttributes.class);
-            if (replace) {
-                try {
-                    Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-                } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-                    Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING);
-                }
-            } else {
-                moveIntoAbsent(tmp, filePath);
-            }
+            move.into(tmp, filePath);
             return written;
         } finally {
             // A successful move consumes tmp; clean it up only if a failure left it behind.
             Files.deleteIfExists(tmp);
+        }
+    }
+
+    /** How a staged file takes the target's place. */
+    @FunctionalInterface
+    private interface Move {
+        void into(Path staged, Path target) throws IOException;
+    }
+
+    /** Moves {@code tmp} over {@code target}, replacing whatever file is there. */
+    private static void replaceAtomically(Path tmp, Path target) throws IOException {
+        try {
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
@@ -1393,7 +1399,7 @@ public final class GuardrailFileWriter {
         try {
             Files.move(tmp, target);
         } catch (FileAlreadyExistsException e) {
-            throw new AppearedDuringWrite(target, e);
+            throw new AppearedDuringWrite(e);
         }
     }
 
@@ -1401,7 +1407,7 @@ public final class GuardrailFileWriter {
     private static final class AppearedDuringWrite extends IOException {
         private static final long serialVersionUID = 1L;
 
-        AppearedDuringWrite(Path target, FileAlreadyExistsException cause) {
+        AppearedDuringWrite(FileAlreadyExistsException cause) {
             super("another writer created it each time this build was about to, so it was left as it is", cause);
         }
     }

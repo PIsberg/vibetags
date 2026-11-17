@@ -2,9 +2,6 @@ package se.deversity.vibetags.processor.internal;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.AppenderBase;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,7 +10,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -46,7 +42,6 @@ class GuardrailFileWriterAppearedFileTest {
     private static final String BODY = "- a guardrail line\n";
 
     private ch.qos.logback.classic.Logger logger;
-    private Interloper interloper;
 
     /** A logger of this test's own, so the parallel suite cannot mix another test's events in. */
     @BeforeEach
@@ -54,26 +49,16 @@ class GuardrailFileWriterAppearedFileTest {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         logger = context.getLogger(GuardrailFileWriterAppearedFileTest.class.getName() + "." + testInfo.getDisplayName());
         logger.setLevel(Level.DEBUG);
-        interloper = new Interloper();
-        interloper.setContext(context);
-        interloper.start();
-        logger.addAppender(interloper);
-    }
-
-    @AfterEach
-    void detach() {
-        logger.detachAppender(interloper);
-        interloper.stop();
     }
 
     @Test
     @DisplayName("hand-written text around the markers survives a CLAUDE.md that appears before the move")
     void markerFileThatAppearsKeepsItsHandWrittenText(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("CLAUDE.md");
-        interloper.createOnCommit(file, HAND_WRITTEN);
-
-        assertTrue(new GuardrailFileWriter(HEADER, null, logger).writeFileIfChanged(file.toString(), BODY, true),
-            "the block is still written, into the file that appeared");
+        try (WriteRaceInterloper ignored = WriteRaceInterloper.createOnCommit(logger, file, HAND_WRITTEN)) {
+            assertTrue(new GuardrailFileWriter(HEADER, null, logger).writeFileIfChanged(file.toString(), BODY, true),
+                "the block is still written, into the file that appeared");
+        }
 
         String result = Files.readString(file);
         assertEquals(1, count(result, PREAMBLE), "the preamble is kept exactly once:\n" + result);
@@ -88,10 +73,10 @@ class GuardrailFileWriterAppearedFileTest {
     @DisplayName("a greptile.json that appears before the move keeps the developer's settings")
     void sharedJsonThatAppearsKeepsItsSettings(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("greptile.json");
-        interloper.createOnCommit(file, "{\n  \"strictness\": 2\n}\n");
-
-        new GuardrailFileWriter(HEADER, null, logger)
-            .writeFileIfChanged(file.toString(), "{\"instructions\": [\"Never touch the ledger\"]}", true);
+        try (WriteRaceInterloper ignored = WriteRaceInterloper.createOnCommit(logger, file, "{\n  \"strictness\": 2\n}\n")) {
+            new GuardrailFileWriter(HEADER, null, logger)
+                .writeFileIfChanged(file.toString(), "{\"instructions\": [\"Never touch the ledger\"]}", true);
+        }
 
         String result = Files.readString(file);
         assertTrue(result.contains("\"strictness\": 2"), "the developer's setting is kept:\n" + result);
@@ -102,11 +87,10 @@ class GuardrailFileWriterAppearedFileTest {
     @DisplayName("a file that keeps appearing is left as it is, and the write is reported failed")
     void aFileThatKeepsAppearingIsLeftAlone(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("CLAUDE.md");
-        interloper.createOnCommit(file, HAND_WRITTEN);
-        interloper.deleteOnRetry(file);
-
-        assertFalse(new GuardrailFileWriter(HEADER, null, logger).writeFileIfChanged(file.toString(), BODY, true),
-            "a write that never found a stable file reports that nothing was written");
+        try (WriteRaceInterloper ignored = WriteRaceInterloper.createOnCommit(logger, file, HAND_WRITTEN).deletingOnRetry()) {
+            assertFalse(new GuardrailFileWriter(HEADER, null, logger).writeFileIfChanged(file.toString(), BODY, true),
+                "a write that never found a stable file reports that nothing was written");
+        }
         assertEquals(HAND_WRITTEN, Files.readString(file), "the file that appeared last is untouched");
     }
 
@@ -116,39 +100,5 @@ class GuardrailFileWriterAppearedFileTest {
             n++;
         }
         return n;
-    }
-
-    /**
-     * Acts on the writer's own DEBUG events, which it logs on the writing thread at fixed points: a
-     * {@code write.commit} immediately before the move into place, a {@code write.retry} when it
-     * starts over. Creating the target at the commit puts a file where the writer found none.
-     */
-    private static final class Interloper extends AppenderBase<ILoggingEvent> {
-        private Path createTarget;
-        private String createContent;
-        private Path deleteTarget;
-
-        void createOnCommit(Path target, String content) {
-            createTarget = target;
-            createContent = content;
-        }
-
-        void deleteOnRetry(Path target) {
-            deleteTarget = target;
-        }
-
-        @Override
-        protected void append(ILoggingEvent event) {
-            String message = event.getFormattedMessage();
-            try {
-                if (message.startsWith("write.commit ") && createTarget != null && Files.notExists(createTarget)) {
-                    Files.writeString(createTarget, createContent);
-                } else if (message.startsWith("write.retry ") && deleteTarget != null) {
-                    Files.deleteIfExists(deleteTarget);
-                }
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
     }
 }
