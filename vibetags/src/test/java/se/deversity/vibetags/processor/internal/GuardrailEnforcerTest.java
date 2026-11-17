@@ -146,22 +146,22 @@ class GuardrailEnforcerTest {
     }
 
     /** The families as the processor builds them: parsed from an -Avibetags.enforce value. */
-    private Set<String> families(String... names) {
+    private Set<GuardrailEnforcer.Family> families(String... names) {
         return enforcer().parseFamilies(String.join(",", names));
     }
 
     /** Records a baseline for {@link #MODULE} and forgets what the recording printed. */
-    private void record(GuardrailModel model, Set<String> families) {
+    private void record(GuardrailModel model, Set<GuardrailEnforcer.Family> families) {
         record(model, families, MODULE);
     }
 
-    private void record(GuardrailModel model, Set<String> families, String moduleId) {
+    private void record(GuardrailModel model, Set<GuardrailEnforcer.Family> families, String moduleId) {
         enforcer().enforce(model, families, root, moduleId, true);
         diagnostics.clear();
         appender.list.clear();
     }
 
-    private int check(GuardrailModel model, Set<String> families) {
+    private int check(GuardrailModel model, Set<GuardrailEnforcer.Family> families) {
         return enforcer().enforce(model, families, root, MODULE, false);
     }
 

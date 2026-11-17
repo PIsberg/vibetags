@@ -273,7 +273,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * ({@code -Avibetags.enforce}). Empty — the default — leaves every guardrail advisory, which is
      * the whole product's posture; enforcement is something a team opts into per family (#284).
      */
-    private Set<String> enforceFamilies = Set.of();
+    private Set<GuardrailEnforcer.Family> enforceFamilies = Set.of();
 
     /** {@code -Avibetags.baseline.update=true}: record the current shapes instead of checking them. */
     private boolean baselineUpdate;
@@ -2291,7 +2291,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return;
         }
         GuardrailEnforcer enforcer = new GuardrailEnforcer(processingEnv.getMessager(), log);
-        Set<String> families = enforceFamilies.isEmpty()
+        Set<GuardrailEnforcer.Family> families = enforceFamilies.isEmpty()
             // -Avibetags.baseline.update on its own means "record everything enforceable", so a
             // first-time adopter does not have to name the families twice.
             ? enforcer.parseFamilies(GuardrailEnforcer.ALL)
