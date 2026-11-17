@@ -66,6 +66,10 @@ public final class MirrorConfig {
     private record Reading(@Nullable MirrorConfig config, @Nullable Unusable unusable) {
         static final Reading ABSENT = new Reading(null, null);
 
+        static Reading loaded(MirrorConfig config) {
+            return new Reading(config, null);
+        }
+
         static Reading unusable(Path file, String reason) {
             return new Reading(null, new Unusable(file.toAbsolutePath().normalize(), reason));
         }
@@ -195,9 +199,7 @@ public final class MirrorConfig {
             try {
                 source = target.resolve(line).normalize();
             } catch (InvalidPathException notAPath) {
-                return Reading.unusable(file, "line " + (i + 1) + " is not a valid path on this system"
-                    + (line.indexOf('*') >= 0 || line.indexOf('?') >= 0
-                        ? ". A glob belongs on a \"glob = ...\" line" : ""));
+                return Reading.unusable(file, notAPathReason(i + 1, line));
             }
             if (!sources.contains(source)) {
                 sources.add(source);
@@ -206,8 +208,18 @@ public final class MirrorConfig {
         if (globs.isEmpty()) {
             globs.add(defaultGlob(target));
         }
-        return new Reading(new MirrorConfig(target, List.copyOf(sources), List.copyOf(globs),
-            BuildFingerprint.fingerprint(content)), null);
+        return Reading.loaded(new MirrorConfig(target, List.copyOf(sources), List.copyOf(globs),
+            BuildFingerprint.fingerprint(content)));
+    }
+
+    /**
+     * Why source line {@code lineNumber} is unusable. A line with a wildcard is most likely a glob
+     * written without its key, which Windows rejects as a path, so the reason says where it belongs.
+     */
+    private static String notAPathReason(int lineNumber, String line) {
+        String reason = "line " + lineNumber + " is not a valid path on this system";
+        boolean looksLikeAGlob = line.indexOf('*') >= 0 || line.indexOf('?') >= 0;
+        return looksLikeAGlob ? reason + ". A glob belongs on a \"glob = ...\" line" : reason;
     }
 
     /**

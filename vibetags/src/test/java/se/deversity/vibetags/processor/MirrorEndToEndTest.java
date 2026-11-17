@@ -73,12 +73,17 @@ class MirrorEndToEndTest {
 
     /** Compiles one module (real pom.xml + file-backed source) into the shared reactor root. */
     private void compileModule(String module, String fqn, String source, String... options) throws IOException {
+        prepareModule(module, fqn, source).compile(options);
+    }
+
+    /** One module's pom.xml and source in the shared reactor root, and a harness ready to compile it. */
+    private ProcessorTestHarness prepareModule(String module, String fqn, String source) throws IOException {
         ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
         Files.createDirectories(reactorRoot.resolve(module));
         Files.writeString(reactorRoot.resolve(module).resolve("pom.xml"),
             "<project><artifactId>" + module + "</artifactId></project>", StandardCharsets.UTF_8);
         harness.writeSourceFile(module + "/src/main/java/" + fqn.replace('.', '/') + ".java", source);
-        harness.compile(options);
+        return harness;
     }
 
     /** Makes {@code module} a mirror target with the given config body. */
@@ -104,12 +109,8 @@ class MirrorEndToEndTest {
         Files.writeString(reactorRoot.resolve("app-broken").resolve(".vibetags-mirror"),
             "../app-fhe\nbad" + (char) 0 + "line\n", StandardCharsets.UTF_8);
 
-        ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
-        Files.createDirectories(reactorRoot.resolve("app-fhe"));
-        Files.writeString(reactorRoot.resolve("app-fhe").resolve("pom.xml"),
-            "<project><artifactId>app-fhe</artifactId></project>", StandardCharsets.UTF_8);
-        harness.writeSourceFile("app-fhe/src/main/java/com/example/fhe/NativeBridge.java", FHE_SOURCE);
-        java.util.List<String> warnings = harness.compileReturningDiagnostics().stream()
+        java.util.List<String> warnings = prepareModule("app-fhe", "com.example.fhe.NativeBridge", FHE_SOURCE)
+            .compileReturningDiagnostics().stream()
             .filter(d -> d.getKind() == javax.tools.Diagnostic.Kind.WARNING)
             .map(d -> d.getMessage(null))
             .filter(m -> m.contains(".vibetags-mirror"))
