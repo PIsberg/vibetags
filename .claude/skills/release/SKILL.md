@@ -38,22 +38,33 @@ back empty.
 ## Step 1b — Count this month's releases against Central's allowance
 
 Maven Central allows an organization 7 releases, 1,167 files and 78 MB a month, and an org
-that stays over them is rate limited (#863). September 2026 had 7 tags. Count this calendar
-month's tags before going further:
+that stays over them is rate limited (#863). The limits are per organization, so async-test-lib
+and every other group under `se.deversity` draw on the same allowance as vibetags. Count the
+whole organization's month before going further:
 
 ```bash
-git for-each-ref --format='%(creatordate:format:%Y-%m) %(refname:short)' 'refs/tags/v*' \
-  | grep "^$(date +%Y-%m) "
+bash .github/scripts/central-month-usage.sh
 ```
 
-The cadence is **at most 3 releases a month**. If this would be the fourth or later, stop
-and tell the user the count, and continue only on an explicit go-ahead for a fix a consumer
-is blocked on. Say which it was in the release PR body.
+It reads repo1's public listings and prints the month's releases, files and bytes against the
+three limits, one line per release (a group and version, which is one bundle). Show the user
+the numbers. Then:
 
-Central counts each published deployment as a release, and `publish.yml` deploys a version
-as one (#863), so a vibetags release costs 1 of the 7. The 7 are per organization: an
-async-test-lib release counts too, so tell the user the tag count is a floor and the usage
-page (https://central.sonatype.com/publishing/usage?org=deversity) has the real number.
+- **Exit 1** means a limit is already reached and this release would go over it. Stop, and
+  continue only on an explicit go-ahead for a fix a consumer is blocked on.
+- **Exit 2** means repo1 could not be read. Say so; do not treat it as zero usage, and do not
+  guess the count.
+- **Exit 0**: also count this repository's tags for the month. The cadence is **at most 3
+  vibetags releases a month**; if this would be the fourth or later, stop and ask as above.
+
+  ```bash
+  git for-each-ref --format='%(creatordate:format:%Y-%m) %(refname:short)' 'refs/tags/v*' \
+    | grep "^$(date +%Y-%m) "
+  ```
+
+Put the counter's lines in the release PR body. The count is a floor (a version that took
+several deployments counts once), and Central's own number is on the usage page
+(https://central.sonatype.com/publishing/usage?org=deversity, owner login).
 
 ## Step 2 — Preflight
 

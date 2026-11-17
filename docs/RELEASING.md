@@ -206,11 +206,25 @@ browser, look for the file in real repositories on GitHub instead. Then act on w
 Maven Central allows an organization 7 releases, 1,167 files and 78 MB per calendar month.
 Going over starts a grace period, and an organization that stays over is rate limited
 ([publishing limits](https://central.sonatype.org/publish/maven-central-publishing-limits/),
-#863). September 2026 used all 7 releases. So:
+#863). The limits are per organization: async-test-lib and every other group under
+`se.deversity` draw on the same 7. So:
 
-- **At most 3 releases a month.** The exception is a fix a consumer is blocked on, and the
-  release PR says so.
-- Count before tagging:
+- **Count the organization's month before tagging:**
+  ```bash
+  bash .github/scripts/central-month-usage.sh          # this month; or pass YYYY-MM
+  ```
+  It reads repo1's public listings for every group under `se/deversity` and prints the month's
+  releases, files and bytes against the three limits, one line per release. It exits 1 when one
+  is already reached, so a release this month goes over it, and 2 when it cannot read repo1,
+  which is never reported as zero. On 2026-11-17 it reported November at 4 of 7 (three
+  async-test-lib releases and vibetags 1.4.2) and 534 of 1,167 files, where this repository's tags
+  showed 1.
+- **One release is one group and version.** The count is a floor: a version that took several
+  deployments counts once, as vibetags 1.4.0's five did, which puts October 2026 at 7 here and 11
+  on Central.
+- **At most 3 vibetags releases a month**, and none that the count says goes over. The exception
+  is a fix a consumer is blocked on, and the release PR says so, with the count. This
+  repository's tags for the month:
   ```bash
   git for-each-ref --format='%(creatordate:format:%Y-%m) %(refname:short)' 'refs/tags/v*' \
     | grep "^$(date +%Y-%m) "
@@ -229,9 +243,9 @@ Going over starts a grace period, and an organization that stays over is rate li
   reactor in `.github/central-release`, and the publishing plugin uploads every module as one
   deployment. `CentralPublishingBudgetTest` fails if a second deploy call or a module missing
   from the reactor comes back.
-- **The allowance is per organization.** async-test-lib publishes under the same `se.deversity`
-  namespace and draws on the same 7, so the tag count above is a floor. Actual usage is on the
-  [usage page](https://central.sonatype.com/publishing/usage?org=deversity) (owner login).
+- **Central's own number** is on the
+  [usage page](https://central.sonatype.com/publishing/usage?org=deversity) (owner login). When it
+  and the counter differ, it is the one that counts.
 
 ### 1. Prepare the release
 

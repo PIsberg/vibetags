@@ -337,9 +337,15 @@ artifacts (#945).
    runs `check-central-bundle.sh` against zips built to a known shape, including the layout Maven
    3.10 produced, poms missing each element Central requires, and signatures that are missing or
    do not verify, all of which it must reject.
-5. **Create a throwaway signing key**: a passphrase-less key that expires in a day, so the bundle
+5. **Check the Central usage counter against fixture listings**:
+   `.github/scripts/central-month-usage.test.sh` runs `central-month-usage.sh`, the count the
+   release steps take of the organization's month on Central (#863), against directory listings
+   written in repo1's format: one release per group and version, other months left out, exit 1 at
+   a limit, and exit 2 rather than zero when a listing cannot be read. It never reads repo1, so a
+   month at the limit cannot redden a pull request.
+6. **Create a throwaway signing key**: a passphrase-less key that expires in a day, so the bundle
    can be signed the way `publish.yml` signs it without the release key (#949).
-6. **Build each published module's Central bundle and check it**:
+7. **Build each published module's Central bundle and check it**:
    `.github/scripts/build-central-bundles.sh` runs `mvn clean deploy -P central-publish` on the
    release reactor `publish.yml` deploys (`.github/central-release`), with the upload pointed at
    `http://127.0.0.1:9` and throwaway credentials. The plugin stages every module into one bundle,
