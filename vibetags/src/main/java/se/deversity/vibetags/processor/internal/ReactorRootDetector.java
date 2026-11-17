@@ -1,13 +1,12 @@
 package se.deversity.vibetags.processor.internal;
 
-import org.jspecify.annotations.Nullable;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,17 +48,17 @@ public final class ReactorRootDetector {
 
     /**
      * Returns the nearest ancestor of {@code moduleRoot} whose build definition declares
-     * {@code moduleRoot} as one of its modules, or {@code null} when there is none — which is the
+     * {@code moduleRoot} as one of its modules, or empty when there is none — which is the
      * ordinary case for a standalone project and for a module that already shares the reactor root.
      */
-    public static @Nullable Path findReactorRootAbove(Path moduleRoot) {
+    public static Optional<Path> findReactorRootAbove(Path moduleRoot) {
         Path current = moduleRoot.getParent();
         for (int i = 0; current != null && i < MAX_WALK_UP; i++, current = current.getParent()) {
             if (declaresModule(current, moduleRoot)) {
-                return current;
+                return Optional.of(current);
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     /**
@@ -121,23 +120,21 @@ public final class ReactorRootDetector {
 
     /** True when {@code candidate}'s build files name {@code module} as a participating module. */
     private static boolean declaresModule(Path candidate, Path module) {
-        String relative = relativise(candidate, module);
-        if (relative == null) {
-            return false;
-        }
         // Maven: <module>sub/dir</module>. Gradle: include("sub:dir") / include ':sub:dir'.
-        return contains(candidate.resolve("pom.xml"), "<module>" + relative + "</module>")
-            || contains(candidate.resolve("settings.gradle"), gradlePath(relative))
-            || contains(candidate.resolve("settings.gradle.kts"), gradlePath(relative));
+        return relativise(candidate, module)
+            .map(relative -> contains(candidate.resolve("pom.xml"), "<module>" + relative + "</module>")
+                || contains(candidate.resolve("settings.gradle"), gradlePath(relative))
+                || contains(candidate.resolve("settings.gradle.kts"), gradlePath(relative)))
+            .orElse(false);
     }
 
-    /** Forward-slash path of {@code module} relative to {@code base}, or {@code null} if not below it. */
-    private static @Nullable String relativise(Path base, Path module) {
+    /** Forward-slash path of {@code module} relative to {@code base}, or empty if not below it. */
+    private static Optional<String> relativise(Path base, Path module) {
         try {
             String rel = base.relativize(module).toString().replace('\\', '/');
-            return rel.isEmpty() || rel.startsWith("..") ? null : rel;
+            return rel.isEmpty() || rel.startsWith("..") ? Optional.empty() : Optional.of(rel);
         } catch (IllegalArgumentException e) {
-            return null;
+            return Optional.empty();
         }
     }
 

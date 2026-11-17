@@ -39,6 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   declares for all 61 platforms and answers nothing for `root_index`, an unknown key and `""`.
   Three deliberate breakages of the new code (a dropped `sourceSetMerge`, a non-empty prologue for
   an unknown key, the helper resolving the wrong platform) failed 26, 3 and 60 of its 64 cases.
+- **`ReactorRootDetector.findReactorRootAbove` returns `Optional<Path>` instead of a nullable
+  `Path` (internal; no output changes).** Its one caller, the #296 detached-module warning in
+  `AIGuardrailProcessor`, no longer null-checks: it hands the root to a new `warnDetachedFrom`
+  through `ifPresent`. The private `relativise` helper returns `Optional<String>` the same way.
+  A new `DetachedModuleWarningTest` case, written first and green on the old code, pins the module
+  name (`group/module-core`, forward slashes) and the `-Avibetags.root=` value the warning prints for
+  a nested module. Two deliberate breakages of the new code failed it: the detector answering the
+  module's parent instead of the declaring reactor (3 failures), and the module name keeping
+  Windows backslashes (1).
 - **Gradle wrapper 9.8.1 → 9.9.1 (11 wrappers).** `gradle.version` in the parent moves to the
   current release (services.gradle.org/versions/current), and `tools/sync-version-mirrors.py`
   rewrites every `gradle-wrapper.properties`. 9.9 also ships a new `gradlew.bat` template, whose
