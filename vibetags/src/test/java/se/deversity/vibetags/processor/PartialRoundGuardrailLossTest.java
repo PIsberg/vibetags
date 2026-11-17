@@ -234,10 +234,8 @@ class PartialRoundGuardrailLossTest {
 
         List<String> warnings = compileSubsetCapturingWarnings(root, sources[0]);
 
-        String beta = java.util.stream.StreamSupport.stream(root.relativize(sources[1]).spliterator(), false)
-            .map(Path::toString)
-            .collect(java.util.stream.Collectors.joining("/"));
-        assertTrue(beta.contains("/"), "precondition: Beta's source sits in a directory below the root");
+        String beta = "src/main/java/com/example/Beta.java";
+        assertTrue(Files.isRegularFile(root.resolve(beta)), "precondition: Beta's source is at " + beta);
         assertTrue(warnings.stream().anyMatch(w -> w.contains("never read: ") && w.contains(beta)),
             "the warning names " + beta + " with forward slashes: " + warnings);
     }
