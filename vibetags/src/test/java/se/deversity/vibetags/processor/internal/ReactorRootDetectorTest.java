@@ -194,8 +194,8 @@ class ReactorRootDetectorTest {
 
     @Test
     void aDeclarationOnALineWithOtherContentStillCounts(@TempDir Path root) throws IOException {
-        // Build files are matched by substring rather than parsed, precisely so a formatting the
-        // detector does not recognise cannot make it silently answer "no".
+        // Entries are found by pattern rather than by parsing the XML, so several on one line, or a
+        // layout a parser would reject, still count instead of silently answering "no".
         Path module = root.resolve("payments-core");
         Files.createDirectories(module);
         write(root.resolve("pom.xml"),
