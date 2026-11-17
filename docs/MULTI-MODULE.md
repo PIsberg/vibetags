@@ -281,6 +281,12 @@ log:
 Generation is milliseconds to seconds per module, so the cost is that much serialisation on the
 VibeTags step only; compilation itself still runs in parallel.
 
+A round that proceeds unlocked does not drop a developer's text from a shared file either. Every write
+reads the file, merges, and moves the result into place, so the last writer wins whole. A writer
+that found no file, which on Windows can be a stat taken while another module's rename replaced it,
+creates the file only if it is still absent; if one has appeared, it logs `write.retry
+reason=appeared-during-write` and merges into that file instead (#1087).
+
 The write cache is shared the same way: every module's processor holds its own view of the one
 `.vibetags-cache`, loaded before any of them generates. A flush re-reads the file and writes back
 only what that module changed (the entries it recorded or removed, its own `# module:` section,
