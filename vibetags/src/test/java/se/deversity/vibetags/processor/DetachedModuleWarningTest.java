@@ -76,6 +76,34 @@ class DetachedModuleWarningTest {
             "the warning must name the fix");
     }
 
+    /**
+     * The warning is only useful if it names the module and the root to pass, and a nested module
+     * is where those go wrong: the name is a path relative to the reactor, in forward slashes on
+     * every OS, and the root is the declaring ancestor rather than the directory just above.
+     */
+    @Test
+    void namesTheNestedModuleAndTheDeclaringReactorRoot() throws IOException {
+        Path reactor = tmp.resolve("reactor");
+        Files.createDirectories(reactor.resolve("group"));
+        Files.writeString(reactor.resolve("pom.xml"),
+            "<project><modules><module>group/module-core</module></modules></project>", StandardCharsets.UTF_8);
+
+        List<String> warnings = compileDetached(reactor.resolve("group").resolve("module-core")).stream()
+            .filter(d -> d.getKind() == Diagnostic.Kind.WARNING)
+            .map(d -> d.getMessage(null))
+            .filter(m -> m.contains("generated its guardrails as its own root"))
+            .toList();
+
+        assertEquals(1, warnings.size(), "exactly one detachment warning. Got: " + warnings);
+        String warning = warnings.get(0);
+        assertTrue(warning.contains("module 'group/module-core'"),
+            "the module is named relative to the reactor, with forward slashes: " + warning);
+        assertTrue(warning.contains(", but " + reactor + " declares it as a module"),
+            "the declaring reactor is named: " + warning);
+        assertTrue(warning.contains("-Avibetags.root=" + reactor + " "),
+            "the fix names the reactor root, not the module's parent directory: " + warning);
+    }
+
     @Test
     void warnsForAGradleSettingsInclude() throws IOException {
         Path reactor = tmp.resolve("reactor");
