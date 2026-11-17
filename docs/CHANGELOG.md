@@ -66,6 +66,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tab, no-break and Unicode spaces are not whitespace, and non-ASCII decimal digits are not digits.
   Swapping in `Character.isWhitespace` failed 4 of them and `Character.isDigit` 3, so the tempting
   "simplification" cannot widen what a third-party JAR's manifest may contain unnoticed.
+- **`LlmsRenderer` renders from a table of sections (internal; no output changes).** Its `render`
+  was 44 hand-written `appendSection` calls, each re-testing whether it was writing `llms.txt` or
+  `llms-full.txt` with its own `full ? long : short` (Clean Code G15, selector arguments). Each
+  section is now one row (model bucket, formatter, compact heading, full heading), `render` picks the
+  heading column once and loops, and the method shrank from 228 lines to 14. The rows were generated
+  from the old calls, so every heading literal is unchanged. Removing `llms-full.txt` (#1084) is now
+  deleting one column. `LlmsRendererGoldenTest`, 548 cases recorded from the old renderer, pins both
+  files byte for byte for 49 models; swapping two rows failed 4 of them, swapping the heading columns
+  103, adding one space to one heading 8, and giving one row the wrong formatter 12.
 - **`GuardrailEnforcer.enforce` is split into one method per step (internal; no output changes).**
   The 110-line method collected the guarded elements, read the baseline, recorded it, warned when
   nothing was recorded, compared in two directions and reported the result. It is now 23 lines that
