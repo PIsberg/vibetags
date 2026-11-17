@@ -28,7 +28,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -146,8 +145,9 @@ class GuardrailEnforcerTest {
         return m.build();
     }
 
-    private static Set<String> families(String... names) {
-        return new LinkedHashSet<>(List.of(names));
+    /** The families as the processor builds them: parsed from an -Avibetags.enforce value. */
+    private Set<String> families(String... names) {
+        return enforcer().parseFamilies(String.join(",", names));
     }
 
     /** Records a baseline for {@link #MODULE} and forgets what the recording printed. */
