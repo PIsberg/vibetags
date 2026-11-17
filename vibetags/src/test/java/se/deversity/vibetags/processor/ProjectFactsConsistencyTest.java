@@ -53,8 +53,13 @@ class ProjectFactsConsistencyTest {
     /** {@code vibetags/} is the surefire working directory; its parent is the repo root. */
     private static final Path REPO_ROOT = Paths.get("").toAbsolutePath().getParent();
 
-    /** Bytes the always-loaded block may spend; see {@link #claudeMdGeneratedBlockStaysWithinItsBudget}. */
-    private static final int CLAUDE_MD_BLOCK_BUDGET = 7_000;
+    /**
+     * Bytes the always-loaded block may spend; see {@link #claudeMdGeneratedBlockStaysWithinItsBudget}.
+     * Raised from 7,000 for the lock on {@code GuardrailModelBuilder.BY_IDENTITY}: a sort order whose
+     * change rewrites every consumer's generated files is a fact an agent needs while editing other
+     * files, which is what the always-loaded block is for.
+     */
+    private static final int CLAUDE_MD_BLOCK_BUDGET = 7_300;
 
     /**
      * Docs that state a version's own historical scope, which must keep their original numbers.

@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 
 import java.lang.annotation.Annotation;
@@ -150,7 +151,7 @@ class AggregateBlankLineContractTest {
     @SafeVarargs
     private static GuardrailModel everyAnnotationBut(Class<? extends Annotation>... excluded) {
         List<Class<? extends Annotation>> skip = List.of(excluded);
-        GuardrailModel.Builder builder = GuardrailModel.builder();
+        GuardrailModelBuilder builder = new GuardrailModelBuilder();
         for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
             if (!skip.contains(type)) {
                 builder.add(type, GuardrailModels.element(type));

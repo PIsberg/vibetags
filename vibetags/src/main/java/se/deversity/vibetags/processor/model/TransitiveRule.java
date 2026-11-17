@@ -25,8 +25,11 @@ import java.util.Objects;
  * safety-bucket annotations as the always-on tier, and that list is load-bearing in the
  * scoped-index collapse. A second severity axis would be a twin of it that nothing keeps in
  * agreement.
+ *
+ * <p>Data, validation and value identity only. The attribute summary and the sort order live in
+ * {@code internal.content.TransitiveRules}.
  */
-public final class TransitiveRule implements Comparable<TransitiveRule> {
+public final class TransitiveRule {
 
     /** How strongly a library rule binds the consuming project. Derived, never authored. */
     public enum Tier {
@@ -73,44 +76,6 @@ public final class TransitiveRule implements Comparable<TransitiveRule> {
 
     /** The annotation's attributes, in the order the manifest listed them. Never null. */
     public Map<String, String> members() { return members; }
-
-    /**
-     * The rule's attributes as one {@code key=value} line, or {@code ""} when it has none.
-     * Used by the renderers and by the fingerprint, so the two can never disagree about what
-     * counts as a change.
-     */
-    public String memberSummary() {
-        if (members.isEmpty()) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder(64);
-        for (Map.Entry<String, String> e : members.entrySet()) {
-            if (sb.length() > 0) {
-                sb.append("; ");
-            }
-            sb.append(e.getKey()).append('=').append(e.getValue());
-        }
-        return sb.toString();
-    }
-
-    /**
-     * Total order by package, then annotation, then origin, then attributes.
-     *
-     * <p>Load-bearing for the same reason {@code GuardrailModel} sorts its buckets: manifests are
-     * discovered in whatever order the compilation's imports happened to be walked, and that order
-     * differs between Maven and Gradle and between machines. Sorting here makes the generated
-     * files, and the build fingerprint, a function of the dependency set alone.
-     */
-    @Override
-    public int compareTo(TransitiveRule other) {
-        int c = packageName.compareTo(other.packageName);
-        if (c != 0) return c;
-        c = annotation.compareTo(other.annotation);
-        if (c != 0) return c;
-        c = origin.compareTo(other.origin);
-        if (c != 0) return c;
-        return memberSummary().compareTo(other.memberSummary());
-    }
 
     @Override
     public boolean equals(Object o) {

@@ -30,10 +30,18 @@ vibetags/
 │   │   │   │   │   ├── ServiceRegistry.java           # Service map + file-existence opt-in
 │   │   │   │   │   ├── ElementNaming.java             # elementPath / displayName helpers
 │   │   │   │   │   ├── GuardrailContentBuilder.java   # Thin coordinator delegating to PlatformRenderers
+│   │   │   │   │   ├── AnnotationLabels.java          # the @AI... label of an annotation type
+│   │   │   │   │   ├── GuardrailModelBuilder.java     # the only maker of a GuardrailModel; sorts it
+│   │   │   │   │   ├── GuardrailModelViews.java       # safety/testing halves, -Avibetags.exclude view
 │   │   │   │   │   ├── GuardrailFileWriter.java       # Marker-aware atomic writes + cache + streaming compare
 │   │   │   │   │   ├── GranularRulesWriter.java       # Per-class .mdc/.md + orphan cleanup
 │   │   │   │   │   ├── WriteCache.java                # 0.7.1: per-file content cache (.vibetags-cache sidecar)
 │   │   │   │   │   └── content/                       # Rendering — compiler-free, reads the model only
+│   │   │   │   │       ├── ContentHash.java           # the shared 8-hex content hash
+│   │   │   │   │       ├── ElementFiles.java          # which element a file glob may stand for
+│   │   │   │   │       ├── ElementKinds.java          # ElementTag lookup by name, class/interface tests
+│   │   │   │   │       ├── RoleConfig.java            # .vibetags-roles routing
+│   │   │   │   │       ├── TransitiveRules.java       # inherited-rule summary text and sort order
 │   │   │   │   │       ├── annotations/               # one AI*Formatter per annotation
 │   │   │   │   │       └── platforms/                 # one PlatformRenderer per output file
 │   │   │   │   └── model/                        # The compiler-free seam: internal → model ← content
@@ -41,9 +49,7 @@ vibetags/
 │   │   │   │       ├── TaggedElement.java             # one annotated element as plain data
 │   │   │   │       ├── ElementTag.java                # name-for-name mirror of ElementKind
 │   │   │   │       ├── GuardrailAnnotations.java      # the single ordered annotation registry
-│   │   │   │       ├── RoleConfig.java                # .vibetags-roles routing
-│   │   │   │       ├── SourceLocation.java            # file + line range for .vibetags-locks
-│   │   │   │       └── ContentHash.java               # the shared 8-hex content hash
+│   │   │   │       └── SourceLocation.java            # file + line range for .vibetags-locks
 │   │   │   └── resources/META-INF/services/
 │   │   │       └── javax.annotation.processing.Processor
 │   │   └── test/                      # Unit + integration tests (424 tests total)

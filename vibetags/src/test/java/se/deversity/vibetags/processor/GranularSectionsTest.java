@@ -60,7 +60,7 @@ class GranularSectionsTest {
         Element owner = type("com.example.KeyBundle");
         TaggedElement f = field(owner, "privateKey");
 
-        String out = GranularSections.render(List.of(privacy(owner, f, "key material")), false);
+        String out = GranularSections.renderPerClass(List.of(privacy(owner, f, "key material")));
 
         assertEquals("### Rules for field privateKey\n"
             + PRIVACY_RULE + "\n"
@@ -75,7 +75,7 @@ class GranularSectionsTest {
         GranularBody.Entry b = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "b"), "Locked Status",
             List.of("- **Reason**: two"));
 
-        String out = GranularSections.render(List.of(a, b), false);
+        String out = GranularSections.renderPerClass(List.of(a, b));
 
         assertEquals("### Rules for field a\n- **Reason**: one\n"
             + "\n### Rules for field b\n- **Reason**: two\n", out);
@@ -88,9 +88,9 @@ class GranularSectionsTest {
     @Test
     void twoPrivacyStanzas_hoistSharedRuleOnceAndPluralizeIt() {
         Element owner = type("com.example.KeyBundle");
-        String out = GranularSections.render(List.of(
+        String out = GranularSections.renderPerClass(List.of(
             privacy(owner, field(owner, "serialVersionUID"), "key material"),
-            privacy(owner, field(owner, "privateKey"), "private exponent")), false);
+            privacy(owner, field(owner, "privateKey"), "private exponent")));
 
         assertEquals(1, count(out, "Never log or expose runtime values"),
             "the constant rule sentence must appear exactly once per section");
@@ -108,7 +108,7 @@ class GranularSectionsTest {
         GranularBody.Entry a = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "add"), "Mathematical Purity", List.of(pureRule));
         GranularBody.Entry b = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "mul"), "Mathematical Purity", List.of(pureRule));
 
-        String out = GranularSections.render(List.of(a, b), false);
+        String out = GranularSections.renderPerClass(List.of(a, b));
 
         assertEquals("## Mathematical Purity\n" + pureRule + "\n"
             + "- **Applies to**: `Calc.add`, `Calc.mul`\n", out);
@@ -124,7 +124,7 @@ class GranularSectionsTest {
         GranularBody.Entry b = new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "y"), "Feature Flag Gate",
             List.of("- **Flag**: 'beta' (default: true)", rule));
 
-        String out = GranularSections.render(List.of(a, b), false);
+        String out = GranularSections.renderPerClass(List.of(a, b));
 
         assertEquals(1, count(out, "gated behind a feature flag"),
             "a shared trailing line hoists just like a shared leading one");
@@ -135,10 +135,10 @@ class GranularSectionsTest {
     @Test
     void sectionsAreIndependent_oneCollapsesTheOtherDoesNot() {
         Element owner = type("com.example.Mixed");
-        String out = GranularSections.render(List.of(
+        String out = GranularSections.renderPerClass(List.of(
             privacy(owner, field(owner, "a"), "one"),
             privacy(owner, field(owner, "b"), "two"),
-            new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "c"), "Locked Status", List.of("- **Reason**: solo"))), false);
+            new GranularBody.Entry(TaggedElements.tagged(owner), field(owner, "c"), "Locked Status", List.of("- **Reason**: solo"))));
 
         assertEquals(1, count(out, "Never log or expose runtime values"));
         assertTrue(out.contains("### Rules for field c\n- **Reason**: solo\n"),
@@ -155,9 +155,9 @@ class GranularSectionsTest {
     void qualifiedMode_usesFullyQualifiedHeadingsAcrossOwners() {
         Element bundle = type("com.example.KeyBundle");
         Element pair = type("com.example.PaillierKeyPair");
-        String out = GranularSections.render(List.of(
+        String out = GranularSections.renderTopic(List.of(
             privacy(bundle, field(bundle, "serialVersionUID"), "key material"),
-            privacy(pair, field(pair, "privateKey"), "private exponent")), true);
+            privacy(pair, field(pair, "privateKey"), "private exponent")));
 
         assertEquals(1, count(out, "Never log or expose runtime values"),
             "cross-owner duplication in a role file collapses too — the case measured in #313");
@@ -168,7 +168,7 @@ class GranularSectionsTest {
     @Test
     void qualifiedMode_singleStanzaStillGetsSectionHeading() {
         Element owner = type("com.example.KeyBundle");
-        String out = GranularSections.render(List.of(privacy(owner, field(owner, "k"), "why")), true);
+        String out = GranularSections.renderTopic(List.of(privacy(owner, field(owner, "k"), "why")));
 
         assertTrue(out.startsWith("## PII / Privacy Guardrails\n"));
         assertTrue(out.contains("### com.example.KeyBundle.k\n"));
@@ -207,10 +207,10 @@ class GranularSectionsTest {
         TaggedElement junitXml = field(owner, "JUnitXmlReportListener");
         TaggedElement json = field(owner, "JsonReportListener");
 
-        String forwards = GranularSections.render(
-            List.of(privacy(owner, junitXml, "same"), privacy(owner, json, "same")), false);
-        String backwards = GranularSections.render(
-            List.of(privacy(owner, json, "same"), privacy(owner, junitXml, "same")), false);
+        String forwards = GranularSections.renderPerClass(
+            List.of(privacy(owner, junitXml, "same"), privacy(owner, json, "same")));
+        String backwards = GranularSections.renderPerClass(
+            List.of(privacy(owner, json, "same"), privacy(owner, junitXml, "same")));
 
         assertEquals(forwards, backwards,
             "identical stanzas in a different arrival order must render byte-identically");
@@ -223,10 +223,10 @@ class GranularSectionsTest {
         TaggedElement junitXml = field(owner, "JUnitXmlReportListener");
         TaggedElement json = field(owner, "JsonReportListener");
 
-        String forwards = GranularSections.render(
-            List.of(privacy(owner, junitXml, "one"), privacy(owner, json, "two")), true);
-        String backwards = GranularSections.render(
-            List.of(privacy(owner, json, "two"), privacy(owner, junitXml, "one")), true);
+        String forwards = GranularSections.renderTopic(
+            List.of(privacy(owner, junitXml, "one"), privacy(owner, json, "two")));
+        String backwards = GranularSections.renderTopic(
+            List.of(privacy(owner, json, "two"), privacy(owner, junitXml, "one")));
 
         assertEquals(forwards, backwards,
             "qualified layout must also be a pure function of the stanza set, not its order");

@@ -2216,13 +2216,13 @@ public final class ModuleSidecar {
         // none at all, so a trigger: always_on rule never loads (issue #684). YAML documents take
         // their own merge shape below and are left alone.
         String frontMatter = htmlMarkers && PlatformRendererRegistry.mergeShapeFor(serviceKey) == null
-            ? sharedFrontMatter(bodiesOf(serviceKey, sidecars, false))
+            ? sharedFrontMatter(reactorBodiesOf(serviceKey, sidecars))
             : "";
         // Same hoist, for a renderer that says in prose what the YAML platforms say in front
         // matter: text about the file rather than about a module. Only TESTING.md declares one,
         // and only when every region actually opens with it (issue #783).
         if (frontMatter.isEmpty() && htmlMarkers) {
-            frontMatter = sharedPrologue(serviceKey, bodiesOf(serviceKey, sidecars, false));
+            frontMatter = sharedPrologue(serviceKey, reactorBodiesOf(serviceKey, sidecars));
         }
         List<Map.Entry<String, String>> contributions = new ArrayList<>();
         boolean anyPointer = false;
@@ -2419,19 +2419,28 @@ public final class ModuleSidecar {
         return String.join("\n\n", parts);
     }
 
-    /**
-     * Every non-blank rendered body for {@code serviceKey}: the reactor bodies, or with
-     * {@code moduleOwn} the module's own nested bodies, of every sidecar given.
-     */
-    private static List<String> bodiesOf(String serviceKey, List<ModuleSidecar> sidecars, boolean moduleOwn) {
+    /** Every non-blank rendered reactor body for {@code serviceKey} of every sidecar given. */
+    private static List<String> reactorBodiesOf(String serviceKey, List<ModuleSidecar> sidecars) {
         List<String> bodies = new ArrayList<>();
         for (ModuleSidecar s : sidecars) {
-            String body = moduleOwn ? s.moduleBodies.get(serviceKey) : s.reactorBody(serviceKey);
-            if (body != null && !body.isBlank()) {
-                bodies.add(body.strip());
-            }
+            addIfNotBlank(bodies, s.reactorBody(serviceKey));
         }
         return bodies;
+    }
+
+    /** Every non-blank module-own (nested) body for {@code serviceKey} of every sidecar given. */
+    private static List<String> moduleBodiesOf(String serviceKey, List<ModuleSidecar> sidecars) {
+        List<String> bodies = new ArrayList<>();
+        for (ModuleSidecar s : sidecars) {
+            addIfNotBlank(bodies, s.moduleBodies.get(serviceKey));
+        }
+        return bodies;
+    }
+
+    private static void addIfNotBlank(List<String> bodies, @Nullable String body) {
+        if (body != null && !body.isBlank()) {
+            bodies.add(body.strip());
+        }
     }
 
     /**
@@ -2534,7 +2543,7 @@ public final class ModuleSidecar {
         for (ModuleSidecar s : sidecars) {
             if (s.regionId.equals(regionId)) region.add(s);
         }
-        List<String> bodies = bodiesOf(serviceKey, region, true);
+        List<String> bodies = moduleBodiesOf(serviceKey, region);
         // Two source sets rendering one front-matter file must still give it one header (issue #684).
         String frontMatter = sharedFrontMatter(bodies);
         List<String> parts = new ArrayList<>();

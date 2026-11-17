@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -25,7 +26,7 @@ import se.deversity.vibetags.processor.model.TaggedElement;
  * the per-class output is emitted exactly as before — byte-for-byte — so enabling this costs
  * nothing for the single-element case.
  *
- * <p>{@code qualified} mode is used for role/topic files, whose stanzas come from several owners:
+ * <p>The topic layout ({@link #renderTopic}) is used for role/topic files, whose stanzas come from several owners:
  * headings there carry the element's fully-qualified path so two classes cannot produce the same
  * heading, and the file is organised by topic rather than by owning class.
  */
@@ -41,14 +42,76 @@ public final class GranularSections {
     private GranularSections() {}
 
     /**
-     * Renders {@code entries} into a rule file body.
+     * Renders {@code entries} into a per-class rule file body, which keeps the historical heading
+     * shape.
      *
-     * @param entries   stanzas in emission order (annotation-type order, as collected)
-     * @param qualified {@code true} for role/topic files spanning several owners — headings use
-     *                  fully-qualified element paths; {@code false} for per-class files, which
-     *                  keep the historical heading shape
+     * @param entries stanzas in emission order (annotation-type order, as collected)
      */
-    public static String render(List<GranularBody.Entry> entries, boolean qualified) {
+    public static String renderPerClass(List<GranularBody.Entry> entries) {
+        return render(entries, Layout.PER_CLASS);
+    }
+
+    /**
+     * Renders {@code entries} into a role or topic file body spanning several owners, whose
+     * headings use fully-qualified element paths.
+     *
+     * @param entries stanzas in emission order (annotation-type order, as collected)
+     */
+    public static String renderTopic(List<GranularBody.Entry> entries) {
+        return render(entries, Layout.TOPIC);
+    }
+
+    /**
+     * How a file names its elements: the only three places a per-class file and a topic file
+     * differ, so {@link #render} never asks which one it is writing.
+     */
+    private enum Layout {
+        /** Per-class file: historical headings, display names. */
+        PER_CLASS {
+            @Override
+            void appendUncollapsed(StringBuilder out, String title, List<GranularBody.Entry> group) {
+                appendPlain(out, group);
+            }
+
+            @Override
+            String nameOf(TaggedElement element) {
+                return element.displayName();
+            }
+
+            @Override
+            String detailHeading(GranularBody.Entry e) {
+                return collapsedHeading(e);
+            }
+        },
+        /** Role or topic file: one section heading, fully-qualified paths under it. */
+        TOPIC {
+            @Override
+            void appendUncollapsed(StringBuilder out, String title, List<GranularBody.Entry> group) {
+                appendQualified(out, title, group);
+            }
+
+            @Override
+            String nameOf(TaggedElement element) {
+                return element.path();
+            }
+
+            @Override
+            String detailHeading(GranularBody.Entry e) {
+                return "### " + e.element().path();
+            }
+        };
+
+        /** A section whose stanzas share no lines. */
+        abstract void appendUncollapsed(StringBuilder out, String title, List<GranularBody.Entry> group);
+
+        /** An element as it appears in an "Applies to" list. */
+        abstract String nameOf(TaggedElement element);
+
+        /** The heading of a stanza that keeps detail beyond the hoisted lines. */
+        abstract String detailHeading(GranularBody.Entry e);
+    }
+
+    private static String render(List<GranularBody.Entry> entries, Layout layout) {
         Map<String, List<GranularBody.Entry>> byTitle = new LinkedHashMap<>();
         for (GranularBody.Entry e : entries) {
             byTitle.computeIfAbsent(e.title(), k -> new ArrayList<>()).add(e);
@@ -69,11 +132,9 @@ public final class GranularSections {
             Shared shared = group.size() >= MIN_GROUP_SIZE ? shared(group) : Shared.NONE;
             boolean hasSharedLines = !shared.lines().isEmpty();
             if (hasSharedLines) {
-                appendCollapsed(out, title, group, shared, qualified);
-            } else if (qualified) {
-                appendQualified(out, title, group);
+                appendCollapsed(out, title, group, shared, layout);
             } else {
-                appendPlain(out, group);
+                layout.appendUncollapsed(out, title, group);
             }
         }
         return out.toString();
@@ -100,7 +161,7 @@ public final class GranularSections {
 
     /** Hoisted layout: the shared sentence once, then only what differs per element. */
     private static void appendCollapsed(StringBuilder out, String title, List<GranularBody.Entry> group,
-                                        Shared shared, boolean qualified) {
+                                        Shared shared, Layout layout) {
         if (out.length() > 0) {
             out.append('\n');
         }
@@ -121,14 +182,14 @@ public final class GranularSections {
                 if (names.length() > 0) {
                     names.append(", ");
                 }
-                names.append('`').append(display(e.element(), qualified)).append('`');
+                names.append('`').append(layout.nameOf(e.element())).append('`');
             }
             out.append("- **Applies to**: ").append(names).append('\n');
         }
 
         for (GranularBody.Entry e : withDetail) {
             out.append('\n')
-               .append(qualified ? "### " + e.element().path() : collapsedHeading(e))
+               .append(layout.detailHeading(e))
                .append('\n')
                .append(String.join("\n", remaining(e, shared)))
                .append('\n');
@@ -161,11 +222,11 @@ public final class GranularSections {
             min = Math.min(min, e.lines().size());
         }
         int prefix = 0;
-        while (prefix < min && sameAt(all, prefix, true)) {
+        while (prefix < min && sameFromStart(all, prefix)) {
             prefix++;
         }
         int suffix = 0;
-        while (prefix + suffix < min && sameAt(all, suffix, false)) {
+        while (prefix + suffix < min && sameFromEnd(all, suffix)) {
             suffix++;
         }
         List<String> first = all.get(0);
@@ -179,13 +240,21 @@ public final class GranularSections {
         return new Shared(prefix, suffix, lines);
     }
 
-    /** True when every stanza has the same line at offset {@code i} from the start (or the end). */
-    private static boolean sameAt(List<List<String>> all, int i, boolean fromStart) {
-        List<String> head = all.get(0);
-        String ref = fromStart ? head.get(i) : head.get(head.size() - 1 - i);
+    /** True when every stanza has the same line at offset {@code i} from its start. */
+    private static boolean sameFromStart(List<List<String>> all, int i) {
+        return allAgree(all, lines -> lines.get(i));
+    }
+
+    /** True when every stanza has the same line at offset {@code i} from its end. */
+    private static boolean sameFromEnd(List<List<String>> all, int i) {
+        return allAgree(all, lines -> lines.get(lines.size() - 1 - i));
+    }
+
+    /** True when {@code lineOf} picks the same line out of every stanza. */
+    private static boolean allAgree(List<List<String>> all, Function<List<String>, String> lineOf) {
+        String ref = lineOf.apply(all.get(0));
         for (int k = 1; k < all.size(); k++) {
-            List<String> lines = all.get(k);
-            String v = fromStart ? lines.get(i) : lines.get(lines.size() - 1 - i);
+            String v = lineOf.apply(all.get(k));
             if (!ref.equals(v)) {
                 return false;
             }
@@ -213,10 +282,6 @@ public final class GranularSections {
     private static String kindOf(TaggedElement element) {
         ElementTag kind = element.kind();
         return kind == ElementTag.UNKNOWN ? "element" : kind.toString().toLowerCase(Locale.ROOT);
-    }
-
-    private static String display(TaggedElement element, boolean qualified) {
-        return qualified ? element.path() : element.displayName();
     }
 
     /**

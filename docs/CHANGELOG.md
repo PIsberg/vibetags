@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The `model` package holds data only (internal; no output changes).** Logic that lived in the
+  compiler-free model moves to the layer that uses it, one commit per class, each behind tests
+  written first and shown red against a mutant of the behaviour they pin. `RoleConfig`, which
+  reads `.vibetags-roles`, compiles its globs and memoises matches, is a service rather than data
+  and now lives in `processor.internal.content`, as does `ContentHash`, the fingerprint hash
+  function. `TaggedElement.ownsSourceFile()` becomes `ElementFiles.ownsSourceFile(element)` beside
+  the formatters that call it, and the element's file-name defaults are resolved in its builder,
+  so its constructor only assigns. `ElementTag` keeps its constants only: `fromName`, `isClass` and
+  `isInterface` become static methods on `ElementKinds`. `GuardrailModel`'s derived views
+  (`safetyOnly`, `withoutSafety`, `excluding`, `labeledSets`) become `GuardrailModelViews` in
+  `processor.internal`. The builder that sorts and derives a model becomes `GuardrailModelBuilder`,
+  and `GuardrailModel` keeps fields and accessors only; an `ArchitectureRulesTest` rule lets no
+  other class call its constructor, so no model can skip the sort that keeps generated output
+  identical on every machine. `TransitiveRule` is no longer `Comparable`: its attribute summary
+  and sort order become `TransitiveRules.memberSummary` and `TransitiveRules.ORDER`.
+  `GuardrailAnnotations.label` becomes `AnnotationLabels.label`, leaving the registry as constants.
+  Generated files are unaffected.
+- **`GuardrailModelBuilder.BY_IDENTITY` is `@AILocked` (internal).** The comparator fixes the order
+  of every bucket, so a change to it rewrites every consuming build's generated files and fingerprint
+  with nothing failing to name the cause. Its lock entry is always loaded, so the budget
+  `ProjectFactsConsistencyTest` holds this repository's own `CLAUDE.md` block to rises from 7,000 to
+  7,300 bytes; the block is 7,296.
+- **Gradle wrapper 9.8.1 → 9.9.1 (11 wrappers).** `gradle.version` in the parent moves to the
+  current release (services.gradle.org/versions/current), and `tools/sync-version-mirrors.py`
+  rewrites every `gradle-wrapper.properties`. 9.9 also ships a new `gradlew.bat` template, whose
+  error branches now exit through `exitWithErrorLevel`, and a new `gradle-wrapper.jar` (SHA-256
+  `621008af...`, the checksum Gradle publishes for 9.9.1); both are what 9.9.1's own `wrapper`
+  task writes, and all 11 copies are byte-identical. `gradlew` is unchanged.
+
 ### Deprecated
 
 - **`llms-full.txt` is deprecated, and removed in the next major version (#1071, #1084).** No tool

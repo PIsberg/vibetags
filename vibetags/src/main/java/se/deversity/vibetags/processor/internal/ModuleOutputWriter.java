@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
-import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.internal.content.RoleConfig;
 
 import javax.annotation.processing.Messager;
 import javax.tools.Diagnostic;

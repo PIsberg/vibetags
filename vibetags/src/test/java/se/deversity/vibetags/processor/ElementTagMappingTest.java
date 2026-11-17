@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
+import se.deversity.vibetags.processor.internal.content.ElementKinds;
 import se.deversity.vibetags.processor.model.ElementTag;
 
 import javax.lang.model.element.ElementKind;
@@ -25,7 +26,7 @@ class ElementTagMappingTest {
     @Test
     void everyElementKind_hasATagWithTheSameName() {
         for (ElementKind kind : ElementKind.values()) {
-            assertNotNull(ElementTag.fromName(kind.name()),
+            assertNotNull(ElementKinds.fromName(kind.name()),
                 "ElementKind." + kind.name() + " has no ElementTag counterpart — add the constant to "
                     + "ElementTag, or generated output will report it as UNKNOWN");
         }
@@ -34,11 +35,11 @@ class ElementTagMappingTest {
     @Test
     void isClassAndIsInterface_agreeWithElementKind() {
         for (ElementKind kind : ElementKind.values()) {
-            ElementTag tag = ElementTag.fromName(kind.name());
+            ElementTag tag = ElementKinds.fromName(kind.name());
             assertNotNull(tag);
-            assertEquals(kind.isClass(), tag.isClass(),
+            assertEquals(kind.isClass(), ElementKinds.isClass(tag),
                 "isClass() must agree with ElementKind for " + kind.name());
-            assertEquals(kind.isInterface(), tag.isInterface(),
+            assertEquals(kind.isInterface(), ElementKinds.isInterface(tag),
                 "isInterface() must agree with ElementKind for " + kind.name());
         }
     }
@@ -53,9 +54,29 @@ class ElementTagMappingTest {
         }
     }
 
+    /**
+     * UNKNOWN has no {@code ElementKind} twin, so the loops above never reach it. Pinned here:
+     * it is neither a class nor an interface, so it can never stand for a source file, and its
+     * own name maps back to it.
+     */
+    @Test
+    void unknown_isNeitherClassNorInterfaceAndRoundTripsByName() {
+        assertEquals(false, ElementKinds.isClass(ElementTag.UNKNOWN));
+        assertEquals(false, ElementKinds.isInterface(ElementTag.UNKNOWN));
+        assertEquals(ElementTag.UNKNOWN, ElementKinds.fromName("UNKNOWN"));
+    }
+
+    @Test
+    void fromName_isCaseSensitive() {
+        // Callers pass ElementKind.name(), which is upper case; a lower-cased heading must not
+        // map back to a constant.
+        assertNull(ElementKinds.fromName("class"));
+        assertEquals(ElementTag.CLASS, ElementKinds.fromName("CLASS"));
+    }
+
     @Test
     void fromName_returnsNullForAnUnknownName() {
-        assertNull(ElementTag.fromName("NOT_A_KIND"));
-        assertNull(ElementTag.fromName(null));
+        assertNull(ElementKinds.fromName("NOT_A_KIND"));
+        assertNull(ElementKinds.fromName(null));
     }
 }

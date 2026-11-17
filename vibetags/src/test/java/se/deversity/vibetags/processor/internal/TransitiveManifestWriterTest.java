@@ -168,7 +168,7 @@ class TransitiveManifestWriterTest {
             .annotation(AILocked.class, lockedAnn)
             .build();
 
-        GuardrailModel model = GuardrailModel.builder()
+        GuardrailModel model = new GuardrailModelBuilder()
             .add(AILocked.class, pkg1)
             .add(AISecure.class, pkg1)
             .add(AIContext.class, pkg2)
@@ -202,7 +202,7 @@ class TransitiveManifestWriterTest {
             .names("com.example.broken", "broken", "broken", "com-example-broken")
             .build(); // no annotation attached
 
-        GuardrailModel model = GuardrailModel.builder()
+        GuardrailModel model = new GuardrailModelBuilder()
             .add(AILocked.class, missingAnnPkg)
             .build();
 
@@ -217,7 +217,7 @@ class TransitiveManifestWriterTest {
         TaggedElement pkgB = packageElement("com.example.b", AILocked.class, lockedAnn);
         TaggedElement pkgA = packageElement("com.example.a", AILocked.class, lockedAnn);
 
-        GuardrailModel model = GuardrailModel.builder()
+        GuardrailModel model = new GuardrailModelBuilder()
             .add(AILocked.class, pkgB)
             .add(AILocked.class, pkgA)
             .build();
@@ -263,7 +263,7 @@ class TransitiveManifestWriterTest {
     void emit_emptyOrigin_logsUnsetInDebug() throws IOException {
         AILocked lockedAnn = annotation(AILocked.class, Map.of("reason", "safety boundary"));
         TaggedElement pkg = packageElement("com.example.pkg", AILocked.class, lockedAnn);
-        GuardrailModel model = GuardrailModel.builder().add(AILocked.class, pkg).build();
+        GuardrailModel model = new GuardrailModelBuilder().add(AILocked.class, pkg).build();
 
         Filer filer = mock(Filer.class);
         FileObject fo = mock(FileObject.class);
@@ -279,7 +279,7 @@ class TransitiveManifestWriterTest {
 
     @Test
     void emit_emptyModel_writesNothing() throws IOException {
-        GuardrailModel model = GuardrailModel.builder().build();
+        GuardrailModel model = new GuardrailModelBuilder().build();
         Filer filer = mock(Filer.class);
 
         List<String> written = TransitiveManifestWriter.emit(filer, model, "com.example:lib:1.0", "9.9.9", null);
@@ -291,7 +291,7 @@ class TransitiveManifestWriterTest {
     void emit_withNullLogger_succeedsQuietly() throws IOException {
         AILocked lockedAnn = annotation(AILocked.class, Map.of("reason", "safety boundary"));
         TaggedElement pkg = packageElement("com.example.pkg", AILocked.class, lockedAnn);
-        GuardrailModel model = GuardrailModel.builder().add(AILocked.class, pkg).build();
+        GuardrailModel model = new GuardrailModelBuilder().add(AILocked.class, pkg).build();
 
         Filer filer = mock(Filer.class);
         FileObject fo = mock(FileObject.class);
@@ -307,7 +307,7 @@ class TransitiveManifestWriterTest {
     void emit_filerThrowsIOException_propagates() throws IOException {
         AILocked lockedAnn = annotation(AILocked.class, Map.of("reason", "safety boundary"));
         TaggedElement pkg = packageElement("com.example.pkg", AILocked.class, lockedAnn);
-        GuardrailModel model = GuardrailModel.builder().add(AILocked.class, pkg).build();
+        GuardrailModel model = new GuardrailModelBuilder().add(AILocked.class, pkg).build();
 
         Filer filer = mock(Filer.class);
         when(filer.createResource(any(), any(), any())).thenThrow(new IOException("disk full"));

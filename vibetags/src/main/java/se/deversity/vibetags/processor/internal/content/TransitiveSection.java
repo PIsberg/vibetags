@@ -139,7 +139,7 @@ public final class TransitiveSection {
                 sb.append('\n');
             }
             sb.append("  - ").append(rule.annotation());
-            String members = rule.memberSummary();
+            String members = TransitiveRules.memberSummary(rule);
             if (!members.isEmpty()) {
                 sb.append(": ").append(oneLine(members));
             }

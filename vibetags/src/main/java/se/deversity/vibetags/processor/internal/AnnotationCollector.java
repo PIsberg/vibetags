@@ -45,6 +45,7 @@ import se.deversity.vibetags.annotations.AITemporary;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadAffinity;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.processor.internal.content.ElementKinds;
 import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 import se.deversity.vibetags.processor.model.GuardrailModel;
@@ -569,7 +570,7 @@ public final class AnnotationCollector {
         }
         GuardrailModel m = publishedMemo;
         if (m == null) {
-            m = model().excluding(exclusions::excludes);
+            m = GuardrailModelViews.excluding(model(), exclusions::excludes);
             publishedMemo = m;
         }
         return m;
@@ -703,7 +704,7 @@ public final class AnnotationCollector {
         });
 
         Map<Element, TaggedElement> tagged = new LinkedHashMap<>();
-        GuardrailModel.Builder model = GuardrailModel.builder();
+        GuardrailModelBuilder model = new GuardrailModelBuilder();
         buckets.forEach((type, elements) -> {
             for (Element e : elements) {
                 model.add(type, materialize(e, builders, tagged, signatures, fileNames, resolver));
@@ -804,7 +805,7 @@ public final class AnnotationCollector {
      */
     private static ElementTag tagOf(Element e) {
         ElementKind kind = e.getKind();
-        ElementTag tag = ElementTag.fromName(kind != null ? kind.name() : null);
+        ElementTag tag = ElementKinds.fromName(kind != null ? kind.name() : null);
         return tag != null ? tag : ElementTag.UNKNOWN;
     }
 }

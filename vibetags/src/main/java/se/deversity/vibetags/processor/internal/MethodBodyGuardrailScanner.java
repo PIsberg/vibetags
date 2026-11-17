@@ -47,6 +47,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Warns about guardrail annotations written where annotation processing cannot see them: on local
@@ -244,22 +245,28 @@ public final class MethodBodyGuardrailScanner {
             return true;
         }
         if (value instanceof String text) {
-            return appearsInTheRound(javaLiteral(text), false, element, roots, sources);
+            String literal = javaLiteral(text);
+            return appearsInTheRound(source -> containsText(source, literal), element, roots, sources);
         }
         if (value instanceof Boolean || value instanceof Integer || value instanceof Long
                 || value instanceof Short || value instanceof Byte) {
-            return appearsInTheRound(String.valueOf(value), true, element, roots, sources);
+            String token = String.valueOf(value);
+            return appearsInTheRound(source -> containsToken(source, token), element, roots, sources);
         }
         return false;
     }
 
-    private boolean appearsInTheRound(String token, boolean word, Element element, Set<? extends Element> roots,
+    /**
+     * Whether {@code found} accepts the text of the element's own file or of any other file of the
+     * round. A file that cannot be read is text nobody can find anything in.
+     */
+    private boolean appearsInTheRound(Predicate<String> found, Element element, Set<? extends Element> roots,
                                       RoundSources sources) {
-        if (contains(textOf(topLevel(element), sources), token, word)) {
+        if (readable(textOf(topLevel(element), sources), found)) {
             return true;
         }
         for (Element root : roots) {
-            if (contains(textOf(root, sources), token, word)) {
+            if (readable(textOf(root, sources), found)) {
                 return true;
             }
         }
@@ -303,11 +310,20 @@ public final class MethodBodyGuardrailScanner {
         }
     }
 
+    private static boolean readable(@Nullable String text, Predicate<String> found) {
+        return text != null && found.test(text);
+    }
+
+    /** Whether {@code text} contains {@code token} anywhere: how a string's Java literal is found. */
+    static boolean containsText(@Nullable String text, String token) {
+        return text != null && !token.isEmpty() && text.contains(token);
+    }
+
     /**
-     * Whether {@code text} contains {@code token}; for a {@code word}, only where it is not part of
-     * a longer identifier or number ({@code 9} is not found in {@code 90}).
+     * Whether {@code text} contains {@code token} where it is not part of a longer identifier or
+     * number ({@code 9} is not found in {@code 90}): how a number or boolean is found.
      */
-    static boolean contains(@Nullable String text, String token, boolean word) {
+    static boolean containsToken(@Nullable String text, String token) {
         if (text == null || token.isEmpty()) {
             return false;
         }
@@ -320,7 +336,7 @@ public final class MethodBodyGuardrailScanner {
             int end = at + token.length();
             boolean before = at == 0 || !Character.isJavaIdentifierPart(text.charAt(at - 1));
             boolean after = end >= text.length() || !Character.isJavaIdentifierPart(text.charAt(end));
-            if (!word || (before && after)) {
+            if (before && after) {
                 return true;
             }
             from = at + 1;

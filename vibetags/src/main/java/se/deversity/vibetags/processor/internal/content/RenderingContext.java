@@ -7,7 +7,6 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import se.deversity.vibetags.processor.model.TaggedElement;
-import se.deversity.vibetags.processor.model.RoleConfig;
 
 /**
  * Context containing metadata and configuration options for the current rendering run.

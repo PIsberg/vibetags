@@ -114,6 +114,37 @@ class SourceDigestWithoutTreeApiTest {
         assertTrue(second.contains(EARLY_EXIT), second);
     }
 
+    /**
+     * A number is spelled out only as a whole token. Here the coverage goal comes from a dependency
+     * constant ({@code 9}) and the only {@code 9} in the source is inside {@code 90}; matching it as
+     * plain text would vouch for a value the round does not determine, and the next build would be
+     * skipped with the old goal still in the generated files. Deleting the whole-token rule for
+     * numbers left the entire suite green (2026-11-16); this case goes red.
+     */
+    @Test
+    void aNumberInsideALongerNumberDoesNotVouchForADependencyConstant() throws IOException {
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AITestDriven;
+
+            @AITestDriven(coverageGoal = com.lib.Goals.COVERAGE)
+            public class Ledger {
+                static final int RETRY_LIMIT_SECONDS = 90;
+            }
+            """);
+        String[] classpath = {"-classpath", System.getProperty("java.class.path")
+            + File.pathSeparator + compileGoals(9)};
+        compile(h, classpath);
+        String before = read("CLAUDE.md");
+        compileGoals(8);
+
+        String second = notes(compile(h, classpath));
+
+        assertFalse(second.contains(EARLY_EXIT), "the constant changed behind the digest:\n" + second);
+        assertFalse(read("CLAUDE.md").equals(before), "the new goal must reach CLAUDE.md:\n" + read("CLAUDE.md"));
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private List<Diagnostic<? extends JavaFileObject>> compile(ProcessorTestHarness h, String... options) {
@@ -135,6 +166,19 @@ class SourceDigestWithoutTreeApiTest {
         Files.createDirectories(source.getParent());
         Files.writeString(source, "package com.lib;\n\npublic final class Reasons {\n"
             + "    public static final String LEDGER = \"" + value + "\";\n}\n", StandardCharsets.UTF_8);
+        Path out = Files.createDirectories(root.resolve("lib-classes"));
+        int exit = javax.tools.ToolProvider.getSystemJavaCompiler()
+            .run(null, null, null, "-d", out.toString(), source.toString());
+        assertEquals(0, exit, "the dependency must compile");
+        return out;
+    }
+
+    /** Compiles {@code com.lib.Goals.COVERAGE = value} as a dependency outside the round. */
+    private Path compileGoals(int value) throws IOException {
+        Path source = root.resolve("lib-src/com/lib/Goals.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, "package com.lib;\n\npublic final class Goals {\n"
+            + "    public static final int COVERAGE = " + value + ";\n}\n", StandardCharsets.UTF_8);
         Path out = Files.createDirectories(root.resolve("lib-classes"));
         int exit = javax.tools.ToolProvider.getSystemJavaCompiler()
             .run(null, null, null, "-d", out.toString(), source.toString());

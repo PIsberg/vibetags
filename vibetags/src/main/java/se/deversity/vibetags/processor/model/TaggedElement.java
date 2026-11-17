@@ -53,21 +53,23 @@ public final class TaggedElement {
      */
     private final @Nullable TaggedElement owner;
 
-    private TaggedElement(Builder b) {
+    /**
+     * Assignment only: {@link Builder#build()} resolves the defaults and takes the defensive
+     * copies, so this object holds data and computes nothing.
+     */
+    private TaggedElement(Builder b, String fileStem, String sourceFile,
+                          Map<Class<? extends Annotation>, Annotation> annotations,
+                          Map<String, String> typeMembers) {
         this.path = b.path;
         this.qualifiedName = b.qualifiedName;
         this.simpleName = b.simpleName;
         this.displayName = b.displayName;
         this.granularQName = b.granularQName;
-        this.fileStem = b.fileStem.isEmpty() ? b.simpleName : b.fileStem;
-        this.sourceFile = b.sourceFile.isEmpty() ? this.fileStem + ".java" : b.sourceFile;
+        this.fileStem = fileStem;
+        this.sourceFile = sourceFile;
         this.kind = b.kind;
-        this.annotations = b.annotations.isEmpty()
-            ? Map.of()
-            : Collections.unmodifiableMap(new LinkedHashMap<>(b.annotations));
-        this.typeMembers = b.typeMembers.isEmpty()
-            ? Map.of()
-            : Collections.unmodifiableMap(new LinkedHashMap<>(b.typeMembers));
+        this.annotations = annotations;
+        this.typeMembers = typeMembers;
         this.owner = b.owner;
         this.signature = b.signature;
     }
@@ -132,19 +134,6 @@ public final class TaggedElement {
      */
     public String sourceFile() {
         return sourceFile;
-    }
-
-    /**
-     * Whether this is the type its source file is named after, the one element a file glob may
-     * stand for. A member is not a file, and neither is a nested type (#926), nor a second
-     * top-level type declared in another type's file: a glob for any of them hides, or would hide,
-     * every unmarked line of that file too (#940).
-     */
-    public boolean ownsSourceFile() {
-        int dot = sourceFile.lastIndexOf('.');
-        String fileName = dot < 0 ? sourceFile : sourceFile.substring(0, dot);
-        return (kind.isClass() || kind.isInterface()) && fileStem.equals(simpleName)
-            && fileName.equals(simpleName);
     }
 
     /** What kind of element this is. */
@@ -284,8 +273,21 @@ public final class TaggedElement {
             return this;
         }
 
+        /**
+         * Resolves an unset file stem to the simple name and an unset source file to the stem plus
+         * {@code .java}, and copies the annotation and type-member maps so later builder calls
+         * cannot reach the element. Nothing is written back into this builder.
+         */
         public TaggedElement build() {
-            return new TaggedElement(this);
+            String resolvedStem = fileStem.isEmpty() ? simpleName : fileStem;
+            String resolvedSource = sourceFile.isEmpty() ? resolvedStem + ".java" : sourceFile;
+            Map<Class<? extends Annotation>, Annotation> annotationCopy = annotations.isEmpty()
+                ? Map.of()
+                : Collections.unmodifiableMap(new LinkedHashMap<>(annotations));
+            Map<String, String> typeMemberCopy = typeMembers.isEmpty()
+                ? Map.of()
+                : Collections.unmodifiableMap(new LinkedHashMap<>(typeMembers));
+            return new TaggedElement(this, resolvedStem, resolvedSource, annotationCopy, typeMemberCopy);
         }
     }
 }

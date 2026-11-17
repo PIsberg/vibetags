@@ -13,6 +13,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -249,7 +250,7 @@ class MultiModuleYamlValidityTest {
             .annotation(AILocked.class, locked("Owned by the " + simple + " team"))
             .annotation(AIAudit.class, audit())
             .build();
-        return GuardrailModel.builder()
+        return new GuardrailModelBuilder()
             .add(AILocked.class, element)
             .add(AIAudit.class, element)
             .build();

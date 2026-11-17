@@ -6,9 +6,10 @@
 # Windows those files checked out as CRLF, so every local example build left
 # dozens of files "modified" in git status with an empty diff. With eol=lf the
 # checkout matches what the processor writes and regeneration stays invisible.
-# No file in this repo requires CRLF. Ten gradlew.bat wrappers are committed under
-# examples/, and cmd.exe runs them from LF-only files, goto labels included: verified by
-# invoking gradlew.bat --version from cmd.exe on Windows 11 against this checkout.
+# No file in this repo requires CRLF. Eleven gradlew.bat wrappers are committed (nine under
+# examples/), and cmd.exe runs them from LF-only files, goto labels included: re-verified on
+# the Gradle 9.9.1 script, whose safety net adds labels, by running gradlew.bat --version
+# (exit 0) and its JAVA_HOME and bad-flag error paths (exit 1) from cmd.exe on Windows 11.
 * text=auto eol=lf
 *.sh text eol=lf
 .github/workflows/*.yml text eol=lf

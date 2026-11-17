@@ -1,6 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
-import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.internal.content.RoleConfig;
 import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

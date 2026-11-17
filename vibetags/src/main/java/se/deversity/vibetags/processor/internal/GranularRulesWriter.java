@@ -6,7 +6,7 @@ import se.deversity.vibetags.processor.internal.content.GranularBody;
 import se.deversity.vibetags.processor.internal.content.GranularContribution;
 import se.deversity.vibetags.processor.internal.content.GranularPairing;
 import se.deversity.vibetags.processor.model.ElementTag;
-import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.internal.content.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.content.GranularSections;
 import java.nio.file.Path;
@@ -314,7 +314,7 @@ public final class GranularRulesWriter {
             String displayName = String.join(", ", rolesInFile.keySet());
             planned.add(Map.entry(stem, new Planned(displayName, "role " + displayName, fileGlobs, stanzas,
                 new Unit(displayName, "AI rules for role " + displayName,
-                    new GranularContribution(fileGlobs, GranularSections.render(stanzas, true).trim())))));
+                    new GranularContribution(fileGlobs, GranularSections.renderTopic(stanzas).trim())))));
         });
 
         return foldCaseCollisions(planned);
@@ -371,7 +371,7 @@ public final class GranularRulesWriter {
             Unit merged = new Unit(String.join(", ", displayNames),
                 "AI rules for " + String.join(", ", subjects),
                 new GranularContribution(new ArrayList<>(globs),
-                    GranularSections.render(stanzas, true).trim()));
+                    GranularSections.renderTopic(stanzas).trim()));
             for (Map.Entry<String, Planned> entry : colliding) {
                 units.put(entry.getKey(), merged);
             }

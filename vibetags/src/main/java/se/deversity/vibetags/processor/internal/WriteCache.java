@@ -5,7 +5,7 @@ import se.deversity.vibetags.annotations.AICore;
 import se.deversity.vibetags.annotations.AIPerformance;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadSafe;
-import se.deversity.vibetags.processor.model.ContentHash;
+import se.deversity.vibetags.processor.internal.content.ContentHash;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;

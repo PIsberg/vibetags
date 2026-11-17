@@ -3,7 +3,7 @@ package se.deversity.vibetags.processor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import se.deversity.vibetags.processor.model.RoleConfig;
+import se.deversity.vibetags.processor.internal.content.RoleConfig;
 
 import javax.lang.model.element.Element;
 import se.deversity.vibetags.processor.model.TaggedElement;
@@ -205,5 +205,85 @@ class RoleConfigTest {
             assertEquals("api-endpoints", roles.roleFor(controller).orElse(null), "call " + call);
             assertTrue(roles.roleFor(service).isEmpty(), "call " + call + ": unmatched stays unmatched");
         }
+    }
+
+    /** The rule-file stem the index points at must be the stem the writer writes; one function. */
+    @Test
+    @DisplayName("the granular stem is the sanitized role name, or the per-class name with no role")
+    void granularStem_isTheSanitizedRoleOrTheClassName(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "api endpoints! = **/*Controller.java");
+
+        assertEquals("api-endpoints-", roles.granularStemFor(type("com.example.web.OrderController")));
+        assertEquals("com-example-web-OrderService", roles.granularStemFor(type("com.example.web.OrderService")));
+    }
+
+    @Test
+    @DisplayName("sanitize keeps [A-Za-z0-9._-] and turns everything else into one dash each")
+    void sanitize_keepsFilenameSafeCharactersOnly() {
+        assertEquals("a-b-c-d.e_f-g", RoleConfig.sanitize("a b/c\\d.e_f-g"));
+        assertEquals("caf-", RoleConfig.sanitize("caf\u00e9"));
+        assertEquals("--", RoleConfig.sanitize("  "));
+    }
+
+    /**
+     * The hash is of the file's exact text, line ending included, so it must equal the
+     * fingerprint hash of those bytes. The oracle is computed here from {@code String.hashCode},
+     * not read from the code under test.
+     */
+    @Test
+    @DisplayName("the content hash is the 8-hex fingerprint hash of the raw file text")
+    void contentHash_isTheHashOfTheRawText(@TempDir Path dir) throws IOException {
+        String text = "api = **/*Controller.java\n";
+        RoleConfig roles = write(dir, "api = **/*Controller.java");
+        assertEquals(String.format("%08x", text.hashCode()), roles.contentHash());
+    }
+
+    @Test
+    @DisplayName("CRLF and bare CR end a line as well as LF does")
+    void everyLineEndingSeparatesRoles(@TempDir Path dir) throws IOException {
+        Files.writeString(dir.resolve(RoleConfig.FILE_NAME),
+            "a = **/*Alpha.java\r\nb = **/*Beta.java\rc = **/*Gamma.java", StandardCharsets.UTF_8);
+        RoleConfig roles = RoleConfig.load(dir);
+
+        assertEquals("a", roles.roleFor(type("x.MyAlpha")).orElse(null));
+        assertEquals("b", roles.roleFor(type("x.MyBeta")).orElse(null));
+        assertEquals("c", roles.roleFor(type("x.MyGamma")).orElse(null));
+    }
+
+    @Test
+    @DisplayName("lines with no name, no '=' or no matchers yield no role, and an all-such file is empty")
+    void unusableLinesYieldNoRole(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir,
+            "# only unusable lines below",
+            "= **/*Controller.java",
+            "   = **/*Service.java",
+            "lonely",
+            "nothing =",
+            "commas = , ,");
+
+        assertFalse(roles == null, "a present file loads, even when nothing in it is usable");
+        assertTrue(roles.isEmpty());
+        assertTrue(roles.roleFor(type("com.example.OrderController")).isEmpty());
+        assertTrue(roles.globsFor("nothing").isEmpty());
+    }
+
+    @Test
+    @DisplayName("a directory named .vibetags-roles is not a config")
+    void aDirectoryIsNotAConfig(@TempDir Path dir) throws IOException {
+        Files.createDirectory(dir.resolve(RoleConfig.FILE_NAME));
+        assertNull(RoleConfig.load(dir));
+    }
+
+    /**
+     * Within a role an exact name is tried before its globs, but across roles config order
+     * decides first: an earlier role's glob beats a later role's exact name.
+     */
+    @Test
+    @DisplayName("config order beats matcher type")
+    void anEarlierGlobBeatsALaterExactName(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir,
+            "endpoints = **/*Endpoint.java",
+            "legacy = com.example.legacy.WeirdEndpoint");
+        assertEquals("endpoints", roles.roleFor(type("com.example.legacy.WeirdEndpoint")).orElse(null));
     }
 }

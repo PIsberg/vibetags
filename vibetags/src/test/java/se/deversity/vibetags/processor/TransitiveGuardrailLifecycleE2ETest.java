@@ -445,9 +445,9 @@ class TransitiveGuardrailLifecycleE2ETest {
      * the second library without its publish opt-in and this test fails. That reshuffling the two
      * {@code import} lines does not change a byte is a stability pin, and measurement says it is
      * currently guarded by more than one layer — with {@code Collections.sort} deleted from
-     * {@code GuardrailModel} the output stayed identical under both an import swap and a reversed
+     * {@code GuardrailModelBuilder} the output stayed identical under both an import swap and a reversed
      * classpath, so nothing reachable from a real compile perturbs the order in the first place.
-     * The sort remains the documented guarantee and {@code TransitiveRule.compareTo} is what
+     * The sort remains the documented guarantee and {@code TransitiveRules.ORDER} is what
      * {@code TransitiveSection} relies on to group by package; this test guards the observable end
      * of that, not the sort itself. Recorded here so the next person does not read a passing test
      * as proof the sort is exercised.
@@ -592,6 +592,43 @@ class TransitiveGuardrailLifecycleE2ETest {
                 || l.contains("safe to share between threads")).count();
         assertEquals(1, advisoryBullets,
             "a cap of 1 should leave exactly one advisory rule:\n" + capped);
+    }
+
+    /**
+     * Which advisory rules survive the cap is decided by package order, not by the order
+     * {@code -Avibetags.manifest.packages} lists the packages in.
+     *
+     * <p>The reader keeps the listed order, so without the processor's own sort ahead of the cap,
+     * a cap of 1 keeps whichever library was named first, and two builds naming the same libraries
+     * in a different order write different guardrails. Ordered by package, crypto's
+     * {@code @AIContext} comes first and is the one kept. Deleting that sort left every other
+     * transitive test green (measured 2026-11-16); this one goes red.
+     */
+    @Test
+    void theAdvisoryCapKeepsTheSameRuleWhicheverOrderThePackagesAreListedIn() throws Exception {
+        Path crypto = buildLibraryJar(tmp.resolve("crypto"), "com.acme:crypto-core:2.4.0");
+        Path ledger = buildLedgerLibraryJar(tmp.resolve("ledger"), "com.acme:ledger-api:1.1.0");
+        String noSource = "package app;\npublic class App {}\n";
+
+        for (String listed : List.of("com.acme.crypto.api,com.acme.ledger.api",
+                                     "com.acme.ledger.api,com.acme.crypto.api")) {
+            Path app = consumerRoot(tmp.resolve(listed.startsWith("com.acme.crypto") ? "crypto-first" : "ledger-first"),
+                true);
+            compile(app,
+                List.of("-classpath", classpathWith(crypto, ledger),
+                        "-Avibetags.manifest.packages=" + listed,
+                        "-Avibetags.manifest.max=1"),
+                sourceFile(app, "app/App.java", noSource));
+            String claude = Files.readString(app.resolve("CLAUDE.md"), StandardCharsets.UTF_8);
+
+            assertTrue(claude.contains("Never construct a raw Cipher")
+                    && claude.contains("Postings are append-only"),
+                "both safety rules survive any cap (listed " + listed + "):\n" + claude);
+            assertTrue(claude.contains("Key exchange is non-blocking"),
+                "the first advisory rule in package order is the one kept (listed " + listed + "):\n" + claude);
+            assertFalse(claude.contains("Amounts are minor units"),
+                "the cap of 1 is spent before the ledger package (listed " + listed + "):\n" + claude);
+        }
     }
 
     /** Compiles the fixture library and copies its manifests into a standalone directory. */

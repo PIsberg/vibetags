@@ -10,6 +10,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.model.GuardrailAnnotations;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -223,10 +224,10 @@ class UnsetMemberRenderingTest {
     @DisplayName("an annotation that renders nothing when bare leaves the file as though it were absent")
     void annotationsThatRenderNothingLeaveNoEmptySection(Platform platform) {
         String absent = PlatformRendererRegistry.getRenderer(platform)
-            .render(GuardrailModel.builder().build(), platform, contextFor(platform));
+            .render(new GuardrailModelBuilder().build(), platform, contextFor(platform));
         List<String> traces = new ArrayList<>();
         for (Class<? extends Annotation> type : RENDERS_NOTHING_WHEN_BARE) {
-            GuardrailModel onlyBare = GuardrailModel.builder()
+            GuardrailModel onlyBare = new GuardrailModelBuilder()
                 .add(type, GuardrailModels.elementWithMembersUnset(type))
                 .build();
             String bare = PlatformRendererRegistry.getRenderer(platform).render(onlyBare, platform, contextFor(platform));

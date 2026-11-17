@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
+import se.deversity.vibetags.processor.internal.content.ElementFiles;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.annotations.AILocked;
 import se.deversity.vibetags.processor.internal.content.AnnotationFormatter;
@@ -34,7 +35,7 @@ public final class AILockedFormatter implements AnnotationFormatter {
                 // or nested type emitted "**/<simpleName>.java", which is either dead weight (no
                 // such file) or a silent over-exclusion: a field named ALL hid an unrelated ALL.java
                 // from the assistant. The lock still reaches every platform that can name it.
-                if (element.ownsSourceFile()) {
+                if (ElementFiles.ownsSourceFile(element)) {
                     sb.append("**/").append(element.sourceFile()).append('\n');
                 }
                 break;

@@ -1,4 +1,4 @@
-package se.deversity.vibetags.processor.model;
+package se.deversity.vibetags.processor.internal.content;
 
 /**
  * The 8-hex-character content hash VibeTags folds into its build fingerprint.

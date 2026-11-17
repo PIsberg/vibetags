@@ -1,6 +1,8 @@
-package se.deversity.vibetags.processor.model;
+package se.deversity.vibetags.processor.internal.content;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.model.TaggedElement;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -145,7 +147,9 @@ public final class RoleConfig {
     }
 
     /**
-     * The uncached match: every role's FQN set, then every role's compiled globs, in config order.
+     * The uncached match, one role at a time in config order: the role's exact names, then its
+     * compiled globs. Config order decides first, so an earlier role's glob beats a later role's
+     * exact name.
      *
      * <p>Cost is roles times globs regex matches per element, and the same element is asked several
      * times per build — once by {@code GranularRulesWriter.plan}, which itself runs two to three

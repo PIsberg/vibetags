@@ -5,6 +5,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRenderer;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.model.SourceLocation;
@@ -126,7 +127,7 @@ class PlatformRenderersTest {
 
         SourceLocation loc = new SourceLocation("src/Main.java", 10, 20);
 
-        GuardrailModel model = GuardrailModel.builder()
+        GuardrailModel model = new GuardrailModelBuilder()
                 .add(AILocked.class, mockElement)
                 .lockedPosition(mockElement, loc)
                 .build();
@@ -186,7 +187,7 @@ class PlatformRenderersTest {
         when(flag.defaultValue()).thenReturn(true);
         when(mockElement.annotation(AIFeatureFlag.class)).thenReturn(flag);
 
-        GuardrailModel.Builder builder = GuardrailModel.builder();
+        GuardrailModelBuilder builder = new GuardrailModelBuilder();
         builder.add(AILocked.class, mockElement);
         builder.add(AIPrivacy.class, mockElement);
         builder.add(AICore.class, mockElement);

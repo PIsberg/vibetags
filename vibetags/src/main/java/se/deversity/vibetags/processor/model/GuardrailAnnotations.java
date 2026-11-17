@@ -133,9 +133,4 @@ public final class GuardrailAnnotations {
      */
     public static final Set<Class<? extends Annotation>> SAFETY = Set.of(
         AILocked.class, AICore.class, AIPrivacy.class, AIIgnore.class, AIAudit.class, AISecure.class);
-
-    /** The label used in the log summary and the scoped-rules index, e.g. {@code @AILocked}. */
-    public static String label(Class<? extends Annotation> type) {
-        return "@" + type.getSimpleName();
-    }
 }

@@ -12,6 +12,7 @@ import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
 import se.deversity.vibetags.processor.model.ElementTag;
+import se.deversity.vibetags.processor.internal.GuardrailModelBuilder;
 import se.deversity.vibetags.processor.model.GuardrailModel;
 import se.deversity.vibetags.processor.model.TaggedElement;
 
@@ -124,7 +125,7 @@ class MultiModuleWholeFileMergeTest {
                 @Override public Class<? extends java.lang.annotation.Annotation> annotationType() { return AIIgnore.class; }
             })
             .build();
-        return GuardrailModel.builder().add(AIIgnore.class, element).build();
+        return new GuardrailModelBuilder().add(AIIgnore.class, element).build();
     }
 
     /** Both PR-Agent sections are fed from the same body; a merge must not update only one. */
