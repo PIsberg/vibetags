@@ -19,6 +19,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -112,8 +113,40 @@ public final class GuardrailEnforcer {
         if (families.isEmpty()) {
             return 0;
         }
-        Map<String, String> current = new LinkedHashMap<>();
-        Map<String, TaggedElement> elementsByKey = new LinkedHashMap<>();
+        Guarded current = guardedElements(model, families);
+        Optional<ReadBaseline> read = readBaseline(root, moduleId);
+        if (read.isEmpty()) {
+            return 1; // reported: an unreadable baseline fails the check rather than passing it
+        }
+        EnforcementBaseline baseline = read.get().baseline();
+        if (update) {
+            recordBaseline(baseline, root, moduleId, families, current);
+            return 0;
+        }
+        if (!read.get().recorded() || baseline.hasNothingFor(moduleId)) {
+            warnNothingRecorded(moduleId);
+            return 0;
+        }
+        int violations = reportChangedShapes(current, baseline, moduleId);
+        violations += reportVanishedElements(current, baseline, moduleId, families);
+        reportResult(moduleId, families, current, violations);
+        return violations;
+    }
+
+    /**
+     * This compilation's guarded elements under {@code families}: their signatures and the elements
+     * themselves, both keyed by {@link EnforcementBaseline#familyAndPath}, in family-name order.
+     */
+    private record Guarded(Map<String, String> signatures, Map<String, TaggedElement> elements) {
+    }
+
+    /** The baseline as read, and whether the file carries a format header this processor knows. */
+    private record ReadBaseline(EnforcementBaseline baseline, boolean recorded) {
+    }
+
+    private static Guarded guardedElements(GuardrailModel model, Set<String> families) {
+        Map<String, String> signatures = new LinkedHashMap<>();
+        Map<String, TaggedElement> elements = new LinkedHashMap<>();
         for (String family : sortedList(families)) {
             Class<? extends Annotation> annotation = FAMILIES.get(family);
             if (annotation == null) {
@@ -127,16 +160,17 @@ public final class GuardrailEnforcer {
                     ? EnforcementBaseline.constructorPath(element.path())
                     : element.path();
                 String key = EnforcementBaseline.familyAndPath(family, path);
-                current.put(key, element.signature());
-                elementsByKey.put(key, element);
+                signatures.put(key, element.signature());
+                elements.put(key, element);
             }
         }
+        return new Guarded(signatures, elements);
+    }
 
-        EnforcementBaseline baseline;
-        boolean recorded;
+    /** The baseline at {@code root}, or empty after reporting that it could not be read. */
+    private Optional<ReadBaseline> readBaseline(Path root, String moduleId) {
         try {
-            baseline = EnforcementBaseline.load(root);
-            recorded = EnforcementBaseline.exists(root);
+            return Optional.of(new ReadBaseline(EnforcementBaseline.load(root), EnforcementBaseline.exists(root)));
         } catch (IOException e) {
             // Present but unreadable is not "nothing recorded". Reading it as empty fell through to
             // the warning below and a pass: one Cp1252 byte from a Windows editor switched the gate
@@ -148,36 +182,45 @@ public final class GuardrailEnforcer {
             if (log != null) {
                 log.error("enforce.skip module={} reason=baseline-unreadable error={}", moduleId, e.toString());
             }
-            return 1;
+            return Optional.empty();
         }
-        if (update) {
-            try {
-                baseline.update(root, moduleId, families, current);
-                messager.printMessage(Diagnostic.Kind.NOTE,
-                    "VibeTags: enforcement baseline updated for module '" + moduleId + "' ("
-                        + current.size() + " guarded element(s)). Commit " + EnforcementBaseline.FILE_NAME + ".");
-                if (log != null) log.info("enforce.baseline.update module={} elements={}", moduleId, current.size());
-            } catch (IOException e) {
-                messager.printMessage(Diagnostic.Kind.ERROR,
-                    "VibeTags: could not write " + EnforcementBaseline.FILE_NAME + ": " + e.getMessage());
+    }
+
+    private void recordBaseline(EnforcementBaseline baseline, Path root, String moduleId, Set<String> families,
+                                Guarded current) {
+        try {
+            baseline.update(root, moduleId, families, current.signatures());
+            messager.printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: enforcement baseline updated for module '" + moduleId + "' ("
+                    + current.signatures().size() + " guarded element(s)). Commit "
+                    + EnforcementBaseline.FILE_NAME + ".");
+            if (log != null) {
+                log.info("enforce.baseline.update module={} elements={}", moduleId, current.signatures().size());
             }
-            return 0;
+        } catch (IOException e) {
+            messager.printMessage(Diagnostic.Kind.ERROR,
+                "VibeTags: could not write " + EnforcementBaseline.FILE_NAME + ": " + e.getMessage());
         }
+    }
 
-        if (!recorded || baseline.hasNothingFor(moduleId)) {
-            // Enforcing against a baseline that was never recorded would fail every build on the
-            // day the option is switched on, which teaches people to switch it off again.
-            messager.printMessage(Diagnostic.Kind.WARNING,
-                "VibeTags: -Avibetags.enforce is on but " + EnforcementBaseline.FILE_NAME
-                    + " records nothing for module '" + moduleId + "'. Nothing was checked."
-                    + " Run once with -Avibetags.baseline.update=true and commit the result.");
-            return 0;
-        }
+    private void warnNothingRecorded(String moduleId) {
+        // Enforcing against a baseline that was never recorded would fail every build on the
+        // day the option is switched on, which teaches people to switch it off again.
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: -Avibetags.enforce is on but " + EnforcementBaseline.FILE_NAME
+                + " records nothing for module '" + moduleId + "'. Nothing was checked."
+                + " Run once with -Avibetags.baseline.update=true and commit the result.");
+    }
 
+    /**
+     * Direction 1: an approved element whose shape changed in place, a type gaining or losing a
+     * public member, say, where the element's own path is unaffected.
+     *
+     * @return the number of changed elements reported
+     */
+    private int reportChangedShapes(Guarded current, EnforcementBaseline baseline, String moduleId) {
         int violations = 0;
-        // Direction 1: an approved element whose shape changed in place — a type gaining or losing
-        // a public member, say, where the element's own path is unaffected.
-        for (Map.Entry<String, String> entry : current.entrySet()) {
+        for (Map.Entry<String, String> entry : current.signatures().entrySet()) {
             String[] parts = entry.getKey().split("\t", 2);
             String approved = baseline.signatureFor(moduleId, parts[0], parts[1]);
             if (approved == null) {
@@ -187,35 +230,48 @@ public final class GuardrailEnforcer {
                 continue;
             }
             violations++;
-            TaggedElement changed = elementsByKey.get(entry.getKey());
+            TaggedElement changed = current.elements().get(entry.getKey());
             if (changed == null) {
-                continue; // current and elementsByKey are filled in lockstep; unreachable in practice
+                continue; // signatures and elements are filled in lockstep; unreachable in practice
             }
             reportChanged(parts[0], changed, approved, entry.getValue());
         }
-        // Direction 2: an approved element that is simply no longer there. This is the common one —
-        // a method's path embeds its parameter types, so changing `charge(String,double)` to
-        // `charge(String,long)` abandons the approved entry rather than editing it. Renaming,
-        // deleting, or dropping the annotation all land here too, and all of them are things a
-        // contract-frozen signature promised would not happen without review.
+        return violations;
+    }
+
+    /**
+     * Direction 2: an approved element that is simply no longer there. This is the common one: a
+     * method's path embeds its parameter types, so changing {@code charge(String,double)} to
+     * {@code charge(String,long)} abandons the approved entry rather than editing it. Renaming,
+     * deleting, or dropping the annotation all land here too, and all of them are things a
+     * contract-frozen signature promised would not happen without review.
+     *
+     * @return the number of vanished elements reported
+     */
+    private int reportVanishedElements(Guarded current, EnforcementBaseline baseline, String moduleId,
+                                       Set<String> families) {
+        int violations = 0;
         for (String familyAndPath : baseline.approvedFor(moduleId, families)) {
-            if (current.containsKey(familyAndPath)) {
+            if (current.signatures().containsKey(familyAndPath)) {
                 continue;
             }
             violations++;
             String[] parts = familyAndPath.split("\t", 2);
             reportMissing(parts[0], parts[1]);
         }
+        return violations;
+    }
+
+    private void reportResult(String moduleId, Set<String> families, Guarded current, int violations) {
         if (log != null) {
             log.info("enforce.result module={} families={} checked={} violations={}",
-                moduleId, families, current.size(), violations);
+                moduleId, families, current.signatures().size(), violations);
         }
         if (violations == 0) {
             messager.printMessage(Diagnostic.Kind.NOTE,
-                "VibeTags: enforcement passed — " + current.size() + " guarded element(s) unchanged ("
+                "VibeTags: enforcement passed — " + current.signatures().size() + " guarded element(s) unchanged ("
                     + sorted(families) + ").");
         }
-        return violations;
     }
 
     private void reportChanged(String family, TaggedElement element, String approved, String actual) {

@@ -66,6 +66,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tab, no-break and Unicode spaces are not whitespace, and non-ASCII decimal digits are not digits.
   Swapping in `Character.isWhitespace` failed 4 of them and `Character.isDigit` 3, so the tempting
   "simplification" cannot widen what a third-party JAR's manifest may contain unnoticed.
+- **`GuardrailEnforcer.enforce` is split into one method per step (internal; no output changes).**
+  The 110-line method collected the guarded elements, read the baseline, recorded it, warned when
+  nothing was recorded, compared in two directions and reported the result. It is now 23 lines that
+  read as those steps, calling `guardedElements`, `readBaseline`, `recordBaseline`,
+  `warnNothingRecorded`, `reportChangedShapes`, `reportVanishedElements` and `reportResult`.
+  `GuardrailEnforcerTest`, 23 cases written first and green on the old method, pins every branch's
+  return value, diagnostic text, `enforce.*` log event and baseline file. Four deliberate breakages
+  of the new methods failed it: vanished reported before changed (1 failure), the "passed" note
+  printed despite violations (3), unsigned elements no longer skipped (2), and a constructor sharing
+  its path with a method (1).
 - **Path helpers live in two utility classes (internal; no output changes).** The forward-slash
   conversion that sidecars, the write cache, module ids and diagnostics compare across machines was
   written out as `.toString().replace('\\', '/')` 24 times in 10 files; 18 of them, every one in
