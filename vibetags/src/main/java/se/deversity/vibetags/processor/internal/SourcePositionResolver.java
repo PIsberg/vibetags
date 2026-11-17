@@ -163,7 +163,7 @@ public final class SourcePositionResolver {
         try {
             SourceLocation location = source.locate(element);
             if (location == null) return null;
-            String file = relativize(location.file().replace('\\', '/'));
+            String file = relativize(PathStrings.forwardSlashes(location.file()));
             return file == null ? null : new SourceLocation(file, location.startLine(), location.endLine());
         } catch (RuntimeException e) {
             return null; // best-effort, like the Tree API path
@@ -182,7 +182,7 @@ public final class SourcePositionResolver {
         if (path.length() > 2 && path.charAt(0) == '/' && path.charAt(2) == ':') {
             path = path.substring(1);
         }
-        return path.replace('\\', '/');
+        return PathStrings.forwardSlashes(path);
     }
 
     /**
@@ -199,7 +199,7 @@ public final class SourcePositionResolver {
         try {
             Path absolute = Path.of(file);
             if (!absolute.isAbsolute() || !absolute.startsWith(root)) return file;
-            return root.relativize(absolute).toString().replace('\\', '/');
+            return PathStrings.relative(root, absolute);
         } catch (java.nio.file.InvalidPathException e) {
             return file;
         }

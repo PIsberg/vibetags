@@ -175,9 +175,9 @@ public final class WriteCache {
     private String cacheKey(Path file) {
         Path abs = file.toAbsolutePath().normalize();
         try {
-            return rootDir.relativize(abs).toString().replace('\\', '/');
+            return PathStrings.relative(rootDir, abs);
         } catch (IllegalArgumentException differentRoot) {
-            return abs.toString().replace('\\', '/');
+            return PathStrings.forwardSlashes(abs);
         }
     }
 
@@ -791,9 +791,9 @@ public final class WriteCache {
                 Path p = java.nio.file.Paths.get(path);
                 if (p.isAbsolute()) {
                     try {
-                        path = rootDir.relativize(p.normalize()).toString().replace('\\', '/');
+                        path = PathStrings.relative(rootDir, p.normalize());
                     } catch (IllegalArgumentException iae) {
-                        path = p.normalize().toString().replace('\\', '/');
+                        path = PathStrings.forwardSlashes(p.normalize());
                     }
                 }
                 String hash = line.substring(t1 + 1, t2);

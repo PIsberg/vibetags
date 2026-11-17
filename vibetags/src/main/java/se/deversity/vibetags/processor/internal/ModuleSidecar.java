@@ -185,9 +185,6 @@ public final class ModuleSidecar {
     /** As above, for the module's own (nested) granular output. */
     private static final String KEY_MODULE_GRANULAR_NAMING_PREFIX = "~modgranname~";
 
-    /** Windows path separator, folded to '/' before any module path is compared. */
-    private static final char BACKSLASH = (char) 92;
-
     /** Separator between a module id and its non-primary source set. */
     static final String SOURCE_SET_SEPARATOR = "__";
 
@@ -305,7 +302,7 @@ public final class ModuleSidecar {
      * written, and a backslashed value already on disk is read the same way.
      */
     private static String portable(String modulePath) {
-        return modulePath.replace('\\', '/');
+        return PathStrings.forwardSlashes(modulePath);
     }
 
     /** Stores the rendered body for {@code serviceKey} if non-blank. */
@@ -1262,7 +1259,7 @@ public final class ModuleSidecar {
      * {@code "_root_"} spelling of "this is the root" folded onto the empty string.
      */
     private static String normalizeModulePath(String modulePath) {
-        String p = modulePath.replace(BACKSLASH, '/');
+        String p = PathStrings.forwardSlashes(modulePath);
         while (p.endsWith("/")) {
             p = p.substring(0, p.length() - 1);
         }
@@ -1558,7 +1555,7 @@ public final class ModuleSidecar {
         boolean hasAggregate = moduleActive.contains(service);
         if (!hasGranular && !hasAggregate) return null; // module keeps nothing of its own → embed as before
 
-        String mp = modulePath.replace('\\', '/');
+        String mp = PathStrings.forwardSlashes(modulePath);
         StringBuilder p = new StringBuilder();
         p.append("Guardrails for module `").append(mp).append("` are maintained in that module's own files");
         if (hasGranular) {
@@ -2762,7 +2759,7 @@ public final class ModuleSidecar {
             // normalised so Windows and Linux agree on the same layout. The directory name is kept
             // in front to leave the id legible.
             if (rel.getNameCount() > 0 && "..".equals(rel.getName(0).toString())) {
-                String normalised = relStr.replace(BACKSLASH, '/');
+                String normalised = PathStrings.forwardSlashes(relStr);
                 String hash = Integer.toHexString(normalised.hashCode() & 0x7fffffff);
                 Path name = compilationRoot.getFileName();
                 if (name == null) {

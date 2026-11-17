@@ -196,7 +196,7 @@ public final class ServiceRegistry {
      */
     private static String optInName(@Nullable Path root, Path path) {
         if (root != null && path.startsWith(root)) {
-            return root.relativize(path).toString().replace('\\', '/');
+            return PathStrings.relative(root, path);
         }
         return GuardrailFileWriter.fileName(path);
     }

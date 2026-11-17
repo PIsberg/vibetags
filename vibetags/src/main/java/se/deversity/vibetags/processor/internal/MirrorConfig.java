@@ -188,7 +188,7 @@ public final class MirrorConfig {
                     granular.add(key);
                 }
             });
-            String dir = base.relativize(target.targetDir().toAbsolutePath().normalize()).toString().replace('\\', '/');
+            String dir = PathStrings.relative(base, target.targetDir().toAbsolutePath().normalize());
             lines.add(dir + " " + target.contentHash() + " " + String.join(",", granular));
         }
         Collections.sort(lines);

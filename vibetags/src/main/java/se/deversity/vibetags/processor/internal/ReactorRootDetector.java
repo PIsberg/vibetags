@@ -33,9 +33,6 @@ import java.util.regex.Pattern;
  */
 public final class ReactorRootDetector {
 
-    /** Safety bound for the upward walk (a build's directory depth never comes close). */
-    private static final int MAX_WALK_UP = 64;
-
     /** A quoted project path in a Gradle {@code include} line. */
     private static final Pattern QUOTED = Pattern.compile("['\"]([^'\"]+)['\"]");
 
@@ -52,13 +49,7 @@ public final class ReactorRootDetector {
      * ordinary case for a standalone project and for a module that already shares the reactor root.
      */
     public static Optional<Path> findReactorRootAbove(Path moduleRoot) {
-        Path current = moduleRoot.getParent();
-        for (int i = 0; current != null && i < MAX_WALK_UP; i++, current = current.getParent()) {
-            if (declaresModule(current, moduleRoot)) {
-                return Optional.of(current);
-            }
-        }
-        return Optional.empty();
+        return Ancestors.firstMatching(moduleRoot.getParent(), candidate -> declaresModule(candidate, moduleRoot));
     }
 
     /**
@@ -131,7 +122,7 @@ public final class ReactorRootDetector {
     /** Forward-slash path of {@code module} relative to {@code base}, or empty if not below it. */
     private static Optional<String> relativise(Path base, Path module) {
         try {
-            String rel = base.relativize(module).toString().replace('\\', '/');
+            String rel = PathStrings.relative(base, module);
             return rel.isEmpty() || rel.startsWith("..") ? Optional.empty() : Optional.of(rel);
         } catch (IllegalArgumentException e) {
             return Optional.empty();

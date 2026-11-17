@@ -48,9 +48,6 @@ public final class ModuleRootResolver {
     /** Conventional source-root directory name; the segment after it names the source set. */
     private static final String SRC_DIR = "src";
 
-    /** Safety bound for the upward walk (a build's directory depth never comes close). */
-    private static final int MAX_WALK_UP = 64;
-
     private ModuleRootResolver() {
     }
 
@@ -234,13 +231,7 @@ public final class ModuleRootResolver {
      * file, or {@code null} if none is found before the filesystem root.
      */
     static @Nullable Path nearestBuildFileAncestor(@Nullable Path dir) {
-        Path current = dir;
-        for (int i = 0; current != null && i < MAX_WALK_UP; i++, current = current.getParent()) {
-            if (hasBuildFile(current)) {
-                return current;
-            }
-        }
-        return null;
+        return Ancestors.firstMatching(dir, ModuleRootResolver::hasBuildFile).orElse(null);
     }
 
     /** Whether {@code dir} carries a build file, identifying it as a module root. */

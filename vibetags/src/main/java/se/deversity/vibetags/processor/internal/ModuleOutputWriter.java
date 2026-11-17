@@ -157,12 +157,12 @@ public final class ModuleOutputWriter {
         keep.addAll(ModuleSidecar.granularStemsFrom(sidecars, moduleId, regionId));
         Set<String> removed = granular.cleanupAll(moduleFiles, moduleActive, keep);
         new DestructiveRewriteWarner(messager, null).orphanSweep(
-            vibetagsRoot.relativize(moduleRoot).toString().replace('\\', '/'), removed, writtenStems);
+            PathStrings.relative(vibetagsRoot, moduleRoot), removed, writtenStems);
 
         if (written > 0 && messager != null) {
             messager.printMessage(Diagnostic.Kind.NOTE,
                 "VibeTags: wrote " + written + " module-scoped file(s) under "
-                    + vibetagsRoot.relativize(moduleRoot).toString().replace('\\', '/'));
+                    + PathStrings.relative(vibetagsRoot, moduleRoot));
         }
     }
 }
