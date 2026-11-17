@@ -56,6 +56,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <rect width="960" height="804" fill="url(#dotGrid)"/>
 <rect class="group-rect" x="10.0" y="100.0" width="408.0" height="548.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="16.0" y="113.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.model</text>
+<path class="edge-line" data-source="GuardrailModel" data-target="GuardrailModel" data-type="HAS" d="M114.0 305.7 Q63.6 445.7 114.0 585.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailModel" data-target="GuardrailModel" data-type="HAS" x="88.8" y="439.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">EMPTY</text>
+<path class="edge-line" data-source="GuardrailModel" data-target="SourceLocation" data-type="HAS" d="M204.0 445.7 Q233.1 394.8 224.0 337.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailModel" data-target="SourceLocation" data-type="HAS" x="223.5" y="387.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedPositions</text>
+<path class="edge-line" data-source="GuardrailModel" data-target="TransitiveRule" data-type="HAS" d="M204.0 445.7 Q202.6 480.9 224.0 509.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailModel" data-target="TransitiveRule" data-type="HAS" x="208.3" y="473.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveRules</text>
 <path class="edge-line" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" d="M114.0 114.0 Q110.9 103.8 102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" x="109.4" y="98.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL</text>
 <path class="edge-line" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" d="M114.0 114.0 Q110.9 103.8 102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -66,14 +72,53 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="TaggedElement" data-target="Annotation" data-type="HAS" x="214.1" y="155.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">annotations</text>
 <path class="edge-line" data-source="TaggedElement" data-target="TaggedElement" data-type="HAS" d="M114.0 204.0 Q63.6 344.0 114.0 484.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TaggedElement" data-target="TaggedElement" data-type="HAS" x="88.8" y="338.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">owner</text>
-<path class="edge-line" data-source="GuardrailModel" data-target="GuardrailModel" data-type="HAS" d="M114.0 305.7 Q63.6 445.7 114.0 585.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailModel" data-target="GuardrailModel" data-type="HAS" x="88.8" y="439.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">EMPTY</text>
-<path class="edge-line" data-source="GuardrailModel" data-target="SourceLocation" data-type="HAS" d="M204.0 445.7 Q233.1 394.8 224.0 337.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailModel" data-target="SourceLocation" data-type="HAS" x="223.5" y="387.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedPositions</text>
-<path class="edge-line" data-source="GuardrailModel" data-target="TransitiveRule" data-type="HAS" d="M204.0 445.7 Q202.6 480.9 224.0 509.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailModel" data-target="TransitiveRule" data-type="HAS" x="208.3" y="473.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveRules</text>
 <path class="edge-line" data-source="TransitiveRule" data-target="Tier" data-type="HAS" d="M314.0 384.0 Q431.3 256.3 502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TransitiveRule" data-target="Tier" data-type="HAS" x="419.6" y="242.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">tier</text>
+<g id="GuardrailModel">
+  <title>GuardrailModel [CLASS]</title>
+  <rect class="node-rect" x="24.0" y="305.7" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="327.7" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailModel</text>
+  <line x1="24.0" y1="349.7" x2="204.0" y2="349.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="32.0" y="363.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">EMPTY: GuardrailModel</text>
+  <text x="32.0" y="378.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets: Map&lt;Class&lt;? extends An…</text>
+  <text x="32.0" y="393.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPositions: Map&lt;TaggedElem…</text>
+  <text x="32.0" y="408.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">elementIds: Set&lt;String&gt;</text>
+  <text x="32.0" y="423.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">totalAnnotatedReferences: int</text>
+  <text x="32.0" y="438.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound: boolean</text>
+  <text x="32.0" y="453.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
+  <line x1="24.0" y1="466.7" x2="204.0" y2="466.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="32.0" y="480.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">of(Class&lt;? extends Annotation&gt;)…</text>
+  <text x="32.0" y="495.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPosition(TaggedElement): …</text>
+  <text x="32.0" y="510.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound(): boolean</text>
+  <text x="32.0" y="525.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules(): List&lt;Transit…</text>
+  <text x="32.0" y="540.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyTransitiveRules(): boolean</text>
+  <text x="32.0" y="555.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets(): Map&lt;Class&lt;? extends …</text>
+  <text x="32.0" y="570.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+47 more)</text>
+</g>
+<g id="SourceLocation">
+  <title>SourceLocation [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="337.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">SourceLocation</text>
+</g>
+<g id="TransitiveRule">
+  <title>TransitiveRule [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="384.0" width="180.0" height="250.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="406.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">TransitiveRule</text>
+  <line x1="224.0" y1="428.0" x2="404.0" y2="428.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="232.0" y="441.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">origin: String</text>
+  <text x="232.0" y="456.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">packageName: String</text>
+  <text x="232.0" y="471.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">annotation: String</text>
+  <text x="232.0" y="486.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tier: Tier</text>
+  <text x="232.0" y="501.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members: Map&lt;String,String&gt;</text>
+  <line x1="224.0" y1="515.0" x2="404.0" y2="515.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="232.0" y="528.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">origin(): String</text>
+  <text x="232.0" y="543.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">packageName(): String</text>
+  <text x="232.0" y="558.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">annotation(): String</text>
+  <text x="232.0" y="573.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tier(): Tier</text>
+  <text x="232.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members(): Map&lt;String,String&gt;</text>
+  <text x="232.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">equals(Object): boolean</text>
+  <text x="232.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+2 more)</text>
+</g>
 <g id="GuardrailAnnotations">
   <title>GuardrailAnnotations [CLASS]</title>
   <rect class="node-rect" x="24.0" y="114.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
@@ -87,6 +132,11 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <title>Class [CLASS]</title>
   <rect class="node-rect" x="12.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="102.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Class</text>
+</g>
+<g id="ElementTag">
+  <title>ElementTag [CLASS]</title>
+  <rect class="node-rect" x="224.0" y="204.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="247.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ElementTag</text>
 </g>
 <g id="TaggedElement">
   <title>TaggedElement [CLASS]</title>
@@ -109,60 +159,10 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="32.0" y="453.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">granularQName(): String</text>
   <text x="32.0" y="468.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+11 more)</text>
 </g>
-<g id="ElementTag">
-  <title>ElementTag [CLASS]</title>
-  <rect class="node-rect" x="224.0" y="204.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="314.0" y="247.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ElementTag</text>
-</g>
 <g id="Annotation">
   <title>Annotation [CLASS]</title>
   <rect class="node-rect" x="212.0" y="12.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="302.0" y="55.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Annotation</text>
-</g>
-<g id="SourceLocation">
-  <title>SourceLocation [CLASS]</title>
-  <rect class="node-rect" x="224.0" y="294.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="314.0" y="337.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">SourceLocation</text>
-</g>
-<g id="GuardrailModel">
-  <title>GuardrailModel [CLASS]</title>
-  <rect class="node-rect" x="24.0" y="305.7" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="114.0" y="327.7" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailModel</text>
-  <line x1="24.0" y1="349.7" x2="204.0" y2="349.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="32.0" y="363.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">EMPTY: GuardrailModel</text>
-  <text x="32.0" y="378.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets: Map&lt;Class&lt;? extends An…</text>
-  <text x="32.0" y="393.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPositions: Map&lt;TaggedElem…</text>
-  <text x="32.0" y="408.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">elementIds: Set&lt;String&gt;</text>
-  <text x="32.0" y="423.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">totalAnnotatedReferences: int</text>
-  <text x="32.0" y="438.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound: boolean</text>
-  <text x="32.0" y="453.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
-  <line x1="24.0" y1="466.7" x2="204.0" y2="466.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="32.0" y="480.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">of(Class&lt;? extends Annotation&gt;)…</text>
-  <text x="32.0" y="495.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPosition(TaggedElement): …</text>
-  <text x="32.0" y="510.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound(): boolean</text>
-  <text x="32.0" y="525.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules(): List&lt;Transit…</text>
-  <text x="32.0" y="540.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyTransitiveRules(): boolean</text>
-  <text x="32.0" y="555.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets(): Map&lt;Class&lt;? extends …</text>
-  <text x="32.0" y="570.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+47 more)</text>
-</g>
-<g id="TransitiveRule">
-  <title>TransitiveRule [CLASS]</title>
-  <rect class="node-rect" x="224.0" y="384.0" width="180.0" height="250.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="314.0" y="406.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">TransitiveRule</text>
-  <line x1="224.0" y1="428.0" x2="404.0" y2="428.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="232.0" y="441.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">origin: String</text>
-  <text x="232.0" y="456.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">packageName: String</text>
-  <text x="232.0" y="471.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">annotation: String</text>
-  <text x="232.0" y="486.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tier: Tier</text>
-  <text x="232.0" y="501.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members: Map&lt;String,String&gt;</text>
-  <line x1="224.0" y1="515.0" x2="404.0" y2="515.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="232.0" y="528.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">origin(): String</text>
-  <text x="232.0" y="543.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">packageName(): String</text>
-  <text x="232.0" y="558.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">annotation(): String</text>
-  <text x="232.0" y="573.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">tier(): Tier</text>
-  <text x="232.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">members(): Map&lt;String,String&gt;</text>
-  <text x="232.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">equals(Object): boolean</text>
-  <text x="232.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+2 more)</text>
 </g>
 <g id="Tier">
   <title>Tier [CLASS]</title>

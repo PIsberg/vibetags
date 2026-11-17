@@ -66,6 +66,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tab, no-break and Unicode spaces are not whitespace, and non-ASCII decimal digits are not digits.
   Swapping in `Character.isWhitespace` failed 4 of them and `Character.isDigit` 3, so the tempting
   "simplification" cannot widen what a third-party JAR's manifest may contain unnoticed.
+- **Enforcement families are an enum, `GuardrailEnforcer.Family` (internal).** They were bare strings:
+  `"locked"`, `"contract"` and `"publicapi"` as `Map` keys, `Set<String>` through `parseFamilies`,
+  `enforce` and the processor (Clean Code J3, enums over constant groups). Each constant now carries
+  its key and its annotation, so the "unknown family, unreachable" branch is gone, and strings remain
+  only where they are a format: the option a user writes and `.vibetags-baseline`'s family column.
+  One observable difference: `-Avibetags.enforce=all` used to add the families in `Map.of`'s
+  iteration order, which the JDK leaves unspecified, so the `families=` field of `enforce.result` could
+  list them in any order; it is now always `[locked, contract, publicapi]`. Every other message, the
+  baseline file and the log fields are unchanged. `GuardrailEnforcerFamiliesTest`, 41 cases written
+  first and green on the strings, compares families by name; renaming one key failed 24 of the
+  enforcer tests, `toString` returning the constant name 19, sorting by declaration order 13, `all`
+  selecting two families 8, and swapping two families' annotations 9.
 - **`LlmsRenderer` renders from a table of sections (internal; no output changes).** Its `render`
   was 44 hand-written `appendSection` calls, each re-testing whether it was writing `llms.txt` or
   `llms-full.txt` with its own `full ? long : short` (Clean Code G15, selector arguments). Each
