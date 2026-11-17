@@ -66,6 +66,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tab, no-break and Unicode spaces are not whitespace, and non-ASCII decimal digits are not digits.
   Swapping in `Character.isWhitespace` failed 4 of them and `Character.isDigit` 3, so the tempting
   "simplification" cannot widen what a third-party JAR's manifest may contain unnoticed.
+- **`MethodBodyGuardrailScanner.topLevel` asks one named question (internal; no output changes).** Its
+  loop condition read `current.getEnclosingElement().getKind()` four times in one boolean (Clean Code
+  G36, G28). It is now `while (isNested(current))`, with `isNested` reading the enclosing element's
+  kind once. `MethodBodyGuardrailScannerTopLevelTest`, 59 cases written first and green on the old
+  loop, pins where the walk lands for real javac elements of every nesting shape and for every
+  `ElementKind` constant of the running JDK; five breakages of the new predicate failed 3 to 45 of
+  them each.
 - **Enforcement families are an enum, `GuardrailEnforcer.Family` (internal).** They were bare strings:
   `"locked"`, `"contract"` and `"publicapi"` as `Map` keys, `Set<String>` through `parseFamilies`,
   `enforce` and the processor (Clean Code J3, enums over constant groups). Each constant now carries

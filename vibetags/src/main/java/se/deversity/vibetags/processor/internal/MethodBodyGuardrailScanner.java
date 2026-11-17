@@ -46,6 +46,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -276,14 +277,23 @@ public final class MethodBodyGuardrailScanner {
     /** The outermost type around {@code element}, which names its source file; itself when top-level. */
     static Element topLevel(Element element) {
         Element current = element;
-        while (current.getEnclosingElement() != null
-                && (current.getEnclosingElement().getKind().isClass()
-                    || current.getEnclosingElement().getKind().isInterface()
-                    || current.getEnclosingElement().getKind().isExecutable()
-                    || current.getEnclosingElement().getKind().isField())) {
-            current = current.getEnclosingElement();
+        while (isNested(current)) {
+            current = Objects.requireNonNull(current.getEnclosingElement(), "isNested checked it");
         }
         return current;
+    }
+
+    /**
+     * Whether {@code element} is declared inside a type, a member or an executable, rather than
+     * directly in a package or module: the elements {@link #topLevel} climbs out of.
+     */
+    private static boolean isNested(Element element) {
+        Element enclosing = element.getEnclosingElement();
+        if (enclosing == null) {
+            return false;
+        }
+        ElementKind kind = enclosing.getKind();
+        return kind.isClass() || kind.isInterface() || kind.isExecutable() || kind.isField();
     }
 
     /**
