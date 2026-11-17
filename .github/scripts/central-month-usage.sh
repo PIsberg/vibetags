@@ -95,7 +95,7 @@ count_version() {
 # walk <path> <depth>: descends from <path> to every artifact directory and counts its versions
 # published in MONTH; the listing gives a version directory the time it was published
 walk() {
-  local path="$1" depth="$2" entries name date _
+  local path="$1" depth="$2" entries name _
   entries="$(listing "$path")" || return 1
   if is_artifact "$entries"; then
     count_artifact "$path" "$entries"
@@ -110,13 +110,13 @@ walk() {
 # count_artifact <path> <entries>: counts the artifact's versions published in MONTH under the
 # artifact's group, the directory above it
 count_artifact() {
-  local path="$1" group name date _
+  local path="$1" group name published _
   group="${path%/}"
   group="${group%/*}"
-  while IFS=$'\t' read -r name date _; do
+  while IFS=$'\t' read -r name published _; do
     case "$name" in [0-9]*/) ;; *) continue ;; esac
-    case "$date" in "$MONTH"-*) ;; *) continue ;; esac
-    count_version "$group" "${name%/}" "$path$name" "$date" || return 1
+    case "$published" in "$MONTH"-*) ;; *) continue ;; esac
+    count_version "$group" "${name%/}" "$path$name" "$published" || return 1
   done <<<"$2"
 }
 
@@ -157,8 +157,8 @@ awk -F '\t' -v month="$MONTH" -v root="$NAMESPACE" -v spread="$MAX_BUNDLE_SPREAD
   }
   END {
     for (i = 1; i <= versions; i++) {
-      count[order[i]] = deployments(minutes[order[i]])
-      releases += count[order[i]]
+      deployments_of[order[i]] = deployments(minutes[order[i]])
+      releases += deployments_of[order[i]]
     }
     printf "Maven Central usage for %s in %s, from repo1 listings:\n", root, month
     printf "releases %3d of %d\n", releases, max_releases
@@ -167,7 +167,7 @@ awk -F '\t' -v month="$MONTH" -v root="$NAMESPACE" -v spread="$MAX_BUNDLE_SPREAD
     for (i = 1; i <= versions; i++) {
       key = order[i]
       printf "%s: %d files, %d bytes%s\n", key, files[key], bytes[key],
-        (count[key] > 1 ? " (" count[key] " deployments)" : "")
+        (deployments_of[key] > 1 ? " (" deployments_of[key] " deployments)" : "")
     }
     if (releases >= max_releases || total_files >= max_files || total_bytes >= max_bytes) {
       print "At or over a monthly limit: another release this month goes over it."
