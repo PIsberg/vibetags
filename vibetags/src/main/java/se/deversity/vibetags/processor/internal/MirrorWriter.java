@@ -181,29 +181,9 @@ public final class MirrorWriter {
 
     /** Directories under {@code root} that carry a build file of their own, {@code root} excluded. */
     private static List<Path> moduleDirectories(Path root) {
-        List<Path> modules = new java.util.ArrayList<>();
-        collectModules(root.toAbsolutePath().normalize(), 0, modules, new LinkedHashSet<>());
-        return modules;
-    }
-
-    private static void collectModules(Path dir, int depth, List<Path> out, Set<Path> seen) {
-        if (!seen.add(dir)) {
-            return; // symlink cycle guard
-        }
-        if (depth > 0 && dir.equals(ModuleRootResolver.nearestBuildFileAncestor(dir))) {
-            out.add(dir);
-        }
-        if (depth >= MODULE_SEARCH_DEPTH) {
-            return;
-        }
-        try {
-            for (Path child : MirrorConfig.childDirectories(dir)) {
-                collectModules(child, depth + 1, out, seen);
-            }
-        } catch (java.io.IOException | RuntimeException ignored) {
-            // A directory this build cannot list holds no sibling this build can protect; the
-            // ordinary prefix cleanup then behaves as it did before.
-        }
+        return MirrorConfig.directoriesBelow(root.toAbsolutePath().normalize(), MODULE_SEARCH_DEPTH).stream()
+            .filter(dir -> dir.equals(ModuleRootResolver.nearestBuildFileAncestor(dir)))
+            .toList();
     }
 
     /**

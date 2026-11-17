@@ -8,7 +8,6 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -201,29 +200,47 @@ public final class MirrorConfig {
             return List.of();
         }
         List<MirrorConfig> found = new ArrayList<>();
-        collect(root.toAbsolutePath().normalize(), 0, found, new LinkedHashSet<>());
+        for (Path dir : directoriesBelow(root.toAbsolutePath().normalize(), MAX_DEPTH)) {
+            MirrorConfig cfg = load(dir);
+            if (cfg != null) {
+                found.add(cfg);
+            }
+        }
         return Collections.unmodifiableList(found);
     }
 
-    private static void collect(Path dir, int depth, List<MirrorConfig> out, Set<Path> seen) {
-        if (!seen.add(dir)) {
-            return; // symlink cycle guard
+    /**
+     * Every directory below {@code dir} and at most {@code levels} deep, depth-first, each
+     * directory's children in {@link #childDirectories} order, never entering {@link #SKIP_DIRS}.
+     * {@code dir} itself is not included. Shared by mirror-target discovery and
+     * {@code MirrorWriter}'s sibling-module search, which must agree on what "the reactor's
+     * directories" are.
+     *
+     * <p>The depth bound is also the cycle guard: every path here is its parent plus one more name,
+     * so a directory symlinked to its own ancestor yields a new path at each level until the bound.
+     */
+    static List<Path> directoriesBelow(Path dir, int levels) {
+        if (levels <= 0) {
+            return List.of();
         }
-        if (depth > 0) {
-            MirrorConfig cfg = load(dir);
-            if (cfg != null) {
-                out.add(cfg);
-            }
+        List<Path> found = new ArrayList<>();
+        for (Path child : childDirectoriesOrNone(dir)) {
+            found.add(child);
+            found.addAll(directoriesBelow(child, levels - 1));
         }
-        if (depth >= MAX_DEPTH) {
-            return;
-        }
+        return found;
+    }
+
+    /**
+     * {@link #childDirectories}, or none for a directory this build cannot list. The walk is
+     * best-effort and must never fail a compile: an unlistable directory hides no mirror target and
+     * no sibling module this build could have acted on, so treating it as empty changes nothing else.
+     */
+    private static List<Path> childDirectoriesOrNone(Path dir) {
         try {
-            for (Path child : childDirectories(dir)) {
-                collect(child, depth + 1, out, seen);
-            }
-        } catch (IOException | RuntimeException ignored) {
-            // Unreadable directory — mirroring is best-effort and must never fail a compile.
+            return childDirectories(dir);
+        } catch (IOException | RuntimeException unlistable) {
+            return List.of();
         }
     }
 

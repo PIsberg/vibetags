@@ -48,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a nested module. Two deliberate breakages of the new code failed it: the detector answering the
   module's parent instead of the declaring reactor (3 failures), and the module name keeping
   Windows backslashes (1).
+- **Mirror discovery and the sibling-module search share one directory walk that returns its result
+  (internal; no output changes).** `MirrorConfig.collect` and `MirrorWriter.collectModules` were two
+  copies of the same bounded, sorted, depth-first walk, each filling a list passed in by its caller.
+  Both now use `MirrorConfig.directoriesBelow(dir, levels)`, which returns the directories, and
+  filter the result. The `seen`-set cycle guard is gone: every path in the walk is its parent plus one
+  name, so the set never matched, and the depth bound is what stops a symlink cycle. New tests pin
+  discovery order (depth-first, siblings sorted) and the sibling search's limits (three levels, own
+  build file, `target/` and `src/` skipped); they passed before the change. Breaking the new walk
+  failed them: breadth-first order (1 failure), one level short (3), and counting directories with no
+  build file of their own as modules (4).
 - **Gradle wrapper 9.8.1 → 9.9.1 (11 wrappers).** `gradle.version` in the parent moves to the
   current release (services.gradle.org/versions/current), and `tools/sync-version-mirrors.py`
   rewrites every `gradle-wrapper.properties`. 9.9 also ships a new `gradlew.bat` template, whose
