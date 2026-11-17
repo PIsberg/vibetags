@@ -52,7 +52,7 @@ public final class MirrorConfig {
         "target", "build", "out", "bin", "src", "node_modules", ".git", ".idea", ".mvn", ".gradle");
 
     /** How far below the VibeTags root a mirror target may sit (covers {@code root/group/module}). */
-    private static final int MAX_DEPTH = 2;
+    static final int MAX_DEPTH = 2;
 
     private final Path targetDir;
     private final List<Path> sources;
