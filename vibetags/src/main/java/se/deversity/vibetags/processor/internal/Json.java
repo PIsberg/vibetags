@@ -104,9 +104,9 @@ public final class Json {
                 return false;
             }
         }
-        if (i < n && (s.charAt(i) == 'e' || s.charAt(i) == 'E')) {
+        if (i < n && isExponentMarker(s.charAt(i))) {
             i++;
-            if (i < n && (s.charAt(i) == '+' || s.charAt(i) == '-')) {
+            if (i < n && isSign(s.charAt(i))) {
                 i++;
             }
             int exponentStart = i;
@@ -120,8 +120,34 @@ public final class Json {
         return i == n;
     }
 
+    /** An ASCII digit. Not {@link Character#isDigit}, which accepts every Unicode decimal digit. */
     private static boolean isDigit(char c) {
         return c >= '0' && c <= '9';
+    }
+
+    private static boolean isExponentMarker(char c) {
+        return c == 'e' || c == 'E';
+    }
+
+    private static boolean isSign(char c) {
+        return c == '+' || c == '-';
+    }
+
+    /**
+     * A character a number's lexeme may contain. Only the set, not the grammar: {@link #isJsonNumber}
+     * checks the order afterwards, so the scan stays one simple loop.
+     */
+    private static boolean isNumberChar(char c) {
+        return isDigit(c) || c == '.' || isExponentMarker(c) || isSign(c);
+    }
+
+    /**
+     * RFC 8259 §2's insignificant whitespace: space, tab, line feed and carriage return, and nothing
+     * else. Not {@link Character#isWhitespace}, which also accepts form feed, vertical tab and the
+     * Unicode spaces.
+     */
+    private static boolean isJsonWhitespace(char c) {
+        return c == ' ' || c == '\t' || c == '\n' || c == '\r';
     }
 
     /**
@@ -198,7 +224,7 @@ public final class Json {
         void skipWhitespace() {
             while (pos < src.length()) {
                 char c = src.charAt(pos);
-                if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                if (isJsonWhitespace(c)) {
                     pos++;
                 } else {
                     return;
@@ -334,7 +360,7 @@ public final class Json {
             }
             while (!atEnd()) {
                 char c = src.charAt(pos);
-                if ((c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-') {
+                if (isNumberChar(c)) {
                     pos++;
                 } else {
                     break;

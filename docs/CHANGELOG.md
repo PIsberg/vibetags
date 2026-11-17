@@ -58,6 +58,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   build file, `target/` and `src/` skipped); they passed before the change. Breaking the new walk
   failed them: breadth-first order (1 failure), one level short (3), and counting directories with no
   build file of their own as modules (4).
+- **`Json`'s character tests are named predicates (internal; no output changes).** The parser for
+  transitive manifests compared characters inline: `c == ' ' || c == '\t' || ...` for whitespace and a
+  six-way test for number characters. They are now `isJsonWhitespace`, `isNumberChar`,
+  `isExponentMarker` and `isSign`, each saying why it is not the `Character` method it resembles.
+  New `JsonTest` cases, green before the change, pin RFC 8259's ASCII-only sets: form feed, vertical
+  tab, no-break and Unicode spaces are not whitespace, and non-ASCII decimal digits are not digits.
+  Swapping in `Character.isWhitespace` failed 4 of them and `Character.isDigit` 3, so the tempting
+  "simplification" cannot widen what a third-party JAR's manifest may contain unnoticed.
 - **Gradle wrapper 9.8.1 → 9.9.1 (11 wrappers).** `gradle.version` in the parent moves to the
   current release (services.gradle.org/versions/current), and `tools/sync-version-mirrors.py`
   rewrites every `gradle-wrapper.properties`. 9.9 also ships a new `gradlew.bat` template, whose
