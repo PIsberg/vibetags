@@ -36,31 +36,19 @@ public final class PlatformRendererRegistry {
      * @return the declared shape, or {@code null}
      */
     public static @Nullable YamlMergeShape mergeShapeFor(String serviceKey) {
-        Platform platform = Platform.fromServiceKey(serviceKey);
-        if (platform == null) {
-            return null;
-        }
-        PlatformRenderer renderer = findRenderer(platform);
+        PlatformRenderer renderer = rendererFor(serviceKey);
         return renderer == null ? null : renderer.mergeShape();
     }
 
     /** How this service's renderer joins one module's source sets, or {@code null} to concatenate. */
     public static @Nullable SourceSetMerge sourceSetMergeFor(String serviceKey) {
-        Platform platform = Platform.fromServiceKey(serviceKey);
-        if (platform == null) {
-            return null;
-        }
-        PlatformRenderer renderer = findRenderer(platform);
+        PlatformRenderer renderer = rendererFor(serviceKey);
         return renderer == null ? null : renderer.sourceSetMerge();
     }
 
     /** The prologue this service's renderer declares, or {@code ""} when it declares none. */
     public static String filePrologueFor(String serviceKey) {
-        Platform platform = Platform.fromServiceKey(serviceKey);
-        if (platform == null) {
-            return "";
-        }
-        PlatformRenderer renderer = findRenderer(platform);
+        PlatformRenderer renderer = rendererFor(serviceKey);
         return renderer == null ? "" : renderer.filePrologue();
     }
 
@@ -73,12 +61,18 @@ public final class PlatformRendererRegistry {
      * @return the declared merge, or {@code null}
      */
     public static @Nullable WholeFileMerge wholeFileMergeFor(String serviceKey) {
-        Platform platform = Platform.fromServiceKey(serviceKey);
-        if (platform == null) {
-            return null;
-        }
-        PlatformRenderer renderer = findRenderer(platform);
+        PlatformRenderer renderer = rendererFor(serviceKey);
         return renderer == null ? null : renderer.wholeFileMerge();
+    }
+
+    /**
+     * The renderer behind {@code serviceKey}, or {@code null} when the key names no platform (an
+     * opt-in-only key such as {@code root_index}, or an unknown one) or the platform has no renderer.
+     * The one lookup the four {@code *For(serviceKey)} methods share, so they cannot drift apart.
+     */
+    private static @Nullable PlatformRenderer rendererFor(String serviceKey) {
+        Platform platform = Platform.fromServiceKey(serviceKey);
+        return platform == null ? null : findRenderer(platform);
     }
 
     /**
