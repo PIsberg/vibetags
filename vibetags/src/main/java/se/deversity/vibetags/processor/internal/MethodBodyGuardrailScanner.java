@@ -274,7 +274,7 @@ public final class MethodBodyGuardrailScanner {
     }
 
     /** The outermost type around {@code element}, which names its source file; itself when top-level. */
-    private static Element topLevel(Element element) {
+    static Element topLevel(Element element) {
         Element current = element;
         while (current.getEnclosingElement() != null
                 && (current.getEnclosingElement().getKind().isClass()
