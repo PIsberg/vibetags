@@ -66,6 +66,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tab, no-break and Unicode spaces are not whitespace, and non-ASCII decimal digits are not digits.
   Swapping in `Character.isWhitespace` failed 4 of them and `Character.isDigit` 3, so the tempting
   "simplification" cannot widen what a third-party JAR's manifest may contain unnoticed.
+- **Two hand-kept agreements are now enforced by the code (internal; no output changes).**
+  `GuardrailEnforcer` held its guarded elements twice, as a map of signatures and a map of elements
+  "filled in lockstep", with an unreachable null branch guarding their agreement; it now keeps the
+  elements only and reads each one's own signature. `MirrorWriter`'s sibling search depth was the
+  literal 3, documented as "one level past mirror discovery"; it is now `MirrorConfig.MAX_DEPTH + 1`
+  (Clean Code G22, make logical dependencies physical). Six new tests, green before the change, pin
+  the enforcer's report order, an element in two families, constructor naming and the mirror depth
+  relation; breaking the one-map version failed 2 to 18 of the enforcer tests, and raising the
+  discovery depth now fails the sibling search's depth test as well.
 - **`MethodBodyGuardrailScanner.topLevel` asks one named question (internal; no output changes).** Its
   loop condition read `current.getEnclosingElement().getKind()` four times in one boolean (Clean Code
   G36, G28). It is now `while (isNested(current))`, with `isNested` reading the enclosing element's
