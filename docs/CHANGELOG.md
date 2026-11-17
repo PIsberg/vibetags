@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`AIGuardrailProcessor` spells diagnostic paths through `PathStrings` (internal; no output changes,
+  #1101).** Five of its six hand-written `.replace('\\', '/')` conversions now call
+  `PathStrings.relative` or `PathStrings.forwardSlashes`. The sixth is inside the `@AILocked`
+  `generateFiles()` and stays until the owner approves an edit there. Mutating each site first
+  showed three of the five were tested by nothing, so `DiagnosticPathSeparatorTest` (the
+  opted-in-after and module-id-collision warnings) and a `PartialRoundGuardrailLossTest` case pin
+  them; each fails on Windows when its site's conversion is removed. The new import moves the
+  locked range in `.vibetags-locks` by one line, to 1254-1569.
 - **`GuardrailFileWriter.writeContentWithBackup` is `stageAndMove` (internal; no output changes,
   #1109).** It stages content in a temp file beside the target and moves it into place, and never
   made a backup, so the name described something it did not do. The two hand-written PlantUML

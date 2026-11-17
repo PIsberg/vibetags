@@ -42,6 +42,7 @@ import se.deversity.vibetags.processor.internal.content.RoleConfig;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 import se.deversity.vibetags.processor.internal.MethodBodyGuardrailScanner;
+import se.deversity.vibetags.processor.internal.PathStrings;
 import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 import se.deversity.vibetags.processor.internal.TransitiveManifestReader;
 import se.deversity.vibetags.processor.internal.TransitiveManifestWriter;
@@ -1032,7 +1033,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String names = unread.stream()
             .map(p -> {
                 try {
-                    return root.toAbsolutePath().normalize().relativize(p).toString().replace('\\', '/');
+                    return PathStrings.relative(root.toAbsolutePath().normalize(), p);
                 } catch (IllegalArgumentException differentFileSystemRoot) {
                     return p.toString();
                 }
@@ -1661,9 +1662,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (behind.isEmpty()) {
                 continue;
             }
-            Path file = serviceFiles.get(service);
             processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
-                "VibeTags: " + root.relativize(file).toString().replace('\\', '/')
+                "VibeTags: " + PathStrings.relative(root, optIn)
                     + " was opted into after " + String.join(", ", behind)
                     + " last compiled, so " + (behind.size() == 1 ? "its guardrails are" : "their guardrails are")
                     + " missing from it. Run a full build to complete the file.");
@@ -2068,7 +2068,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             for (String p : drift) {
                 String rel;
                 try {
-                    rel = root.relativize(Paths.get(p)).toString().replace('\\', '/');
+                    rel = PathStrings.relative(root, Paths.get(p));
                 } catch (IllegalArgumentException e) {
                     rel = p;
                 }
@@ -2193,7 +2193,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (theirs == null) {
             return;
         }
-        String here = mine.isEmpty() ? "(root)" : mine.replace('\\', '/');
+        String here = mine.isEmpty() ? "(root)" : PathStrings.forwardSlashes(mine);
         processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
             "VibeTags: modules '" + here + "' and '" + theirs + "' both resolve to the module id '" + moduleId
                 + "', so they share one sidecar and one region, and each build of one replaces the other's"
@@ -2352,7 +2352,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** Says that this module generated as its own root although {@code reactorRoot} declares it. */
     private void warnDetachedFrom(Path reactorRoot) {
-        String moduleName = reactorRoot.relativize(root).toString().replace('\\', '/');
+        String moduleName = PathStrings.relative(reactorRoot, root);
         processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
             "VibeTags: module '" + moduleName + "' generated its guardrails as its own root ("
                 + root + "), but " + reactorRoot + " declares it as a module. Its guardrails are"
