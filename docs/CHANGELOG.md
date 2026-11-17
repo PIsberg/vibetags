@@ -147,6 +147,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A file that appears while the writer is creating it is merged into, not replaced (#1087).** The
+  writer reads a guardrail file, splices its block into what it read and moves the result into
+  place. When the read found no file, the result was the generated block alone, and the move
+  replaced whatever was there by then. On `windows-latest` CI, four threads of
+  `GuardrailFileWriterSharedFileAsyncTest` (8 writers sharing one `CLAUDE.md`, the shape of a
+  `mvn -T` or Gradle `--parallel` reactor) saw a `CLAUDE.md` that was only the block, the
+  developer's preamble and appendix gone; a stat that reports the file missing while another
+  module's rename replaces it is the likely cause, and it did not reproduce locally in 3 runs. A
+  write merged from no file now moves into place only if no file is there. If one is, the writer
+  logs `write.retry file= reason=appeared-during-write attempt=` and merges again from that file;
+  after 3 attempts it leaves the file as it is, warns, and logs `write.skip
+  reason=appeared-during-write attempts=3`. On POSIX the JDK checks the target before
+  `rename(2)`, so a file created between the two is still replaced there. The new
+  `GuardrailFileWriterAppearedFileTest` creates the file at the writer's `write.commit` event, the
+  last step before the move, for `CLAUDE.md` and `greptile.json`; all three of its cases failed
+  before the change.
 - **One malformed `.vibetags-mirror` no longer hides every mirror target found after it.** A source
   line that is not a valid path on this OS (a NUL anywhere; on Windows also an ordinary line such as
   `../modules/*` written without `glob =`) made `MirrorConfig.load` throw `InvalidPathException`.

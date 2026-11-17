@@ -115,6 +115,41 @@ class GuardrailFileWriterLogContractTest {
             "the failed rewrite names its reason: " + events());
     }
 
+    @Test
+    @DisplayName("a file that appears during the write logs write.retry, then a skip once it keeps appearing")
+    void appearedFileLogsRetryThenSkip(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("CLAUDE.md");
+        // Plays the other writer: creates the file the moment this one commits, deletes it when it
+        // starts over, so every attempt finds no file and is beaten to it (#1087).
+        ch.qos.logback.core.AppenderBase<ILoggingEvent> interloper = new ch.qos.logback.core.AppenderBase<>() {
+            @Override
+            protected void append(ILoggingEvent event) {
+                try {
+                    if (event.getFormattedMessage().startsWith("write.commit ") && Files.notExists(file)) {
+                        Files.writeString(file, "# Hand-written\n");
+                    } else if (event.getFormattedMessage().startsWith("write.retry ")) {
+                        Files.deleteIfExists(file);
+                    }
+                } catch (IOException e) {
+                    throw new java.io.UncheckedIOException(e);
+                }
+            }
+        };
+        interloper.setContext(logger.getLoggerContext());
+        interloper.start();
+        logger.addAppender(interloper);
+        try {
+            new GuardrailFileWriter(HEADER, null, logger).writeFileIfChanged(file.toString(), HEADER + "rule\n", true);
+        } finally {
+            logger.detachAppender(interloper);
+            interloper.stop();
+        }
+        assertTrue(logged("write.retry file=CLAUDE.md reason=appeared-during-write attempt=1"),
+            "the first lost race is logged with its reason and attempt: " + events());
+        assertTrue(logged("write.skip file=CLAUDE.md reason=appeared-during-write attempts=3"),
+            "giving up is a skip with the same reason and the attempts made: " + events());
+    }
+
     /**
      * Makes replacing {@code file} fail until closed: an open handle on Windows, which does not
      * share delete access with a rename over the file, and a read-only directory elsewhere.

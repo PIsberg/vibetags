@@ -17,6 +17,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -138,100 +139,125 @@ public final class GuardrailFileWriter {
     @AIContract(reason = "Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics")
     public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
         Path filePath = Paths.get(path);
-        try {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                return writeOnce(filePath, path, content, hasNewRules);
+            } catch (AppearedDuringWrite e) {
+                if (attempt == MAX_WRITE_ATTEMPTS) {
+                    debug("write.skip file={} reason=appeared-during-write attempts={}", fileName(filePath), attempt);
+                    return writeFailed(filePath, path, e, null);
+                }
+                debug("write.retry file={} reason=appeared-during-write attempt={}", fileName(filePath), attempt);
+            } catch (CharacterCodingException e) {
+                return writeFailed(filePath, path, e, undecodableEncoding(filePath));
+            } catch (IOException e) {
+                return writeFailed(filePath, path, e, null);
+            }
+        }
+    }
 
-            // Fast-path: if our cache says we wrote this exact body to this file and the file
-            // is byte-stable since (size + mtime unchanged), skip the read/diff/write entirely.
-            if (writeCache != null && writeCache.isUnchanged(filePath, content)) {
-                debug("write.skip file={} reason=cache-unchanged bytes={}", fileName(filePath), content.length());
+    /**
+     * How many times {@link #writeFileIfChanged} reads, merges and commits a file that keeps appearing
+     * where it found none before it gives up. One retry covers a stat that reported a file missing
+     * while another module's rename replaced it; a file that is created again after every attempt is
+     * something else, and is left as it is.
+     */
+    private static final int MAX_WRITE_ATTEMPTS = 3;
+
+    /**
+     * One read, merge and commit for {@link #writeFileIfChanged}.
+     *
+     * @throws AppearedDuringWrite when the file was found absent and one was there by the move, so
+     *                             the merge has to start over from that file
+     */
+    private boolean writeOnce(Path filePath, String path, String content, boolean hasNewRules) throws IOException {
+        // Fast-path: if our cache says we wrote this exact body to this file and the file
+        // is byte-stable since (size + mtime unchanged), skip the read/diff/write entirely.
+        if (writeCache != null && writeCache.isUnchanged(filePath, content)) {
+            debug("write.skip file={} reason=cache-unchanged bytes={}", fileName(filePath), content.length());
+            return false;
+        }
+
+        Path parent = filePath.getParent();
+        if (parent != null && !dryRun) {
+            Files.createDirectories(parent);
+        }
+
+        // Path.getFileName() returns null only for root paths (e.g. "/") — never for
+        // the concrete file paths VibeTags constructs, but we guard for correctness.
+        Path fileNamePath = filePath.getFileName();
+        String fileName = fileNamePath != null ? fileNamePath.toString() : "";
+
+        // A JSON document the user owns and VibeTags shares values of (greptile.json, .greptile/config.json). It
+        // has no markers, but it is not a whole-file overwrite either, so it must not reach the
+        // size fast path below, which would replace the user's configuration with the rendering.
+        List<JsonValueSpans.SharedKey> sharedKeys = JsonValueSpans.sharedKeysFor(filePath);
+        if (sharedKeys != null) {
+            return writeSharedJsonValues(filePath, fileName, content, hasNewRules, sharedKeys);
+        }
+
+        String[] markers = getMarkersFor(fileName);
+        boolean supportsMarkers = markers != null;
+
+        // Pre-check size to allow non-marker overwrite branch to skip the full read. Taken
+        // before the file is read, so a file found current is recorded with attributes no newer
+        // than the bytes compared: see noteCurrent.
+        BasicFileAttributes existingAttrs = attributesOrNull(filePath);
+        boolean fileExists = existingAttrs != null;
+        long existingSize = existingAttrs != null ? existingAttrs.size() : 0L;
+        byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
+        int contentByteLen = contentBytes.length;
+
+        // Phase-2 streaming fast path: for non-marker files where the on-disk size matches
+        // the new content size exactly, stream-compare bytes with early-exit on first
+        // mismatch. Skips materialising the entire file as a String just to call .equals().
+        if (!supportsMarkers && fileExists && existingSize == contentByteLen) {
+            if (fileBytesEqual(filePath, contentBytes)) {
+                // Byte-identical — nothing to do. Refresh the cache so subsequent calls hit
+                // the cheap WriteCache fast path even on the very first build.
+                noteCurrent(filePath, content, existingAttrs);
+                debug("write.skip file={} reason=identical-bytes bytes={}", fileName, contentByteLen);
                 return false;
             }
-
-            Path parent = filePath.getParent();
-            if (parent != null && !dryRun) {
-                Files.createDirectories(parent);
+            // Sizes match but bytes differ — write directly. No need for readString or
+            // strip-tolerant compare: an exact-size byte mismatch is unambiguous.
+            if (!hasNewRules && existingSize > 0) {
+                debug("write.skip file={} reason=no-new-rules existingBytes={}", fileName, existingSize);
+                skipUpdateMsg(fileName);
+                return false;
             }
-
-            // Path.getFileName() returns null only for root paths (e.g. "/") — never for
-            // the concrete file paths VibeTags constructs, but we guard for correctness.
-            Path fileNamePath = filePath.getFileName();
-            String fileName = fileNamePath != null ? fileNamePath.toString() : "";
-
-            // A JSON document the user owns and VibeTags shares values of (greptile.json, .greptile/config.json). It
-            // has no markers, but it is not a whole-file overwrite either, so it must not reach the
-            // size fast path below, which would replace the user's configuration with the rendering.
-            List<JsonValueSpans.SharedKey> sharedKeys = JsonValueSpans.sharedKeysFor(filePath);
-            if (sharedKeys != null) {
-                return writeSharedJsonValues(filePath, fileName, content, hasNewRules, sharedKeys);
+            String sameSize = Files.readString(filePath, StandardCharsets.UTF_8);
+            if (!replaceableWholeFile(sameSize)) {
+                return writeHandWrittenWholeFile(filePath, fileName, content, sameSize, existingAttrs);
             }
-
-            String[] markers = getMarkersFor(fileName);
-            boolean supportsMarkers = markers != null;
-
-            // Pre-check size to allow non-marker overwrite branch to skip the full read. Taken
-            // before the file is read, so a file found current is recorded with attributes no newer
-            // than the bytes compared: see noteCurrent.
-            BasicFileAttributes existingAttrs = attributesOrNull(filePath);
-            boolean fileExists = existingAttrs != null;
-            long existingSize = existingAttrs != null ? existingAttrs.size() : 0L;
-            byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
-            int contentByteLen = contentBytes.length;
-
-            // Phase-2 streaming fast path: for non-marker files where the on-disk size matches
-            // the new content size exactly, stream-compare bytes with early-exit on first
-            // mismatch. Skips materialising the entire file as a String just to call .equals().
-            if (!supportsMarkers && fileExists && existingSize == contentByteLen) {
-                if (fileBytesEqual(filePath, contentBytes)) {
-                    // Byte-identical — nothing to do. Refresh the cache so subsequent calls hit
-                    // the cheap WriteCache fast path even on the very first build.
-                    noteCurrent(filePath, content, existingAttrs);
-                    debug("write.skip file={} reason=identical-bytes bytes={}", fileName, contentByteLen);
-                    return false;
-                }
-                // Sizes match but bytes differ — write directly. No need for readString or
-                // strip-tolerant compare: an exact-size byte mismatch is unambiguous.
-                if (!hasNewRules && existingSize > 0) {
-                    debug("write.skip file={} reason=no-new-rules existingBytes={}", fileName, existingSize);
-                    skipUpdateMsg(fileName);
-                    return false;
-                }
-                String sameSize = Files.readString(filePath, StandardCharsets.UTF_8);
-                if (!replaceableWholeFile(sameSize)) {
-                    return writeHandWrittenWholeFile(filePath, fileName, content, sameSize, existingAttrs);
-                }
-                debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
-                    fileName, existingSize, contentByteLen);
-                writeAndCache(filePath, content, content);
-                messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
-                return true;
-            }
-
-            // Read the existing file whenever it exists so the compare-before-write below can treat
-            // a line-ending-only difference (LF vs CRLF, e.g. a git core.autocrlf checkout on
-            // Windows) as a no-op instead of rewriting the file — see issue #282. The common
-            // unchanged case is already handled allocation-free by the exact-size byte fast path above.
-            String existing = fileExists
-                ? Files.readString(filePath, StandardCharsets.UTF_8)
-                : "";
-
-            debug("write.compare file={} exists={} markers={} oldBytes={} newBytes={} hasNewRules={}",
-                fileName, fileExists, supportsMarkers, existingSize, contentByteLen, hasNewRules);
-            if (markers != null) {
-                // A byte order mark an editor saved in front of the file is encoding, not content.
-                // Left in place it hid a first-line START marker (U+FEFF is not whitespace, so the
-                // marker no longer owned its line) and the old block was kept as hand-written text
-                // beside a new one. The markers are looked for behind it, and it is written back.
-                String bom = existing.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
-                return writeWithMarkers(filePath, fileName, path, content, existing.substring(bom.length()), bom,
-                    hasNewRules, markers, existingAttrs);
-            }
-            return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules,
-                existingAttrs);
-        } catch (CharacterCodingException e) {
-            return writeFailed(filePath, path, e, undecodableEncoding(filePath));
-        } catch (IOException e) {
-            return writeFailed(filePath, path, e, null);
+            debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
+                fileName, existingSize, contentByteLen);
+            writeAndCache(filePath, content, content, existingAttrs);
+            messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
+            return true;
         }
+
+        // Read the existing file whenever it exists so the compare-before-write below can treat
+        // a line-ending-only difference (LF vs CRLF, e.g. a git core.autocrlf checkout on
+        // Windows) as a no-op instead of rewriting the file — see issue #282. The common
+        // unchanged case is already handled allocation-free by the exact-size byte fast path above.
+        String existing = fileExists
+            ? Files.readString(filePath, StandardCharsets.UTF_8)
+            : "";
+
+        debug("write.compare file={} exists={} markers={} oldBytes={} newBytes={} hasNewRules={}",
+            fileName, fileExists, supportsMarkers, existingSize, contentByteLen, hasNewRules);
+        if (markers != null) {
+            // A byte order mark an editor saved in front of the file is encoding, not content.
+            // Left in place it hid a first-line START marker (U+FEFF is not whitespace, so the
+            // marker no longer owned its line) and the old block was kept as hand-written text
+            // beside a new one. The markers are looked for behind it, and it is written back.
+            String bom = existing.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
+            return writeWithMarkers(filePath, fileName, path, content, existing.substring(bom.length()), bom,
+                hasNewRules, markers, existingAttrs);
+        }
+        return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules,
+            existingAttrs);
     }
 
     /**
@@ -311,15 +337,24 @@ public final class GuardrailFileWriter {
         return fileName != null ? fileName.toString() : filePath.toString();
     }
 
-    /** Writes {@code finalContent} atomically and, if a write cache is wired, records the body we wrote. */
-    private void writeAndCache(Path filePath, String finalContent, String bodyForCache) throws IOException {
+    /**
+     * Writes {@code finalContent} atomically and, if a write cache is wired, records the body we wrote.
+     *
+     * @param mergedFrom the attributes of the file {@code finalContent} was merged from, or {@code null}
+     *                   when none was found. Content merged from no file replaces no file: if one is
+     *                   there by the move, it holds text this rendering never saw (in a parallel
+     *                   reactor, a {@code CLAUDE.md} another module's stat briefly reported missing,
+     *                   #1087), so the move fails with {@link AppearedDuringWrite} instead
+     */
+    private void writeAndCache(Path filePath, String finalContent, String bodyForCache,
+                               @Nullable BasicFileAttributes mergedFrom) throws IOException {
         if (dryRun) {
             debug("write.skip file={} reason=dry-run bytes={}", fileName(filePath), finalContent.length());
             dryRunChanges.add(filePath.toString());
             return;
         }
         debug("write.commit file={} bytes={}", fileName(filePath), finalContent.length());
-        BasicFileAttributes written = writeContentWithBackup(filePath, finalContent);
+        BasicFileAttributes written = writeContentWithBackup(filePath, finalContent, mergedFrom != null);
         if (writeCache != null) {
             writeCache.recordWrite(filePath, bodyForCache, written);
         }
@@ -440,7 +475,7 @@ public final class GuardrailFileWriter {
                 }
                 debug("write.update file={} reason=malformed-markers-repaired newBytes={}",
                     fileName, finalContent.length());
-                writeAndCache(filePath, bom + finalContent, content);
+                writeAndCache(filePath, bom + finalContent, content, existingAttrs);
                 return true;
             }
             end += markerEnd.length();
@@ -468,7 +503,7 @@ public final class GuardrailFileWriter {
 
             debug("write.update file={} reason=marker-block-differs oldBytes={} newBytes={} markers=true",
                 fileName, existing.length(), finalContent.length());
-            writeAndCache(filePath, bom + finalContent, content);
+            writeAndCache(filePath, bom + finalContent, content, existingAttrs);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
             return true;
         } else if (!existing.isEmpty() && hasLegacyHeaderLine(existing)) {
@@ -492,7 +527,7 @@ public final class GuardrailFileWriter {
             debug("write.update file={} reason=legacy-upgrade oldBytes={} newBytes={} markers=legacy",
                 fileName, existing.length(), finalContent.length());
 
-            writeAndCache(filePath, bom + finalContent, content);
+            writeAndCache(filePath, bom + finalContent, content, existingAttrs);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
             return true;
         } else {
@@ -510,7 +545,7 @@ public final class GuardrailFileWriter {
                 return false;
             }
 
-            writeAndCache(filePath, bom + updated, content);
+            writeAndCache(filePath, bom + updated, content, existingAttrs);
             String action = existing.isEmpty() ? "wrote" : "appended";
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + action + " " + fileName);
             return true;
@@ -539,6 +574,7 @@ public final class GuardrailFileWriter {
             existing = Files.readString(filePath, StandardCharsets.UTF_8);
         } catch (NoSuchFileException e) {
             existing = "";
+            existingAttrs = null;
         }
         java.util.Map<String, String> bodies = JsonValueSpans.bodiesFrom(content);
         if (bodies == null) {
@@ -571,7 +607,7 @@ public final class GuardrailFileWriter {
         }
         debug("write.update file={} reason=json-values-differ oldBytes={} newBytes={} markers=json-values",
             fileName, existing.length(), merged.length());
-        writeAndCache(filePath, merged, content);
+        writeAndCache(filePath, merged, content, existingAttrs);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
         return true;
     }
@@ -594,7 +630,7 @@ public final class GuardrailFileWriter {
             return writeHandWrittenWholeFile(filePath, fileName, content, existing, existingAttrs);
         }
 
-        writeAndCache(filePath, content, content);
+        writeAndCache(filePath, content, content, existingAttrs);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
         return true;
     }
@@ -651,7 +687,7 @@ public final class GuardrailFileWriter {
         }
         debug("write.update file={} reason=toml-values-differ oldBytes={} newBytes={} markers=toml-values",
             fileName, existing.length(), merged.length());
-        writeAndCache(filePath, merged, content);
+        writeAndCache(filePath, merged, content, existingAttrs);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
         return true;
     }
@@ -1267,7 +1303,7 @@ public final class GuardrailFileWriter {
                     // Atomic, like every other write: an in-place write interrupted halfway left
                     // the developer's remaining text truncated (#875).
                     try {
-                        writeContentWithBackup(p, bom + content + "\n");
+                        writeContentWithBackup(p, bom + content + "\n", true);
                     } catch (IOException e) {
                         recordFailedScrub(p, e);
                         return false;
@@ -1305,7 +1341,14 @@ public final class GuardrailFileWriter {
         }
     }
 
-    private BasicFileAttributes writeContentWithBackup(Path filePath, String finalContent) throws IOException {
+    /**
+     * Stages {@code finalContent} beside {@code filePath} and moves it into place.
+     *
+     * @param replace whether the move may replace a file already there; when {@code false} a file
+     *                found at the target throws {@link AppearedDuringWrite} and is left untouched
+     */
+    private BasicFileAttributes writeContentWithBackup(Path filePath, String finalContent, boolean replace)
+            throws IOException {
         // Create the staging file with a fresh random name in the TARGET directory (so the atomic
         // move stays on the same filesystem). Files.createTempFile creates it atomically with
         // O_EXCL semantics, so it cannot follow or clobber a pre-planted symlink at a predictable
@@ -1323,15 +1366,43 @@ public final class GuardrailFileWriter {
             // recorded against this content (see noteCurrent). A rename keeps both, so these are
             // the attributes the target has for as long as it holds these bytes.
             BasicFileAttributes written = Files.readAttributes(tmp, BasicFileAttributes.class);
-            try {
-                Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-                Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING);
+            if (replace) {
+                try {
+                    Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                    Files.move(tmp, filePath, StandardCopyOption.REPLACE_EXISTING);
+                }
+            } else {
+                moveIntoAbsent(tmp, filePath);
             }
             return written;
         } finally {
             // A successful move consumes tmp; clean it up only if a failure left it behind.
             Files.deleteIfExists(tmp);
+        }
+    }
+
+    /**
+     * Moves {@code tmp} to {@code target} only if no file is there. Without {@code REPLACE_EXISTING}
+     * the JDK renames with Windows' no-replace {@code MoveFileEx}, which refuses a taken name in the
+     * same call that would take it. On POSIX it checks the target before {@code rename(2)}, so a file
+     * created between the two is still replaced; that window is the JDK's, and the Windows stat that
+     * reports a replaced file missing (#1087) does not happen there.
+     */
+    private static void moveIntoAbsent(Path tmp, Path target) throws IOException {
+        try {
+            Files.move(tmp, target);
+        } catch (FileAlreadyExistsException e) {
+            throw new AppearedDuringWrite(target, e);
+        }
+    }
+
+    /** A file was found where the write had found none, so its merge is stale; see {@link #writeAndCache}. */
+    private static final class AppearedDuringWrite extends IOException {
+        private static final long serialVersionUID = 1L;
+
+        AppearedDuringWrite(Path target, FileAlreadyExistsException cause) {
+            super("another writer created it each time this build was about to, so it was left as it is", cause);
         }
     }
 
