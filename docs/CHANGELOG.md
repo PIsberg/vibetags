@@ -31,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with nothing failing to name the cause. Its lock entry is always loaded, so the budget
   `ProjectFactsConsistencyTest` holds this repository's own `CLAUDE.md` block to rises from 7,000 to
   7,300 bytes; the block is 7,296.
+- **`PlatformRendererRegistry`'s four service-key lookups share one helper (internal; no output
+  changes).** `mergeShapeFor`, `sourceSetMergeFor`, `filePrologueFor` and `wholeFileMergeFor`
+  each repeated the same key-to-platform-to-renderer resolution with its own null checks; they now
+  call one private `rendererFor(serviceKey)`. `PlatformRendererRegistryServiceKeyTest`, written
+  first and green on the old code, pins that each lookup returns what the platform's renderer
+  declares for all 61 platforms and answers nothing for `root_index`, an unknown key and `""`.
+  Three deliberate breakages of the new code (a dropped `sourceSetMerge`, a non-empty prologue for
+  an unknown key, the helper resolving the wrong platform) failed 26, 3 and 60 of its 64 cases.
 - **Gradle wrapper 9.8.1 → 9.9.1 (11 wrappers).** `gradle.version` in the parent moves to the
   current release (services.gradle.org/versions/current), and `tools/sync-version-mirrors.py`
   rewrites every `gradle-wrapper.properties`. 9.9 also ships a new `gradlew.bat` template, whose
