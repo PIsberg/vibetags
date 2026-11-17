@@ -62,8 +62,8 @@ the numbers. Then:
     | grep "^$(date +%Y-%m) "
   ```
 
-Put the counter's lines in the release PR body. The count is a floor (a version that took
-several deployments counts once), and Central's own number is on the usage page
+Put the counter's lines in the release PR body. It counts each deployment (a version whose
+artifacts landed minutes apart counts once per burst), and Central's own number is on the usage page
 (https://central.sonatype.com/publishing/usage?org=deversity, owner login).
 
 ## Step 2 — Preflight

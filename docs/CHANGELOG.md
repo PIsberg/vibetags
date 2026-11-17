@@ -22,9 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2026-11-17 it showed 1 release for November where the organization had 4 and 534 of its 1,167
   files. The new `.github/scripts/central-month-usage.sh` reads repo1's public directory listings,
   counts one release per group and version published that month, sums their files and bytes, and
-  exits 1 once a limit is reached and 2 when repo1 cannot be read (never zero). It is a floor: a
-  version published in several deployments counts once, so October 2026 reads 7 where Central
-  counted 11. Both release steps run it; the cadence of at most 3 vibetags releases a month stays.
+  exits 1 once a limit is reached and 2 when repo1 cannot be read (never zero). A version published in
+  several deployments counts once per deployment (#1111, below), so October 2026 reads 11, as
+  Central counted it. Both release steps run it; the cadence of at most 3 vibetags releases a month stays.
   `central-month-usage.test.sh` runs it against fixture listings in `build.yml`'s Central Bundle
   Shape job, and `CentralPublishingBudgetTest` fails if either release step or that CI step stops
   running it. The test was written first and failed for each.
@@ -167,6 +167,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`central-month-usage.sh` counts a version published in several deployments once per
+  deployment (#1111).** It counted one release per group and version, so vibetags 1.4.0, published
+  as five per-module deployments, counted as one and October 2026 read 7 where Central counted 11.
+  On repo1 a one-bundle release lands every artifact in the same minute (vibetags 1.4.1 and 1.4.2,
+  async-test-lib 1.12.4 and 1.14.3), while 1.4.0's modules landed 5 to 15 minutes apart. The
+  counter now splits a group and version where its artifacts' publish times are more than 2
+  minutes apart, and October reads 11. A new `central-month-usage.test.sh` case (two artifacts in
+  one burst across a minute boundary, a third five minutes later) failed first.
 - **A `.vibetags-mirror` VibeTags cannot use is warned about (#1098).** A config that could not be
   read, or that held a source line that is not a valid path on this OS (on Windows, `../modules/*`
   written without its `glob =` key), was ignored in silence: its module got no mirrored rules and
