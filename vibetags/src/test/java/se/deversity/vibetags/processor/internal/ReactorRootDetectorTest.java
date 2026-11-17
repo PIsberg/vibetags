@@ -8,9 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Whether an ancestor directory is really this module's reactor root, or merely a directory that
@@ -46,7 +46,7 @@ class ReactorRootDetectorTest {
             </project>
             """);
 
-        assertEquals(root, ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     @Test
@@ -63,7 +63,7 @@ class ReactorRootDetectorTest {
             </project>
             """);
 
-        assertNull(ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     @Test
@@ -72,7 +72,7 @@ class ReactorRootDetectorTest {
         Files.createDirectories(module);
         write(root.resolve("settings.gradle"), "include ':payments-core'\n");
 
-        assertEquals(root, ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     @Test
@@ -81,7 +81,7 @@ class ReactorRootDetectorTest {
         Files.createDirectories(module);
         write(root.resolve("settings.gradle.kts"), "include(\"payments-core\")\n");
 
-        assertEquals(root, ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     @Test
@@ -92,7 +92,7 @@ class ReactorRootDetectorTest {
         Files.createDirectories(module);
         write(root.resolve("settings.gradle.kts"), "include(\"group:payments-core\")\n");
 
-        assertEquals(root, ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     @Test
@@ -101,7 +101,7 @@ class ReactorRootDetectorTest {
         Files.createDirectories(module);
         write(root.resolve("pom.xml"), "<module>group/payments-core</module>\n");
 
-        assertEquals(root, ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     @Test
@@ -114,7 +114,7 @@ class ReactorRootDetectorTest {
         write(root.resolve("pom.xml"), "<module>group/payments-core</module>\n");
         write(group.resolve("pom.xml"), "<module>payments-core</module>\n");
 
-        assertEquals(group, ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.of(group), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     @Test
@@ -122,7 +122,7 @@ class ReactorRootDetectorTest {
         Path module = root.resolve("standalone");
         Files.createDirectories(module);
 
-        assertNull(ReactorRootDetector.findReactorRootAbove(module),
+        assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(module),
             "the ordinary standalone project must not be told it is part of a reactor");
     }
 
@@ -134,7 +134,7 @@ class ReactorRootDetectorTest {
         Files.createDirectories(module);
         Files.createDirectories(root.resolve("pom.xml")); // a directory where a file is expected
 
-        assertNull(ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     @Test
@@ -143,14 +143,14 @@ class ReactorRootDetectorTest {
         Files.createDirectories(module);
         Files.write(root.resolve("pom.xml"), new byte[]{(byte) 0xC3, (byte) 0x28, (byte) 0xA9});
 
-        assertNull(ReactorRootDetector.findReactorRootAbove(module),
+        assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(module),
             "a build file this cannot decode is not evidence of anything");
     }
 
     @Test
     void aModuleAtTheFilesystemRootIsNotWalkedPast(@TempDir Path root) {
         Path filesystemRoot = root.getRoot();
-        assertNull(ReactorRootDetector.findReactorRootAbove(filesystemRoot),
+        assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(filesystemRoot),
             "the walk terminates rather than running off the top of the tree");
     }
 
@@ -163,7 +163,7 @@ class ReactorRootDetectorTest {
         write(root.resolve("pom.xml"),
             "  <modules><module>payments-core</module><module>payments-api</module></modules>\n");
 
-        assertEquals(root, ReactorRootDetector.findReactorRootAbove(module));
+        assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(module));
     }
 
     // declaredModules: the root round's "do I have siblings?" signal (#1081). A false positive costs

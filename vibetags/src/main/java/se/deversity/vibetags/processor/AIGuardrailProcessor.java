@@ -2328,10 +2328,11 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (!compilationRoot.equals(root) || !contributes) {
             return; // already sharing a root with siblings, or nothing to contribute anyway
         }
-        Path reactorRoot = ReactorRootDetector.findReactorRootAbove(root);
-        if (reactorRoot == null) {
-            return;
-        }
+        ReactorRootDetector.findReactorRootAbove(root).ifPresent(this::warnDetachedFrom);
+    }
+
+    /** Says that this module generated as its own root although {@code reactorRoot} declares it. */
+    private void warnDetachedFrom(Path reactorRoot) {
         String moduleName = reactorRoot.relativize(root).toString().replace('\\', '/');
         processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
             "VibeTags: module '" + moduleName + "' generated its guardrails as its own root ("
