@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`GuardrailFileWriter.writeContentWithBackup` is `stageAndMove` (internal; no output changes,
+  #1109).** It stages content in a temp file beside the target and moves it into place, and never
+  made a backup, so the name described something it did not do. The two hand-written PlantUML
+  diagrams and `docs/architecture/design-decisions.md` follow; the code-karta diagrams show no
+  structural change.
+
 - **The release steps count the organization's month on Maven Central, not this repository's tags
   (#863).** Central's limits (7 releases, 1,167 files, 78 MB a month) are per organization, and
   async-test-lib and every other group under `se.deversity` draw on them too, so the tag count in
