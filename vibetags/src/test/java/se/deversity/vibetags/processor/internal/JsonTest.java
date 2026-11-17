@@ -1,6 +1,8 @@
 package se.deversity.vibetags.processor.internal;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.Map;
@@ -89,6 +91,37 @@ class JsonTest {
     void skipsWhitespaceEverywhereItIsLegal() {
         Map<String, Object> parsed = Json.parseObject("  {\n\t\"a\" :\r\n [ 1 , 2 ]\n}  ");
         assertEquals(List.of(new Json.Num("1"), new Json.Num("2")), parsed.get("a"));
+    }
+
+    /**
+     * RFC 8259 defines four whitespace characters and no others. {@link Character#isWhitespace}
+     * also accepts form feed, vertical tab and the Unicode spaces, so swapping it in would quietly
+     * widen what a third-party manifest may contain: 0x0C form feed, 0x0B vertical tab, 0x2003 em
+     * space and 0x3000 ideographic space are all whitespace to it. 0x00A0 is here for the next
+     * candidate, {@link Character#isSpaceChar}, which accepts the no-break space too.
+     */
+    @ParameterizedTest(name = "0x{0}")
+    @ValueSource(ints = {0x0C, 0x0B, 0xA0, 0x2003, 0x3000})
+    void rejectsWhitespaceThatJsonDoesNotDefine(int codePoint) {
+        String c = String.valueOf((char) codePoint);
+        assertThrows(Json.JsonException.class, () -> Json.parse(c + "1"), "before a value");
+        assertThrows(Json.JsonException.class, () -> Json.parse("[1," + c + "2]"), "between values");
+        assertThrows(Json.JsonException.class, () -> Json.parse("{\"a\":1}" + c), "after the document");
+    }
+
+    /**
+     * A JSON number is ASCII digits only. {@link Character#isDigit} accepts every Unicode decimal
+     * digit, so using it to scan or check a number would read 0x0661 (Arabic-Indic one), 0x0967
+     * (Devanagari one) or 0xFF11 (fullwidth one) as a number nobody else's JSON parser would accept.
+     */
+    @ParameterizedTest(name = "0x{0}")
+    @ValueSource(ints = {0x0661, 0x0967, 0xFF11})
+    void rejectsDigitsOutsideAscii(int codePoint) {
+        String digit = String.valueOf((char) codePoint);
+        assertThrows(Json.JsonException.class, () -> Json.parse(digit), "on its own");
+        assertThrows(Json.JsonException.class, () -> Json.parse("1" + digit), "after an ASCII digit");
+        assertThrows(Json.JsonException.class, () -> Json.parse("1e" + digit), "as an exponent");
+        assertThrows(Json.JsonException.class, () -> Json.parse("[" + digit + "]"), "inside an array");
     }
 
     @Test
