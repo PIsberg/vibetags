@@ -161,6 +161,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The detached-module warning (#296) reads module declarations the way the rest of the build does
+  (#1096).** `ReactorRootDetector.findReactorRootAbove` matched a literal `<module>path</module>`
+  substring, so a module declared as a Maven 4 `<subproject>` or as a whitespace-padded
+  `<module> core </module>` that compiled as its own root got no warning, and its guardrails were
+  silently missing from the reactor's merged files. The same substring test made a Gradle
+  `include ':payments-core-extra'` declare `payments-core`, a warning on a project nothing
+  includes. It now asks `declaredModules`, the parser the root round's lock signal (#1081) already
+  uses. Three `ReactorRootDetectorTest` cases, one per shape, failed before the change.
 - **A file that appears while the writer is creating it is merged into, not replaced (#1087).** The
   writer reads a guardrail file, splices its block into what it read and moves the result into
   place. When the read found no file, the result was the generated block alone, and the move

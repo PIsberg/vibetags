@@ -109,13 +109,15 @@ public final class ReactorRootDetector {
         return names;
     }
 
-    /** True when {@code candidate}'s build files name {@code module} as a participating module. */
+    /**
+     * True when {@code candidate}'s build files name {@code module} as a participating module. Reads
+     * the same declarations as {@link #declaredModules}, so a Maven 4 {@code <subproject>}, a padded
+     * {@code <module>} and a Gradle include count here exactly as they do for the root's lock signal,
+     * and a Gradle include of a longer name that merely contains this one does not (#1096).
+     */
     private static boolean declaresModule(Path candidate, Path module) {
-        // Maven: <module>sub/dir</module>. Gradle: include("sub:dir") / include ':sub:dir'.
         return relativise(candidate, module)
-            .map(relative -> contains(candidate.resolve("pom.xml"), "<module>" + relative + "</module>")
-                || contains(candidate.resolve("settings.gradle"), gradlePath(relative))
-                || contains(candidate.resolve("settings.gradle.kts"), gradlePath(relative)))
+            .map(relative -> declaredModules(candidate).contains(relative))
             .orElse(false);
     }
 
@@ -127,32 +129,5 @@ public final class ReactorRootDetector {
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
-    }
-
-    /** Gradle project path for a relative directory: {@code a/b} → {@code a:b}. */
-    private static String gradlePath(String relative) {
-        return relative.replace('/', ':');
-    }
-
-    /**
-     * True when {@code file} exists and contains {@code needle}. Deliberately a substring test
-     * rather than a parse: this runs inside somebody else's compile, only ever decides whether to
-     * print one diagnostic, and must not fail on a build file it does not fully understand.
-     */
-    private static boolean contains(Path file, String needle) {
-        if (!Files.isRegularFile(file)) {
-            return false;
-        }
-        try {
-            List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-            for (String line : lines) {
-                if (line.contains(needle)) {
-                    return true;
-                }
-            }
-        } catch (IOException | RuntimeException ignored) {
-            // Unreadable or non-UTF-8 build file — no signal, no warning.
-        }
-        return false;
     }
 }
