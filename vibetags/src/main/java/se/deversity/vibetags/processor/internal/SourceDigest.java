@@ -219,7 +219,7 @@ public final class SourceDigest {
         String prefix = base.toString() + base.getFileSystem().getSeparator();
         String full = path.toString();
         String relative = full.startsWith(prefix) ? full.substring(prefix.length()) : full;
-        return relative.replace('\\', '/');
+        return PathStrings.forwardSlashes(relative);
     }
 
     /** SHA-256 of {@code file}, streamed through {@code buffer} rather than read into one array per file. */

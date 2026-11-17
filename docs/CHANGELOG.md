@@ -66,6 +66,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tab, no-break and Unicode spaces are not whitespace, and non-ASCII decimal digits are not digits.
   Swapping in `Character.isWhitespace` failed 4 of them and `Character.isDigit` 3, so the tempting
   "simplification" cannot widen what a third-party JAR's manifest may contain unnoticed.
+- **Path helpers live in two utility classes (internal; no output changes).** The forward-slash
+  conversion that sidecars, the write cache, module ids and diagnostics compare across machines was
+  written out as `.toString().replace('\\', '/')` 24 times in 10 files; 18 of them, every one in
+  `processor.internal`, now call `PathStrings.forwardSlashes` or `PathStrings.relative(base, path)`.
+  The bounded upward walk copied into `ModuleRootResolver` and `ReactorRootDetector`, each with its
+  own `MAX_WALK_UP = 64`, is `Ancestors.firstMatching`. `ModuleSidecar`'s `BACKSLASH` constant, used
+  only for the conversion, is gone. `AIGuardrailProcessor`'s six copies stay for now (#1101).
+  `PathStringsTest` and `AncestorsTest` were written first and failed to compile against the
+  missing classes. Making `forwardSlashes` return its input failed 34 tests across 14 classes in the
+  full suite on Windows, and making the walk skip its starting directory failed 11.
 - **Gradle wrapper 9.8.1 → 9.9.1 (11 wrappers).** `gradle.version` in the parent moves to the
   current release (services.gradle.org/versions/current), and `tools/sync-version-mirrors.py`
   rewrites every `gradle-wrapper.properties`. 9.9 also ships a new `gradlew.bat` template, whose

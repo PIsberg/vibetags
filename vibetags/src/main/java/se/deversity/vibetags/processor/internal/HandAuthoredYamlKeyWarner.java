@@ -82,6 +82,6 @@ public final class HandAuthoredYamlKeyWarner {
         Path absoluteRoot = root.toAbsolutePath().normalize();
         Path absoluteFile = file.toAbsolutePath().normalize();
         Path shown = absoluteFile.startsWith(absoluteRoot) ? absoluteRoot.relativize(absoluteFile) : absoluteFile;
-        return shown.toString().replace('\\', '/');
+        return PathStrings.forwardSlashes(shown);
     }
 }
