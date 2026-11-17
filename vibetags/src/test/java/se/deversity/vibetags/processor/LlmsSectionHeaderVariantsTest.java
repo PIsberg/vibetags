@@ -17,9 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code llms.txt} and {@code llms-full.txt} share one renderer whose 44 sections each choose
- * between a bare heading and a heading followed by an explanatory sentence, via a
- * {@code full ? long : short} ternary per section.
+ * {@code llms.txt} and {@code llms-full.txt} share one renderer whose 44 sections each have a bare
+ * heading and a heading followed by an explanatory sentence: the compact and full columns of its
+ * section table. Until that table existed, each section chose with its own
+ * {@code full ? long : short} ternary.
  *
  * <p>The mutation report showed all 42 of those ternaries below the first two could be flipped
  * without a failure: the compact file could ship carrying the book-sized explanations, or the
