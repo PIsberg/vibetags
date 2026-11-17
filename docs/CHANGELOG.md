@@ -48,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a nested module. Two deliberate breakages of the new code failed it: the detector answering the
   module's parent instead of the declaring reactor (3 failures), and the module name keeping
   Windows backslashes (1).
+- **Mirror discovery and the sibling-module search share one directory walk that returns its result
+  (internal; no output changes).** `MirrorConfig.collect` and `MirrorWriter.collectModules` were two
+  copies of the same bounded, sorted, depth-first walk, each filling a list passed in by its caller.
+  Both now use `MirrorConfig.directoriesBelow(dir, levels)`, which returns the directories, and
+  filter the result. The `seen`-set cycle guard is gone: every path in the walk is its parent plus one
+  name, so the set never matched, and the depth bound is what stops a symlink cycle. New tests pin
+  discovery order (depth-first, siblings sorted) and the sibling search's limits (three levels, own
+  build file, `target/` and `src/` skipped); they passed before the change. Breaking the new walk
+  failed them: breadth-first order (1 failure), one level short (3), and counting directories with no
+  build file of their own as modules (4).
 - **Gradle wrapper 9.8.1 → 9.9.1 (11 wrappers).** `gradle.version` in the parent moves to the
   current release (services.gradle.org/versions/current), and `tools/sync-version-mirrors.py`
   rewrites every `gradle-wrapper.properties`. 9.9 also ships a new `gradlew.bat` template, whose
@@ -72,6 +82,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **One malformed `.vibetags-mirror` no longer hides every mirror target found after it.** A source
+  line that is not a valid path on this OS (a NUL anywhere; on Windows also an ordinary line such as
+  `../modules/*` written without `glob =`) made `MirrorConfig.load` throw `InvalidPathException`.
+  Discovery caught it at the parent directory's level, so the targets after the bad one in walk order
+  were silently dropped and their modules got no mirrored rules. Such a config now counts as absent,
+  like an unreadable one; the whole file rather than the line, because dropping the only source line
+  would mean "mirror from every module". It is still ignored without a warning (#1098). A new
+  `MirrorConfigTest` case failed before the change.
 - **The root round of a reactor locks on its first build too (#1081).** The #1074 fix below locked
   the root's own round only once `.vibetags-generate.lock` existed, so on the first parallel build
   of a Gradle root project with sources (or after `git clean` removed the gitignored file), the root

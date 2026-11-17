@@ -207,4 +207,39 @@ class MirrorConfigTest {
         assertEquals(List.of(), MirrorConfig.discover(root),
             "a stray config under target/ or src/ is not a module and must not be picked up");
     }
+
+    @Test
+    void aConfigWithALineThatIsNotAPathIsAbsentAndDoesNotHideItsSiblings(@TempDir Path root) throws IOException {
+        // A NUL is invalid in a path on every OS; on Windows so is a plain source line such as
+        // modules/* (a glob written without its "glob =" key). load() threw InvalidPathException,
+        // the walk's catch for the parent directory swallowed it, and every target after the bad
+        // one was silently dropped: here, c.
+        write(root.resolve("a"));
+        Files.createDirectories(root.resolve("b"));
+        Files.writeString(root.resolve("b").resolve(MirrorConfig.FILE_NAME), "bad" + (char) 0 + "line\n",
+            StandardCharsets.UTF_8);
+        write(root.resolve("c"));
+
+        assertNull(MirrorConfig.load(root.resolve("b")),
+            "a config naming a source this cannot resolve is treated as absent, like an unreadable one. "
+                + "Dropping only the bad line would turn a one-entry source list into mirror-everything");
+        Path base = root.toAbsolutePath().normalize();
+        assertEquals(List.of(base.resolve("a"), base.resolve("c")),
+            MirrorConfig.discover(root).stream().map(MirrorConfig::targetDir).toList(),
+            "one malformed config must not hide the targets discovered after it");
+    }
+
+    @Test
+    void discoverReturnsTargetsDepthFirstWithSiblingsSorted(@TempDir Path root) throws IOException {
+        // Written out of order on purpose: the walk, not creation order, decides the result.
+        write(root.resolve("b"));
+        write(root.resolve("a").resolve("x"));
+        write(root.resolve("a"));
+
+        List<Path> found = MirrorConfig.discover(root).stream().map(MirrorConfig::targetDir).toList();
+        Path base = root.toAbsolutePath().normalize();
+        assertEquals(List.of(base.resolve("a"), base.resolve("a").resolve("x"), base.resolve("b")), found,
+            "a directory's own target comes before the targets below it, and siblings sort by name. "
+                + "Mirroring and the build key follow this order, so a different one is a different build");
+    }
 }
