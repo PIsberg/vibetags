@@ -50,6 +50,9 @@ class CentralPublishingBudgetTest {
     /** Counts the organization's releases, files and bytes on Central for one month. */
     private static final String USAGE_COUNTER = ".github/scripts/central-month-usage.sh";
 
+    /** The counter's own cases, run against fixture listings. */
+    private static final String USAGE_COUNTER_TESTS = ".github/scripts/central-month-usage.test.sh";
+
     /** Modules that inherit from vibetags-parent but are never published, each with the reason. */
     private static final Map<String, String> NOT_PUBLISHED = Map.of(
         "load-tests", "the benchmark harness; its artifact is a workbench, never released");
@@ -143,7 +146,7 @@ class CentralPublishingBudgetTest {
      * release; the counter reads every group under the namespace from repo1 instead (#863).
      */
     @Test
-    void theReleaseStepsCountTheOrganizationsMonthNotThisRepositorysTags() throws IOException {
+    void bothReleaseStepsRunTheOrganizationWideCounter() throws IOException {
         for (String doc : List.of("docs/RELEASING.md", ".claude/skills/release/SKILL.md")) {
             String text = Files.readString(repoRoot().resolve(doc), StandardCharsets.UTF_8);
             assertTrue(text.contains("bash " + USAGE_COUNTER),
@@ -156,8 +159,8 @@ class CentralPublishingBudgetTest {
     @Test
     void buildRunsTheUsageCounterTests() throws IOException {
         String build = Files.readString(repoRoot().resolve(".github/workflows/build.yml"), StandardCharsets.UTF_8);
-        assertTrue(build.contains("run: bash " + USAGE_COUNTER.replace(".sh", ".test.sh")),
-            "build.yml must run " + USAGE_COUNTER.replace(".sh", ".test.sh") + "; a counter nobody tests "
+        assertTrue(build.contains("run: bash " + USAGE_COUNTER_TESTS),
+            "build.yml must run " + USAGE_COUNTER_TESTS + "; a counter nobody tests "
                 + "can report zero usage for a month that is over the limit");
     }
 

@@ -53,6 +53,18 @@ run() {
   STATUS=$?
 }
 
+# record <ok> <name> <why>: counts one case, and on a failure shows why and the last run's output
+record() {
+  if [ "$1" -eq 1 ]; then
+    pass=$((pass + 1))
+    echo "ok   $2"
+  else
+    fail=$((fail + 1))
+    echo "FAIL $2 ($3)"
+    printf '%s\n' "$OUT" | sed 's/^/     /'
+  fi
+}
+
 # expect <name> <status> <pattern>...: the last run exited with <status> and printed every pattern
 expect() {
   local name="$1" status="$2" pattern ok=1
@@ -61,26 +73,14 @@ expect() {
   for pattern in "$@"; do
     printf '%s\n' "$OUT" | grep -Eq -- "$pattern" || ok=0
   done
-  if [ "$ok" -eq 1 ]; then
-    pass=$((pass + 1))
-    echo "ok   $name"
-  else
-    fail=$((fail + 1))
-    echo "FAIL $name (exit $STATUS, wanted $status)"
-    printf '%s\n' "$OUT" | sed 's/^/     /'
-  fi
+  record "$ok" "$name" "exit $STATUS, wanted $status"
 }
 
 # refuse <name> <pattern>: the last run did not print <pattern>
 refuse() {
-  if printf '%s\n' "$OUT" | grep -Eq -- "$2"; then
-    fail=$((fail + 1))
-    echo "FAIL $1: printed $2"
-    printf '%s\n' "$OUT" | sed 's/^/     /'
-  else
-    pass=$((pass + 1))
-    echo "ok   $1"
-  fi
+  local ok=1
+  printf '%s\n' "$OUT" | grep -Eq -- "$2" && ok=0
+  record "$ok" "$1" "printed $2"
 }
 
 # An organization with two groups. vibetags published 9.8.7 as one bundle of two artifacts in

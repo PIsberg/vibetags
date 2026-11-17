@@ -42,15 +42,20 @@ fi
 RECORDS="$(mktemp)"
 trap 'rm -f "$RECORDS"' EXIT
 
-# listing <path>: one line per entry of a repo1 directory listing, name<TAB>date<TAB>size. A
-# directory's name ends in /, and a row repo1 renders without a date or size has - for each.
-listing() {
-  local body
-  if ! body="$(curl -fsS --retry 2 -m 60 "$BASE/$1$INDEX")"; then
+# fetch <path>: the HTML of a repo1 directory listing; says which URL failed and returns 1 when
+# it cannot be read
+fetch() {
+  if ! curl -fsS --retry 2 -m 60 "$BASE/$1$INDEX"; then
     echo "central-month-usage: could not read $BASE/$1$INDEX" >&2
     return 1
   fi
-  printf '%s\n' "$body" | awk '
+}
+
+# parse_listing: reads a listing's HTML on stdin and prints one line per entry,
+# name<TAB>date<TAB>size. A directory's name ends in /, and a row repo1 renders without a date or
+# size has - for each.
+parse_listing() {
+  awk '
     /^<a href="/ {
       name = $0
       sub(/^<a href="/, "", name)
@@ -61,6 +66,13 @@ listing() {
       n = split(rest, field, " ")
       printf "%s\t%s\t%s\n", name, (n >= 3 ? field[1] : "-"), (n >= 1 ? field[n] : "-")
     }'
+}
+
+# listing <path>: the entries of a repo1 directory, as parse_listing prints them
+listing() {
+  local html
+  html="$(fetch "$1")" || return 1
+  printf '%s\n' "$html" | parse_listing
 }
 
 # is_artifact <entries>: an artifact directory has maven-metadata.xml and version directories. A
@@ -82,20 +94,29 @@ count_version() {
 # walk <path> <depth>: descends from <path> to every artifact directory and counts its versions
 # published in MONTH; the listing gives a version directory the time it was published
 walk() {
-  local path="$1" depth="$2" entries name date size
+  local path="$1" depth="$2" entries name date _
   entries="$(listing "$path")" || return 1
   if is_artifact "$entries"; then
-    while IFS=$'\t' read -r name date size; do
-      case "$name" in [0-9]*/) ;; *) continue ;; esac
-      case "$date" in "$MONTH"-*) ;; *) continue ;; esac
-      count_version "${path%/}" "${name%/}" "$path$name" || return 1
-    done <<<"$entries"
-    return 0
+    count_artifact "$path" "$entries"
+    return
   fi
   [ "$depth" -lt "$MAX_DEPTH" ] || return 0
-  while IFS=$'\t' read -r name date size; do
+  while IFS=$'\t' read -r name _ _; do
     case "$name" in */) walk "$path$name" $((depth + 1)) || return 1 ;; esac
   done <<<"$entries"
+}
+
+# count_artifact <path> <entries>: counts the artifact's versions published in MONTH under the
+# artifact's group, the directory above it
+count_artifact() {
+  local path="$1" group name date _
+  group="${path%/}"
+  group="${group%/*}"
+  while IFS=$'\t' read -r name date _; do
+    case "$name" in [0-9]*/) ;; *) continue ;; esac
+    case "$date" in "$MONTH"-*) ;; *) continue ;; esac
+    count_version "$group" "${name%/}" "$path$name" || return 1
+  done <<<"$2"
 }
 
 walk "$NAMESPACE/" 0 || exit 2
@@ -104,9 +125,7 @@ walk "$NAMESPACE/" 0 || exit 2
 awk -F '\t' -v month="$MONTH" -v root="$NAMESPACE" \
     -v max_releases="$MAX_RELEASES" -v max_files="$MAX_FILES" -v max_bytes="$MAX_BYTES" '
   {
-    group = $1
-    sub(/\/[^\/]*$/, "", group)
-    key = group " " $2
+    key = $1 " " $2
     if (!(key in files)) order[++releases] = key
     files[key] += $3
     bytes[key] += $4
