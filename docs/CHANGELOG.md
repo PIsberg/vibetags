@@ -72,6 +72,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **One malformed `.vibetags-mirror` no longer hides every mirror target found after it.** A source
+  line that is not a valid path on this OS (a NUL anywhere; on Windows also an ordinary line such as
+  `../modules/*` written without `glob =`) made `MirrorConfig.load` throw `InvalidPathException`.
+  Discovery caught it at the parent directory's level, so the targets after the bad one in walk order
+  were silently dropped and their modules got no mirrored rules. Such a config now counts as absent,
+  like an unreadable one; the whole file rather than the line, because dropping the only source line
+  would mean "mirror from every module". It is still ignored without a warning (#1098). A new
+  `MirrorConfigTest` case failed before the change.
 - **The root round of a reactor locks on its first build too (#1081).** The #1074 fix below locked
   the root's own round only once `.vibetags-generate.lock` existed, so on the first parallel build
   of a Gradle root project with sources (or after `git clean` removed the gitignored file), the root

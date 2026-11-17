@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -106,7 +107,9 @@ public final class MirrorConfig {
 
     /**
      * Loads {@code <dir>/.vibetags-mirror} if present, else returns {@code null} (this directory is
-     * not a mirror target). Unreadable files are treated as absent.
+     * not a mirror target). Unreadable files are treated as absent, and so is a file with a source
+     * line that is not a valid path: dropping just that line would turn a one-entry source list into
+     * "mirror every module", and letting the exception out hid every target discovered after it.
      */
     public static @Nullable MirrorConfig load(Path dir) {
         Path file = dir.resolve(FILE_NAME);
@@ -134,7 +137,12 @@ public final class MirrorConfig {
                 }
                 continue;
             }
-            Path source = target.resolve(line).normalize();
+            Path source;
+            try {
+                source = target.resolve(line).normalize();
+            } catch (InvalidPathException notAPath) {
+                return null;
+            }
             if (!sources.contains(source)) {
                 sources.add(source);
             }
