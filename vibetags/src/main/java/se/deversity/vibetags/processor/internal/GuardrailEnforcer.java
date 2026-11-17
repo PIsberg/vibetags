@@ -174,10 +174,22 @@ public final class GuardrailEnforcer {
     }
 
     /**
-     * This compilation's guarded elements under {@code families}: their signatures and the elements
-     * themselves, both keyed by {@link EnforcementBaseline#familyAndPath}, in family-name order.
+     * This compilation's guarded elements under {@code families}, keyed by
+     * {@link EnforcementBaseline#familyAndPath}, in family-name order. One map: an element carries its
+     * own signature, so a second map of signatures could only ever disagree with it.
      */
-    private record Guarded(Map<String, String> signatures, Map<String, TaggedElement> elements) {
+    private record Guarded(Map<String, TaggedElement> elements) {
+
+        /** The signature of each element, by the same key: the shape the baseline stores. */
+        Map<String, String> signatures() {
+            Map<String, String> signatures = new LinkedHashMap<>();
+            elements.forEach((key, element) -> signatures.put(key, element.signature()));
+            return signatures;
+        }
+
+        int size() {
+            return elements.size();
+        }
     }
 
     /** The baseline as read, and whether the file carries a format header this processor knows. */
@@ -185,7 +197,6 @@ public final class GuardrailEnforcer {
     }
 
     private static Guarded guardedElements(GuardrailModel model, Set<Family> families) {
-        Map<String, String> signatures = new LinkedHashMap<>();
         Map<String, TaggedElement> elements = new LinkedHashMap<>();
         for (Family family : byKey(families)) {
             for (TaggedElement element : model.of(family.annotation())) {
@@ -195,12 +206,10 @@ public final class GuardrailEnforcer {
                 String path = element.kind() == ElementTag.CONSTRUCTOR
                     ? EnforcementBaseline.constructorPath(element.path())
                     : element.path();
-                String key = EnforcementBaseline.familyAndPath(family.key(), path);
-                signatures.put(key, element.signature());
-                elements.put(key, element);
+                elements.put(EnforcementBaseline.familyAndPath(family.key(), path), element);
             }
         }
-        return new Guarded(signatures, elements);
+        return new Guarded(elements);
     }
 
     /** The baseline at {@code root}, or empty after reporting that it could not be read. */
@@ -228,10 +237,10 @@ public final class GuardrailEnforcer {
             baseline.update(root, moduleId, keys(families), current.signatures());
             messager.printMessage(Diagnostic.Kind.NOTE,
                 "VibeTags: enforcement baseline updated for module '" + moduleId + "' ("
-                    + current.signatures().size() + " guarded element(s)). Commit "
+                    + current.size() + " guarded element(s)). Commit "
                     + EnforcementBaseline.FILE_NAME + ".");
             if (log != null) {
-                log.info("enforce.baseline.update module={} elements={}", moduleId, current.signatures().size());
+                log.info("enforce.baseline.update module={} elements={}", moduleId, current.size());
             }
         } catch (IOException e) {
             messager.printMessage(Diagnostic.Kind.ERROR,
@@ -256,21 +265,18 @@ public final class GuardrailEnforcer {
      */
     private int reportChangedShapes(Guarded current, EnforcementBaseline baseline, String moduleId) {
         int violations = 0;
-        for (Map.Entry<String, String> entry : current.signatures().entrySet()) {
+        for (Map.Entry<String, TaggedElement> entry : current.elements().entrySet()) {
             String[] parts = entry.getKey().split("\t", 2);
             String approved = baseline.signatureFor(moduleId, parts[0], parts[1]);
             if (approved == null) {
                 continue; // newly annotated element: not yet approved, but not a violation either
             }
-            if (approved.equals(entry.getValue())) {
+            TaggedElement element = entry.getValue();
+            if (approved.equals(element.signature())) {
                 continue;
             }
             violations++;
-            TaggedElement changed = current.elements().get(entry.getKey());
-            if (changed == null) {
-                continue; // signatures and elements are filled in lockstep; unreachable in practice
-            }
-            reportChanged(parts[0], changed, approved, entry.getValue());
+            reportChanged(parts[0], element, approved, element.signature());
         }
         return violations;
     }
@@ -288,7 +294,7 @@ public final class GuardrailEnforcer {
                                        Set<Family> families) {
         int violations = 0;
         for (String familyAndPath : baseline.approvedFor(moduleId, keys(families))) {
-            if (current.signatures().containsKey(familyAndPath)) {
+            if (current.elements().containsKey(familyAndPath)) {
                 continue;
             }
             violations++;
@@ -301,11 +307,11 @@ public final class GuardrailEnforcer {
     private void reportResult(String moduleId, Set<Family> families, Guarded current, int violations) {
         if (log != null) {
             log.info("enforce.result module={} families={} checked={} violations={}",
-                moduleId, families, current.signatures().size(), violations);
+                moduleId, families, current.size(), violations);
         }
         if (violations == 0) {
             messager.printMessage(Diagnostic.Kind.NOTE,
-                "VibeTags: enforcement passed — " + current.signatures().size() + " guarded element(s) unchanged ("
+                "VibeTags: enforcement passed — " + current.size() + " guarded element(s) unchanged ("
                     + sorted(families) + ").");
         }
     }

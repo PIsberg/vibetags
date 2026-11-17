@@ -51,6 +51,22 @@ class MirrorWriterShadowingPrefixesTest {
     }
 
     @Test
+    void reachesASiblingOneLevelBelowTheDeepestMirrorTarget(@TempDir Path root) throws IOException {
+        // A mirror target is discovered at most two levels down (MirrorConfigTest pins that). The
+        // sibling search goes one level further, so a module directly under the deepest possible
+        // target is still protected from the shorter-named module's cleanup.
+        module(root);
+        Path deepestTarget = root.resolve("core-g").resolve("tests");
+        module(deepestTarget);
+        Files.writeString(deepestTarget.resolve(MirrorConfig.FILE_NAME), "");
+        module(deepestTarget.resolve("fixtures"));
+
+        assertEquals(1, MirrorConfig.discover(root).size(), "the target itself is discoverable");
+        assertEquals(List.of(mirrored("core-g_tests"), mirrored("core-g_tests_fixtures")), prefixes(root, "core"),
+            "both the target module and the module one level below it are protected");
+    }
+
+    @Test
     void doesNotLookPastThreeLevels(@TempDir Path root) throws IOException {
         module(root);
         module(root.resolve("core-y").resolve("a").resolve("b").resolve("c")); // depth 4

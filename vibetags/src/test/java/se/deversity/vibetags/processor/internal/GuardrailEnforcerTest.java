@@ -372,6 +372,89 @@ class GuardrailEnforcerTest {
         assertTrue(diagnostics.get(0).contains("approved: public B(String)"), diagnostics.get(0));
     }
 
+    // ------------------------------------------------------------------ order and overlap
+
+    @Test
+    void changedElementsAreReportedFamilyByFamilyInNameOrderThenInModelOrder() {
+        record(model()
+            .with(AILocked.class, method("a.B#l2()", "void l2()"))
+            .with(AILocked.class, method("a.B#l1()", "void l1()"))
+            .with(AIContract.class, method("a.B#c2()", "void c2()"))
+            .with(AIContract.class, method("a.B#c1()", "void c1()"))
+            .build(), families("locked", "contract"));
+
+        assertEquals(4, check(model()
+            .with(AILocked.class, method("a.B#l2()", "int l2()"))
+            .with(AILocked.class, method("a.B#l1()", "int l1()"))
+            .with(AIContract.class, method("a.B#c2()", "int c2()"))
+            .with(AIContract.class, method("a.B#c1()", "int c1()"))
+            .build(), families("locked", "contract")));
+
+        List<String> named = diagnosticsOfKind(Diagnostic.Kind.ERROR).stream()
+            .map(d -> d.substring(d.indexOf("the shape of ") + "the shape of ".length(), d.indexOf(" changed")))
+            .toList();
+        assertEquals(List.of("a.B#c1()", "a.B#c2()", "a.B#l1()", "a.B#l2()"), named,
+            "contract before locked (family name order), and within a family the model's path order");
+    }
+
+    @Test
+    void vanishedElementsAreReportedInTheBaselinesOrder() {
+        record(locked(method("a.B#z()", "void z()"), method("a.B#m()", "void m()"), method("a.B#a()", "void a()")),
+            families("locked"));
+
+        assertEquals(3, check(locked(), families("locked")));
+        List<String> named = diagnosticsOfKind(Diagnostic.Kind.ERROR).stream()
+            .map(d -> d.substring(d.indexOf(DASH + " ") + 2, d.indexOf(" was approved")))
+            .toList();
+        assertEquals(List.of("a.B#a()", "a.B#m()", "a.B#z()"), named);
+    }
+
+    @Test
+    void anElementInTwoFamiliesIsRecordedCheckedAndCountedUnderBoth() throws IOException {
+        TaggedElement both = method("a.B#pay(String)", "void pay(String)");
+        record(model().with(AILocked.class, both).with(AIContract.class, both).build(), families("locked", "contract"));
+
+        String text = baselineText();
+        assertTrue(text.contains("core\tlocked\ta.B#pay(String)\tvoid pay(String)"), text);
+        assertTrue(text.contains("core\tcontract\ta.B#pay(String)\tvoid pay(String)"), text);
+
+        assertEquals(0, check(model().with(AILocked.class, both).with(AIContract.class, both).build(),
+            families("locked", "contract")));
+        assertTrue(diagnostics.get(0).contains("2 guarded element(s) unchanged"), diagnostics.toString());
+
+        diagnostics.clear();
+        TaggedElement changed = method("a.B#pay(String)", "int pay(String)");
+        assertEquals(2, check(model().with(AILocked.class, changed).with(AIContract.class, changed).build(),
+            families("locked", "contract")), "one change, two families, two violations");
+        List<String> errors = diagnosticsOfKind(Diagnostic.Kind.ERROR);
+        assertTrue(errors.get(0).startsWith("ERROR: VibeTags: @AIContract violation"), errors.get(0));
+        assertTrue(errors.get(1).startsWith("ERROR: VibeTags: @AILocked violation"), errors.get(1));
+    }
+
+    @Test
+    void aChangedConstructorIsNamedByItsOwnPathNotItsBaselineKey() {
+        record(locked(constructor("a.B#B(String)", "public B(String)")), families("locked"));
+
+        assertEquals(1, check(locked(constructor("a.B#B(String)", "B(String)")), families("locked")));
+        String error = diagnostics.get(0);
+        assertTrue(error.contains("the shape of a.B#B(String) changed"), error);
+        assertTrue(logLines().get(0).contains("element=a.B#B(String) approved=public B(String) actual=B(String)"),
+            logLines().get(0));
+    }
+
+    @Test
+    void theBaselineRecordsEachElementsOwnSignature() throws IOException {
+        record(locked(method("a.B#one()", "sig-one"), method("a.B#two()", "sig-two"),
+            constructor("a.B#B()", "sig-ctor")), families("locked"));
+
+        List<String> lines = baselineText().lines().filter(l -> !l.startsWith("#")).toList();
+        assertEquals(3, lines.size(), lines.toString());
+        assertTrue(lines.stream().anyMatch(l -> l.endsWith("\ta.B#one()\tsig-one")), lines.toString());
+        assertTrue(lines.stream().anyMatch(l -> l.endsWith("\ta.B#two()\tsig-two")), lines.toString());
+        assertTrue(lines.stream().anyMatch(l -> l.contains("\tlocked\t") && l.endsWith("\tsig-ctor")
+            && !l.contains("\ta.B#B()\tsig-ctor")), "a constructor is stored under its constructor key: " + lines);
+    }
+
     // ------------------------------------------------------------------ nothing recorded
 
     @Test

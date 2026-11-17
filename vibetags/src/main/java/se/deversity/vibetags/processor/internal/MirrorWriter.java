@@ -176,8 +176,11 @@ public final class MirrorWriter {
         return prefixes;
     }
 
-    /** How deep below the root a sibling module is looked for; one level past mirror discovery. */
-    private static final int MODULE_SEARCH_DEPTH = 3;
+    /**
+     * How deep below the root a sibling module is looked for: one level past mirror discovery, so a
+     * module directly under the deepest possible mirror target is still found.
+     */
+    private static final int MODULE_SEARCH_DEPTH = MirrorConfig.MAX_DEPTH + 1;
 
     /** Directories under {@code root} that carry a build file of their own, {@code root} excluded. */
     private static List<Path> moduleDirectories(Path root) {
