@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The release steps count the organization's month on Maven Central, not this repository's tags
+  (#863).** Central's limits (7 releases, 1,167 files, 78 MB a month) are per organization, and
+  async-test-lib and every other group under `se.deversity` draw on them too, so the tag count in
+  `docs/RELEASING.md` step 0c and the release skill's step 1b missed most of the usage: on
+  2026-11-17 it showed 1 release for November where the organization had 4 and 534 of its 1,167
+  files. The new `.github/scripts/central-month-usage.sh` reads repo1's public directory listings,
+  counts one release per group and version published that month, sums their files and bytes, and
+  exits 1 once a limit is reached and 2 when repo1 cannot be read (never zero). It is a floor: a
+  version published in several deployments counts once, so October 2026 reads 7 where Central
+  counted 11. Both release steps run it; the cadence of at most 3 vibetags releases a month stays.
+  `central-month-usage.test.sh` runs it against fixture listings in `build.yml`'s Central Bundle
+  Shape job, and `CentralPublishingBudgetTest` fails if either release step or that CI step stops
+  running it. The test was written first and failed for each.
+
 - **The `model` package holds data only (internal; no output changes).** Logic that lived in the
   compiler-free model moves to the layer that uses it, one commit per class, each behind tests
   written first and shown red against a mutant of the behaviour they pin. `RoleConfig`, which

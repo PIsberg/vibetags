@@ -1929,6 +1929,12 @@ jobs:
       - name: Check the bundle checker against known layouts
         run: bash .github/scripts/check-central-bundle.test.sh
 
+      # The release steps count the organization's month on Central with this script before a tag
+      # (#863). Its cases run on fixture listings, never on repo1, so a month at the limit cannot
+      # redden a pull request.
+      - name: Check the Central usage counter against fixture listings
+        run: bash .github/scripts/central-month-usage.test.sh
+
       # Central rejects a file without a signature that verifies (#949). Pull requests have no
       # access to the release key, so sign with one made for this run and discarded with the
       # runner: it proves sign-artifacts signs every file the bundle holds, not that Central knows

@@ -47,6 +47,12 @@ class CentralPublishingBudgetTest {
     /** The aggregator {@code publish.yml} deploys, so that every module goes up as one deployment. */
     private static final String RELEASE_REACTOR = ".github/central-release";
 
+    /** Counts the organization's releases, files and bytes on Central for one month. */
+    private static final String USAGE_COUNTER = ".github/scripts/central-month-usage.sh";
+
+    /** The counter's own cases, run against fixture listings. */
+    private static final String USAGE_COUNTER_TESTS = ".github/scripts/central-month-usage.test.sh";
+
     /** Modules that inherit from vibetags-parent but are never published, each with the reason. */
     private static final Map<String, String> NOT_PUBLISHED = Map.of(
         "load-tests", "the benchmark harness; its artifact is a workbench, never released");
@@ -132,6 +138,30 @@ class CentralPublishingBudgetTest {
         }
         assertTrue(withSbom > 0, "no module publish.yml deploys generates an SBOM; if that is "
             + "deliberate, delete this check rather than leaving it vacuous");
+    }
+
+    /**
+     * The release steps measure the month's Central usage for the whole organization. The allowance
+     * is per organization, so this repository's tags were a floor that missed every async-test-lib
+     * release; the counter reads every group under the namespace from repo1 instead (#863).
+     */
+    @Test
+    void bothReleaseStepsRunTheOrganizationWideCounter() throws IOException {
+        for (String doc : List.of("docs/RELEASING.md", ".claude/skills/release/SKILL.md")) {
+            String text = Files.readString(repoRoot().resolve(doc), StandardCharsets.UTF_8);
+            assertTrue(text.contains("bash " + USAGE_COUNTER),
+                doc + " must run " + USAGE_COUNTER + " before a release: Central's limits are per "
+                    + "organization, and a count of this repository's tags misses every other group (#863)");
+        }
+    }
+
+    /** The counter's own cases run on every pull request, so a broken counter fails before a release reads it. */
+    @Test
+    void buildRunsTheUsageCounterTests() throws IOException {
+        String build = Files.readString(repoRoot().resolve(".github/workflows/build.yml"), StandardCharsets.UTF_8);
+        assertTrue(build.contains("run: bash " + USAGE_COUNTER_TESTS),
+            "build.yml must run " + USAGE_COUNTER_TESTS + "; a counter nobody tests "
+                + "can report zero usage for a month that is over the limit");
     }
 
     private static List<String> deployCalls() throws IOException {
