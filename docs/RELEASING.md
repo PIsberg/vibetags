@@ -219,9 +219,10 @@ Going over starts a grace period, and an organization that stays over is rate li
   which is never reported as zero. On 2026-11-17 it reported November at 4 of 7 (three
   async-test-lib releases and vibetags 1.4.2) and 534 of 1,167 files, where this repository's tags
   showed 1.
-- **One release is one group and version.** The count is a floor: a version that took several
-  deployments counts once, as vibetags 1.4.0's five did, which puts October 2026 at 7 here and 11
-  on Central.
+- **One release is one deployment.** A group and version published as one bundle lands every
+  artifact in the same minute; artifacts published more than 2 minutes apart count as separate
+  deployments, as vibetags 1.4.0's five per-module uploads (5 to 15 minutes apart) or a resumed
+  partial publish do (#1111). That puts October 2026 at 11, as Central counted it.
 - **At most 3 vibetags releases a month**, and none that the count says goes over. The exception
   is a fix a consumer is blocked on, and the release PR says so, with the count. This
   repository's tags for the month:

@@ -355,7 +355,7 @@ public final class GuardrailFileWriter {
         }
         debug("write.commit file={} bytes={}", fileName(filePath), finalContent.length());
         Move move = mergedFrom == null ? GuardrailFileWriter::moveIntoAbsent : GuardrailFileWriter::replaceAtomically;
-        BasicFileAttributes written = writeContentWithBackup(filePath, finalContent, move);
+        BasicFileAttributes written = stageAndMove(filePath, finalContent, move);
         if (writeCache != null) {
             writeCache.recordWrite(filePath, bodyForCache, written);
         }
@@ -1305,7 +1305,7 @@ public final class GuardrailFileWriter {
                     // Atomic, like every other write: an in-place write interrupted halfway left
                     // the developer's remaining text truncated (#875).
                     try {
-                        writeContentWithBackup(p, bom + content + "\n", GuardrailFileWriter::replaceAtomically);
+                        stageAndMove(p, bom + content + "\n", GuardrailFileWriter::replaceAtomically);
                     } catch (IOException e) {
                         recordFailedScrub(p, e);
                         return false;
@@ -1346,7 +1346,7 @@ public final class GuardrailFileWriter {
     /**
      * Stages {@code finalContent} beside {@code filePath} and moves it into place with {@code move}.
      */
-    private BasicFileAttributes writeContentWithBackup(Path filePath, String finalContent, Move move)
+    private BasicFileAttributes stageAndMove(Path filePath, String finalContent, Move move)
             throws IOException {
         // Create the staging file with a fresh random name in the TARGET directory (so the atomic
         // move stays on the same filesystem). Files.createTempFile creates it atomically with

@@ -92,7 +92,7 @@ loop For each active service
     end
 
     alt Content changed AND hasNewRules
-        Processor -> FS: writeContentWithBackup(filePath, content)
+        Processor -> FS: stageAndMove(filePath, content)
         FS -> AIFiles: Write updated file
         Processor -> Compiler: NOTE: "updated - <file>"
         Processor -> Logger: info("{} — updated", relPath)

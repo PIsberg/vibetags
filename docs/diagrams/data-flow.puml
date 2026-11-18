@@ -121,7 +121,7 @@ partition "generateFiles() — called once on final round" {
       note right: Multi-module safety
     else (no)
       if (Content changed?) then (yes)
-        :writeContentWithBackup();
+        :stageAndMove();
         :Print NOTE: updated;
       else (no)
         :Skip write;

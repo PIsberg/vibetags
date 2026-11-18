@@ -133,6 +133,23 @@ run "$FULL" 2026-11
 expect "6: a month at the release limit exits 1 and says another release goes over" 1 \
   '^releases +7 of 7$' 'over'
 
+# A version published in more than one deployment (#1111). One bundle lands every artifact in the
+# same minute on repo1 (every vibetags release since the release reactor, and async-test-lib's);
+# vibetags 1.4.0 went up as five deployments, 5 to 15 minutes apart. Here a and c are one deployment across a
+# minute boundary, and b, five minutes later, is a second.
+SPLIT="$TMP/split"
+listing "$SPLIT" se/deversity "split/|-|-"
+listing "$SPLIT" se/deversity/split "a/|-|-" "b/|-|-" "c/|-|-"
+for artifact in a:06:50 b:06:55 c:06:51; do
+  name="${artifact%%:*}"
+  listing "$SPLIT" "se/deversity/split/$name" "9.1.0/|2026-11-03 ${artifact#*:}|-" "maven-metadata.xml|2026-11-03 07:00|500"
+  listing "$SPLIT" "se/deversity/split/$name/9.1.0" "$name-9.1.0.pom|2026-11-03 ${artifact#*:}|100"
+done
+
+run "$SPLIT" 2026-11
+expect "10: artifacts of one version published minutes apart are separate deployments" 0 \
+  '^releases +2 of 7$' '^se/deversity/split 9\.1\.0: 3 files, 300 bytes \(2 deployments\)$'
+
 run "$TMP/missing" 2026-11
 expect "7: a listing that cannot be read fails the run" 2 'could not read'
 refuse "8: an unreadable month is not reported as zero usage" '^releases'

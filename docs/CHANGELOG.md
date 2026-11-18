@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`AIGuardrailProcessor` spells diagnostic paths through `PathStrings` (internal; no output changes,
+  #1101).** Five of its six hand-written `.replace('\\', '/')` conversions now call
+  `PathStrings.relative` or `PathStrings.forwardSlashes`. The sixth is inside the `@AILocked`
+  `generateFiles()` and stays until the owner approves an edit there. Mutating each site first
+  showed three of the five were tested by nothing, so `DiagnosticPathSeparatorTest` (the
+  opted-in-after and module-id-collision warnings) and a `PartialRoundGuardrailLossTest` case pin
+  them; each fails on Windows when its site's conversion is removed. The new import moves the
+  locked range in `.vibetags-locks` by one line, to 1254-1569.
+- **`GuardrailFileWriter.writeContentWithBackup` is `stageAndMove` (internal; no output changes,
+  #1109).** It stages content in a temp file beside the target and moves it into place, and never
+  made a backup, so the name described something it did not do. The two hand-written PlantUML
+  diagrams and `docs/architecture/design-decisions.md` follow; the code-karta diagrams show no
+  structural change.
+
 - **The release steps count the organization's month on Maven Central, not this repository's tags
   (#863).** Central's limits (7 releases, 1,167 files, 78 MB a month) are per organization, and
   async-test-lib and every other group under `se.deversity` draw on them too, so the tag count in
@@ -16,9 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2026-11-17 it showed 1 release for November where the organization had 4 and 534 of its 1,167
   files. The new `.github/scripts/central-month-usage.sh` reads repo1's public directory listings,
   counts one release per group and version published that month, sums their files and bytes, and
-  exits 1 once a limit is reached and 2 when repo1 cannot be read (never zero). It is a floor: a
-  version published in several deployments counts once, so October 2026 reads 7 where Central
-  counted 11. Both release steps run it; the cadence of at most 3 vibetags releases a month stays.
+  exits 1 once a limit is reached and 2 when repo1 cannot be read (never zero). A version published in
+  several deployments counts once per deployment (#1111, below), so October 2026 reads 11, as
+  Central counted it. Both release steps run it; the cadence of at most 3 vibetags releases a month stays.
   `central-month-usage.test.sh` runs it against fixture listings in `build.yml`'s Central Bundle
   Shape job, and `CentralPublishingBudgetTest` fails if either release step or that CI step stops
   running it. The test was written first and failed for each.
@@ -161,6 +175,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`central-month-usage.sh` counts a version published in several deployments once per
+  deployment (#1111).** It counted one release per group and version, so vibetags 1.4.0, published
+  as five per-module deployments, counted as one and October 2026 read 7 where Central counted 11.
+  On repo1 a one-bundle release lands every artifact in the same minute (vibetags 1.4.1 and 1.4.2,
+  async-test-lib 1.12.4 and 1.14.3), while 1.4.0's modules landed 5 to 15 minutes apart. The
+  counter now splits a group and version where its artifacts' publish times are more than 2
+  minutes apart, and October reads 11. A new `central-month-usage.test.sh` case (two artifacts in
+  one burst across a minute boundary, a third five minutes later) failed first.
+- **A `.vibetags-mirror` VibeTags cannot use is warned about (#1098).** A config that could not be
+  read, or that held a source line that is not a valid path on this OS (on Windows, `../modules/*`
+  written without its `glob =` key), was ignored in silence: its module got no mirrored rules and
+  the build stayed green. Every build now warns once per such config, naming the file and the line,
+  and a rebuild that changes nothing warns again (#1063). `MirrorConfig.unusable` reports them;
+  the warning is hosted with the other warnings about state on disk. Tests in `MirrorConfigTest`,
+  `MirrorEndToEndTest` and `ShortCircuitStateWarningTest` failed first against a stub that
+  reported nothing.
+- **The detached-module warning (#296) reads module declarations the way the rest of the build does
+  (#1096).** `ReactorRootDetector.findReactorRootAbove` matched a literal `<module>path</module>`
+  substring, so a module declared as a Maven 4 `<subproject>` or as a whitespace-padded
+  `<module> core </module>` that compiled as its own root got no warning, and its guardrails were
+  silently missing from the reactor's merged files. The same substring test made a Gradle
+  `include ':payments-core-extra'` declare `payments-core`, a warning on a project nothing
+  includes. It now asks `declaredModules`, the parser the root round's lock signal (#1081) already
+  uses. Three `ReactorRootDetectorTest` cases, one per shape, failed before the change.
 - **A file that appears while the writer is creating it is merged into, not replaced (#1087).** The
   writer reads a guardrail file, splices its block into what it read and moves the result into
   place. When the read found no file, the result was the generated block alone, and the move

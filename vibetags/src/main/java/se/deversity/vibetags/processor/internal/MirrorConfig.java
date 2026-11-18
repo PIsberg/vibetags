@@ -44,6 +44,37 @@ import java.util.stream.Stream;
  */
 public final class MirrorConfig {
 
+    /**
+     * A {@code .vibetags-mirror} that exists but cannot be used, so its directory receives no
+     * mirrored rules (#1098).
+     *
+     * @param file   the config file, absolute and normalised
+     * @param reason why, worded to follow "is ignored: " in a build warning
+     */
+    public record Unusable(Path file, String reason) {
+
+        /** {@link #file} relative to {@code root}, with forward slashes, for a diagnostic. */
+        public String relativeTo(Path root) {
+            return PathStrings.relative(root.toAbsolutePath().normalize(), file);
+        }
+    }
+
+    /**
+     * What reading one directory's config found: the config, why it cannot be used, or neither when
+     * the directory has no config file.
+     */
+    private record Reading(@Nullable MirrorConfig config, @Nullable Unusable unusable) {
+        static final Reading ABSENT = new Reading(null, null);
+
+        static Reading loaded(MirrorConfig config) {
+            return new Reading(config, null);
+        }
+
+        static Reading unusable(Path file, String reason) {
+            return new Reading(null, new Unusable(file.toAbsolutePath().normalize(), reason));
+        }
+    }
+
     /** Opt-in signal file: its presence in a module directory makes that module a mirror target. */
     public static final String FILE_NAME = ".vibetags-mirror";
 
@@ -109,23 +140,51 @@ public final class MirrorConfig {
      * not a mirror target). Unreadable files are treated as absent, and so is a file with a source
      * line that is not a valid path: dropping just that line would turn a one-entry source list into
      * "mirror every module", and letting the exception out hid every target discovered after it.
+     * {@link #unusable} reports both, so the processor can warn about them.
      */
     public static @Nullable MirrorConfig load(Path dir) {
+        return read(dir).config();
+    }
+
+    /**
+     * Every config at or below {@code root} that {@link #discover} skips because it cannot be used,
+     * in discovery order. Empty when every config loads, or there is none. {@link #load} treats such
+     * a config as absent, which is right for the build and silent for the developer (#1098); this is
+     * what lets the processor say which file and which line.
+     */
+    public static List<Unusable> unusable(Path root) {
+        if (root == null || !Files.isDirectory(root)) {
+            return List.of();
+        }
+        List<Unusable> found = new ArrayList<>();
+        for (Path dir : directoriesBelow(root.toAbsolutePath().normalize(), MAX_DEPTH)) {
+            Unusable reason = read(dir).unusable();
+            if (reason != null) {
+                found.add(reason);
+            }
+        }
+        return found;
+    }
+
+    private static Reading read(Path dir) {
         Path file = dir.resolve(FILE_NAME);
         if (!Files.isRegularFile(file)) {
-            return null;
+            return Reading.ABSENT;
         }
         String content;
         try {
             content = Files.readString(file, StandardCharsets.UTF_8);
+        } catch (java.nio.charset.CharacterCodingException e) {
+            return Reading.unusable(file, "it is not valid UTF-8 text. Re-save it as UTF-8");
         } catch (IOException e) {
-            return null;
+            return Reading.unusable(file, "it could not be read (" + e.getClass().getSimpleName() + ")");
         }
         Path target = dir.toAbsolutePath().normalize();
         List<Path> sources = new ArrayList<>();
         List<String> globs = new ArrayList<>();
-        for (String raw : content.split("\r\n|\r|\n", -1)) {
-            String line = raw.trim();
+        String[] lines = content.split("\r\n|\r|\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].trim();
             if (line.isEmpty() || line.startsWith("#")) {
                 continue;
             }
@@ -140,7 +199,7 @@ public final class MirrorConfig {
             try {
                 source = target.resolve(line).normalize();
             } catch (InvalidPathException notAPath) {
-                return null;
+                return Reading.unusable(file, notAPathReason(i + 1, line));
             }
             if (!sources.contains(source)) {
                 sources.add(source);
@@ -149,8 +208,18 @@ public final class MirrorConfig {
         if (globs.isEmpty()) {
             globs.add(defaultGlob(target));
         }
-        return new MirrorConfig(target, List.copyOf(sources), List.copyOf(globs),
-            BuildFingerprint.fingerprint(content));
+        return Reading.loaded(new MirrorConfig(target, List.copyOf(sources), List.copyOf(globs),
+            BuildFingerprint.fingerprint(content)));
+    }
+
+    /**
+     * Why source line {@code lineNumber} is unusable. A line with a wildcard is most likely a glob
+     * written without its key, which Windows rejects as a path, so the reason says where it belongs.
+     */
+    private static String notAPathReason(int lineNumber, String line) {
+        String reason = "line " + lineNumber + " is not a valid path on this system";
+        boolean looksLikeAGlob = line.indexOf('*') >= 0 || line.indexOf('?') >= 0;
+        return looksLikeAGlob ? reason + ". A glob belongs on a \"glob = ...\" line" : reason;
     }
 
     /**

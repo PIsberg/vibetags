@@ -80,7 +80,7 @@ boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
     String existing = Files.readString(file, UTF_8);
     if (existing.strip().equals(finalContent.strip())) return false;
 
-    writeContentWithBackup(file, finalContent); // tmp + atomic-move
+    stageAndMove(file, finalContent, move); // tmp + atomic-move
     writeCache.recordWrite(file, content);
     return true;
 }

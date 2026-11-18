@@ -340,8 +340,8 @@ artifacts (#945).
 5. **Check the Central usage counter against fixture listings**:
    `.github/scripts/central-month-usage.test.sh` runs `central-month-usage.sh`, the count the
    release steps take of the organization's month on Central (#863), against directory listings
-   written in repo1's format: one release per group and version, other months left out, exit 1 at
-   a limit, and exit 2 rather than zero when a listing cannot be read. It never reads repo1, so a
+   written in repo1's format: one release per deployment (a group and version, split where its
+   artifacts were published minutes apart), other months left out, exit 1 at a limit, and exit 2 rather than zero when a listing cannot be read. It never reads repo1, so a
    month at the limit cannot redden a pull request.
 6. **Create a throwaway signing key**: a passphrase-less key that expires in a day, so the bundle
    can be signed the way `publish.yml` signs it without the release key (#949).

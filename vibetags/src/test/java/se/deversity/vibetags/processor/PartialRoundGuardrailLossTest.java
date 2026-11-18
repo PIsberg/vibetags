@@ -222,6 +222,25 @@ class PartialRoundGuardrailLossTest {
     }
 
     /**
+     * The unread sources are named relative to the root with forward slashes, as every path in a
+     * diagnostic is, so the warning reads the same on every OS (#1101).
+     */
+    @Test
+    void thePartialRoundWarningNamesUnreadSourcesWithForwardSlashes(@TempDir Path root) throws Exception {
+        Path[] sources = writeThreeAnnotatedSources(root);
+        compileAll(root, sources);
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+
+        List<String> warnings = compileSubsetCapturingWarnings(root, sources[0]);
+
+        String beta = "src/main/java/com/example/Beta.java";
+        assertTrue(Files.isRegularFile(root.resolve(beta)), "precondition: Beta's source is at " + beta);
+        assertTrue(warnings.stream().anyMatch(w -> w.contains("never read: ") && w.contains(beta)),
+            "the warning names " + beta + " with forward slashes: " + warnings);
+    }
+
+    /**
      * The control: with Beta's file deleted from the outside root nothing explains its missing
      * element, so the round is complete and CLAUDE.md stops naming Beta.
      */

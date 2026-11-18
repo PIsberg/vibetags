@@ -67,6 +67,44 @@ class ReactorRootDetectorTest {
     }
 
     @Test
+    void aMaven4SubprojectEntryIsRecognised(@TempDir Path root) throws IOException {
+        // Maven 4 spells a module <subproject>; the root round's lock signal already read it, the
+        // detached-module warning did not (#1096).
+        Path module = root.resolve("payments-core");
+        Files.createDirectories(module);
+        write(root.resolve("pom.xml"), """
+            <project>
+              <subprojects>
+                <subproject>payments-core</subproject>
+              </subprojects>
+            </project>
+            """);
+
+        assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(module));
+    }
+
+    @Test
+    void aWhitespacePaddedModuleEntryIsRecognised(@TempDir Path root) throws IOException {
+        // Maven trims the entry, so this is a declaration of payments-core like any other (#1096).
+        Path module = root.resolve("payments-core");
+        Files.createDirectories(module);
+        write(root.resolve("pom.xml"), "<project><modules><module> payments-core </module></modules></project>\n");
+
+        assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(module));
+    }
+
+    @Test
+    void aGradleIncludeOfALongerNameDoesNotDeclareTheModule(@TempDir Path root) throws IOException {
+        // 'payments-core-extra' contains 'payments-core' as text; it is a different project, and a
+        // warning for it would fire on a standalone directory that happens to share a prefix.
+        Path module = root.resolve("payments-core");
+        Files.createDirectories(module);
+        write(root.resolve("settings.gradle"), "include ':payments-core-extra'\n");
+
+        assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(module));
+    }
+
+    @Test
     void aGradleSettingsIncludeIsRecognised(@TempDir Path root) throws IOException {
         Path module = root.resolve("payments-core");
         Files.createDirectories(module);
@@ -156,8 +194,8 @@ class ReactorRootDetectorTest {
 
     @Test
     void aDeclarationOnALineWithOtherContentStillCounts(@TempDir Path root) throws IOException {
-        // Build files are matched by substring rather than parsed, precisely so a formatting the
-        // detector does not recognise cannot make it silently answer "no".
+        // Entries are found by pattern rather than by parsing the XML, so several on one line, or a
+        // layout a parser would reject, still count instead of silently answering "no".
         Path module = root.resolve("payments-core");
         Files.createDirectories(module);
         write(root.resolve("pom.xml"),
