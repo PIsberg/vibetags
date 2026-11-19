@@ -175,6 +175,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`@AIArchitecture(cannotReference)` is enforced under Gradle (#1118).** `ArchitectureRule` called
+  `Trees.instance` on the `ProcessingEnvironment` it was given, and Gradle's incremental processing
+  always hands the processor a decorator that `Trees.instance` rejects. The rule caught the
+  `IllegalArgumentException`, printed a NOTE that `cannotReference` was not checked, and an illegal
+  import compiled cleanly on every Gradle build. It now gets the Tree API through
+  `SourcePositionResolver.treesFor`, which unwraps the decorator, as every other Tree-API consumer
+  already did. `WrappedProcessingEnvironmentTest` compiles an illegal import behind a wrapper and
+  failed with the NOTE before the fix.
+
 - **`central-month-usage.sh` counts a version published in several deployments once per
   deployment (#1111).** It counted one release per group and version, so vibetags 1.4.0, published
   as five per-module deployments, counted as one and October 2026 read 7 where Central counted 11.

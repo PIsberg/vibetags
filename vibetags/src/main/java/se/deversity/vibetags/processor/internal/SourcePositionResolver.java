@@ -78,7 +78,7 @@ public final class SourcePositionResolver {
      * Every reflective step is best-effort — a sealed or unknown wrapper degrades to the old
      * no-position behaviour rather than throwing.
      */
-    static @Nullable Trees treesFor(ProcessingEnvironment env) {
+    public static @Nullable Trees treesFor(ProcessingEnvironment env) {
         ProcessingEnvironment current = env;
         // The depth bound is also the cycle guard: a wrapper whose "delegate" leads back to
         // itself just re-probes and gives up, so no identity comparison is needed below.
