@@ -589,7 +589,7 @@ Every command, check and exit code, with example output: [vibetags-cli/README.md
 
 ### Prerequisites
 
-- **Java 21 or higher** (tested on 21, 25, 26)
+- **Java 21 or higher** (tested on 21, 25, 26, 27)
 - **Maven 3.6+** or **Gradle 7.0+**
 
 VibeTags ships as **two artifacts**:

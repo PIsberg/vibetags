@@ -240,4 +240,4 @@ absent on the cold one, and report the percentage without gating it.
   the jar is too old, for exactly this reason: it failed a five-point bisect the first time it
   did not.
 - **Do not compare a JMH run against a baseline captured on another machine or JDK.** All
-  committed baselines used JDK Temurin 26 on one i7-1260P; the CI matrix is 21/25/26.
+  committed baselines used JDK Temurin 26 on one i7-1260P; the CI matrix is 21/25/26/27.

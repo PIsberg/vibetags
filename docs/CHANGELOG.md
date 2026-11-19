@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **CI builds on JDK 27 (#1117).** The Maven and Gradle jobs' matrices are now 21, 25, 26 and 27;
+  JDK 27 is the current release. Measured locally on Temurin 27.0.1 before adding the legs: the
+  annotations module verifies, the processor's fast tier passes (3,347 tests, Error Prone and
+  NullAway included), and Gradle 9.9.1 builds both modules.
+
 - **`AIGuardrailProcessor` spells diagnostic paths through `PathStrings` (internal; no output changes,
   #1101).** Five of its six hand-written `.replace('\\', '/')` conversions now call
   `PathStrings.relative` or `PathStrings.forwardSlashes`. The sixth is inside the `@AILocked`

@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * the processor-tax measurements in {@code load-tests/results/}), and excludes the parallel
  * write phase's pool threads; both facts are part of the budget's definition, not errors in
  * it. The ceiling is deliberately about 3x the measured value so that JDK-version variance
- * (CI runs 21, 25 and 26) never trips it, while the failure it exists to catch - an
+ * (CI runs 21, 25, 26 and 27) never trips it, while the failure it exists to catch - an
  * accidentally quadratic collector or a per-element re-render - blows through 3x immediately.
  *
  * <p>Measured 2026-08-15 on JDK 26 (Oracle, Windows): 264,955,400 bytes for this exact
