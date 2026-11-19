@@ -156,6 +156,66 @@ class KspLifecycleTest {
             "the untouched file's guardrail survived an incremental run over Ledger.kt:\n" + claude);
     }
 
+    /**
+     * javac's element utilities answer for every type of the compilation, whichever round declared
+     * it. A second KSP round, started here by another processor's generated file, used to replace the
+     * adapter's element model with one holding only that round's new files, so the final round could
+     * no longer look up a type from round 1 (#1122).
+     */
+    @Test
+    void theFinalRoundStillFindsTheFirstRoundsTypesAfterASecondRound() throws IOException {
+        write("com/a/Api.kt", "package com.a\n" + IMPORTS + "@AILocked(reason = \"wire\") class Api\n");
+        SymbolProcessorProvider generator = env -> new SymbolProcessor() {
+            private boolean done;
+
+            @Override
+            public List<KSAnnotated> process(Resolver resolver) {
+                if (!done) {
+                    done = true;
+                    try (java.io.OutputStream out = env.getCodeGenerator().createNewFile(
+                            new com.google.devtools.ksp.processing.Dependencies(false), "com.gen", "Message", "kt")) {
+                        out.write("package com.gen\nclass Message\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    } catch (IOException e) {
+                        throw new java.io.UncheckedIOException(e);
+                    }
+                }
+                return List.of();
+            }
+        };
+        List<String> seen = new ArrayList<>();
+        AtomicInteger rounds = new AtomicInteger();
+        SymbolProcessorProvider probe = env -> new KspGuardrailProcessor(env, new AbstractProcessor() {
+            @Override
+            public Set<String> getSupportedAnnotationTypes() {
+                return Set.of("*");
+            }
+
+            @Override
+            public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment round) {
+                if (!round.processingOver()) {
+                    rounds.incrementAndGet();
+                    return false;
+                }
+                javax.lang.model.util.Elements elements = processingEnv.getElementUtils();
+                for (String name : List.of("com.a.Api", "com.gen.Message")) {
+                    if (elements.getTypeElement(name) != null) {
+                        seen.add(name);
+                    }
+                }
+                if (elements.getPackageElement("com.a") != null) {
+                    seen.add("package com.a");
+                }
+                return false;
+            }
+        });
+
+        new KspHarness(sources(), root).run(probe, generator);
+
+        assertEquals(2, rounds.get(), "precondition: the generated file started a second round");
+        assertEquals(List.of("com.a.Api", "com.gen.Message", "package com.a"), seen,
+            "the final round's element utilities must know every round's types");
+    }
+
     /** How many files the second of two incremental KSP runs shows a processor that claims nothing. */
     private static int filesAnIncrementalRunShows(Path project) throws IOException {
         Path src = Files.createDirectories(project.resolve("src"));

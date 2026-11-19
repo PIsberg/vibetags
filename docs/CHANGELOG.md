@@ -175,6 +175,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Under `vibetags-ksp`, the final round still finds the first round's types after a second round
+  (#1122).** When another KSP processor generates a file, KSP runs a second round, and the adapter
+  replaced its element model with one built from that round's new files only. javac's `Elements`
+  answers for every round's types; under KSP the final round's `getTypeElement` and
+  `getPackageElement` returned null for everything declared in round 1. The models are now layered.
+  A `KspLifecycleTest` case with a generating processor failed before the fix (only the generated
+  type was found). The issue's other two points did not hold up: check mode fails on drift, never on
+  a warning, under javac as under KSP, and kotlinc 2.4.21 rejects a VibeTags annotation on a
+  `typealias` with `WRONG_ANNOTATION_TARGET`, so such a guardrail fails the build rather than
+  being dropped.
+
 - **Under `vibetags-ksp`, a guardrail value from another module's constant no longer lets an unchanged
   rebuild be skipped (#1121).** Without the Tree API, `MethodBodyGuardrailScanner` counts the
   annotation values the round's sources do not spell out, and the source digest vouches only for a

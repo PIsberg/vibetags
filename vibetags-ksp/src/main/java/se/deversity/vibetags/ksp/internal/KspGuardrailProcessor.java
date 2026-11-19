@@ -47,6 +47,7 @@ public final class KspGuardrailProcessor implements SymbolProcessor {
     private final AnnotationReader annotations = new AnnotationReader(KspGuardrailProcessor.class.getClassLoader());
     private final List<KSFile> sources = new ArrayList<>();
     private @Nullable KspProcessingEnvironment processingEnvironment;
+    private @Nullable KspElements elements;
     private boolean over;
 
     public KspGuardrailProcessor(SymbolProcessorEnvironment environment) {
@@ -73,7 +74,10 @@ public final class KspGuardrailProcessor implements SymbolProcessor {
             for (String lost : model.dropped()) {
                 logger.warn("VibeTags: " + lost, null);
             }
-            KspElements elements = new KspElements(model);
+            // Layered over the earlier rounds' elements: a later round's model holds only its new files,
+            // and javac's Elements still answers for every round's types (#1122).
+            KspElements elements = new KspElements(model, this.elements);
+            this.elements = elements;
             KspProcessingEnvironment env = processingEnvironment;
             if (env == null) {
                 if (!environment.getOptions().containsKey(ROOT_OPTION)) {
