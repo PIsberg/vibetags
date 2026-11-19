@@ -256,7 +256,8 @@ class ReactorRootDetectorTest {
     @Test
     void anIncludedBuildOrACommentedIncludeIsNotASubproject(@TempDir Path root) throws IOException {
         write(root.resolve("settings.gradle.kts"),
-            "includeBuild(\"../plugins\")\n// include(\":old\")\n/* include(\":older\") */\ninclude(\":kept\")\n");
+            "pluginManagement { repositories { maven(\"https://repo.example/m2\") } }\n"
+                + "includeBuild(\"../plugins\")\n// include(\":old\")\n/* include(\":older\") */\ninclude(\":kept\")\n");
 
         assertEquals(List.of("kept"), ReactorRootDetector.declaredModules(root));
     }

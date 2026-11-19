@@ -15,6 +15,8 @@ import java.util.Map;
  * that constant changed was skipped as unchanged (#1121). An element implementing this hands the
  * scanner the same values a mirror's {@code getElementValues()} would.
  */
+// Implemented by element classes, never written as a lambda: the one abstract method is a coincidence.
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface UseSiteAnnotationValues {
 
     /** Stands for an enum constant or a class literal, which the source names wherever it is used. */

@@ -37,12 +37,12 @@ public final class ReactorRootDetector {
     private static final Pattern QUOTED = Pattern.compile("['\"]([^'\"]+)['\"]");
 
     /**
-     * One Gradle {@code include}: the parenthesised Kotlin or Groovy call (group 1), or the Groovy
-     * command form, a comma-separated run of string literals that may continue over lines (group 2).
-     * The word boundary after {@code include} is what leaves {@code includeBuild} out.
+     * The word {@code include} as a whole word, which leaves {@code includeBuild} and
+     * {@code includeFlat} out. What follows it is scanned by {@link #includeArguments}, not matched
+     * here: a pattern for a comma-separated run of literals needs nested repetition, which SpotBugs
+     * rightly flags as open to catastrophic backtracking.
      */
-    private static final Pattern GRADLE_INCLUDE = Pattern.compile(
-        "\\binclude\\b\\s*(?:\\(([^)]*)\\)|((?:\"[^\"\\n]*\"|'[^'\\n]*')(?:\\s*,\\s*(?:\"[^\"\\n]*\"|'[^'\\n]*'))*))");
+    private static final Pattern GRADLE_INCLUDE = Pattern.compile("\\binclude\\b");
 
     /** A Maven {@code <module>}, or a Maven 4 {@code <subproject>}, entry. */
     private static final Pattern MAVEN_MODULE =
@@ -101,10 +101,10 @@ public final class ReactorRootDetector {
     public static List<String> gradleIncludes(Path settings) {
         List<String> names = new ArrayList<>();
         try {
-            Matcher include = GRADLE_INCLUDE.matcher(withoutComments(Files.readString(settings, StandardCharsets.UTF_8)));
+            String text = withoutComments(Files.readString(settings, StandardCharsets.UTF_8));
+            Matcher include = GRADLE_INCLUDE.matcher(text);
             while (include.find()) {
-                String arguments = include.group(1) != null ? include.group(1) : include.group(2);
-                Matcher m = QUOTED.matcher(arguments);
+                Matcher m = QUOTED.matcher(includeArguments(text, include.end()));
                 while (m.find()) {
                     String name = m.group(1);
                     while (name.startsWith(":")) {
@@ -123,37 +123,74 @@ public final class ReactorRootDetector {
     }
 
     /**
+     * The argument text of the {@code include} ending at {@code from}: up to the closing parenthesis
+     * of the call form, or, for Groovy's command form, the run of string literals separated by
+     * commas, which may continue over lines. Empty when neither follows.
+     */
+    static String includeArguments(String text, int from) {
+        int i = skipWhitespace(text, from);
+        if (i < text.length() && text.charAt(i) == '(') {
+            int close = text.indexOf(')', i);
+            return close < 0 ? text.substring(i + 1) : text.substring(i + 1, close);
+        }
+        int end = i;
+        while (end < text.length() && (text.charAt(end) == '"' || text.charAt(end) == '\'')) {
+            int closing = text.indexOf(text.charAt(end), end + 1);
+            int newline = text.indexOf('\n', end + 1);
+            if (closing < 0 || (newline >= 0 && newline < closing)) {
+                break;
+            }
+            end = closing + 1;
+            int next = skipWhitespace(text, end);
+            if (next >= text.length() || text.charAt(next) != ',') {
+                break;
+            }
+            end = skipWhitespace(text, next + 1);
+        }
+        return text.substring(i, Math.max(i, end));
+    }
+
+    private static int skipWhitespace(String text, int from) {
+        int i = from;
+        while (i < text.length() && Character.isWhitespace(text.charAt(i))) {
+            i++;
+        }
+        return i;
+    }
+
+    /**
      * {@code text} with its {@code //} and block comments blanked out, string literals left alone so
      * a URL in a repository declaration is not cut at its {@code //}. Newlines are kept.
      */
     static String withoutComments(String text) {
         StringBuilder out = new StringBuilder(text.length());
         char quote = 0;
-        for (int i = 0; i < text.length(); i++) {
+        int i = 0;
+        while (i < text.length()) {
             char c = text.charAt(i);
             char next = i + 1 < text.length() ? text.charAt(i + 1) : 0;
-            if (quote != 0) {
-                out.append(c);
-                if (c == '\\' && next != 0) {
-                    out.append(next);
-                    i++;
-                } else if (c == quote || c == '\n') {
-                    quote = 0;
-                }
-            } else if (c == '/' && next == '/') {
-                while (i < text.length() && text.charAt(i) != '\n') {
-                    i++;
-                }
-                out.append('\n');
-            } else if (c == '/' && next == '*') {
+            if (quote == 0 && c == '/' && next == '/') {
+                int newline = text.indexOf('\n', i);
+                i = newline < 0 ? text.length() : newline;
+            } else if (quote == 0 && c == '/' && next == '*') {
                 int end = text.indexOf("*/", i + 2);
-                i = end < 0 ? text.length() : end + 1;
                 out.append(' ');
-            } else {
+                i = end < 0 ? text.length() : end + 2;
+            } else if (quote == 0) {
                 if (c == '"' || c == '\'') {
                     quote = c;
                 }
                 out.append(c);
+                i++;
+            } else {
+                boolean escaped = c == '\\' && next != 0;
+                out.append(c);
+                if (escaped) {
+                    out.append(next);
+                } else if (c == quote || c == '\n') {
+                    quote = 0;
+                }
+                i += escaped ? 2 : 1;
             }
         }
         return out.toString();
