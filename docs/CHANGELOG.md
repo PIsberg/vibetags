@@ -175,6 +175,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Gradle `include(...)` spread over lines declares its subprojects, and a module round locks
+  when a declared sibling opted in (#1120).** `ReactorRootDetector.gradleIncludes` read
+  `settings.gradle(.kts)` line by line and kept lines starting with `include`, so the multi-line
+  form Gradle's init template writes yielded no subproject: the root round of such a reactor
+  generated unlocked on its first build (the #1081 race), and the detached-module and shared-identity
+  warnings missed it. It now reads the whole file with comments removed; `includeBuild`, which it
+  used to count, and `includeFlat` are not subprojects. Separately, a module round with no opt-in in
+  the root or its own directory skipped `GenerationLock` while it still saved its sidecar and
+  flushed `.vibetags-cache` at the root, racing a sibling that had opted in; it now also locks when
+  the root's build declares an opted-in sibling. New cases in `ReactorRootDetectorTest` and
+  `ParallelReactorGenerationTest` failed before the change.
+
 - **Modules sharing one directory no longer read each other's sidecars as their own (#1119).** In a
   Gradle build configured from one root build file (`-Avibetags.module`,
   `examples/gradle-shared-buildfile`), every module records the root as its directory, so the

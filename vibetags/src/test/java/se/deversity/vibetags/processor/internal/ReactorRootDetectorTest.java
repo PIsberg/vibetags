@@ -237,6 +237,30 @@ class ReactorRootDetectorTest {
         assertEquals(List.of("payments/core", "cli", "api"), ReactorRootDetector.declaredModules(root));
     }
 
+    /**
+     * Gradle's own templates and most multi-project builds spread {@code include} over lines, and
+     * a line-by-line read saw only {@code include(} and none of the names (#1120). The root's
+     * lock decision and the detached-module warning then took a reactor for a single project.
+     */
+    @Test
+    void declaredModulesListsAMultiLineGradleInclude(@TempDir Path root) throws IOException {
+        write(root.resolve("settings.gradle.kts"),
+            "rootProject.name = \"app\"\ninclude(\n    \":core\",\n    \":app\" // the CLI\n)\n");
+        write(root.resolve("settings.gradle"),
+            "include ':api',\n        ':payments:core'\n");
+
+        assertEquals(List.of("api", "payments/core", "core", "app"), ReactorRootDetector.declaredModules(root));
+    }
+
+    /** {@code includeBuild} names a composite build, not a subproject, and a comment names nothing. */
+    @Test
+    void anIncludedBuildOrACommentedIncludeIsNotASubproject(@TempDir Path root) throws IOException {
+        write(root.resolve("settings.gradle.kts"),
+            "includeBuild(\"../plugins\")\n// include(\":old\")\n/* include(\":older\") */\ninclude(\":kept\")\n");
+
+        assertEquals(List.of("kept"), ReactorRootDetector.declaredModules(root));
+    }
+
     @Test
     void declaredModulesIsEmptyForASingleProjectBuild(@TempDir Path root) throws IOException {
         write(root.resolve("pom.xml"), "<project><artifactId>app</artifactId></project>");

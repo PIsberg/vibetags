@@ -228,6 +228,40 @@ class ParallelReactorGenerationTest {
     }
 
     @Test
+    void theRootRoundOfAGradleRootWithAMultiLineIncludeLocksOnItsFirstBuild() throws IOException {
+        // #1120: the include spread over lines, as Gradle's own init template writes it, read as
+        // no subproject at all, so the root round of #1081 generated unlocked again.
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve("module-cli"));
+        Files.writeString(root.resolve("settings.gradle.kts"),
+            "rootProject.name = \"app\"\ninclude(\n    \"module-cli\"\n)\n", StandardCharsets.UTF_8);
+        rootModule("build.gradle.kts", "plugins { java }").compile();
+
+        assertTrue(Files.exists(root.resolve(".vibetags-generate.lock")),
+            "a multi-line include declares the subproject as surely as a one-line one");
+    }
+
+    @Test
+    void aModuleWithNoOptInOfItsOwnLocksWhenADeclaredSiblingOptedIn() throws Exception {
+        // #1120: neither the root nor module-core has an AI file, module-tests does. module-core's
+        // round still saves its sidecar and flushes .vibetags-cache at the root, the files
+        // module-tests' round writes too, so it must take the lock like any module round.
+        Files.writeString(root.resolve("pom.xml"), "<project><artifactId>app</artifactId><modules>"
+            + "<module>module-core</module><module>module-tests</module></modules></project>",
+            StandardCharsets.UTF_8);
+        Files.createDirectories(root.resolve("module-tests"));
+        Files.createFile(root.resolve("module-tests").resolve("CLAUDE.md"));
+        // Measured on the first build: once any round has locked, the lock file it leaves behind
+        // makes every later round lock, so only a round with no lock file yet shows the decision.
+        module("module-core", "com.example.core.IrNode", LOCKED_SOURCE).compile();
+
+        assertTrue(Files.exists(root.resolve(".vibetags-cache")),
+            "precondition: the round writes shared state at the root, which is what needs the lock");
+        assertTrue(Files.exists(root.resolve(".vibetags-generate.lock")),
+            "a module round of a reactor whose declared sibling opted in must generate under the lock");
+    }
+
+    @Test
     void aSingleProjectGradleBuildCreatesNoLockFile() throws IOException {
         // A settings.gradle that only names the root project declares no sibling to race.
         Files.createFile(root.resolve("CLAUDE.md"));

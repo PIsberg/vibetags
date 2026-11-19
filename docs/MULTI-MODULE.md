@@ -258,12 +258,15 @@ log:
 
 - **Which rounds lock.** A module round locks when the root opted into anything, or when its own
   directory did: a module-only opt-in writes no root files, but it still saves its sidecar and
-  flushes `.vibetags-cache` at the root (#1074). Any round, the root's own included, also locks once
+  flushes `.vibetags-cache` at the root (#1074). It also locks when the root's build declares a
+  sibling that opted in, even if neither the root nor this module did, for the same reason: its
+  sidecar and the cache are the files that sibling writes (#1120). Any round, the root's own included, also locks once
   `.vibetags-generate.lock` exists, which the first sibling to lock leaves behind; that covers a
   Gradle root project that has sources of its own and compiles alongside its subprojects. On the
   first build, before any sibling has left the file, the root round also locks when its build
   declares subprojects (a `<module>` or `<subproject>` in `pom.xml`, an `include` in
-  `settings.gradle(.kts)`) and the root or one of those subprojects opted in (#1081). A
+  `settings.gradle(.kts)`, also one spread over several lines; `includeBuild`, `includeFlat` and
+  commented-out includes do not count) and the root or one of those subprojects opted in (#1081). A
   single-module build declares none, never meets the file and never creates it, and a project that
   never opted in still has nothing written to it (invariant 1).
 - **It works within one JVM as well as across processes.** A file lock belongs to the whole JVM, so

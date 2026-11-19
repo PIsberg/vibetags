@@ -36,6 +36,14 @@ public final class ReactorRootDetector {
     /** A quoted project path in a Gradle {@code include} line. */
     private static final Pattern QUOTED = Pattern.compile("['\"]([^'\"]+)['\"]");
 
+    /**
+     * One Gradle {@code include}: the parenthesised Kotlin or Groovy call (group 1), or the Groovy
+     * command form, a comma-separated run of string literals that may continue over lines (group 2).
+     * The word boundary after {@code include} is what leaves {@code includeBuild} out.
+     */
+    private static final Pattern GRADLE_INCLUDE = Pattern.compile(
+        "\\binclude\\b\\s*(?:\\(([^)]*)\\)|((?:\"[^\"\\n]*\"|'[^'\\n]*')(?:\\s*,\\s*(?:\"[^\"\\n]*\"|'[^'\\n]*'))*))");
+
     /** A Maven {@code <module>}, or a Maven 4 {@code <subproject>}, entry. */
     private static final Pattern MAVEN_MODULE =
         Pattern.compile("<(module|subproject)>\\s*([^<]+?)\\s*</\\1>");
@@ -82,16 +90,21 @@ public final class ReactorRootDetector {
         return modules;
     }
 
-    /** Directory names a Gradle settings file includes, with the leading colon path flattened. */
+    /**
+     * Directory names a Gradle settings file includes, with the leading colon path flattened.
+     *
+     * <p>Read over the whole file with comments removed, not line by line: an {@code include(...)}
+     * spread over several lines, as Gradle's own init template writes it, used to yield nothing,
+     * so a reactor read as a single project (#1120). {@code includeBuild} and {@code includeFlat}
+     * are not matched: the first names a composite build, the second a directory beside the root.
+     */
     public static List<String> gradleIncludes(Path settings) {
         List<String> names = new ArrayList<>();
         try {
-            for (String line : Files.readAllLines(settings, StandardCharsets.UTF_8)) {
-                String trimmed = line.trim();
-                if (!trimmed.startsWith("include")) {
-                    continue;
-                }
-                Matcher m = QUOTED.matcher(trimmed);
+            Matcher include = GRADLE_INCLUDE.matcher(withoutComments(Files.readString(settings, StandardCharsets.UTF_8)));
+            while (include.find()) {
+                String arguments = include.group(1) != null ? include.group(1) : include.group(2);
+                Matcher m = QUOTED.matcher(arguments);
                 while (m.find()) {
                     String name = m.group(1);
                     while (name.startsWith(":")) {
@@ -107,6 +120,43 @@ public final class ReactorRootDetector {
             return List.of(); // A diagnostic must never be the thing that fails a build.
         }
         return names;
+    }
+
+    /**
+     * {@code text} with its {@code //} and block comments blanked out, string literals left alone so
+     * a URL in a repository declaration is not cut at its {@code //}. Newlines are kept.
+     */
+    static String withoutComments(String text) {
+        StringBuilder out = new StringBuilder(text.length());
+        char quote = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            char next = i + 1 < text.length() ? text.charAt(i + 1) : 0;
+            if (quote != 0) {
+                out.append(c);
+                if (c == '\\' && next != 0) {
+                    out.append(next);
+                    i++;
+                } else if (c == quote || c == '\n') {
+                    quote = 0;
+                }
+            } else if (c == '/' && next == '/') {
+                while (i < text.length() && text.charAt(i) != '\n') {
+                    i++;
+                }
+                out.append('\n');
+            } else if (c == '/' && next == '*') {
+                int end = text.indexOf("*/", i + 2);
+                i = end < 0 ? text.length() : end + 1;
+                out.append(' ');
+            } else {
+                if (c == '"' || c == '\'') {
+                    quote = c;
+                }
+                out.append(c);
+            }
+        }
+        return out.toString();
     }
 
     /**
