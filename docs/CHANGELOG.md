@@ -175,6 +175,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Modules sharing one directory no longer read each other's sidecars as their own (#1119).** In a
+  Gradle build configured from one root build file (`-Avibetags.module`,
+  `examples/gradle-shared-buildfile`), every module records the root as its directory, so the
+  partial-round guard's containment test matched the sibling's sidecar: its elements read as
+  missing in every round, the missing-element condition always held, and one annotated source the
+  build excluded refused every later round of that module, leaving its guardrail files frozen. A
+  sidecar of another module that recorded source roots now describes this round only if one of
+  them is a root this round compiles. The walk for a module's own deleted elements likewise covers
+  only its recorded roots when its directory is shared, because walking the root found the
+  sibling's file declaring a type of the same name and kept a deleted guardrail alive. Two new
+  `PartialRoundGuardrailLossTest` cases failed before the fix, and disabling either half fails its
+  own case.
+
 - **`@AIArchitecture(cannotReference)` is enforced under Gradle (#1118).** `ArchitectureRule` called
   `Trees.instance` on the `ProcessingEnvironment` it was given, and Gradle's incremental processing
   always hands the processor a decorator that `Trees.instance` rejects. The rule caught the

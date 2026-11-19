@@ -394,8 +394,79 @@ class PartialRoundGuardrailLossTest {
             "both modules' guardrails belong in CLAUDE.md after a full build. Was:" + NL + claude);
     }
 
+    /**
+     * Sibling sidecars in a shared directory must not stand in for this module's record (#1119).
+     * Every module there records the root as its directory, so containment alone made core's
+     * elements read as missing in every app round, condition (1) always held, and an annotated
+     * file app's build excludes then refused every later app round as partial.
+     */
+    @Test
+    void aSiblingsSidecarInASharedDirectoryDoesNotMakeAnExcludedSourceRefuseEveryRound(@TempDir Path root)
+            throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.writeString(root.resolve("build.gradle"), "subprojects {}" + NL, StandardCharsets.UTF_8);
+        compileSharedDirectoryModule(root, "app", "Runner");
+        compileSharedDirectoryModule(root, "core", "Ledger");
+        Path excluded = root.resolve("app/src/main/java/com/example/gsb/app/Scratch.java");
+        Files.writeString(excluded,
+            "package com.example.gsb.app;" + NL
+                + "import se.deversity.vibetags.annotations.AILocked;" + NL
+                + "@AILocked(reason = " + Q + "excluded from the build" + Q + ")" + NL
+                + "public class Scratch {}" + NL,
+            StandardCharsets.UTF_8);
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        List<String> appWarnings = compileSharedDirectoryModule(root, "app", "Runner");
+
+        assertTrue(appWarnings.stream().noneMatch(w -> w.contains("did not compile every annotated source")),
+            "app's round produced every element app's own sidecar recorded; core's record is not app's: "
+                + appWarnings);
+    }
+
+    /**
+     * The walk for a module's own missing elements covers its directory, and in a shared directory
+     * that is the root, sibling sources included (#1119). A sibling declaring a type of the same
+     * name then explained the genuinely deleted element, and its rule could never be retired.
+     */
+    @Test
+    void anElementDeletedInASharedDirectoryIsNotKeptAliveByASiblingsSource(@TempDir Path root) throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.writeString(root.resolve("build.gradle"), "subprojects {}" + NL, StandardCharsets.UTF_8);
+        Path appWidget = root.resolve("app/src/main/java/com/example/gsb/shared/Widget.java");
+        compileSharedDirectoryModule(root, "core", "Ledger", "shared/Widget");
+        compileSharedDirectoryModule(root, "app", "Runner", "shared/Widget");
+        assertTrue(Files.exists(appWidget), "precondition: app declares its own Widget");
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        Files.delete(appWidget);
+        List<String> appWarnings = compileSharedDirectoryModule(root, "app", "Runner");
+
+        assertTrue(appWarnings.stream().noneMatch(w -> w.contains("did not compile every annotated source")),
+            "app deleted its Widget; core's Widget is core's source, not an unread one of app's: " + appWarnings);
+    }
+
+    private static List<String> compileSharedDirectoryModule(Path root, String module, String type,
+                                                             String sharedType) throws IOException {
+        Path p = root.resolve(module + "/src/main/java/com/example/gsb/" + sharedType + ".java");
+        Files.createDirectories(p.getParent());
+        String simple = sharedType.substring(sharedType.indexOf('/') + 1);
+        Files.writeString(p,
+            "package com.example.gsb." + sharedType.substring(0, sharedType.indexOf('/')) + ";" + NL
+                + "import se.deversity.vibetags.annotations.AIContext;" + NL
+                + "@AIContext(focus = " + Q + module + "-widget" + Q + ")" + NL
+                + "public class " + simple + " {}" + NL,
+            StandardCharsets.UTF_8);
+        return compileSharedDirectoryModule(root, module, type, p);
+    }
+
     private static List<String> compileSharedDirectoryModule(Path root, String module, String type)
             throws IOException {
+        return compileSharedDirectoryModule(root, module, type, new Path[0]);
+    }
+
+    private static List<String> compileSharedDirectoryModule(Path root, String module, String type,
+                                                             Path... extraSources) throws IOException {
         ProcessorTestHarness harness = new ProcessorTestHarness(root, false);
         String pkg = "com.example.gsb." + module;
         harness.writeSourceFile(
@@ -404,6 +475,9 @@ class PartialRoundGuardrailLossTest {
                 + "import se.deversity.vibetags.annotations.AILocked;" + NL
                 + "@AILocked(reason = " + Q + type + " wire format" + Q + ")" + NL
                 + "public class " + type + " {}" + NL);
+        for (Path extra : extraSources) {
+            harness.addSourceFile(extra);
+        }
         List<String> warnings = harness.compileReturningDiagnostics("-Avibetags.module=" + module)
             .stream()
             .filter(d -> d.getKind() == Diagnostic.Kind.WARNING

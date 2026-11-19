@@ -562,14 +562,16 @@ from that view deleted 22 committed rule files and cut a whole block out of `CLA
 independent facts hold: a sidecar describing this compilation's own source tree and source set
 (a main round never consults the test source set's sidecar, whose elements it never produces, and a
 module round never consults a parent module's, such as a reactor root that compiles sources of its
-own) names an element the round did not produce, **and** a `.java` file under a source root the round did compile from
+own, nor another module's sidecar that recorded source roots none of which this round compiles,
+which is how modules sharing one directory under `-Avibetags.module` tell their records apart, #1119) names an element the round did not produce, **and** a `.java` file under a source root the round did compile from
 was not compiled and names `se.deversity.vibetags.annotations`. When no such file is found there,
 the module directory of the compiling module's own sidecar is walked, for the elements that sidecar
 recorded, for an uncompiled file that names the package and declares that element's own type: a second source root of the same
 source set (`src/main/extra`, added by build-helper or a Gradle `srcDir`) that the round compiled
 nothing from is found that way (#1060). Another module's sidecar never starts this walk: modules
 configured from one root build file share a directory, and the walk would find each other's
-sources. Build output, generated-source trees and hidden directories are not walked. The same
+sources. For the same reason a module whose directory another module shares walks only the source
+roots it recorded, never the shared directory itself (#1119). Build output, generated-source trees and hidden directories are not walked. The same
 search then covers the source roots that sidecar recorded: each full round stores the roots it
 compiled from (relative to the VibeTags root, under the reserved `~roots` key), which is what
 reaches a second root outside the module directory, `../shared/src` from build-helper or a Gradle
