@@ -145,7 +145,39 @@ class SourceDigestWithoutTreeApiTest {
         assertFalse(read("CLAUDE.md").equals(before), "the new goal must reach CLAUDE.md:\n" + read("CLAUDE.md"));
     }
 
+    /**
+     * An element model that cannot look the annotation types up by name, as {@code vibetags-ksp}'s
+     * cannot (#1121), used to end the count before it began, so every value was vouched for. Values
+     * now come from {@code UseSiteAnnotationValues}; javac's elements offer none, so nothing here
+     * says the value was spelled out, and the next build must walk even though it was.
+     */
+    @Test
+    void aModelThatCannotNameTheAnnotationTypesIsNotVouchedFor() throws IOException {
+        ProcessorTestHarness h = project("""
+            package com.example;
+
+            import se.deversity.vibetags.annotations.AILocked;
+
+            @AILocked(reason = "ledger maths is audited")
+            public class Ledger {
+            }
+            """);
+        compileHidingAnnotationTypes(h);
+        assertTrue(read("CLAUDE.md").contains("ledger maths is audited"), "precondition:\n" + read("CLAUDE.md"));
+
+        String second = notes(compileHidingAnnotationTypes(h));
+
+        assertFalse(second.contains(EARLY_EXIT), "no value was read, so none may be vouched for:\n" + second);
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private List<Diagnostic<? extends JavaFileObject>> compileHidingAnnotationTypes(ProcessorTestHarness h) {
+        List<Diagnostic<? extends JavaFileObject>> diagnostics =
+            h.compileWithReturningDiagnostics(new TreelessProcessor(true));
+        VibeTagsLogger.shutdown();
+        return diagnostics;
+    }
 
     private List<Diagnostic<? extends JavaFileObject>> compile(ProcessorTestHarness h, String... options) {
         List<Diagnostic<? extends JavaFileObject>> diagnostics =
@@ -200,18 +232,30 @@ class SourceDigestWithoutTreeApiTest {
     @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level",
                        "vibetags.cache", "vibetags.check", "vibetags.module"})
     private static final class TreelessProcessor extends AIGuardrailProcessor {
+        private final boolean hideAnnotationTypes;
+
+        TreelessProcessor() {
+            this(false);
+        }
+
+        TreelessProcessor(boolean hideAnnotationTypes) {
+            this.hideAnnotationTypes = hideAnnotationTypes;
+        }
+
         @Override
         public synchronized void init(ProcessingEnvironment processingEnv) {
-            super.init(new OpaqueEnvironment(processingEnv));
+            super.init(new OpaqueEnvironment(processingEnv, hideAnnotationTypes));
         }
     }
 
     /** A pass-through whose delegate is typed {@code Object}, so no reflective unwrap finds it. */
     private static final class OpaqueEnvironment implements ProcessingEnvironment {
         private final Object hidden;
+        private final boolean hideAnnotationTypes;
 
-        OpaqueEnvironment(ProcessingEnvironment delegate) {
+        OpaqueEnvironment(ProcessingEnvironment delegate, boolean hideAnnotationTypes) {
             this.hidden = delegate;
+            this.hideAnnotationTypes = hideAnnotationTypes;
         }
 
         private ProcessingEnvironment env() {
@@ -221,7 +265,26 @@ class SourceDigestWithoutTreeApiTest {
         @Override public Map<String, String> getOptions() { return env().getOptions(); }
         @Override public Messager getMessager() { return env().getMessager(); }
         @Override public Filer getFiler() { return env().getFiler(); }
-        @Override public Elements getElementUtils() { return env().getElementUtils(); }
+        @Override public Elements getElementUtils() {
+            Elements real = env().getElementUtils();
+            if (!hideAnnotationTypes) {
+                return real;
+            }
+            // getTypeElement answers null for the VibeTags annotation types, as a model built only
+            // from the consumer's sources does; everything else passes through.
+            return (Elements) java.lang.reflect.Proxy.newProxyInstance(Elements.class.getClassLoader(),
+                new Class<?>[]{Elements.class}, (proxy, method, args) -> {
+                    if ("getTypeElement".equals(method.getName()) && args != null
+                            && String.valueOf(args[args.length - 1]).startsWith("se.deversity.vibetags.annotations.")) {
+                        return null;
+                    }
+                    try {
+                        return method.invoke(real, args);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
+        }
         @Override public Types getTypeUtils() { return env().getTypeUtils(); }
         @Override public SourceVersion getSourceVersion() { return env().getSourceVersion(); }
         @Override public Locale getLocale() { return env().getLocale(); }

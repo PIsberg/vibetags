@@ -175,6 +175,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Under `vibetags-ksp`, a guardrail value from another module's constant no longer lets an unchanged
+  rebuild be skipped (#1121).** Without the Tree API, `MethodBodyGuardrailScanner` counts the
+  annotation values the round's sources do not spell out, and the source digest vouches only for a
+  round with none (#1062). It found the annotations by looking their types up by name, and the KSP
+  element model holds only the consumer's own types, so it counted nothing: a Kotlin
+  `@AILocked(reason = Shared.REASON)` was vouched for, and after `REASON` changed in its module the
+  next build exited early with the old text in every guardrail file. The KSP elements now hand over
+  the values each use wrote (`UseSiteAnnotationValues`), and an element model offering neither
+  mirrors nor values is never vouched for. `KspLifecycleTest` failed before the fix with the
+  source-digest exit on the second run; a `SourceDigestWithoutTreeApiTest` case fails when the
+  fallback is removed.
+
 - **A Gradle `include(...)` spread over lines declares its subprojects, and a module round locks
   when a declared sibling opted in (#1120).** `ReactorRootDetector.gradleIncludes` read
   `settings.gradle(.kts)` line by line and kept lines starting with `include`, so the multi-line

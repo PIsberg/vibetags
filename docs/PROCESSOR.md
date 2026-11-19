@@ -335,7 +335,12 @@ which hashes the collected values, decides. Without the Tree API (ECJ, a build t
 reflective unwrap cannot see through) the arguments cannot be read, so the round's source text is
 read instead: a value counts unless it appears spelled out in one of the round's files, a string as
 its Java literal, a number or boolean as a token; enum constants and class literals never count.
-Before #1062 nothing was counted there, and ECJ 3.46.100 kept a dependency constant's old value. The
+Before #1062 nothing was counted there, and ECJ 3.46.100 kept a dependency constant's old value.
+Under `vibetags-ksp` the annotation types are not in the element model and its elements carry no
+annotation mirrors, so the same count reads the values each use wrote through
+`UseSiteAnnotationValues`, which the KSP elements implement; an element model that offers neither
+counts every annotated element, so it is never vouched for. Before #1121 KSP counted nothing, and a
+Kotlin guardrail whose text came from another module's `const val` kept the old text. The
 warnings `generateFiles()` raises ahead of its own fingerprint short-circuit (a deprecated opt-in, an
 unidentified module) are raised again on the skipped path too (#859), and so are the ones it raises
 after the short-circuit about state still on disk: a detached module, an unreadable sidecar, an

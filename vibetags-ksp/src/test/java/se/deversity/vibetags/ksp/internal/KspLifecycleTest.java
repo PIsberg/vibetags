@@ -181,6 +181,46 @@ class KspLifecycleTest {
         return shown.get();
     }
 
+    /**
+     * Control for the case below: a guardrail whose value the round's own source spells out is
+     * vouched for, so an unchanged second run takes the early exit under KSP as it does under javac.
+     */
+    @Test
+    void anUnchangedRebuildWithSpelledOutValuesIsSkipped() throws IOException {
+        optIn("CLAUDE.md");
+        write("com/a/Vault.kt", "package com.a\n" + IMPORTS + "@AILocked(reason = \"audited\") class Vault\n");
+        new KspHarness(sources(), root).run();
+
+        KspHarness.Result second = new KspHarness(sources(), root).run();
+
+        assertTrue(second.infos().stream().anyMatch(i -> i.contains("skipping collection")),
+            () -> "control: an unchanged rebuild must be skipped under KSP: " + second.infos());
+    }
+
+    /**
+     * A value the round's sources do not determine, a constant from the classpath, must not let the
+     * digest vouch for the round (#1062): the constant can change in its own module while this one's
+     * sources stay the same, and a skipped rebuild keeps the old text in every guardrail file. Under
+     * KSP the count of such values was always zero, because the fallback looked the annotation types
+     * up by name in a model that holds only the consumer's types (#1121).
+     */
+    @Test
+    void aValueFromAConstantOnTheClasspathIsNotVouchedFor() throws IOException {
+        optIn("CLAUDE.md");
+        write("com/a/Vault.kt", "package com.a\n" + IMPORTS
+            + "@AILocked(reason = java.util.jar.JarFile.MANIFEST_NAME) class Vault\n");
+        KspHarness.Result first = new KspHarness(sources(), root).run();
+        assertTrue(Files.readString(root.resolve("CLAUDE.md")).contains("META-INF/MANIFEST.MF"),
+            () -> "precondition: the constant's value was generated: " + first.errors());
+
+        KspHarness.Result second = new KspHarness(sources(), root).run();
+
+        // "skipping collection" is the source-digest exit. The fingerprint exit after the walk may
+        // still fire, and rightly: it hashes the collected values, the constant's included.
+        assertTrue(second.infos().stream().noneMatch(i -> i.contains("skipping collection")),
+            () -> "a value read off the classpath must make the next build walk again: " + second.infos());
+    }
+
     @Test
     void checkModeFailsTheBuildWhenAFileIsOutOfDate() throws IOException {
         optIn("CLAUDE.md");
