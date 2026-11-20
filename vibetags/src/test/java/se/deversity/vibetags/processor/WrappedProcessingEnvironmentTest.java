@@ -12,10 +12,13 @@ import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import javax.tools.Diagnostic;
+import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -128,6 +131,46 @@ class WrappedProcessingEnvironmentTest {
             "the locked element must appear in the report:\n" + report);
         assertTrue(report.contains("\"startLine\""),
             "positions must survive the ProcessingEnvironment wrapper (reflective unwrap):\n" + report);
+    }
+
+    /**
+     * {@code @AIArchitecture(cannotReference)} is the one guardrail that fails the build, and it
+     * reads imports through the Tree API. Calling {@code Trees.instance} directly on the wrapped
+     * environment threw, the rule downgraded itself to a NOTE, and every Gradle build compiled an
+     * illegal import cleanly (issue #1118). The rule must unwrap the decorator like every other
+     * Tree-API consumer does.
+     */
+    @Test
+    void architectureImportCheck_survivesAWrappedEnvironment() throws IOException {
+        Files.createFile(reactorRoot.resolve("CLAUDE.md"));
+        ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
+        harness.writeSourceFile("src/main/java/com/example/infra/Db.java", """
+            package com.example.infra;
+
+            public class Db {
+            }
+            """);
+        harness.writeSourceFile("src/main/java/com/example/domain/Order.java", """
+            package com.example.domain;
+
+            import com.example.infra.Db;
+            import se.deversity.vibetags.annotations.AIArchitecture;
+
+            @AIArchitecture(belongsTo = "domain", cannotReference = {"com.example.infra"})
+            public class Order {
+                Db db;
+            }
+            """);
+
+        List<Diagnostic<? extends JavaFileObject>> diagnostics =
+            harness.compileWithReturningDiagnostics(new WrappedEnvProcessor());
+
+        List<String> errors = diagnostics.stream()
+            .filter(d -> d.getKind() == Diagnostic.Kind.ERROR)
+            .map(d -> d.getMessage(Locale.ROOT))
+            .toList();
+        assertTrue(errors.stream().anyMatch(e -> e.contains("illegal import of 'com.example.infra.Db'")),
+            "the illegal import must still be an ERROR behind a wrapped environment: " + diagnostics);
     }
 
     private String sidecarNames() throws IOException {

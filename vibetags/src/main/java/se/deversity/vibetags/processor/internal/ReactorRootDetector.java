@@ -36,6 +36,14 @@ public final class ReactorRootDetector {
     /** A quoted project path in a Gradle {@code include} line. */
     private static final Pattern QUOTED = Pattern.compile("['\"]([^'\"]+)['\"]");
 
+    /**
+     * The word {@code include} as a whole word, which leaves {@code includeBuild} and
+     * {@code includeFlat} out. What follows it is scanned by {@link #includeArguments}, not matched
+     * here: a pattern for a comma-separated run of literals needs nested repetition, which SpotBugs
+     * rightly flags as open to catastrophic backtracking.
+     */
+    private static final Pattern GRADLE_INCLUDE = Pattern.compile("\\binclude\\b");
+
     /** A Maven {@code <module>}, or a Maven 4 {@code <subproject>}, entry. */
     private static final Pattern MAVEN_MODULE =
         Pattern.compile("<(module|subproject)>\\s*([^<]+?)\\s*</\\1>");
@@ -82,16 +90,25 @@ public final class ReactorRootDetector {
         return modules;
     }
 
-    /** Directory names a Gradle settings file includes, with the leading colon path flattened. */
+    /**
+     * Directory names a Gradle settings file includes, with the leading colon path flattened.
+     *
+     * <p>Read over the whole file with comments removed, not line by line: an {@code include(...)}
+     * spread over several lines, as Gradle's own init template writes it, used to yield nothing,
+     * so a reactor read as a single project (#1120). The word inside a string literal does not
+     * count. {@code includeBuild} and {@code includeFlat}
+     * are not matched: the first names a composite build, the second a directory beside the root.
+     */
     public static List<String> gradleIncludes(Path settings) {
         List<String> names = new ArrayList<>();
         try {
-            for (String line : Files.readAllLines(settings, StandardCharsets.UTF_8)) {
-                String trimmed = line.trim();
-                if (!trimmed.startsWith("include")) {
-                    continue;
-                }
-                Matcher m = QUOTED.matcher(trimmed);
+            String raw = Files.readString(settings, StandardCharsets.UTF_8);
+            String text = withoutComments(raw);
+            // Searched with string contents blanked, so "include" in a literal is not a declaration;
+            // the two texts have the same length, so a match's offset reads the arguments in text.
+            Matcher include = GRADLE_INCLUDE.matcher(stripped(raw, true));
+            while (include.find()) {
+                Matcher m = QUOTED.matcher(includeArguments(text, include.end()));
                 while (m.find()) {
                     String name = m.group(1);
                     while (name.startsWith(":")) {
@@ -107,6 +124,89 @@ public final class ReactorRootDetector {
             return List.of(); // A diagnostic must never be the thing that fails a build.
         }
         return names;
+    }
+
+    /**
+     * The argument text of the {@code include} ending at {@code from}: up to the closing parenthesis
+     * of the call form, or, for Groovy's command form, the run of string literals separated by
+     * commas, which may continue over lines. Empty when neither follows.
+     */
+    static String includeArguments(String text, int from) {
+        int i = skipWhitespace(text, from);
+        if (i < text.length() && text.charAt(i) == '(') {
+            int close = text.indexOf(')', i);
+            return close < 0 ? text.substring(i + 1) : text.substring(i + 1, close);
+        }
+        int end = i;
+        while (end < text.length() && (text.charAt(end) == '"' || text.charAt(end) == '\'')) {
+            int closing = text.indexOf(text.charAt(end), end + 1);
+            int newline = text.indexOf('\n', end + 1);
+            if (closing < 0 || (newline >= 0 && newline < closing)) {
+                break;
+            }
+            end = closing + 1;
+            int next = skipWhitespace(text, end);
+            if (next >= text.length() || text.charAt(next) != ',') {
+                break;
+            }
+            end = skipWhitespace(text, next + 1);
+        }
+        return text.substring(i, Math.max(i, end));
+    }
+
+    private static int skipWhitespace(String text, int from) {
+        int i = from;
+        while (i < text.length() && Character.isWhitespace(text.charAt(i))) {
+            i++;
+        }
+        return i;
+    }
+
+    /**
+     * {@code text} with its {@code //} and block comments blanked out, string literals left alone so
+     * a URL in a repository declaration is not cut at its {@code //}. Newlines are kept.
+     */
+    static String withoutComments(String text) {
+        return stripped(text, false);
+    }
+
+    /**
+     * {@link #withoutComments}, with the characters between a literal's quotes also blanked to spaces
+     * when {@code blankStrings} is set. Both forms of the same text have the same length.
+     */
+    private static String stripped(String text, boolean blankStrings) {
+        StringBuilder out = new StringBuilder(text.length());
+        char quote = 0;
+        int i = 0;
+        while (i < text.length()) {
+            char c = text.charAt(i);
+            char next = i + 1 < text.length() ? text.charAt(i + 1) : 0;
+            if (quote == 0 && c == '/' && next == '/') {
+                int newline = text.indexOf('\n', i);
+                i = newline < 0 ? text.length() : newline;
+            } else if (quote == 0 && c == '/' && next == '*') {
+                int end = text.indexOf("*/", i + 2);
+                out.append(' ');
+                i = end < 0 ? text.length() : end + 2;
+            } else if (quote == 0) {
+                if (c == '"' || c == '\'') {
+                    quote = c;
+                }
+                out.append(c);
+                i++;
+            } else {
+                boolean escaped = c == '\\' && next != 0;
+                boolean closes = !escaped && (c == quote || c == '\n');
+                out.append(blankStrings && !closes ? ' ' : c);
+                if (escaped) {
+                    out.append(blankStrings ? ' ' : next);
+                } else if (closes) {
+                    quote = 0;
+                }
+                i += escaped ? 2 : 1;
+            }
+        }
+        return out.toString();
     }
 
     /**

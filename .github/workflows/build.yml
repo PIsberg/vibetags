@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '21', '25', '26' ]
+        java: [ '21', '25', '26', '27' ]
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -955,7 +955,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '21', '25', '26' ]
+        java: [ '21', '25', '26', '27' ]
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -998,7 +998,7 @@ jobs:
           ./gradlew clean build -PcompilerArgs="-Avibetags.log.path=../../vibetags.log" --no-daemon
 
       # JDK 21 only: the Kotlin Gradle plugin trails new JDK releases, and the example pins a
-      # 21 toolchain anyway — the 25/26 legs would only re-test whether Kotlin tolerates a host
+      # 21 toolchain anyway — the 25/26/27 legs would only re-test whether Kotlin tolerates a host
       # JDK it does not yet claim to support.
       - name: Build Kotlin Example Project (Gradle + kapt)
         if: matrix.java == '21'

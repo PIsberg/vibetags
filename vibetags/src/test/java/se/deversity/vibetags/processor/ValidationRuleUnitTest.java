@@ -290,7 +290,7 @@ class ValidationRuleUnitTest {
         }).when(messager).printMessage(any(Diagnostic.Kind.class), anyString(), any(Element.class));
         RoundEnvironment roundEnv = mock(RoundEnvironment.class);
 
-        // Trees.instance(env) on a mocked ProcessingEnvironment throws rather than returning null.
+        // A mocked ProcessingEnvironment is not javac's and wraps nothing, so treesFor finds no Tree API.
         new ArchitectureRule().check(new ValidationContext(messager, roundEnv, env, null), element);
 
         assertTrue(messages.stream().anyMatch(m -> m.startsWith("NOTE|") && m.contains("Trees API not available")),

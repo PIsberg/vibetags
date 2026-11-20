@@ -227,27 +227,51 @@ public final class PartialRoundDetector {
                                                 Path moduleRoot, String moduleId, Set<Path> recordingDirs,
                                                 Set<String> ownMissing) {
         Set<String> missing = new LinkedHashSet<>();
-        for (ModuleSidecar sidecar : ModuleSidecar.peekAll(root)) {
-            if (!describesThisCompilation(root, sidecar, moduleRoot)
+        List<ModuleSidecar> sidecars = ModuleSidecar.peekAll(root);
+        for (ModuleSidecar sidecar : sidecars) {
+            boolean own = ModuleSidecar.sanitizeId(moduleId).equals(sidecar.getModuleId());
+            if (!describesThisCompilation(root, sidecar, moduleRoot, own)
                     || !ModuleSidecar.sanitizeId(sourceSet).equals(sourceSetOf(sidecar))) {
                 continue;
             }
-            boolean own = ModuleSidecar.sanitizeId(moduleId).equals(sidecar.getModuleId());
-            Path dir = own ? moduleDirOf(root, sidecar) : null;
+            Path dir = own ? walkableModuleDir(root, sidecar, sidecars) : null;
             for (String recorded : sidecar.getElementIds()) {
                 if (!elementIdsSeen.contains(recorded)) {
                     missing.add(recorded);
-                    if (dir != null) {
+                    if (own) {
                         ownMissing.add(recorded);
-                        recordingDirs.add(dir);
+                        if (dir != null) {
+                            recordingDirs.add(dir);
+                        }
                     }
                 }
             }
-            if (dir != null && !ownMissing.isEmpty()) {
+            if (own && !ownMissing.isEmpty()) {
                 addRecordedSourceRoots(root, sidecar, recordingDirs);
             }
         }
         return missing;
+    }
+
+    /**
+     * The module directory the walk for {@code own}'s missing elements may cover, or {@code null}
+     * when only the source roots it recorded may be walked: its directory is shared with another
+     * module (a Gradle build configured from one root build file, where every module records the
+     * root) and it recorded roots to walk instead. Walking the shared directory reached the other
+     * module's sources, and a type of the same name there explained a genuinely deleted element,
+     * so its rule file could never be retired (#1119).
+     */
+    private static @Nullable Path walkableModuleDir(Path root, ModuleSidecar own, List<ModuleSidecar> sidecars) {
+        Path dir = moduleDirOf(root, own);
+        if (dir == null || recordedSourceRoots(root, own).isEmpty()) {
+            return dir;
+        }
+        for (ModuleSidecar other : sidecars) {
+            if (!other.getRegionId().equals(own.getRegionId()) && dir.equals(moduleDirOf(root, other))) {
+                return null;
+            }
+        }
+        return dir;
     }
 
     /**
@@ -304,8 +328,16 @@ public final class PartialRoundDetector {
      * The module's own directory, and any below it, still count, which is what keeps the drifted
      * identity case in the class comment covered. So does a source root the sidecar recorded: a round
      * compiled from a root outside the module directory alone is that module's round too (#1065).
+     *
+     * <p>Another module's sidecar that recorded source roots, none of which this round compiles,
+     * describes that module only, whatever its directory contains. In a directory two modules share
+     * (one root build file, {@code -Avibetags.module}) both record the root, so containment matched
+     * the sibling's sidecar, its elements read as missing in every round, (1) always held, and an
+     * excluded annotated source refused every later round (#1119). This compilation's own sidecar
+     * and a sidecar that recorded no roots (written before #1065) still go by containment, which
+     * keeps the drifted-identity case covered.
      */
-    private boolean describesThisCompilation(Path root, ModuleSidecar sidecar, Path moduleRoot) {
+    private boolean describesThisCompilation(Path root, ModuleSidecar sidecar, Path moduleRoot, boolean own) {
         Path moduleDir = moduleDirOf(root, sidecar);
         if (moduleDir == null) {
             return false;
@@ -316,7 +348,15 @@ public final class PartialRoundDetector {
         }
         List<Path> recorded = recordedSourceRoots(root, sidecar);
         for (Path sourceRoot : sourceRoots) {
-            if (sourceRoot.startsWith(moduleDir) || recorded.stream().anyMatch(sourceRoot::startsWith)) {
+            if (recorded.stream().anyMatch(sourceRoot::startsWith)) {
+                return true;
+            }
+        }
+        if (!own && !recorded.isEmpty()) {
+            return false;
+        }
+        for (Path sourceRoot : sourceRoots) {
+            if (sourceRoot.startsWith(moduleDir)) {
                 return true;
             }
         }

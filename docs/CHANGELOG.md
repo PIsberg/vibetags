@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **CI builds on JDK 27 (#1117).** The Maven and Gradle jobs' matrices are now 21, 25, 26 and 27;
+  JDK 27 is the current release. Measured locally on Temurin 27.0.1 before adding the legs: the
+  annotations module verifies, the processor's fast tier passes (3,347 tests, Error Prone and
+  NullAway included), and Gradle 9.9.1 builds both modules.
+
 - **`AIGuardrailProcessor` spells diagnostic paths through `PathStrings` (internal; no output changes,
   #1101).** Five of its six hand-written `.replace('\\', '/')` conversions now call
   `PathStrings.relative` or `PathStrings.forwardSlashes`. The sixth is inside the `@AILocked`
@@ -174,6 +179,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and two `InitCommandTest` cases pin it; the early-exit case failed before the change.
 
 ### Fixed
+
+- **Under `vibetags-ksp`, the final round still finds the first round's types after a second round
+  (#1122).** When another KSP processor generates a file, KSP runs a second round, and the adapter
+  replaced its element model with one built from that round's new files only. javac's `Elements`
+  answers for every round's types; under KSP the final round's `getTypeElement` and
+  `getPackageElement` returned null for everything declared in round 1. The models are now layered.
+  A `KspLifecycleTest` case with a generating processor failed before the fix (only the generated
+  type was found). The issue's other two points did not hold up: check mode fails on drift, never on
+  a warning, under javac as under KSP, and kotlinc 2.4.21 rejects a VibeTags annotation on a
+  `typealias` with `WRONG_ANNOTATION_TARGET`, so such a guardrail fails the build rather than
+  being dropped.
+
+- **Under `vibetags-ksp`, a guardrail value from another module's constant no longer lets an unchanged
+  rebuild be skipped (#1121).** Without the Tree API, `MethodBodyGuardrailScanner` counts the
+  annotation values the round's sources do not spell out, and the source digest vouches only for a
+  round with none (#1062). It found the annotations by looking their types up by name, and the KSP
+  element model holds only the consumer's own types, so it counted nothing: a Kotlin
+  `@AILocked(reason = Shared.REASON)` was vouched for, and after `REASON` changed in its module the
+  next build exited early with the old text in every guardrail file. The KSP elements now hand over
+  the values each use wrote (`UseSiteAnnotationValues`), and an element model offering neither
+  mirrors nor values is never vouched for. `KspLifecycleTest` failed before the fix with the
+  source-digest exit on the second run; a `SourceDigestWithoutTreeApiTest` case fails when the
+  fallback is removed.
+
+- **A Gradle `include(...)` spread over lines declares its subprojects, and a module round locks
+  when a declared sibling opted in (#1120).** `ReactorRootDetector.gradleIncludes` read
+  `settings.gradle(.kts)` line by line and kept lines starting with `include`, so the multi-line
+  form Gradle's init template writes yielded no subproject: the root round of such a reactor
+  generated unlocked on its first build (the #1081 race), and the detached-module and shared-identity
+  warnings missed it. It now reads the whole file with comments removed; `includeBuild`, which it
+  used to count, `includeFlat` and the word `include` inside a string literal are not
+  subprojects. Separately, a module round with no opt-in in
+  the root or its own directory skipped `GenerationLock` while it still saved its sidecar and
+  flushed `.vibetags-cache` at the root, racing a sibling that had opted in; it now also locks when
+  the root's build declares an opted-in sibling. New cases in `ReactorRootDetectorTest` and
+  `ParallelReactorGenerationTest` failed before the change.
+
+- **Modules sharing one directory no longer read each other's sidecars as their own (#1119).** In a
+  Gradle build configured from one root build file (`-Avibetags.module`,
+  `examples/gradle-shared-buildfile`), every module records the root as its directory, so the
+  partial-round guard's containment test matched the sibling's sidecar: its elements read as
+  missing in every round, the missing-element condition always held, and one annotated source the
+  build excluded refused every later round of that module, leaving its guardrail files frozen. A
+  sidecar of another module that recorded source roots now describes this round only if one of
+  them is a root this round compiles. The walk for a module's own deleted elements likewise covers
+  only its recorded roots when its directory is shared, because walking the root found the
+  sibling's file declaring a type of the same name and kept a deleted guardrail alive. Two new
+  `PartialRoundGuardrailLossTest` cases failed before the fix, and disabling either half fails its
+  own case.
+
+- **`@AIArchitecture(cannotReference)` is enforced under Gradle (#1118).** `ArchitectureRule` called
+  `Trees.instance` on the `ProcessingEnvironment` it was given, and Gradle's incremental processing
+  always hands the processor a decorator that `Trees.instance` rejects. The rule caught the
+  `IllegalArgumentException`, printed a NOTE that `cannotReference` was not checked, and an illegal
+  import compiled cleanly on every Gradle build. It now gets the Tree API through
+  `SourcePositionResolver.treesFor`, which unwraps the decorator, as every other Tree-API consumer
+  already did. `WrappedProcessingEnvironmentTest` compiles an illegal import behind a wrapper and
+  failed with the NOTE before the fix.
 
 - **`central-month-usage.sh` counts a version published in several deployments once per
   deployment (#1111).** It counted one release per group and version, so vibetags 1.4.0, published

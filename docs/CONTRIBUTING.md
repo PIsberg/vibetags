@@ -10,7 +10,7 @@ This project follows a code of conduct. By participating, you are expected to up
 
 ### Prerequisites
 
-- **JDK 21 or higher (tested on 21, 25, 26))
+- **JDK 21 or higher (tested on 21, 25, 26, 27))
 - **Maven 3.6+** or **Gradle 7.0+**
 - **Git**
 

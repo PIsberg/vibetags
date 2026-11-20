@@ -5,6 +5,7 @@ import com.sun.source.tree.ImportTree;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import se.deversity.vibetags.annotations.AIArchitecture;
+import se.deversity.vibetags.processor.internal.SourcePositionResolver;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
@@ -15,8 +16,11 @@ import java.lang.annotation.Annotation;
  * source, and therefore the one that reports an {@code ERROR} rather than a warning.
  *
  * <p>{@code cannotReference} names packages or types this element must not depend on. The check
- * reads the compilation unit's import list through the Tree API, which is javac-only: under a
- * compiler that does not expose {@link Trees} the scan is skipped with a {@code NOTE} rather than
+ * reads the compilation unit's import list through the Tree API, which is javac-only. It is
+ * obtained through {@link SourcePositionResolver#treesFor}, which unwraps the decorator Gradle's
+ * incremental processing puts around javac's environment; calling {@code Trees.instance} directly
+ * threw there and skipped the check on every Gradle build (issue #1118). Under a
+ * compiler that does not expose {@link Trees} at all the scan is skipped with a {@code NOTE} rather than
  * failing, because a layering rule going unchecked must not become a build that cannot run at all.
  * The import list is also the limit of what this proves — a fully-qualified reference written
  * inline is invisible here, by design, since chasing it needs body analysis the processor does not
@@ -46,7 +50,14 @@ public final class ArchitectureRule implements ValidationRule {
             return;
         }
         try {
-            scanImports(ctx, element, forbidden, env);
+            Trees trees = SourcePositionResolver.treesFor(env);
+            if (trees == null) {
+                ctx.note(element, "Trees API not available for AST architectural import scanning: "
+                    + "no compiler Tree API behind " + env.getClass().getSimpleName()
+                    + "; cannotReference was not checked this round");
+                return;
+            }
+            scanImports(ctx, element, forbidden, trees);
         } catch (Throwable t) {
             // Trees is unavailable (Gradle's compiler, ECJ, a mocked environment) or threw. A
             // layering rule that cannot be checked is reported as unchecked, never as a failure.
@@ -66,11 +77,7 @@ public final class ArchitectureRule implements ValidationRule {
     }
 
     private static void scanImports(ValidationContext ctx, Element element, String[] forbidden,
-                                    ProcessingEnvironment env) {
-        Trees trees = Trees.instance(env);
-        if (trees == null) {
-            return;
-        }
+                                    Trees trees) {
         TreePath path = trees.getPath(element);
         if (path == null) {
             return;

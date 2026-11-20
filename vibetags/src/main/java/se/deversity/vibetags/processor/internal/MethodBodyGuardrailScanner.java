@@ -211,6 +211,7 @@ public final class MethodBodyGuardrailScanner {
             for (Class<? extends Annotation> type : GuardrailAnnotations.ALL) {
                 TypeElement annotation = utils.getTypeElement(type.getCanonicalName());
                 if (annotation == null) {
+                    countUseSiteValues(roundEnv, type, roots, sources);
                     continue;
                 }
                 for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
@@ -231,9 +232,32 @@ public final class MethodBodyGuardrailScanner {
         }
     }
 
+    /**
+     * The same count for an element model whose annotation types cannot be looked up by name and
+     * whose elements carry no mirrors ({@code vibetags-ksp}, #1121): the values come from
+     * {@link UseSiteAnnotationValues}. An annotated element that offers neither counts once, since
+     * nothing says its values were spelled out.
+     */
+    private void countUseSiteValues(RoundEnvironment roundEnv, Class<? extends Annotation> type,
+                                    Set<? extends Element> roots, RoundSources sources) {
+        for (Element element : roundEnv.getElementsAnnotatedWith(type)) {
+            Map<String, Object> values = element instanceof UseSiteAnnotationValues site
+                ? site.useSiteValues(type.getName()) : null;
+            if (values == null) {
+                outsideValues++;
+                continue;
+            }
+            for (Object value : values.values()) {
+                if (!spelledOutInTheRound(value, element, roots, sources)) {
+                    outsideValues++;
+                }
+            }
+        }
+    }
+
     private boolean spelledOutInTheRound(@Nullable Object value, Element element, Set<? extends Element> roots,
                                          RoundSources sources) {
-        if (value instanceof VariableElement || value instanceof TypeMirror) {
+        if (value instanceof VariableElement || value instanceof TypeMirror || value == UseSiteAnnotationValues.NAMED) {
             return true; // an enum constant or a class literal: the source names it
         }
         if (value instanceof java.util.List<?> list) {

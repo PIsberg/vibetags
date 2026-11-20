@@ -51,7 +51,7 @@ behind it.
 
 ### Job: `build-maven`
 
-Matrix over **JDK 21, 25, 26** (Temurin distribution, Maven dependency cache). JDK 21 is the minimum supported version; the rest are forward-compatibility checks. Steps, in `build.yml` order:
+Matrix over **JDK 21, 25, 26, 27** (Temurin distribution, Maven dependency cache). JDK 21 is the minimum supported version; the rest are forward-compatibility checks. Steps, in `build.yml` order:
 
 1. **Harden runner** — egress audit.
 2. **Checkout**.
@@ -125,7 +125,7 @@ Single JDK 21 leg, `needs: build-maven`. Steps:
 
 ### Job: `build-gradle`
 
-Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26**. Differences:
+Mirror of `build-maven` but with Gradle. Matrix over **JDK 21, 25, 26, 27**. Differences:
 
 - Uses Gradle dependency cache.
 - Gradle wrappers (`gradlew`/`gradlew.bat`, Gradle 8.8) are committed in `vibetags-annotations/`, `vibetags/`, and `examples/basic/` — copied from `vibetags/`'s pre-existing wrapper. CI invokes `./gradlew` in every subproject; there is no on-the-fly `gradle wrapper` generation step.

@@ -237,6 +237,63 @@ class ReactorRootDetectorTest {
         assertEquals(List.of("payments/core", "cli", "api"), ReactorRootDetector.declaredModules(root));
     }
 
+    /**
+     * Gradle's own templates and most multi-project builds spread {@code include} over lines, and
+     * a line-by-line read saw only {@code include(} and none of the names (#1120). The root's
+     * lock decision and the detached-module warning then took a reactor for a single project.
+     */
+    @Test
+    void declaredModulesListsAMultiLineGradleInclude(@TempDir Path root) throws IOException {
+        write(root.resolve("settings.gradle.kts"),
+            "rootProject.name = \"app\"\ninclude(\n    \":core\",\n    \":app\" // the CLI\n)\n");
+        write(root.resolve("settings.gradle"),
+            "include ':api',\n        ':payments:core'\n");
+
+        assertEquals(List.of("api", "payments/core", "core", "app"), ReactorRootDetector.declaredModules(root));
+    }
+
+    /** {@code includeBuild} names a composite build, not a subproject, and a comment names nothing. */
+    @Test
+    void anIncludedBuildOrACommentedIncludeIsNotASubproject(@TempDir Path root) throws IOException {
+        write(root.resolve("settings.gradle.kts"),
+            "pluginManagement { repositories { maven(\"https://repo.example/m2\") } }\n"
+                + "includeBuild(\"../plugins\")\n// include(\":old\")\n/* include(\":older\") */\ninclude(\":kept\")\n");
+
+        assertEquals(List.of("kept"), ReactorRootDetector.declaredModules(root));
+    }
+
+    /**
+     * A settings file being edited, or written by hand, need not be well formed: the scan keeps the
+     * names it can read and stops at what it cannot, rather than reading past a broken literal into
+     * the next line or past an unclosed comment.
+     */
+    @Test
+    void anUnfinishedIncludeYieldsTheNamesItSpellsOut(@TempDir Path root) throws IOException {
+        assertEquals(List.of("a", "b"), includes(root, "include(\":a\", \":b\""));
+        assertEquals(List.of("c", "d"), includes(root, "include 'c',\n        'd',"));
+        assertEquals(List.of("f"), includes(root, "include 'e\ninclude 'f'\n"));
+        assertEquals(List.of(), includes(root, "include 'z"));
+        assertEquals(List.of("g"), includes(root, "include 'g', /* never closed\ninclude 'h'\n"));
+        assertEquals(List.of(), includes(root, "rootProject.name = 'app'\ninclude"));
+    }
+
+    /**
+     * The word {@code include} inside a string literal is text, not a declaration: a description or
+     * a println that mentions it named a subproject that does not exist. An escaped quote does not
+     * end the literal it sits in.
+     */
+    @Test
+    void anIncludeInsideAStringLiteralIsNotASubproject(@TempDir Path root) throws IOException {
+        assertEquals(List.of("real"), includes(root,
+            "println \"say include ':fake' to add one\"\ndef s = \"x \\\" include 'bogus' \"\ninclude ':real'\n"));
+    }
+
+    private static List<String> includes(Path root, String settings) throws IOException {
+        Path file = root.resolve("settings.gradle");
+        write(file, settings);
+        return ReactorRootDetector.gradleIncludes(file);
+    }
+
     @Test
     void declaredModulesIsEmptyForASingleProjectBuild(@TempDir Path root) throws IOException {
         write(root.resolve("pom.xml"), "<project><artifactId>app</artifactId></project>");

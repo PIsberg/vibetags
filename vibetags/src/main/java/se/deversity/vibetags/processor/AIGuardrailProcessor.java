@@ -2229,7 +2229,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * <ul>
      *   <li>A module round of a reactor locks when the root has opted into anything, when its own
      *       directory has (the root files are then absent, but the sidecars and the cache are not,
-     *       #1074), or when the lock file is already there, which a sibling that locked left
+     *       #1074), when the root's build declares a sibling that has (the round still saves its
+     *       sidecar and flushes the cache at the root, the files that sibling's round writes,
+     *       #1120), or when the lock file is already there, which a sibling that locked left
      *       behind.</li>
      *   <li>The root's own round locks when that lock file is there, or when the root's build
      *       declares subprojects and the root or one of them has opted in. Gradle compiles a root
@@ -2254,7 +2256,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (compilationRoot.equals(root)) {
             return declaresAnOptedInReactor();
         }
-        return optedIn(root) || optedIn(compilationRoot);
+        return optedIn(root) || optedIn(compilationRoot) || declaresAnOptedInReactor();
     }
 
     /**
