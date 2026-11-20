@@ -31,10 +31,6 @@ final class KspElements implements Elements {
     /** The previous rounds' elements, consulted for what this round's model does not declare. */
     private final @Nullable KspElements earlier;
 
-    KspElements(StubModel model) {
-        this(model, null);
-    }
-
     /**
      * Elements over {@code model}, falling back to {@code earlier} for a type or package only an
      * earlier round declared. javac's {@code Elements} answers for every round's types; a later KSP
