@@ -95,14 +95,18 @@ public final class ReactorRootDetector {
      *
      * <p>Read over the whole file with comments removed, not line by line: an {@code include(...)}
      * spread over several lines, as Gradle's own init template writes it, used to yield nothing,
-     * so a reactor read as a single project (#1120). {@code includeBuild} and {@code includeFlat}
+     * so a reactor read as a single project (#1120). The word inside a string literal does not
+     * count. {@code includeBuild} and {@code includeFlat}
      * are not matched: the first names a composite build, the second a directory beside the root.
      */
     public static List<String> gradleIncludes(Path settings) {
         List<String> names = new ArrayList<>();
         try {
-            String text = withoutComments(Files.readString(settings, StandardCharsets.UTF_8));
-            Matcher include = GRADLE_INCLUDE.matcher(text);
+            String raw = Files.readString(settings, StandardCharsets.UTF_8);
+            String text = withoutComments(raw);
+            // Searched with string contents blanked, so "include" in a literal is not a declaration;
+            // the two texts have the same length, so a match's offset reads the arguments in text.
+            Matcher include = GRADLE_INCLUDE.matcher(stripped(raw, true));
             while (include.find()) {
                 Matcher m = QUOTED.matcher(includeArguments(text, include.end()));
                 while (m.find()) {
@@ -163,6 +167,14 @@ public final class ReactorRootDetector {
      * a URL in a repository declaration is not cut at its {@code //}. Newlines are kept.
      */
     static String withoutComments(String text) {
+        return stripped(text, false);
+    }
+
+    /**
+     * {@link #withoutComments}, with the characters between a literal's quotes also blanked to spaces
+     * when {@code blankStrings} is set. Both forms of the same text have the same length.
+     */
+    private static String stripped(String text, boolean blankStrings) {
         StringBuilder out = new StringBuilder(text.length());
         char quote = 0;
         int i = 0;
@@ -184,10 +196,11 @@ public final class ReactorRootDetector {
                 i++;
             } else {
                 boolean escaped = c == '\\' && next != 0;
-                out.append(c);
+                boolean closes = !escaped && (c == quote || c == '\n');
+                out.append(blankStrings && !closes ? ' ' : c);
                 if (escaped) {
-                    out.append(next);
-                } else if (c == quote || c == '\n') {
+                    out.append(blankStrings ? ' ' : next);
+                } else if (closes) {
                     quote = 0;
                 }
                 i += escaped ? 2 : 1;

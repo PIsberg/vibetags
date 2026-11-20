@@ -262,6 +262,38 @@ class ReactorRootDetectorTest {
         assertEquals(List.of("kept"), ReactorRootDetector.declaredModules(root));
     }
 
+    /**
+     * A settings file being edited, or written by hand, need not be well formed: the scan keeps the
+     * names it can read and stops at what it cannot, rather than reading past a broken literal into
+     * the next line or past an unclosed comment.
+     */
+    @Test
+    void anUnfinishedIncludeYieldsTheNamesItSpellsOut(@TempDir Path root) throws IOException {
+        assertEquals(List.of("a", "b"), includes(root, "include(\":a\", \":b\""));
+        assertEquals(List.of("c", "d"), includes(root, "include 'c',\n        'd',"));
+        assertEquals(List.of("f"), includes(root, "include 'e\ninclude 'f'\n"));
+        assertEquals(List.of(), includes(root, "include 'z"));
+        assertEquals(List.of("g"), includes(root, "include 'g', /* never closed\ninclude 'h'\n"));
+        assertEquals(List.of(), includes(root, "rootProject.name = 'app'\ninclude"));
+    }
+
+    /**
+     * The word {@code include} inside a string literal is text, not a declaration: a description or
+     * a println that mentions it named a subproject that does not exist. An escaped quote does not
+     * end the literal it sits in.
+     */
+    @Test
+    void anIncludeInsideAStringLiteralIsNotASubproject(@TempDir Path root) throws IOException {
+        assertEquals(List.of("real"), includes(root,
+            "println \"say include ':fake' to add one\"\ndef s = \"x \\\" include 'bogus' \"\ninclude ':real'\n"));
+    }
+
+    private static List<String> includes(Path root, String settings) throws IOException {
+        Path file = root.resolve("settings.gradle");
+        write(file, settings);
+        return ReactorRootDetector.gradleIncludes(file);
+    }
+
     @Test
     void declaredModulesIsEmptyForASingleProjectBuild(@TempDir Path root) throws IOException {
         write(root.resolve("pom.xml"), "<project><artifactId>app</artifactId></project>");

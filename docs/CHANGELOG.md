@@ -209,7 +209,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   form Gradle's init template writes yielded no subproject: the root round of such a reactor
   generated unlocked on its first build (the #1081 race), and the detached-module and shared-identity
   warnings missed it. It now reads the whole file with comments removed; `includeBuild`, which it
-  used to count, and `includeFlat` are not subprojects. Separately, a module round with no opt-in in
+  used to count, `includeFlat` and the word `include` inside a string literal are not
+  subprojects. Separately, a module round with no opt-in in
   the root or its own directory skipped `GenerationLock` while it still saved its sidecar and
   flushed `.vibetags-cache` at the root, racing a sibling that had opted in; it now also locks when
   the root's build declares an opted-in sibling. New cases in `ReactorRootDetectorTest` and
