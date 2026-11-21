@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-11-21
+
 ### Changed
 
 - **CI builds on JDK 27 (#1117).** The Maven and Gradle jobs' matrices are now 21, 25, 26 and 27;
@@ -7150,7 +7152,8 @@ The `writeFileIfChanged_smallWrite` and `writeFileIfChanged_largeWrite` columns 
 - API and generated file formats may change before 1.0.0.
 - Publishes to both GitHub Packages and Maven Central (Sonatype OSSRH).
 
-[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/PIsberg/vibetags/compare/v1.4.3...HEAD
+[1.4.3]: https://github.com/PIsberg/vibetags/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/PIsberg/vibetags/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/PIsberg/vibetags/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/PIsberg/vibetags/compare/v1.3.8...v1.4.0
