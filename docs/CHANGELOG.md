@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.3] - 2026-11-21
 
+**Upgrade note: no generated file moves, but a build that opts into `llms-full.txt` gets a new
+warning.** The consumer sweep built five downstream repositories at 1.4.3. codekarta, skill3 and
+blindbean generated the same files byte for byte as the same builds at 1.4.2; async-test-lib's only
+change is the `~roots=` sidecar line 1.4.2 introduced, and common-license-lib's files did not move.
+A build that opts into `llms-full.txt` now prints one compiler WARNING, which fails a build compiled
+with `-Werror` (see Deprecated). A module that sets `-Avibetags.module` and mirrors into a target
+writes its mirrored rule files under the new name, and the old ones need deleting by hand (#1076,
+under Fixed).
+
 ### Changed
 
 - **CI builds on JDK 27 (#1117).** The Maven and Gradle jobs' matrices are now 21, 25, 26 and 27;
