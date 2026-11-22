@@ -198,6 +198,13 @@
     <Method name="loadIfNeeded"/>
     <Bug pattern="PATH_TRAVERSAL_IN"/>
   </Match>
+  <!-- Split out of loadIfNeeded: the string is a row of .vibetags-cache, the processor's own file
+       under the root, parsed into a map key. -->
+  <Match>
+    <Class name="se.deversity.vibetags.processor.internal.WriteCache"/>
+    <Method name="entryKey"/>
+    <Bug pattern="PATH_TRAVERSAL_IN"/>
+  </Match>
 
   <!-- IMPROPER_UNICODE: the flagged comparisons parse build configuration — the "true" /
        "false" / "OFF" processor options and the lower-cased keys of .vibetags-mirror and

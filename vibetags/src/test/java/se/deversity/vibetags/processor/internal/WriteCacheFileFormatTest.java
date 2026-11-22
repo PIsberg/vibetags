@@ -136,6 +136,62 @@ class WriteCacheFileFormatTest {
             "only the complete line is an entry; the truncated ones must not become half-entries");
     }
 
+    /**
+     * A row whose path no file system can name (a NUL byte, from a corrupted or hand-edited cache)
+     * is a corrupt row like any other. Letting the parse throw took the whole generation down: the
+     * processor's guard turned it into "guardrail generation failed and was skipped" on every build
+     * until someone deleted a file the message never names.
+     */
+    @Test
+    void anEntryWhosePathCannotBeParsedIsSkipped(@TempDir Path dir) throws IOException {
+        Path file = writeCacheFile(dir,
+            "bad\0path\t0f0f0f0f\t12\t1000",
+            entry("AGENTS.md", "0f0f0f0f", 12, 1000L));
+
+        WriteCache cache = new WriteCache(file);
+
+        assertEquals(1, assertDoesNotThrow(cache::size),
+            "the unparseable row must be skipped and the good one kept");
+    }
+
+    /** A cache saved with Windows line endings (an editor, a git autocrlf checkout) still loads. */
+    @Test
+    void aCacheWithWindowsLineEndingsStillLoads(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve(CACHE);
+        Files.writeString(file, "# format: 3\r\n# module: core\r\n# fingerprint: abcd1234\r\n"
+            + entry("CLAUDE.md", "0f0f0f0f", 12, 1000L) + "\r\n", StandardCharsets.UTF_8);
+
+        WriteCache cache = new WriteCache(file);
+        cache.bindModule("core");
+
+        assertEquals("abcd1234", cache.getBuildFingerprint());
+        assertEquals(1, cache.size());
+    }
+
+    /**
+     * A source digest is written only inside a module section. One found before the first
+     * {@code # module:} line belongs to no module, and adopting it would let the early exit skip a
+     * build on a digest no module recorded.
+     */
+    @Test
+    void aSourceDigestOutsideAModuleSectionIsNeverAdopted(@TempDir Path dir) throws IOException {
+        Path file = writeCacheFile(dir,
+            "# format: 3",
+            "# fingerprint: abcd1234",
+            "# source-digest: rootdigest",
+            "# module: core",
+            "# source-digest: coredigest");
+
+        WriteCache core = new WriteCache(file);
+        core.bindModule("core");
+        WriteCache other = new WriteCache(file);
+        other.bindModule("other");
+
+        assertEquals("coredigest", core.getSourceDigest());
+        assertNull(other.getSourceDigest(),
+            "a module with no section of its own must not inherit the whole-root section's digest");
+    }
+
     @Test
     void anEntryWithANonNumericSizeIsSkipped(@TempDir Path dir) throws IOException {
         Path file = writeCacheFile(dir,

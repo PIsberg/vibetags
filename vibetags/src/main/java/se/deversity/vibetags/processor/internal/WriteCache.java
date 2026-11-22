@@ -114,6 +114,15 @@ public final class WriteCache {
 
     /** Header of one recorded diagnostic, after a module's {@code # source-digest:} line. */
     private static final String SOURCE_DIAGNOSTIC = "# source-diagnostic: ";
+    // The header prefixes, one constant each because flush() writes them and loadIfNeeded() reads
+    // them back: a prefix spelled differently on the two sides would drop that header on every
+    // load with nothing failing.
+    private static final String FORMAT_HEADER = "# format: ";
+    private static final String MODULE_HEADER = "# module: ";
+    private static final String FINGERPRINT_HEADER = "# fingerprint: ";
+    private static final String SIDECAR_STAMP_HEADER = "# sidecar-stamp: ";
+    private static final String SOURCE_DIGEST_HEADER = "# source-digest: ";
+    private static final String CONTEXT_HEADER = "# context: ";
 
     /** The whole-root section a version-2 cache carries, and an unbound instance still uses. */
     private static final String LEGACY_SECTION = "";
@@ -615,9 +624,9 @@ public final class WriteCache {
 
         StringBuilder sb = new StringBuilder(64 + 128 * mergedEntries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n")
-            .append("# format: ").append(FORMAT_VERSION).append('\n');
+            .append(FORMAT_HEADER).append(FORMAT_VERSION).append('\n');
         if (mergedStamp != null) {
-            sb.append("# sidecar-stamp: ").append(mergedStamp).append('\n');
+            sb.append(SIDECAR_STAMP_HEADER).append(mergedStamp).append('\n');
         }
         // One header block per module. The legacy (unbound) section, when present, is written
         // first and without a "# module:" line, which is exactly the shape version 2 read.
@@ -627,7 +636,7 @@ public final class WriteCache {
         }
         for (Map.Entry<String, Section> section : mergedSections.entrySet()) {
             if (!LEGACY_SECTION.equals(section.getKey())) {
-                sb.append("# module: ").append(section.getKey()).append('\n');
+                sb.append(MODULE_HEADER).append(section.getKey()).append('\n');
                 appendHeaders(sb, section.getKey(), section.getValue());
             }
         }
@@ -658,13 +667,13 @@ public final class WriteCache {
     /** The fingerprint, sidecar-stamp, and context lines of one section; the current module's context is the bound one. */
     private void appendHeaders(StringBuilder sb, String moduleId, Section section) {
         if (section.fingerprint != null) {
-            sb.append("# fingerprint: ").append(section.fingerprint).append('\n');
+            sb.append(FINGERPRINT_HEADER).append(section.fingerprint).append('\n');
         }
         if (!LEGACY_SECTION.equals(moduleId) && section.sidecarStamp != null) {
-            sb.append("# sidecar-stamp: ").append(section.sidecarStamp).append('\n');
+            sb.append(SIDECAR_STAMP_HEADER).append(section.sidecarStamp).append('\n');
         }
         if (section.sourceDigest != null) {
-            sb.append("# source-digest: ").append(section.sourceDigest).append('\n');
+            sb.append(SOURCE_DIGEST_HEADER).append(section.sourceDigest).append('\n');
             for (String diagnostic : section.sourceDiagnostics) {
                 sb.append(SOURCE_DIAGNOSTIC).append(diagnostic).append('\n');
             }
@@ -672,7 +681,7 @@ public final class WriteCache {
         String effectiveContext = moduleId.equals(currentModule) && currentContext != null
             ? currentContext : section.storedContext;
         if (effectiveContext != null) {
-            sb.append("# context: ").append(effectiveContext).append('\n');
+            sb.append(CONTEXT_HEADER).append(effectiveContext).append('\n');
         }
     }
 
@@ -685,123 +694,172 @@ public final class WriteCache {
     private synchronized void loadIfNeeded() {
         if (loaded) return;
         loaded = true;
-        // Headers before any "# module:" line belong to the whole-root section; registered only
-        // once one is read, so a cache with nothing there leaves no empty section to adopt.
-        Section legacy = new Section();
-        Section loading = legacy;
-        boolean readingLegacy = true;
+        HeaderReader headers = new HeaderReader(sections);
         try {
             for (String line : Files.readAllLines(cachePath, StandardCharsets.UTF_8)) {
                 if (line.isEmpty()) continue;
                 if (line.charAt(0) == '#') {
-                    // Future-format guard: a cache written by a newer processor may use a line
-                    // format this version cannot parse. Discard it wholesale — the cache is a
-                    // pure optimisation and rebuilds on the next successful write.
-                    String formatPrefix = "# format: ";
-                    if (line.startsWith(formatPrefix)) {
-                        try {
-                            int version = Integer.parseInt(line.substring(formatPrefix.length()).trim());
-                            if (version > FORMAT_VERSION) {
-                                entries.clear();
-                                sections.clear();
-                                sidecarStamp = null;
-                                return;
-                            }
-                        } catch (NumberFormatException ignored) {
-                            // Unparseable format header — treat as unknown and start over.
-                            entries.clear();
-                            sections.clear();
-                            sidecarStamp = null;
-                            return;
-                        }
+                    if (!headers.read(line)) {
+                        discardAll();
+                        return;
                     }
-                    // A "# module:" line opens that module's section; headers before any such
-                    // line are the whole-root section a version-2 cache carries.
-                    String modulePrefix = "# module: ";
-                    if (line.startsWith(modulePrefix)) {
-                        String id = line.substring(modulePrefix.length()).trim();
-                        if (!id.isEmpty()) {
-                            loading = sections.computeIfAbsent(id, k -> new Section());
-                            readingLegacy = false;
-                        }
-                        continue;
-                    }
-                    // Recognise the fingerprint header; ignore other comments.
-                    String prefix = "# fingerprint: ";
-                    if (line.startsWith(prefix)) {
-                        String fp = line.substring(prefix.length()).trim();
-                        if (!fp.isEmpty()) {
-                            loading.fingerprint = fp;
-                            if (readingLegacy) sections.putIfAbsent(LEGACY_SECTION, legacy);
-                        }
-                    }
-                    String sidecarPrefix = "# sidecar-stamp: ";
-                    if (line.startsWith(sidecarPrefix)) {
-                        String st = line.substring(sidecarPrefix.length()).trim();
-                        if (!st.isEmpty()) {
-                            if (readingLegacy) {
-                                sidecarStamp = st;
-                                legacy.sidecarStamp = st;
-                            } else {
-                                loading.sidecarStamp = st;
-                            }
-                        }
-                    }
-                    // Written only inside a module section, never before the first "# module:"
-                    // line, so a digest can never be adopted from the whole-root section.
-                    String digestPrefix = "# source-digest: ";
-                    if (line.startsWith(digestPrefix) && !readingLegacy) {
-                        String dg = line.substring(digestPrefix.length()).trim();
-                        if (!dg.isEmpty()) {
-                            loading.sourceDigest = dg;
-                        }
-                    }
-                    // Kept verbatim, not trimmed: an encoded diagnostic may end in a separator.
-                    // Read into module sections only, like the digest it belongs to.
-                    if (line.startsWith(SOURCE_DIAGNOSTIC) && !readingLegacy) {
-                        loading.sourceDiagnostics.add(line.substring(SOURCE_DIAGNOSTIC.length()));
-                    }
-                    String contextPrefix = "# context: ";
-                    if (line.startsWith(contextPrefix)) {
-                        String cx = line.substring(contextPrefix.length()).trim();
-                        if (!cx.isEmpty()) {
-                            loading.storedContext = cx;
-                            if (readingLegacy) sections.putIfAbsent(LEGACY_SECTION, legacy);
-                        }
-                    }
-                    continue;
+                } else {
+                    readEntry(line);
                 }
-                int t1 = line.indexOf('\t');
-                if (t1 < 0) continue;
-                int t2 = line.indexOf('\t', t1 + 1);
-                if (t2 < 0) continue;
-                int t3 = line.indexOf('\t', t2 + 1);
-                if (t3 < 0) continue;
-                String path = line.substring(0, t1);
-                Path p = java.nio.file.Paths.get(path);
-                if (p.isAbsolute()) {
-                    try {
-                        path = PathStrings.relative(rootDir, p.normalize());
-                    } catch (IllegalArgumentException iae) {
-                        path = PathStrings.forwardSlashes(p.normalize());
-                    }
-                }
-                String hash = line.substring(t1 + 1, t2);
-                try {
-                    long size  = Long.parseLong(line.substring(t2 + 1, t3));
-                    // trim() handles CRLF line endings on Windows: if the cache file was
-                    // written or edited on Windows, the mtime value may carry a trailing \r
-                    // that causes Long.parseLong to throw and silently drop a valid entry.
-                    long mtime = Long.parseLong(line.substring(t3 + 1).trim());
-                    entries.put(path, new Entry(hash, size, mtime));
-                } catch (NumberFormatException ignored) {
-                    // Skip corrupt rows — fresh entries replace them on next write.
-                }
+            }
+            String legacyStamp = headers.legacySidecarStamp();
+            if (legacyStamp != null) {
+                sidecarStamp = legacyStamp;
             }
         } catch (NoSuchFileException ignored) {
             // First run — empty cache is fine.
         } catch (IOException ioe) {
             entries.clear(); // Corrupt or unreadable — start over.
+        }
+    }
+
+    /** Forgets everything loaded: a cache this version cannot read is worth nothing, and it rebuilds. */
+    private void discardAll() {
+        entries.clear();
+        sections.clear();
+        sidecarStamp = null;
+    }
+
+    /**
+     * Reads the {@code #} lines of a cache into its sections, tracking which section each belongs
+     * to: the whole-root section until the first {@code # module:} line, that module's after it.
+     * Touches nothing but the map it is given, so all of its state stays inside one load.
+     */
+    private static final class HeaderReader {
+        private final Map<String, Section> sections;
+        // Headers before any "# module:" line belong to the whole-root section; registered only
+        // once one is read, so a cache with nothing there leaves no empty section to adopt.
+        private final Section legacy = new Section();
+        private Section loading = legacy;
+        /** The module whose section is being read; null before the first {@code # module:} line. */
+        private @Nullable String module;
+
+        HeaderReader(Map<String, Section> sections) {
+            this.sections = sections;
+        }
+
+        /** The whole-root section's sidecar stamp, which is also the cache's own; null when none. */
+        @Nullable String legacySidecarStamp() {
+            return legacy.sidecarStamp;
+        }
+
+        /** Applies one header line; false when the whole cache must be discarded unread. */
+        boolean read(String line) {
+            if (line.startsWith(FORMAT_HEADER)) {
+                return isReadableFormat(line.substring(FORMAT_HEADER.length()).trim());
+            }
+            if (line.startsWith(MODULE_HEADER)) {
+                // A "# module:" line opens that module's section; headers before any such
+                // line are the whole-root section a version-2 cache carries.
+                String id = line.substring(MODULE_HEADER.length()).trim();
+                if (!id.isEmpty()) {
+                    loading = sections.computeIfAbsent(id, k -> new Section());
+                    module = id;
+                }
+            } else if (line.startsWith(FINGERPRINT_HEADER)) {
+                String fp = line.substring(FINGERPRINT_HEADER.length()).trim();
+                if (!fp.isEmpty()) {
+                    loading.fingerprint = fp;
+                    registerLegacyIfReading();
+                }
+            } else if (line.startsWith(SIDECAR_STAMP_HEADER)) {
+                String st = line.substring(SIDECAR_STAMP_HEADER.length()).trim();
+                if (!st.isEmpty()) {
+                    loading.sidecarStamp = st;
+                }
+            } else if (line.startsWith(SOURCE_DIGEST_HEADER) && !readingLegacy()) {
+                // Written only inside a module section, never before the first "# module:"
+                // line, so a digest can never be adopted from the whole-root section.
+                String dg = line.substring(SOURCE_DIGEST_HEADER.length()).trim();
+                if (!dg.isEmpty()) {
+                    loading.sourceDigest = dg;
+                }
+            } else if (line.startsWith(SOURCE_DIAGNOSTIC) && !readingLegacy()) {
+                // Kept verbatim, not trimmed: an encoded diagnostic may end in a separator.
+                // Read into module sections only, like the digest it belongs to.
+                loading.sourceDiagnostics.add(line.substring(SOURCE_DIAGNOSTIC.length()));
+            } else if (line.startsWith(CONTEXT_HEADER)) {
+                String cx = line.substring(CONTEXT_HEADER.length()).trim();
+                if (!cx.isEmpty()) {
+                    loading.storedContext = cx;
+                    registerLegacyIfReading();
+                }
+            }
+            // Any other comment is ignored.
+            return true;
+        }
+
+        /** Still before the first {@code # module:} line, so a header belongs to the whole-root section. */
+        private boolean readingLegacy() {
+            return module == null;
+        }
+
+        private void registerLegacyIfReading() {
+            if (readingLegacy()) {
+                sections.putIfAbsent(LEGACY_SECTION, legacy);
+            }
+        }
+    }
+
+    /**
+     * Future-format guard: a cache written by a newer processor may use a line format this
+     * version cannot parse, and an unparseable format header is no better. Either is discarded
+     * wholesale; the cache is a pure optimisation and rebuilds on the next successful write.
+     */
+    private static boolean isReadableFormat(String version) {
+        try {
+            return Integer.parseInt(version) <= FORMAT_VERSION;
+        } catch (NumberFormatException unparseable) {
+            return false;
+        }
+    }
+
+    /** One entry row, {@code path\thash\tsize\tmtime}. A row that does not parse is skipped. */
+    private void readEntry(String line) {
+        int t1 = line.indexOf('\t');
+        if (t1 < 0) return;
+        int t2 = line.indexOf('\t', t1 + 1);
+        if (t2 < 0) return;
+        int t3 = line.indexOf('\t', t2 + 1);
+        if (t3 < 0) return;
+        String path = entryKey(line.substring(0, t1));
+        if (path == null) return;
+        String hash = line.substring(t1 + 1, t2);
+        try {
+            long size  = Long.parseLong(line.substring(t2 + 1, t3));
+            // trim(): readAllLines has already removed the line terminator, CRLF included; this
+            // tolerates whitespace a hand edit leaves after the number.
+            long mtime = Long.parseLong(line.substring(t3 + 1).trim());
+            entries.put(path, new Entry(hash, size, mtime));
+        } catch (NumberFormatException ignored) {
+            // Skip corrupt rows — fresh entries replace them on next write.
+        }
+    }
+
+    /**
+     * The key a row's path is stored under: relative to the cache's directory when it was written
+     * absolute, as-is otherwise. Null when no {@link Path} can be made of it, which is a corrupt
+     * row like any other: an uncaught throw here failed the consumer's build (#1146).
+     */
+    private @Nullable String entryKey(String path) {
+        Path p;
+        try {
+            p = java.nio.file.Paths.get(path);
+        } catch (java.nio.file.InvalidPathException unparseable) {
+            return null;
+        }
+        if (!p.isAbsolute()) {
+            return path;
+        }
+        try {
+            return PathStrings.relative(rootDir, p.normalize());
+        } catch (IllegalArgumentException iae) {
+            return PathStrings.forwardSlashes(p.normalize());
         }
     }
 
