@@ -48,3 +48,8 @@ Against `main` at b3938f9b, with the six stacked refactor pull requests of 2026-
 code, it measured 98.3% coverage on new code (337 of 343 executable lines) and 0% duplication, and
 it failed one method: `WriteCache.HeaderReader#read(String)`, written in that chain, at cognitive
 complexity 26. It now reads its headers from a table and passes.
+
+Run once on all of the processor's code instead (Git's empty tree as the base): 95.6% coverage,
+0% duplication, and 89 complexity findings in 82 methods, the existing debt the gate holds still.
+The full record, with the command and every method, is
+[docs/analysis/2026-11-22-quality-gate-whole-code.md](../../docs/analysis/2026-11-22-quality-gate-whole-code.md).
