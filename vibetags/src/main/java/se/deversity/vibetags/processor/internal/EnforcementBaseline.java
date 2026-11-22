@@ -224,13 +224,10 @@ public final class EnforcementBaseline {
         StringBuilder sb = new StringBuilder(HEADER);
         lines.forEach(line -> sb.append(line).append('\n'));
 
-        // A temp name unique per writer: a fixed one is truncated by whichever sibling starts
-        // second, so the first rename moves the other module's bytes into place and the second
-        // fails with NoSuchFileException, which reaches the enforcer as a compile error.
-        Path target = root.resolve(FILE_NAME);
-        Path tmp = AtomicFileReplacer.uniqueTempFile(root, FILE_NAME);
-        Files.writeString(tmp, sb, StandardCharsets.UTF_8);
-        AtomicFileReplacer.moveIntoPlace(tmp, target, AtomicFileReplacer.ATOMIC_REPLACE);
+        // Through a temp name unique per writer: a fixed one is truncated by whichever sibling
+        // starts second, so the first rename moves the other module's bytes into place and the
+        // second fails with NoSuchFileException, which reaches the enforcer as a compile error.
+        AtomicFileReplacer.replace(root.resolve(FILE_NAME), sb);
         entries.clear();
         entries.putAll(merged);
     }

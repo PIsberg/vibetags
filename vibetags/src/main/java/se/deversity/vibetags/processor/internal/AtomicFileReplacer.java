@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -22,6 +23,44 @@ import java.util.concurrent.atomic.AtomicLong;
 final class AtomicFileReplacer {
 
     private AtomicFileReplacer() { }
+
+    /**
+     * Replaces {@code target} with {@code content}, UTF-8, through a temp file beside it.
+     *
+     * @throws IOException when the temp file cannot be written or the rename keeps failing; the
+     *     target then still holds what it held before
+     */
+    static void replace(Path target, CharSequence content) throws IOException {
+        replace(target, content, AtomicFileReplacer::writeUtf8, ATOMIC_REPLACE);
+    }
+
+    /** {@link #replace(Path, CharSequence)} with the write and the rename injectable, for tests. */
+    static void replace(Path target, CharSequence content, StagedWrite stage, FileMover mover)
+            throws IOException {
+        Path dir = target.toAbsolutePath().getParent();
+        Path name = target.getFileName();
+        if (dir == null || name == null) {
+            throw new IOException("cannot replace a filesystem root: " + target);
+        }
+        Path tmp = uniqueTempFile(dir, name.toString());
+        try {
+            stage.write(tmp, content);
+        } catch (IOException | RuntimeException failedWrite) {
+            tryDelete(tmp); // half-written, and no reader would ever clean it up
+            throw failedWrite;
+        }
+        moveIntoPlace(tmp, target, mover);
+    }
+
+    /** How the new content reaches the temp file. */
+    @FunctionalInterface
+    interface StagedWrite {
+        void write(Path tmp, CharSequence content) throws IOException;
+    }
+
+    private static void writeUtf8(Path tmp, CharSequence content) throws IOException {
+        Files.writeString(tmp, content, StandardCharsets.UTF_8);
+    }
 
     /**
      * Attempts at renaming the temp file over the live file before giving up.

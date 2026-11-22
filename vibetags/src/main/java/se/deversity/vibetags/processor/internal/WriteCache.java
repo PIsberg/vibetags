@@ -643,18 +643,8 @@ public final class WriteCache {
             if (cacheParent != null) {
                 Files.createDirectories(cacheParent);
             }
-            // Path.getFileName() returns null only for root paths — guard for correctness.
-            Path cacheFileName = cachePath.getFileName();
-            // Unique per writer: every module of a reactor flushes this one root-level cache, and a
-            // fixed temp name lets the second writer truncate the first's bytes mid-move (#554).
-            Path tmpDir = cacheParent != null ? cacheParent : cachePath.toAbsolutePath().getParent();
-            if (tmpDir == null) {
-                return; // a cache path that is a filesystem root is not a cache location
-            }
-            Path tmp = AtomicFileReplacer.uniqueTempFile(
-                    tmpDir, cacheFileName != null ? cacheFileName.toString() : DEFAULT_FILE_NAME);
-            Files.writeString(tmp, sb.toString(), StandardCharsets.UTF_8);
-            AtomicFileReplacer.moveIntoPlace(tmp, cachePath, AtomicFileReplacer.ATOMIC_REPLACE);
+            // Every module of a reactor flushes this one root-level cache (#554).
+            AtomicFileReplacer.replace(cachePath, sb);
             dirty = false;
             // On disk now; a later flush re-reads them, and must not re-assert a value a sibling
             // has replaced since.

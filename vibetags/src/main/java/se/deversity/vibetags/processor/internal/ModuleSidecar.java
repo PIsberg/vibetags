@@ -406,11 +406,10 @@ public final class ModuleSidecar {
             return;
         }
 
-        // Unique rather than `<sidecar>.tmp`: two javac invocations for one module id (a build and
-        // an IDE compiling the same module at once) otherwise truncate each other's temp file.
-        Path tmp = AtomicFileReplacer.uniqueTempFile(root, SIDECAR_PREFIX + moduleId);
-        Files.writeString(tmp, sb, StandardCharsets.UTF_8);
-        AtomicFileReplacer.moveIntoPlace(tmp, target, AtomicFileReplacer.ATOMIC_REPLACE);
+        // Through a unique temp name rather than `<sidecar>.tmp`: two javac invocations for one
+        // module id (a build and an IDE compiling the same module at once) otherwise truncate each
+        // other's temp file.
+        AtomicFileReplacer.replace(target, sb);
     }
 
     /** The bytes {@link #save} writes, trailer included. */

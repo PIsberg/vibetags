@@ -10,6 +10,9 @@ import java.net.URLClassLoader;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.stream.Stream;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,6 +32,50 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * these are deterministic unit tests rather than more stress.
  */
 class AtomicFileReplacerTest {
+
+    // ---------------------------------------------------------------- replace
+
+    @Test
+    void replaceWritesTheContentAndLeavesOnlyTheTarget(@TempDir Path dir) throws IOException {
+        Path target = Files.writeString(dir.resolve(".vibetags-cache"), "old");
+
+        AtomicFileReplacer.replace(target, "new åäö");
+
+        assertEquals("new åäö", Files.readString(target, StandardCharsets.UTF_8));
+        assertEquals(List.of(target), filesIn(dir), "the temp file must have been renamed away");
+    }
+
+    /**
+     * A write that dies part way, a full disk being the usual cause, must not leave its temp file
+     * in the reactor root: every later build would carry it, and nothing else ever deletes it.
+     */
+    @Test
+    void aWriteThatFailsPartWayLeavesNoTempFileBehind(@TempDir Path dir) throws IOException {
+        Path target = Files.writeString(dir.resolve(".vibetags-baseline"), "approved");
+
+        IOException thrown = assertThrows(IOException.class, () ->
+            AtomicFileReplacer.replace(target, "replacement", (tmp, content) -> {
+                Files.writeString(tmp, "repl");
+                throw new IOException("No space left on device");
+            }, AtomicFileReplacer.ATOMIC_REPLACE));
+
+        assertEquals("No space left on device", thrown.getMessage(), "the write's own failure is the one to report");
+        assertEquals("approved", Files.readString(target), "a failed replace must leave the target as it was");
+        assertEquals(List.of(target), filesIn(dir), "the half-written temp file was left behind");
+    }
+
+    @Test
+    void aFilesystemRootCannotBeReplaced() {
+        Path root = Path.of("").toAbsolutePath().getRoot();
+
+        assertThrows(IOException.class, () -> AtomicFileReplacer.replace(root, "content"));
+    }
+
+    private static List<Path> filesIn(Path dir) throws IOException {
+        try (Stream<Path> files = Files.list(dir)) {
+            return files.sorted().toList();
+        }
+    }
 
     // ---------------------------------------------------------------- rename retry
 
