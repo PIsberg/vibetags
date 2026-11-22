@@ -24,7 +24,7 @@ The full table of every annotation (targets, attributes, semantics) and every co
 **Processing Logic:**
 
 ```
-Accumulation phase (every round, until processingOver() == true):
+Accumulation phase (every round, until processingOver() == true; AIGuardrailProcessor.collectRound):
 1. AnnotationCollector.collect(roundEnv) — drains the round into the LinkedHashSet<Element> accumulators (one per annotation type). The Elements stay here; AnnotationCollector.model() snapshots them into the compiler-free GuardrailModel at generate time, because an Element is only valid while its round is live
 2. AnnotationValidator.validate(messager, roundEnv) — compile-time checks:
    - Contradiction checks (e.g. @AIDraft + @AILocked, @AILegacyBridge + @AIDraft)
@@ -36,7 +36,7 @@ Accumulation phase (every round, until processingOver() == true):
 4. process() returns false so other processors still see the annotations
    - On the first round, before the early exit, ProcessorCoexistence.warnAboutDroppedPeers(...) names any peer processor (Lombok, MapStruct, ...) whose annotations the sources use but which the processor path dropped
 
-Generation phase (once, on the round where processingOver() == true):
+Generation phase (once, on the round where processingOver() == true; AIGuardrailProcessor.finishProcessing):
 5. ServiceRegistry.buildServiceFileMap(root) → service-key → file-path map
 6. ServiceRegistry.resolveActiveServices(messager, files) → file-existence opt-in
 7. GuardrailContentBuilder.build() lazily allocates the platform StringBuilders via `initBuilders()`, then delegates file rendering to modular, stateless `PlatformRenderer` implementations (under `se.deversity.vibetags.processor.internal.content.platforms.*`). Renderers orchestrate formatters from `FormatterRegistry` to build precise Markdown, XML, TOML, or Starlark files, and return the final service-key → content map. No I/O. **Before the render loop** it computes the granular owner set once (the keys of `GranularRenderer.renderGranular`) and passes it on `RenderingContext.granularOwners()`; an aggregate renderer whose granular sibling is active (`GranularIndexSection.indexActive`) then collapses to a **scoped-rules index** — always-loaded safety buckets inline, then an index naming each element whose scoped file carries more than that safety tier (`RenderingContext.indexOwners()`, #839), one line per package with the elements listed by simple name so the package is written once — instead of duplicating every element's full guardrails. The index states the file-naming convention once in its note and repeats an explicit path only for an element whose file deviates from it, which a `.vibetags-roles` config causes by grouping several elements onto one role file. Single-opt-in aggregates render in full, unchanged.
