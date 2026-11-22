@@ -124,6 +124,44 @@ class SupersededAncestorRegionTest {
         assertFalse(Files.exists(root.resolve(".vibetags-mod-_root_")));
     }
 
+    /**
+     * The merge writes regions in the order {@code readAll} returns them, so the survivors' order is
+     * part of every generated file. The other cases here compare sorted ids and would not see a
+     * retirement that also reordered what was left.
+     */
+    @Test
+    void theSurvivorsKeepTheirFilenameOrder(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        Files.createDirectories(root.resolve("lib"));
+        Files.createDirectories(root.resolve("zeta"));
+        writeSidecar(root, "zeta", "zeta", "com.example.Z");
+        writeSidecar(root, "lib", "lib", "com.example.L");
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "app", "app", "com.example.A", "com.example.B");
+
+        List<String> moduleIds = ModuleSidecar.readAll(root).stream().map(ModuleSidecar::getModuleId).toList();
+
+        assertEquals(List.of("app", "lib", "zeta"), moduleIds);
+    }
+
+    @Test
+    void everySourceSetOfARetiredRegionGoesWithIt(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A");
+        ModuleSidecar rootTests = new ModuleSidecar("_root___test", "", "_root_");
+        rootTests.putBody("claude", "body of the root's test source set");
+        rootTests.setElementIds(Set.of("com.example.ATest"));
+        rootTests.save(root);
+        writeSidecar(root, "app", "app", "com.example.A", "com.example.ATest", "com.example.B");
+
+        List<String> moduleIds = ModuleSidecar.readAll(root).stream().map(ModuleSidecar::getModuleId).toList();
+
+        assertEquals(List.of("app"), moduleIds, "a region is retired whole, not one source set of it");
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-_root_")));
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-_root___test")),
+            "a source set left behind would render the retired region again on the next build");
+    }
+
     @Test
     void aSidecarThatRecordsNoElementsIsLeftAlone(@TempDir Path root) throws IOException {
         Files.createDirectories(root.resolve("app"));
