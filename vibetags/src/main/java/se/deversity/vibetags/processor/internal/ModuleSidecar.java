@@ -476,6 +476,68 @@ public final class ModuleSidecar {
     }
 
     /**
+     * What a {@code key=value} line of a sidecar holds, told from its key. This is the one place
+     * the format's keys are told apart: {@link #load} and {@link SummaryScan} both ask {@link #of},
+     * so the two readers cannot classify a key differently.
+     *
+     * <p>Declaration order is match order, and two positions in it matter: {@link #RESERVED} comes
+     * after every key that starts with its prefix, and {@link #SERVICE_BODY}, which is whatever no
+     * other kind claims, is last.
+     */
+    private enum LineKind {
+        MODULE_ID(KEY_MODULE_ID, Claim.WHOLE_KEY),
+        MODULE_PATH(KEY_MODULE_PATH, Claim.WHOLE_KEY),
+        REGION_ID(KEY_REGION_ID, Claim.WHOLE_KEY),
+        GRANULAR_STEMS(KEY_GRANULAR_STEMS, Claim.WHOLE_KEY),
+        ELEMENT_IDS(KEY_ELEMENT_IDS, Claim.WHOLE_KEY),
+        SOURCE_ROOTS(KEY_SOURCE_ROOTS, Claim.WHOLE_KEY),
+        MODULE_GRANULAR_NAMING(KEY_MODULE_GRANULAR_NAMING_PREFIX, Claim.PREFIX),
+        GRANULAR_NAMING(KEY_GRANULAR_NAMING_PREFIX, Claim.PREFIX),
+        MODULE_GRANULAR_UNIT(KEY_MODULE_GRANULAR_UNIT_PREFIX, Claim.PREFIX),
+        GRANULAR_UNIT(KEY_GRANULAR_UNIT_PREFIX, Claim.PREFIX),
+        MODULE_BODY(KEY_MODULE_BODY_PREFIX, Claim.PREFIX),
+        INDEX_DIGEST(KEY_INDEX_DIGEST_PREFIX, Claim.PREFIX),
+        UNROUTED_BODY(KEY_UNROUTED_BODY_PREFIX, Claim.PREFIX),
+        /** A reserved key this version does not define, written by a newer processor. */
+        RESERVED(RESERVED_PREFIX, Claim.PREFIX),
+        /** A service's reactor body. A service key is no constant, so this is every other key. */
+        SERVICE_BODY("", Claim.PREFIX);
+
+        /** How a kind claims a key: by being all of it, or by opening it. */
+        private enum Claim { WHOLE_KEY, PREFIX }
+
+        /** Every kind that claims keys by name, in match order: all but {@link #SERVICE_BODY}. */
+        private static final LineKind[] NAMED =
+            java.util.EnumSet.complementOf(java.util.EnumSet.of(SERVICE_BODY)).toArray(new LineKind[0]);
+
+        private final String key;
+        private final Claim claim;
+
+        LineKind(String key, Claim claim) {
+            this.key = key;
+            this.claim = claim;
+        }
+
+        static LineKind of(String lineKey) {
+            for (LineKind kind : NAMED) {
+                if (kind.claims(lineKey)) {
+                    return kind;
+                }
+            }
+            return SERVICE_BODY;
+        }
+
+        private boolean claims(String lineKey) {
+            return claim == Claim.WHOLE_KEY ? key.equals(lineKey) : lineKey.startsWith(key);
+        }
+
+        /** What {@code lineKey} names past this kind's prefix: a service key or a rule-file stem. */
+        String nameIn(String lineKey) {
+            return lineKey.substring(key.length());
+        }
+    }
+
+    /**
      * Sentinel returned by {@link #load(Path)} for a sidecar written in a newer format than this
      * processor understands. Distinct from {@code null} (malformed): a future-version sidecar is
      * owned by a sibling module compiled with a newer processor and must be skipped, not deleted.
@@ -545,50 +607,28 @@ public final class ModuleSidecar {
                 if (eq < 0) continue;
                 String key = line.substring(0, eq);
                 String val = line.substring(eq + 1);
-                if (KEY_MODULE_ID.equals(key)) {
-                    moduleId = val;
-                } else if (KEY_MODULE_PATH.equals(key)) {
-                    modulePath = val;
-                } else if (KEY_REGION_ID.equals(key)) {
-                    regionId = val;
-                } else if (KEY_GRANULAR_STEMS.equals(key)) {
-                    // -1 keeps trailing empty fields rather than relying on split's default of
-                    // dropping them; the isBlank guard is what discards them, visibly.
-                    for (String stem : decode(val).split("\n", -1)) {
-                        if (!stem.isBlank()) granularStems.add(stem);
+                LineKind kind = LineKind.of(key);
+                String name = kind.nameIn(key);
+                switch (kind) {
+                    case MODULE_ID -> { moduleId = val; }
+                    case MODULE_PATH -> { modulePath = val; }
+                    case REGION_ID -> { regionId = val; }
+                    case GRANULAR_STEMS -> addNonBlankLines(decode(val), granularStems);
+                    case ELEMENT_IDS -> addNonBlankLines(decode(val), elementIds);
+                    case SOURCE_ROOTS -> addNonBlankLines(portable(decode(val)), sourceRoots);
+                    case MODULE_GRANULAR_NAMING -> moduleGranularNaming.put(name, decode(val));
+                    case GRANULAR_NAMING -> granularNaming.put(name, decode(val));
+                    case MODULE_GRANULAR_UNIT -> putParsedContribution(moduleGranularUnits, name, decode(val));
+                    case GRANULAR_UNIT -> putParsedContribution(granularUnits, name, decode(val));
+                    case MODULE_BODY -> moduleBodies.put(name, decode(val));
+                    case INDEX_DIGEST -> indexDigests.put(name, decode(val));
+                    case UNROUTED_BODY -> unroutedBodies.put(name, decode(val));
+                    case RESERVED -> {
+                        // Recognised and deliberately not stored, nor even decoded. Above all it is
+                        // kept out of SERVICE_BODY, which would render it into somebody's guardrail
+                        // file. Doing nothing here is the point.
                     }
-                } else if (KEY_ELEMENT_IDS.equals(key)) {
-                    for (String id : decode(val).split("\n", -1)) {
-                        if (!id.isBlank()) elementIds.add(id);
-                    }
-                } else if (KEY_SOURCE_ROOTS.equals(key)) {
-                    for (String sourceRoot : decode(val).split("\n", -1)) {
-                        if (!sourceRoot.isBlank()) sourceRoots.add(portable(sourceRoot));
-                    }
-                } else if (key.startsWith(KEY_MODULE_GRANULAR_NAMING_PREFIX)) {
-                    moduleGranularNaming.put(key.substring(KEY_MODULE_GRANULAR_NAMING_PREFIX.length()), decode(val));
-                } else if (key.startsWith(KEY_GRANULAR_NAMING_PREFIX)) {
-                    granularNaming.put(key.substring(KEY_GRANULAR_NAMING_PREFIX.length()), decode(val));
-                } else if (key.startsWith(KEY_MODULE_GRANULAR_UNIT_PREFIX)) {
-                    // Checked before the ~mod~ prefix below: "~modgran~" does not start with
-                    // "~mod~", but the two read alike and the order is what keeps that true.
-                    putParsedContribution(moduleGranularUnits,
-                        key.substring(KEY_MODULE_GRANULAR_UNIT_PREFIX.length()), decode(val));
-                } else if (key.startsWith(KEY_GRANULAR_UNIT_PREFIX)) {
-                    putParsedContribution(granularUnits,
-                        key.substring(KEY_GRANULAR_UNIT_PREFIX.length()), decode(val));
-                } else if (key.startsWith(KEY_MODULE_BODY_PREFIX)) {
-                    moduleBodies.put(key.substring(KEY_MODULE_BODY_PREFIX.length()), decode(val));
-                } else if (key.startsWith(KEY_INDEX_DIGEST_PREFIX)) {
-                    indexDigests.put(key.substring(KEY_INDEX_DIGEST_PREFIX.length()), decode(val));
-                } else if (key.startsWith(KEY_UNROUTED_BODY_PREFIX)) {
-                    unroutedBodies.put(key.substring(KEY_UNROUTED_BODY_PREFIX.length()), decode(val));
-                } else if (key.startsWith(RESERVED_PREFIX)) {
-                    // Reserved key from a newer processor: recognised, deliberately not stored, and
-                    // above all kept out of the `else` below, which would put it in `bodies` and
-                    // render it into somebody's guardrail file. Doing nothing here is the point.
-                } else {
-                    bodies.put(key, decode(val));
+                    case SERVICE_BODY -> bodies.put(name, decode(val));
                 }
             }
             // Before the checks below, because those delete: a file cut short can lose its
@@ -698,6 +738,17 @@ public final class ModuleSidecar {
 
     private static String decode(String base64) {
         return new String(Base64.getDecoder().decode(base64), StandardCharsets.UTF_8);
+    }
+
+    /** Adds each non-blank line of a decoded list value to {@code into}, in order. */
+    private static void addNonBlankLines(String list, Collection<String> into) {
+        // -1 keeps trailing empty fields rather than relying on split's default of dropping them;
+        // the isBlank guard is what discards them, visibly.
+        for (String entry : list.split("\n", -1)) {
+            if (!entry.isBlank()) {
+                into.add(entry);
+            }
+        }
     }
 
     /**
@@ -1731,28 +1782,19 @@ public final class ModuleSidecar {
             }
         }
 
-        /** The same order of cases as {@code load}'s key chain, which is what makes them agree. */
+        /**
+         * What this scan does with a value of each kind {@code load} tells apart. No default arm,
+         * so a kind added to {@link LineKind} does not compile until this says how it is read.
+         */
         private Kind classify(String k) {
-            if (KEY_MODULE_ID.equals(k) || KEY_MODULE_PATH.equals(k) || KEY_REGION_ID.equals(k)) {
-                return Kind.HEADER;
-            }
-            if (KEY_ELEMENT_IDS.equals(k)) {
-                return Kind.ELEMENTS;
-            }
-            if (KEY_GRANULAR_STEMS.equals(k)
-                    || KEY_SOURCE_ROOTS.equals(k)
-                    || k.startsWith(KEY_MODULE_GRANULAR_NAMING_PREFIX)
-                    || k.startsWith(KEY_GRANULAR_NAMING_PREFIX)
-                    || k.startsWith(KEY_MODULE_GRANULAR_UNIT_PREFIX)
-                    || k.startsWith(KEY_GRANULAR_UNIT_PREFIX)
-                    || k.startsWith(KEY_MODULE_BODY_PREFIX)
-                    || k.startsWith(KEY_INDEX_DIGEST_PREFIX)) {
-                return Kind.CHECKED;
-            }
-            if (k.startsWith(KEY_UNROUTED_BODY_PREFIX)) {
-                return readUnrouted ? Kind.UNROUTED : Kind.CHECKED;
-            }
-            return k.startsWith(RESERVED_PREFIX) ? Kind.IGNORED : Kind.CHECKED;
+            return switch (LineKind.of(k)) {
+                case MODULE_ID, MODULE_PATH, REGION_ID -> Kind.HEADER;
+                case ELEMENT_IDS -> Kind.ELEMENTS;
+                case UNROUTED_BODY -> readUnrouted ? Kind.UNROUTED : Kind.CHECKED;
+                case RESERVED -> Kind.IGNORED;
+                case GRANULAR_STEMS, SOURCE_ROOTS, MODULE_GRANULAR_NAMING, GRANULAR_NAMING,
+                     MODULE_GRANULAR_UNIT, GRANULAR_UNIT, MODULE_BODY, INDEX_DIGEST, SERVICE_BODY -> Kind.CHECKED;
+            };
         }
 
         /** Tracks whether this line, stripped, is {@link #TRAILER}, the way {@code isWhole} asks. */
@@ -1827,9 +1869,7 @@ public final class ModuleSidecar {
                 }
                 case ELEMENTS -> {
                     try {
-                        for (String id : decode(captured.toString()).split("\n", -1)) {
-                            if (!id.isBlank()) elementIds.add(id);
-                        }
+                        addNonBlankLines(decode(captured.toString()), elementIds);
                     } catch (IllegalArgumentException malformed) {
                         undecodable = true;
                     }
