@@ -778,7 +778,12 @@ public final class WriteCache {
                 int t3 = line.indexOf('\t', t2 + 1);
                 if (t3 < 0) continue;
                 String path = line.substring(0, t1);
-                Path p = java.nio.file.Paths.get(path);
+                Path p;
+                try {
+                    p = java.nio.file.Paths.get(path);
+                } catch (java.nio.file.InvalidPathException unparseable) {
+                    continue; // a corrupt row like any other: an uncaught throw failed the build (#1146)
+                }
                 if (p.isAbsolute()) {
                     try {
                         path = PathStrings.relative(rootDir, p.normalize());
