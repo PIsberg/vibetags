@@ -194,6 +194,34 @@ class ModuleSidecarUnreadableScanAgreementTest {
         assertFalse(agrees(root, odd));
     }
 
+    /**
+     * The scan read a version header its own way and differed from {@code load} on two shapes
+     * (#1154). A header with nothing after the {@code =} was not a header to it at all, so a
+     * later one decided; {@code load} refuses the file at the empty one. And it kept only the
+     * first 128 characters of the line, so a number padded past that was read as a different
+     * number, or as none.
+     */
+    @Test
+    @DisplayName("a version header is read as load reads it, empty or padded past the capture")
+    void versionHeaderIsReadTheWayLoadReadsIt(@TempDir Path root) throws IOException {
+        Path emptyThenFuture = write(root, "empty", "# version=\n# version=99999\nmoduleId=empty\n# end\n");
+        assertNull(ModuleSidecar.load(emptyThenFuture), "fixture assumption: the empty header refuses the file");
+        assertFalse(agrees(root, emptyThenFuture));
+
+        Path emptyThenTorn = write(root, "emptytorn", "# version=\n# version=3\nmoduleId=emptytorn\n");
+        assertNull(ModuleSidecar.load(emptyThenTorn), "fixture assumption: refused before the trailer is judged");
+        assertFalse(agrees(root, emptyThenTorn));
+
+        Path padded = write(root, "padded", "# version=" + " ".repeat(200) + "3\nmoduleId=padded\n");
+        assertSame(ModuleSidecar.UNREADABLE, ModuleSidecar.load(padded),
+            "fixture assumption: trimmed, this is version 3 with no trailer");
+        assertTrue(agrees(root, padded));
+
+        Path zeros = write(root, "zeros", "# version=" + "0".repeat(200) + "99\nmoduleId=zeros\n# end\n");
+        assertSame(ModuleSidecar.FUTURE_VERSION, ModuleSidecar.load(zeros), "fixture assumption");
+        assertTrue(agrees(root, zeros));
+    }
+
     @Test
     @DisplayName("no version header at all is not named, trailer or no trailer")
     void headerlessIsNotNamed(@TempDir Path root) throws IOException {

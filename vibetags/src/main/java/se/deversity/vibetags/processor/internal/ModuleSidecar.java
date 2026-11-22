@@ -1518,8 +1518,13 @@ public final class ModuleSidecar {
      */
     private static final class TrailerScan {
 
-        /** Long enough for the version header and the trailer; no other line is ever inspected. */
+        /**
+         * Long enough for the trailer, which is the only thing a comment line that is not a
+         * version header is inspected for. A version header is kept whole, however long.
+         */
         private static final int CAPTURE_CHARS = 128;
+
+        private static final String VERSION_KEY = KEY_FORMAT_VERSION + "=";
 
         private int version;
         private boolean lastNonBlankIsTrailer;
@@ -1529,6 +1534,12 @@ public final class ModuleSidecar {
         private int firstNonBlank = -1;
         private int strippedLength;
         private boolean capturing;
+        /**
+         * Whether this line opens with {@link #VERSION_KEY}. Such a line is captured to its end:
+         * {@code load} parses all of it, so a number cut at {@link #CAPTURE_CHARS} would be read as
+         * a different one, or as none (#1154).
+         */
+        private boolean versionHeader;
 
         /**
          * Feeds one character in.
@@ -1551,8 +1562,13 @@ public final class ModuleSidecar {
                 }
                 strippedLength = column - firstNonBlank + 1;
             }
-            if (capturing && captured.length() < CAPTURE_CHARS) {
+            if (capturing && (versionHeader || captured.length() < CAPTURE_CHARS)) {
                 captured.append(c);
+                if (captured.length() == VERSION_KEY.length()) {
+                    // firstNonBlank == 0 is what the startsWith in load requires: a header
+                    // indented by a space is not one.
+                    versionHeader = firstNonBlank == 0 && VERSION_KEY.contentEquals(captured);
+                }
             }
             column++;
             return null;
@@ -1580,14 +1596,12 @@ public final class ModuleSidecar {
          * one and an unparseable one are {@code null} and are not.
          */
         private @Nullable Boolean versionVerdict() {
-            // firstNonBlank == 0 is what the startsWith in load requires: a header indented by a
-            // space is not one.
-            if (firstNonBlank != 0 || !startsWithVersionKey()) {
+            if (!versionHeader) {
                 return null;
             }
             try {
-                int parsed = Integer.parseInt(
-                        captured.substring(KEY_FORMAT_VERSION.length() + 1).trim());
+                // Nothing after the "=" is still a header, and an unparseable one, as it is to load.
+                int parsed = Integer.parseInt(captured.substring(VERSION_KEY.length()).trim());
                 if (parsed > FORMAT_VERSION) {
                     return Boolean.TRUE;
                 }
@@ -1601,17 +1615,13 @@ public final class ModuleSidecar {
             }
         }
 
-        private boolean startsWithVersionKey() {
-            String key = KEY_FORMAT_VERSION + "=";
-            return captured.length() > key.length() && captured.indexOf(key) == 0;
-        }
-
         private void resetLine() {
             captured.setLength(0);
             column = 0;
             firstNonBlank = -1;
             strippedLength = 0;
             capturing = false;
+            versionHeader = false;
         }
     }
 
