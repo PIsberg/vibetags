@@ -21,7 +21,6 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -354,7 +353,8 @@ public final class GuardrailFileWriter {
             return;
         }
         debug("write.commit file={} bytes={}", fileName(filePath), finalContent.length());
-        Move move = mergedFrom == null ? GuardrailFileWriter::moveIntoAbsent : GuardrailFileWriter::replaceAtomically;
+        AtomicFileReplacer.FileMover move =
+            mergedFrom == null ? GuardrailFileWriter::moveIntoAbsent : AtomicFileReplacer.ATOMIC_REPLACE;
         BasicFileAttributes written = stageAndMove(filePath, finalContent, move);
         if (writeCache != null) {
             writeCache.recordWrite(filePath, bodyForCache, written);
@@ -1305,7 +1305,7 @@ public final class GuardrailFileWriter {
                     // Atomic, like every other write: an in-place write interrupted halfway left
                     // the developer's remaining text truncated (#875).
                     try {
-                        stageAndMove(p, bom + content + "\n", GuardrailFileWriter::replaceAtomically);
+                        stageAndMove(p, bom + content + "\n", AtomicFileReplacer.ATOMIC_REPLACE);
                     } catch (IOException e) {
                         recordFailedScrub(p, e);
                         return false;
@@ -1346,7 +1346,7 @@ public final class GuardrailFileWriter {
     /**
      * Stages {@code finalContent} beside {@code filePath} and moves it into place with {@code move}.
      */
-    private BasicFileAttributes stageAndMove(Path filePath, String finalContent, Move move)
+    private BasicFileAttributes stageAndMove(Path filePath, String finalContent, AtomicFileReplacer.FileMover move)
             throws IOException {
         // Create the staging file with a fresh random name in the TARGET directory (so the atomic
         // move stays on the same filesystem). Files.createTempFile creates it atomically with
@@ -1365,26 +1365,11 @@ public final class GuardrailFileWriter {
             // recorded against this content (see noteCurrent). A rename keeps both, so these are
             // the attributes the target has for as long as it holds these bytes.
             BasicFileAttributes written = Files.readAttributes(tmp, BasicFileAttributes.class);
-            move.into(tmp, filePath);
+            move.move(tmp, filePath);
             return written;
         } finally {
             // A successful move consumes tmp; clean it up only if a failure left it behind.
             Files.deleteIfExists(tmp);
-        }
-    }
-
-    /** How a staged file takes the target's place. */
-    @FunctionalInterface
-    private interface Move {
-        void into(Path staged, Path target) throws IOException;
-    }
-
-    /** Moves {@code tmp} over {@code target}, replacing whatever file is there. */
-    private static void replaceAtomically(Path tmp, Path target) throws IOException {
-        try {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (java.nio.file.AtomicMoveNotSupportedException e) {
-            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
