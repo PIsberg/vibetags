@@ -162,6 +162,35 @@ class SupersededAncestorRegionTest {
             "a source set left behind would render the retired region again on the next build");
     }
 
+    /**
+     * Check mode asks what the files would be after this round's save, and the save changes the
+     * freshness the rule compares: a sidecar whose content changed is written now, one whose
+     * content is unchanged is not rewritten and keeps its time (#556, #766). The module about to
+     * save here is the stale-looking ancestor of a fresher module with the same elements.
+     */
+    @Test
+    void aSidecarAboutToBeSavedCountsAsWrittenNowOnlyWhenItsContentChanged(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "app", "app", "com.example.A");
+        writtenAt(root, "_root_", 1_000_000_000_000L);
+        writtenAt(root, "app", 1_100_000_000_000L);
+        assertEquals(List.of("app"), regionIds(ModuleSidecar.peekAll(root)), "fixture assumption: on disk, app is fresher");
+
+        ModuleSidecar unchanged = new ModuleSidecar("_root_", "");
+        unchanged.putBody("claude", "body of _root_");
+        unchanged.setElementIds(Set.of("com.example.A"));
+        assertEquals(List.of("app"), regionIds(ModuleSidecar.peekAllAfterSaving(root, unchanged, null)),
+            "a save that rewrites nothing leaves the file as old as it was");
+
+        ModuleSidecar changed = new ModuleSidecar("_root_", "");
+        changed.putBody("claude", "an edited body of _root_");
+        changed.setElementIds(Set.of("com.example.A"));
+        assertEquals(List.of("_root_"), regionIds(ModuleSidecar.peekAllAfterSaving(root, changed, null)),
+            "a save that changes the content writes the file now, which makes it the fresher of the two");
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-app")), "and asking the question deleted nothing");
+    }
+
     @Test
     void aSidecarThatRecordsNoElementsIsLeftAlone(@TempDir Path root) throws IOException {
         Files.createDirectories(root.resolve("app"));
