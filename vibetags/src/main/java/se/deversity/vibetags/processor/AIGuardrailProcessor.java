@@ -1351,32 +1351,18 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             log.info("Root: {}", root.toAbsolutePath());
         }
 
-        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
-        Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
-
-        // Compute module identity for multi-module aggregation. regionId names the module's region
-        // in the shared files; moduleId additionally carries the source set, so this compilation
-        // owns its own sidecar file and cannot overwrite a sibling source set's (issue #330).
-        Path compilationRoot = compilationRoot();
-        String regionId = moduleIdOverride != null
-            ? moduleIdOverride : ModuleSidecar.computeModuleId(compilationRoot, root);
-        String sourceSet = moduleIdentity != null ? moduleIdentity.sourceSet() : ModuleIdentity.MAIN;
-        String moduleId = ModuleSidecar.scopedModuleId(regionId, sourceSet);
-        String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
+        // The same targets checkFiles() resolves, so a check verdict is about these files.
+        RoundTargets targets = resolveRoundTargets();
+        Map<String, Path> serviceFiles = targets.serviceFiles();
+        Set<String> activeServices = targets.activeServices();
+        Path compilationRoot = targets.compilationRoot();
+        String regionId = targets.regionId();
+        String moduleId = targets.moduleId();
         warnIfModuleUnidentifiable(compilationRoot, regionId);
-
-        // Per-module (nested) output: resolve this module's own opt-in files quietly. Non-opted
-        // modules are the common case in a reactor and must not spam diagnostics. Empty for
-        // single-module builds where the compilation root IS the VibeTags root.
-        Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
-        Set<String> moduleActiveServices = (moduleIdentity == null || compilationRoot.equals(root))
-            ? java.util.Set.of()
-            : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
-
-        // Role/topic routing for granular files (.vibetags-roles); null when absent → per-class.
-        RoleConfig rootRoles = RoleConfig.load(root);
-        RoleConfig moduleRoles = (moduleIdentity != null && !compilationRoot.equals(root))
-            ? RoleConfig.load(compilationRoot) : null;
+        Map<String, Path> moduleServiceFiles = targets.moduleServiceFiles();
+        Set<String> moduleActiveServices = targets.moduleActiveServices();
+        RoleConfig rootRoles = targets.rootRoles();
+        RoleConfig moduleRoles = targets.moduleRoles();
 
         // Top-level fingerprint short-circuit: if neither the annotation set, active services, nor
         // any sibling sidecar have changed since the last run, AND every file we wrote then is
@@ -1437,33 +1423,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
         // --- Multi-module aggregation ---
         // Write this module's rendered bodies to its sidecar file so siblings can pick them up.
-        ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath, regionId);
-        populateSidecarBodies(mySidecar, contentByService);
-        if (moduleBuilt != null) {
-            moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
-        }
-        // Granular filenames go in before they are written: siblings read them as cleanup
-        // exclusions, so no round deletes rule files it simply could not see (issue #330). The
-        // content behind each name goes in with it, because a granular file is not owned by one
-        // module either — a role spanning modules resolves to one shared path, and without the
-        // contributions the last module to compile replaced it (issue #365).
         Map<String, GranularContribution> myGranular =
             GranularRulesWriter.contributionsFor(built.elementRules, rootRoles);
-        myGranular.forEach(mySidecar::putGranularContribution);
-        Set<String> myStems = new java.util.LinkedHashSet<>(myGranular.keySet());
-        if (moduleBuilt != null) {
-            Map<String, GranularContribution> myModuleGranular =
-                GranularRulesWriter.contributionsFor(moduleBuilt.elementRules, moduleRoles);
-            myModuleGranular.forEach(mySidecar::putModuleGranularContribution);
-            myStems.addAll(myModuleGranular.keySet());
-        }
-        mySidecar.setGranularStems(myStems);
-        // The elements themselves, recorded whether or not a granular service is active: this is
-        // what lets the next run tell an edited annotation from a round that never saw the sources.
-        mySidecar.setElementIds(collector.model().elementIds());
-        // Safety-tier digest for the lean indexed reactor root: without it the root keeps NOTHING
-        // of a module inline, and @AILocked/@AICore/@AIAudit stop being always-on (issue #332).
-        buildSafetyDigests(activeServices, rootRoles).forEach(mySidecar::putIndexDigest);
+        ModuleSidecar mySidecar = assembleSidecar(targets, contentByService, moduleBuilt, myGranular);
         // Only persist the sidecar when this compilation actually saw annotations. Maven runs
         // the processor again for test-compile (and other source sets) under the SAME module
         // identity but usually with zero annotations — an unconditional save would overwrite the
@@ -2047,52 +2009,31 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             log.info("Root: {}", root.toAbsolutePath());
         }
 
-        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
-        Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
-        RoleConfig checkRootRoles = RoleConfig.load(root);
+        // The same targets generateFiles() resolves, and the same sidecar it would save.
+        RoundTargets targets = resolveRoundTargets();
+        Map<String, Path> serviceFiles = targets.serviceFiles();
+        Set<String> activeServices = targets.activeServices();
+        RoleConfig checkRootRoles = targets.rootRoles();
 
         GuardrailContentBuilder.Result built =
             new GuardrailContentBuilder(collector, activeServices, projectName, GENERATED_HEADER, checkRootRoles).build();
         Map<String, String> contentByService = built.contentByService;
 
+        Path compilationRoot = targets.compilationRoot();
+        String regionId = targets.regionId();
+        String moduleId = targets.moduleId();
+        Map<String, Path> moduleServiceFiles = targets.moduleServiceFiles();
+        Set<String> moduleActiveServices = targets.moduleActiveServices();
+        RoleConfig checkModuleRoles = targets.moduleRoles();
+        GuardrailContentBuilder.Result moduleBuilt = moduleActiveServices.isEmpty() ? null
+            : new GuardrailContentBuilder(collector, moduleActiveServices, projectName, GENERATED_HEADER, checkModuleRoles).build();
+
         // Simulate this module's sidecar save in memory: the merge below must reflect the
         // freshly built bodies, not whatever a previous compile persisted to disk. Skipped when
         // this compilation saw no annotations, mirroring the conditional save in generateFiles()
         // (a test-compile pass must not evict the main compile's contribution from the merge).
-        Path compilationRoot = compilationRoot();
-        String regionId = currentRegionId();
-        String moduleId = currentModuleId();
-        String modulePath = ModuleSidecar.computeModulePath(compilationRoot, root);
-
-        // This module's own opt-ins and content, resolved here rather than just before the nested
-        // write, because the simulated sidecar below has to carry them (as generateFiles does).
-        Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
-        Set<String> moduleActiveServices = (moduleIdentity == null || compilationRoot.equals(root))
-            ? Set.of()
-            : ServiceRegistry.resolveActiveServices(moduleServiceFiles);
-        RoleConfig checkModuleRoles = (moduleIdentity != null && !compilationRoot.equals(root))
-            ? RoleConfig.load(compilationRoot) : null;
-        GuardrailContentBuilder.Result moduleBuilt = moduleActiveServices.isEmpty() ? null
-            : new GuardrailContentBuilder(collector, moduleActiveServices, projectName, GENERATED_HEADER, checkModuleRoles).build();
-
-        ModuleSidecar mySidecar = new ModuleSidecar(moduleId, modulePath, regionId);
-        populateSidecarBodies(mySidecar, contentByService);
-        if (moduleBuilt != null) {
-            moduleBuilt.contentByService.forEach(mySidecar::putModuleBody);
-        }
-        Map<String, GranularContribution> myGranular =
-            GranularRulesWriter.contributionsFor(built.elementRules, checkRootRoles);
-        myGranular.forEach(mySidecar::putGranularContribution);
-        Set<String> myStems = new java.util.LinkedHashSet<>(myGranular.keySet());
-        if (moduleBuilt != null) {
-            Map<String, GranularContribution> myModuleGranular =
-                GranularRulesWriter.contributionsFor(moduleBuilt.elementRules, checkModuleRoles);
-            myModuleGranular.forEach(mySidecar::putModuleGranularContribution);
-            myStems.addAll(myModuleGranular.keySet());
-        }
-        mySidecar.setGranularStems(myStems);
-        mySidecar.setElementIds(collector.model().elementIds());
-        buildSafetyDigests(activeServices, checkRootRoles).forEach(mySidecar::putIndexDigest);
+        ModuleSidecar mySidecar = assembleSidecar(targets, contentByService, moduleBuilt,
+            GranularRulesWriter.contributionsFor(built.elementRules, checkRootRoles));
         // Same order as generateFiles: the departed stems are read before readAll, which prunes
         // the stale sidecars that are the only record of them.
         Set<String> departedStems = ModuleSidecar.staleGranularStems(root);
@@ -2187,6 +2128,82 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             if (log != null) log.error("Check failed: {} guardrail file(s) out of date.", drift.size());
         }
         VibeTagsLogger.shutdown(root);
+    }
+
+    /**
+     * Where a round's output goes and what decides it: the root's service files and opt-ins, this
+     * compilation's module identity, the module's own opt-ins, and both role configs. Resolved by
+     * one method for {@link #generateFiles()} and {@link #checkFiles()} alike, so check mode judges
+     * exactly the files generation writes.
+     *
+     * @param regionId names the module's region in the shared files
+     * @param moduleId the region plus the source set, so this compilation owns its own sidecar file
+     *                 and cannot overwrite a sibling source set's (issue #330)
+     */
+    private record RoundTargets(Map<String, Path> serviceFiles, Set<String> activeServices,
+                                Path compilationRoot, String regionId, String moduleId, String modulePath,
+                                Map<String, Path> moduleServiceFiles, Set<String> moduleActiveServices,
+                                @Nullable RoleConfig rootRoles, @Nullable RoleConfig moduleRoles) { }
+
+    private RoundTargets resolveRoundTargets() {
+        Map<String, Path> serviceFiles = ServiceRegistry.buildServiceFileMap(root);
+        Set<String> activeServices = ServiceRegistry.resolveActiveServices(processingEnv.getMessager(), serviceFiles);
+        Path compilationRoot = compilationRoot();
+        // Per-module (nested) output: resolve this module's own opt-in files quietly. Non-opted
+        // modules are the common case in a reactor and must not spam diagnostics. Empty for
+        // single-module builds where the compilation root IS the VibeTags root.
+        boolean nestedModule = moduleIdentity != null && !compilationRoot.equals(root);
+        Map<String, Path> moduleServiceFiles = ServiceRegistry.buildServiceFileMap(compilationRoot);
+        Set<String> moduleActiveServices = nestedModule
+            ? ServiceRegistry.resolveActiveServices(moduleServiceFiles)
+            : Set.of();
+        // Role/topic routing for granular files (.vibetags-roles); null when absent → per-class.
+        return new RoundTargets(serviceFiles, activeServices, compilationRoot,
+            currentRegionId(), currentModuleId(), ModuleSidecar.computeModulePath(compilationRoot, root),
+            moduleServiceFiles, moduleActiveServices,
+            RoleConfig.load(root), nestedModule ? RoleConfig.load(compilationRoot) : null);
+    }
+
+    /**
+     * This round's sidecar as generation saves it and check mode simulates it: the rendered bodies,
+     * the module's own bodies, the granular contributions and stems, the element ids and the safety
+     * digests.
+     *
+     * @param myGranular this round's root granular contributions; the caller keeps them, because
+     *                   their keys are also the stems the orphan sweep is judged against
+     */
+    @AIContext(
+        focus = "generateFiles() and checkFiles() both build this round's sidecar here, and both resolve their targets through resolveRoundTargets()",
+        avoids = "Inlining a copy of either into one of the two modes: the copies drift, and check mode then passes a tree generation would rewrite (#766)")
+    private ModuleSidecar assembleSidecar(RoundTargets targets, Map<String, String> contentByService,
+                                          GuardrailContentBuilder.@Nullable Result moduleBuilt,
+                                          Map<String, GranularContribution> myGranular) {
+        ModuleSidecar sidecar = new ModuleSidecar(targets.moduleId(), targets.modulePath(), targets.regionId());
+        populateSidecarBodies(sidecar, contentByService);
+        if (moduleBuilt != null) {
+            moduleBuilt.contentByService.forEach(sidecar::putModuleBody);
+        }
+        // Granular filenames go in before they are written: siblings read them as cleanup
+        // exclusions, so no round deletes rule files it simply could not see (issue #330). The
+        // content behind each name goes in with it, because a granular file is not owned by one
+        // module either — a role spanning modules resolves to one shared path, and without the
+        // contributions the last module to compile replaced it (issue #365).
+        myGranular.forEach(sidecar::putGranularContribution);
+        Set<String> stems = new java.util.LinkedHashSet<>(myGranular.keySet());
+        if (moduleBuilt != null) {
+            Map<String, GranularContribution> moduleGranular =
+                GranularRulesWriter.contributionsFor(moduleBuilt.elementRules, targets.moduleRoles());
+            moduleGranular.forEach(sidecar::putModuleGranularContribution);
+            stems.addAll(moduleGranular.keySet());
+        }
+        sidecar.setGranularStems(stems);
+        // The elements themselves, recorded whether or not a granular service is active: this is
+        // what lets the next run tell an edited annotation from a round that never saw the sources.
+        sidecar.setElementIds(collector.model().elementIds());
+        // Safety-tier digest for the lean indexed reactor root: without it the root keeps NOTHING
+        // of a module inline, and @AILocked/@AICore/@AIAudit stop being always-on (issue #332).
+        buildSafetyDigests(targets.activeServices(), targets.rootRoles()).forEach(sidecar::putIndexDigest);
+        return sidecar;
     }
 
     /**

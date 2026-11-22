@@ -4,6 +4,10 @@
 ### Rules for method generateFiles
 - **Reason**: Step order is load-bearing: fingerprint check → sidecar write → sidecar read → merge → file write → cache flush; reordering steps silently skips regeneration or corrupts multi-module output
 
+### Rules for method assembleSidecar
+- **Focus**: generateFiles() and checkFiles() both build this round's sidecar here, and both resolve their targets through resolveRoundTargets()
+- **Avoid**: Inlining a copy of either into one of the two modes: the copies drift, and check mode then passes a tree generation would rewrite (#766)
+
 ### Rules for method earlyExitAllowed
 - **Focus**: A step added after the collection walk that reads the collected model must also turn the early exit off here
 - **Avoid**: Adding such a step without a clause here: a no-op rebuild then skips it with nothing reporting it (#834)
