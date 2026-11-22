@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`ModuleSidecar.load` is split, and the sidecar's readers share their rules.** The method the
+  whole-code quality run ranked first (cognitive complexity 86, 106 statements) now reads the file
+  and hands its lines to `LineReader`, whose steps are `read`, `accept`, `store`, `isTorn` and
+  `toSidecar`. Two rules that each reader of a sidecar carried its own copy of are stated once:
+  `LineKind` tells the format's fifteen kinds of key apart for `load` and for the streaming
+  `SummaryScan`, whose switch has no default arm, so a new key does not compile until both say how
+  they read it; and `FormatVersion` reads the `# version=` header for `load`, `SummaryScan` and
+  `TrailerScan`. No change to the file format. `ModuleSidecarLoadRoutingTest` came first and pins
+  the field each key is read into; breaking the routing three ways turned it red each time.
 - **Generation and check mode share their round targets and sidecar.** `checkFiles()` carried a
   copy of the code inside the `@AILocked` `generateFiles()` that resolves the service files, module
   identity, module opt-ins and role configs, and that builds this round's sidecar. Both now call
@@ -93,6 +102,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The unreadable-sidecar warning reads a version header as the loader does (#1154).**
+  `unreadableSidecarNames` parsed the `# version=` header with its own copy of the rule. A header
+  with nothing after the `=` was not a header to it, so the round could warn that a sidecar was
+  skipped and kept while `readAll` had judged it malformed and deleted it; and it read only the
+  first 128 characters of the line, so a number padded past that went unnamed. No writer produces
+  either shape. `versionHeaderIsReadTheWayLoadReadsIt` failed before the fix.
 - **A corrupt `.vibetags-cache` row no longer fails the build (#1146).** A row whose path no
   file system can name (a NUL byte from a damaged or hand-edited cache) threw
   `InvalidPathException` out of `AIGuardrailProcessor.init()`, which is not covered by
