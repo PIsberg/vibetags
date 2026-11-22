@@ -161,7 +161,7 @@
         <node.version>26.13.1</node.version>
         <!-- The gh extension actions-lock.yml verifies .github/workflows/actions.lock with. A
              precompiled extension pinned by release tag; Dependabot cannot see it. -->
-        <gh-actions-lock.version>0.4.1</gh-actions-lock.version>
+        <gh-actions-lock.version>0.5.1</gh-actions-lock.version>
     </properties>
 
     <dependencyManagement>
