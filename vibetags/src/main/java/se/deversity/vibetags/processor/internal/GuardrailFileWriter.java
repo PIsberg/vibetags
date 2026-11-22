@@ -463,7 +463,7 @@ public final class GuardrailFileWriter {
                     "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
                 String before = withRenderedFrontMatter(
                     stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing()), frontMatter);
-                String finalContent = (before.isEmpty() ? "" : before + "\n\n") + wrappedBody + "\n";
+                String finalContent = afterBlankLine(before, wrappedBody + "\n");
                 if (contentMatches(existing, finalContent)) {
                     debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
                     noteCurrent(filePath, content, existingAttrs);
@@ -513,7 +513,7 @@ public final class GuardrailFileWriter {
             // rewriting the whole file from the rendered content alone deleted it.
             String human = stripLegacyVibeTagsBlock(existing);
             String before = human.isEmpty() ? frontMatter : withRenderedFrontMatter(human, frontMatter);
-            String finalContent = (before.isEmpty() ? "" : before + "\n\n") + wrappedBody + "\n";
+            String finalContent = afterBlankLine(before, wrappedBody + "\n");
             if (contentMatches(existing, finalContent)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=legacy",
                     fileName, finalContent.length());
@@ -1249,75 +1249,87 @@ public final class GuardrailFileWriter {
      *         the caller's signal not to report a removal that did not happen.
      */
     private boolean scrubGranularFile(Path p) {
+        String content;
         try {
-            String content = Files.readString(p, StandardCharsets.UTF_8);
-            // Encoding, not content, as in writeFileIfChanged. Left in, it kept a start marker on
-            // the first line from owning its line, so the block was not found, and it hid the
-            // generated front matter from frontMatterEnd once the block was gone, so a file holding
-            // only that header was kept. Written back when the file is.
-            String bom = content.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
-            content = content.substring(bom.length());
-            boolean updated = false;
-
-            int mdStart = indexOfBlockStart(content, MARKER_START_MD);
-            if (mdStart >= 0) {
-                int end = indexOfMarkerLine(content, MARKER_END_MD, mdStart + MARKER_START_MD.length());
-                if (end != -1) {
-                    String before = content.substring(0, mdStart).stripTrailing();
-                    String after = content.substring(end + MARKER_END_MD.length()).stripLeading();
-                    content = (before.isEmpty() ? "" : before + "\n\n") + after;
-                    updated = true;
-                }
-            } else {
-                int hashStart = indexOfBlockStart(content, MARKER_START_HASH);
-                if (hashStart >= 0) {
-                    int end = indexOfMarkerLine(content, MARKER_END_HASH, hashStart + MARKER_START_HASH.length());
-                    if (end != -1) {
-                        String before = content.substring(0, hashStart).stripTrailing();
-                        String after = content.substring(end + MARKER_END_HASH.length()).stripLeading();
-                        content = (before.isEmpty() ? "" : before + "\n\n") + after;
-                        updated = true;
-                    }
-                }
-            }
-
-            if (updated) {
-                content = content.trim();
-                // Only a header fenced by lines of its own counts: a substring search for the next
-                // "---" read one inside the developer's prose as the closing fence, and deleted a
-                // file whose only content was their note (#875).
-                int headerEnd = frontMatterEnd(content);
-                boolean isEmptyOrBoilerplate = content.isEmpty()
-                    || (headerEnd != -1 && content.substring(headerEnd).isBlank());
-
-                if (dryRun) {
-                    dryRunChanges.add(p.toString());
-                    return true;
-                }
-
-                if (isEmptyOrBoilerplate) {
-                    // Through deleteIfExists, which logs the removal, drops the cache entry, and
-                    // records a failed delete for the next build to retry.
-                    if (!deleteIfExists(p)) {
-                        return false;
-                    }
-                } else {
-                    // Atomic, like every other write: an in-place write interrupted halfway left
-                    // the developer's remaining text truncated (#875).
-                    try {
-                        stageAndMove(p, bom + content + "\n", AtomicFileReplacer.ATOMIC_REPLACE);
-                    } catch (IOException e) {
-                        recordFailedScrub(p, e);
-                        return false;
-                    }
-                    if (writeCache != null) writeCache.invalidate(p);
-                }
-                return true;
-            }
+            content = Files.readString(p, StandardCharsets.UTF_8);
         } catch (IOException ignored) {
-            // Skip files we can't read
+            return false; // Skip files we can't read
         }
-        return false;
+        // Encoding, not content, as in writeFileIfChanged. Left in, it kept a start marker on
+        // the first line from owning its line, so the block was not found, and it hid the
+        // generated front matter from frontMatterEnd once the block was gone, so a file holding
+        // only that header was kept. Written back when the file is.
+        String bom = content.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
+        String remaining = withoutGeneratedBlock(content.substring(bom.length()));
+        if (remaining == null) {
+            return false;
+        }
+        if (dryRun) {
+            dryRunChanges.add(p.toString());
+            return true;
+        }
+        if (isEmptyOrBoilerplate(remaining)) {
+            // Through deleteIfExists, which logs the removal, drops the cache entry, and
+            // records a failed delete for the next build to retry.
+            return deleteIfExists(p);
+        }
+        // Atomic, like every other write: an in-place write interrupted halfway left
+        // the developer's remaining text truncated (#875).
+        try {
+            stageAndMove(p, bom + remaining + "\n", AtomicFileReplacer.ATOMIC_REPLACE);
+        } catch (IOException e) {
+            recordFailedScrub(p, e);
+            return false;
+        }
+        if (writeCache != null) writeCache.invalidate(p);
+        return true;
+    }
+
+    /**
+     * {@code content} with its generated block taken out and the rest trimmed, or null when it holds
+     * no complete block. A Markdown start marker decides the style: once one is found, a hash-marked
+     * block is not looked for, even when the Markdown block has no end.
+     */
+    private static @Nullable String withoutGeneratedBlock(String content) {
+        int mdStart = indexOfBlockStart(content, MARKER_START_MD);
+        String remaining = mdStart >= 0
+            ? withoutBlockAt(content, mdStart, MARKER_START_MD, MARKER_END_MD)
+            : withoutBlockAt(content, indexOfBlockStart(content, MARKER_START_HASH), MARKER_START_HASH, MARKER_END_HASH);
+        return remaining == null ? null : remaining.trim();
+    }
+
+    /**
+     * The text around the block that starts at {@code start}, joined by one blank line; null when
+     * there is no start, or no end marker after it, in which case everything after the start may be
+     * the developer's and nothing is removed.
+     */
+    private static @Nullable String withoutBlockAt(String content, int start, String startMarker, String endMarker) {
+        if (start < 0) {
+            return null;
+        }
+        int end = indexOfMarkerLine(content, endMarker, start + startMarker.length());
+        if (end == -1) {
+            return null;
+        }
+        String before = content.substring(0, start).stripTrailing();
+        String after = content.substring(end + endMarker.length()).stripLeading();
+        return afterBlankLine(before, after);
+    }
+
+    /**
+     * Whether nothing of the developer's is left: no text, or only a front-matter header. Only a
+     * header fenced by lines of its own counts: a substring search for the next "---" read one inside
+     * the developer's prose as the closing fence, and deleted a file whose only content was their
+     * note (#875).
+     */
+    private static boolean isEmptyOrBoilerplate(String content) {
+        int headerEnd = frontMatterEnd(content);
+        return content.isEmpty() || (headerEnd != -1 && content.substring(headerEnd).isBlank());
+    }
+
+    /** {@code rest} after {@code before} with one blank line between them; just {@code rest} when {@code before} is empty. */
+    private static String afterBlankLine(String before, String rest) {
+        return (before.isEmpty() ? "" : before + "\n\n") + rest;
     }
 
     /**

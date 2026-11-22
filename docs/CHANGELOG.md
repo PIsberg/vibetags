@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The orphan scrub removes a generated block through one code path.**
+  `GuardrailFileWriter.scrubGranularFile` carried the block removal twice, for Markdown and for
+  hash markers. It is now `withoutGeneratedBlock` (same precedence: a Markdown start marker means
+  hash markers are not looked for) over `withoutBlockAt`, and the four copies of the "text, blank
+  line, block" splice are one `afterBlankLine`. Pinned first: a start marker with no end leaves the
+  file untouched in both styles.
 - **`AIGuardrailProcessor.init()` is split into named steps.** The 119-line method is now ten calls
   (`resolveRoot`, `warnAboutUnrecognizedOptions`, `readOutputOptions`, `configureLogging`,
   `readEnforcementOptions`, `configureCollection`, `createWriters`,
