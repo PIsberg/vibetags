@@ -10,6 +10,9 @@ Every third-party and toolchain version lives once, as a property in
 files that cannot read a pom (Gradle wrappers, standalone examples, workflow `env`, README
 snippets) carry copies listed in `vibetags-parent/version-mirrors.txt`.
 `BuildVersionParityTest` fails the build if a literal creeps back in or any copy drifts.
+Dependabot does not bump a property that has copies: its Maven entry ignores the coordinates of
+`ksp.version` and `maven-compiler-plugin.version` (`DependabotMirroredPinsTest` keeps that list
+complete), so this skill is the only thing that moves them.
 What that test cannot see is whether the pinned version is *current*, which is what this
 skill is for.
 

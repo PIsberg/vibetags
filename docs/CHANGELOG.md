@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependabot no longer opens bumps that cannot pass (#1038).** Its Maven entry now ignores the
+  KSP artifacts and `maven-compiler-plugin`, the two pins it can see whose versions are also copied
+  into files it does not edit (the kotlin-ksp example, README snippets, the example poms). Each such
+  bump arrived with `BuildVersionParityTest` red in every Maven and Gradle job until the copies were
+  synced by hand: #1024 and #1092, both `ksp.version`. `tools/bump-dependencies.sh` reports both
+  pins and `tools/sync-version-mirrors.py` writes their copies. The new `DependabotMirroredPinsTest`
+  derives the ignore list from the poms and `version-mirrors.txt`, so a newly mirrored pin fails the
+  build until it is ignored; it was seen failing on the four unignored coordinates before the entries
+  were added. `dependabot-mirrors.yml`, which was to push the synced copies with a GitHub App token,
+  is removed: the App was never created, so on #1092 it ran and pushed nothing.
+
 ### Fixed
 
 - **`central-month-usage.sh` counts a bundle uploaded on its own as a deployment (#1130).** It
