@@ -94,6 +94,28 @@ class AIGuardrailProcessorProcessTest {
             "Second call must not produce any additional messages (idempotency guard)");
     }
 
+    /**
+     * javac never delivers a round after the final one, but a reused processor (an IDE, a daemon
+     * re-running one instance) can. Collecting from it would add elements to a model whose files
+     * were already written, so the next build's output would not match this one's.
+     */
+    @Test
+    void process_aRoundAfterTheFinalRoundIsNotRead() {
+        AIGuardrailProcessor processor = new AIGuardrailProcessor();
+        processor.init(mockEnv(noopMessager()));
+        RoundEnvironment finalRound = mock(RoundEnvironment.class);
+        when(finalRound.processingOver()).thenReturn(true);
+        processor.process(Set.of(), finalRound);
+
+        RoundEnvironment lateRound = mock(RoundEnvironment.class);
+        when(lateRound.processingOver()).thenReturn(false);
+        boolean result = processor.process(Set.of(), lateRound);
+
+        assertFalse(result);
+        verify(lateRound, never()).getRootElements();
+        verify(lateRound, never()).getElementsAnnotatedWith(any(java.lang.Class.class));
+    }
+
     @Test
     void process_alwaysReturnsFalse() {
         AIGuardrailProcessor processor = new AIGuardrailProcessor();

@@ -104,6 +104,32 @@ class ProcessorFailureGuardTest {
             "Expected a WARNING noting that guardrail generation failed and was skipped");
     }
 
+    /**
+     * Check mode is the one place the guard fails closed: a build that asked VibeTags to verify its
+     * guardrail files must not pass because the verification itself blew up.
+     */
+    @Test
+    void inCheckModeARuntimeFailureFailsTheBuildWithAnError(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("CLAUDE.md"));
+        ProcessorTestHarness harness = new ProcessorTestHarness(tempDir, false);
+        harness.writeSourceFile("src/main/java/com/example/Locked.java", """
+            package com.example;
+            import se.deversity.vibetags.annotations.AILocked;
+            @AILocked(reason = "core logic")
+            public class Locked {}
+            """);
+
+        List<Diagnostic<? extends JavaFileObject>> diagnostics =
+            harness.compileWithReturningDiagnostics(new FaultyProcessor(), "-Avibetags.check=true");
+
+        assertTrue(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR
+                && d.getMessage(null).contains("check mode could not verify guardrail files")),
+            () -> "a check that could not run must fail the build, not pass it: " + diagnostics);
+        assertFalse(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.WARNING
+                && d.getMessage(null).contains("guardrail generation failed")),
+            () -> "check mode must not downgrade the failure to the advisory warning: " + diagnostics);
+    }
+
     @Test
     @ResourceLock(ParallelReactorGenerationTest.SEAM_LOCK)
     void aFailureDuringGenerationStillReleasesTheLog(@TempDir Path tempDir) throws IOException {
