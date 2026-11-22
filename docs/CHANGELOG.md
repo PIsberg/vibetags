@@ -19,6 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   build until it is ignored; it was seen failing on the four unignored coordinates before the entries
   were added. `dependabot-mirrors.yml`, which was to push the synced copies with a GitHub App token,
   is removed: the App was never created, so on #1092 it ran and pushed nothing.
+- **Dependency bumps (#1055, #1092, #1115, #1124, #1125, #1127 and the rest of the report).** From
+  `tools/bump-dependencies.sh` and the registries, one commit each: logback 1.6.7 -> 1.6.8,
+  async-test-lib 1.14.2 -> 1.14.3, KSP 2.3.13 -> 2.3.14 (its API still declares kotlin-stdlib 2.4.0,
+  so `kotlin-stdlib.version` stays), exec-maven-plugin 3.6.4 -> 3.7.0 (needs Maven 3.9.0, already
+  required), Error Prone 2.52.0 -> 2.53.0, NullAway 0.14.3 -> 0.14.4, Gradle 9.9.1 -> 9.9.2, the
+  publishing Maven 3.10.0 -> 3.10.2 (SHA-512 from apache.org, matched against the archive on Maven
+  Central), Node 24.22.0 -> 26.13.1 (the current LTS), gh-actions-lock 0.4.1 -> 0.5.1,
+  claude-code-action 1.0.276 -> 1.0.286, `@openai/codex` 0.167.1 -> 0.171.0 and
+  `@anthropic-ai/claude-code` 2.1.326 -> 2.1.330. Verified locally on JDK 25 with the full
+  processor suite (`-Pe2e`, 4,429 tests), the KSP front end (47 tests), the BOM, CLI and load-tests
+  builds, `vibetags`'s Gradle build and the kotlin, kotlin-ksp, groovy, scala and basic examples.
 
 ### Fixed
 
