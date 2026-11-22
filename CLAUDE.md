@@ -46,6 +46,7 @@ mvn test -Dtest=SomeTest            # -Dtest overrides the tag filter; runs only
 mvn test-compile -Pself-annotate    # regenerate this repo's own guardrail files (a test round routes to TESTING.md)
 
 cd examples/basic && mvn clean compile     # consumer fixture; library must be installed first
+tools/quality-gate/run.sh origin/main      # new-code quality gate (after mvn test -Pe2e): tools/quality-gate/README.md
 ```
 
 ## Scoping and hygiene

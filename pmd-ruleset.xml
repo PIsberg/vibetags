@@ -138,7 +138,10 @@
       order is load-bearing. A threshold that can only be met by a refactor nobody is going to make
       is a permanently red gate, which trains people to ignore the category that also contains
       SimplifyBooleanReturns (2) and PublicMemberInNonPublicType (3). Those two stay live and their
-      findings were fixed.
+      findings were fixed. CognitiveComplexity and NcssCount are not dropped altogether: the
+      new-code quality gate (tools/quality-gate) runs them on every pull request and fails a method
+      that is new over the threshold or that the change made worse, which a legacy method left alone
+      never is.
     -->
     <rule ref="category/java/design.xml">
         <exclude name="CyclomaticComplexity"/>

@@ -19,6 +19,12 @@ apart. "manual" means nothing runs it automatically; it exists for a human (or t
 | `self-check.sh` | Regenerates this repo's own guardrail files from a clean-clone state and fails if anything moved, including the README line counts | self-check step in `build.yml`, `vibetags-self-check` pre-commit hook | `SelfCheckGateWiringTest` |
 | `ecj-degradation-check.sh` | Compiles `examples/basic` under javac and ECJ, compares the locks output | `ecj` job in `build.yml` | that CI job |
 
+## Code quality
+
+| Tool | What it does | Run by | Enforced by |
+|---|---|---|---|
+| `quality-gate/run.sh` | The new-code quality gate: coverage, duplication and method complexity of what a change adds, against Sonar's agentic-AI thresholds ([quality-gate/README.md](quality-gate/README.md)) | `build-maven` job (JDK 21, pull requests) | `quality-gate/test_quality_gate.py`, run by the same job on every event |
+
 ## Suite health
 
 | Tool | What it does | Run by | Enforced by |

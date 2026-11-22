@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A quality gate on new code.** Sonar's "Sonar way for agentic AI" conditions, measured on what a
+  pull request adds with the build's own tools: at least 80% of new executable lines covered by
+  the full suite, at most 3% of new lines in a CPD clone, and no method new over
+  `CognitiveComplexity` 15 or `NcssCount` 60, or made worse, compared with the same sources at
+  the base. Reliability, security and dependency risk stay with the build's analyzers and
+  `dependency-review.yml`. It runs on the JDK 21 leg of `build-maven` for pull requests, and its
+  own 16 tests on every event. `tools/quality-gate/README.md` says what each condition measures.
+  Its first run, against `main` with this changelog's six refactors as the new code, measured 98.3%
+  coverage and 0% duplication, and failed `WriteCache.HeaderReader#read` at cognitive complexity
+  26, which now reads its headers from a table. The Codecov patch comment, which still cited a 90%
+  floor that `target: auto` had replaced, now points at the gate.
+
 ### Changed
 
 - **Generation and check mode share their round targets and sidecar.** `checkFiles()` carried a
