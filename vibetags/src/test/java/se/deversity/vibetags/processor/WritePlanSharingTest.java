@@ -17,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * root-sweep predicate each existed twice, the copy in generateFiles() frozen by its lock (#766).
  * A behavioural test can only catch the copies once they have already drifted. This one fails the
  * moment either method decides a per-file question for itself instead of reading the shared
- * {@code WritePlan} and {@code maySweepRoot}.
+ * {@code WritePlan} and {@code maySweepRoot}, or resolves its targets or builds this round's sidecar
+ * itself instead of through {@code resolveRoundTargets} and {@code assembleSidecar}.
  *
  * <p>Calls inside a lambda are compiled into a synthetic {@code lambda$method$n}, and the inline
  * predicate lived in exactly such a lambda, so those count as calls from the method too.
@@ -39,6 +40,22 @@ class WritePlanSharingTest {
             writer + " asks which files are ignore files itself; that is WritePlan's decision");
         assertFalse(calls.contains("String.endsWith"),
             writer + " carries an inline service-name predicate again");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"generateFiles", "checkFiles"})
+    void eachWriterResolvesItsTargetsAndBuildsItsSidecarThroughTheSharedMethods(String writer) {
+        Set<String> calls = callsFrom(writer);
+
+        assertTrue(calls.contains("AIGuardrailProcessor.resolveRoundTargets"),
+            writer + " does not resolve its targets through resolveRoundTargets: " + calls);
+        assertTrue(calls.contains("AIGuardrailProcessor.assembleSidecar"),
+            writer + " does not build its sidecar through assembleSidecar: " + calls);
+        for (String own : Set.of("ServiceRegistry.buildServiceFileMap", "RoleConfig.load",
+                "AIGuardrailProcessor.populateSidecarBodies", "ModuleSidecar.setGranularStems",
+                "ModuleSidecar.setElementIds", "AIGuardrailProcessor.buildSafetyDigests")) {
+            assertFalse(calls.contains(own), writer + " calls " + own + " itself again; the copy drifts from the other mode's");
+        }
     }
 
     private static Set<String> callsFrom(String method) {
