@@ -155,8 +155,8 @@
              apache-maven-<version>-bin.tar.gz. Change both together. Not named maven.version:
              Maven defines that itself as the running Maven, and a property here would shadow it
              for every plugin that reads it. -->
-        <publish-maven.version>3.10.0</publish-maven.version>
-        <publish-maven.sha512>908b1501bfb420bf7c8affb855534a9c407fd6099367bfb9f2f2dcb8e9799102bffb84518cde74c679bd76870247c6528683abdd620581bffa90f95d92d175aa</publish-maven.sha512>
+        <publish-maven.version>3.10.2</publish-maven.version>
+        <publish-maven.sha512>57d2db6b37e7582119137ade544557bba741b29e62109ef81539a2bdfd6d0e641fdd5d8edb014af1816d0510deac6fac8f347433b3a1aa36316ba85aa77b8119</publish-maven.sha512>
         <!-- The Node that installs the pinned CLIs in build.yml and instruction-evals.yml. -->
         <node.version>24.22.0</node.version>
         <!-- The gh extension actions-lock.yml verifies .github/workflows/actions.lock with. A
