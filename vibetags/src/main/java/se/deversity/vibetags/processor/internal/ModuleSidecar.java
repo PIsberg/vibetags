@@ -604,99 +604,150 @@ public final class ModuleSidecar {
      * (skipped, and likewise never deleted).
      */
     static @Nullable ModuleSidecar load(Path path) {
-        // Outside the try: the catch for an undecodable value below still has to judge the trailer.
-        List<String> lines = List.of();
-        FormatVersion version = null;
+        List<String> lines;
         try {
             lines = Files.readAllLines(path, StandardCharsets.UTF_8);
-            String moduleId = null;
-            String modulePath = "";
-            String regionId = null;
-            Map<String, String> bodies = new LinkedHashMap<>();
-            Map<String, String> moduleBodies = new LinkedHashMap<>();
-            Map<String, String> indexDigests = new LinkedHashMap<>();
-            Map<String, String> unroutedBodies = new LinkedHashMap<>();
-            Set<String> granularStems = new LinkedHashSet<>();
-            Set<String> elementIds = new LinkedHashSet<>();
-            Set<String> sourceRoots = new LinkedHashSet<>();
-            Map<String, GranularContribution> granularUnits = new LinkedHashMap<>();
-            Map<String, GranularContribution> moduleGranularUnits = new LinkedHashMap<>();
-            Map<String, String> granularNaming = new LinkedHashMap<>();
-            Map<String, String> moduleGranularNaming = new LinkedHashMap<>();
-            for (String line : lines) {
-                if (line.startsWith("#")) {
-                    // Enforce the format-version header: refuse to (mis-)parse future formats,
-                    // and treat older formats (or a missing header) as stale.
-                    if (line.startsWith(VERSION_HEADER)) {
-                        version = FormatVersion.of(line.substring(VERSION_HEADER.length()));
-                        if (version == FormatVersion.FUTURE) return FUTURE_VERSION;
-                        if (version == FormatVersion.STALE) return null;
-                    }
-                    continue; // other comments — skip
-                }
-                int eq = line.indexOf('=');
-                if (eq < 0) continue;
-                String key = line.substring(0, eq);
-                String val = line.substring(eq + 1);
-                LineKind kind = LineKind.of(key);
-                String name = kind.nameIn(key);
-                switch (kind) {
-                    case MODULE_ID -> { moduleId = val; }
-                    case MODULE_PATH -> { modulePath = val; }
-                    case REGION_ID -> { regionId = val; }
-                    case GRANULAR_STEMS -> addNonBlankLines(decode(val), granularStems);
-                    case ELEMENT_IDS -> addNonBlankLines(decode(val), elementIds);
-                    case SOURCE_ROOTS -> addNonBlankLines(portable(decode(val)), sourceRoots);
-                    case MODULE_GRANULAR_NAMING -> moduleGranularNaming.put(name, decode(val));
-                    case GRANULAR_NAMING -> granularNaming.put(name, decode(val));
-                    case MODULE_GRANULAR_UNIT -> putParsedContribution(moduleGranularUnits, name, decode(val));
-                    case GRANULAR_UNIT -> putParsedContribution(granularUnits, name, decode(val));
-                    case MODULE_BODY -> moduleBodies.put(name, decode(val));
-                    case INDEX_DIGEST -> indexDigests.put(name, decode(val));
-                    case UNROUTED_BODY -> unroutedBodies.put(name, decode(val));
-                    case RESERVED -> {
-                        // Recognised and deliberately not stored, nor even decoded. Above all it is
-                        // kept out of SERVICE_BODY, which would render it into somebody's guardrail
-                        // file. Doing nothing here is the point.
-                    }
-                    case SERVICE_BODY -> bodies.put(name, decode(val));
-                }
-            }
-            // Before the checks below, because those delete: a file cut short can lose its
-            // moduleId line as easily as its last body, and pruning a module's sidecar over a torn
-            // write takes that module out of every sibling's output until it recompiles.
-            // Only a version that promises a trailer may be judged by one. A version-2 file has
-            // none to lose, so its absence says nothing about whether the write finished, and
-            // treating it as torn is what silently reduced a reactor to one region (issue #590).
-            if (version == FormatVersion.PROMISES_TRAILER && !isWhole(lines)) return UNREADABLE;
-            if (moduleId == null || version == null) return null;
-            // Sidecars written before the source-set split carry no regionId; their module id IS
-            // the region id, which is exactly what they meant.
-            ModuleSidecar s = new ModuleSidecar(moduleId, modulePath,
-                    regionId != null && !regionId.isBlank() ? regionId : moduleId);
-            s.bodies.putAll(bodies);
-            s.moduleBodies.putAll(moduleBodies);
-            s.indexDigests.putAll(indexDigests);
-            s.unroutedBodies.putAll(unroutedBodies);
-            s.granularStems.addAll(granularStems);
-            s.elementIds.addAll(elementIds);
-            s.sourceRoots.addAll(sourceRoots);
-            // Naming lines may precede or follow their contribution; attach once both are in.
-            granularNaming.forEach((stem, naming) ->
-                granularUnits.computeIfPresent(stem, (k, c) -> c.withNaming(naming)));
-            moduleGranularNaming.forEach((stem, naming) ->
-                moduleGranularUnits.computeIfPresent(stem, (k, c) -> c.withNaming(naming)));
-            s.granularUnits.putAll(granularUnits);
-            s.moduleGranularUnits.putAll(moduleGranularUnits);
-            return s;
         } catch (IOException unreadable) {
             // Could not read it — that says nothing about the content. See UNREADABLE.
             return UNREADABLE;
-        } catch (IllegalArgumentException malformed) {
-            // Read it fine, but a value is not decodable. With no trailer that is a write cut off
-            // inside the value, the same torn write the trailer check above reports, and must not
-            // be pruned for it. With the trailer it is genuinely corrupt, so the caller prunes.
-            return version == FormatVersion.PROMISES_TRAILER && !isWhole(lines) ? UNREADABLE : null;
+        }
+        return new LineReader().read(lines);
+    }
+
+    /**
+     * The state {@link #load} keeps while it reads a sidecar's lines in file order, and the verdict
+     * it reaches from them.
+     *
+     * <p>The first refusal in file order decides. A version header this processor will not read
+     * ends the read at that line, and a value that will not decode ends it at that value.
+     * {@link SummaryScan} applies the same rules to the same lines without holding a body, and
+     * {@code ModuleSidecarOnRecordAgreementTest} holds the two to one verdict.
+     */
+    private static final class LineReader {
+
+        /** What the last version header read says; {@code null} until there is one. */
+        private @Nullable FormatVersion version;
+        private @Nullable String moduleId;
+        private String modulePath = "";
+        private @Nullable String regionId;
+        private final Map<String, String> bodies = new LinkedHashMap<>();
+        private final Map<String, String> moduleBodies = new LinkedHashMap<>();
+        private final Map<String, String> indexDigests = new LinkedHashMap<>();
+        private final Map<String, String> unroutedBodies = new LinkedHashMap<>();
+        private final Set<String> granularStems = new LinkedHashSet<>();
+        private final Set<String> elementIds = new LinkedHashSet<>();
+        private final Set<String> sourceRoots = new LinkedHashSet<>();
+        private final Map<String, GranularContribution> granularUnits = new LinkedHashMap<>();
+        private final Map<String, GranularContribution> moduleGranularUnits = new LinkedHashMap<>();
+        private final Map<String, String> granularNaming = new LinkedHashMap<>();
+        private final Map<String, String> moduleGranularNaming = new LinkedHashMap<>();
+
+        /** The verdict {@link #load} documents, for a file that could be read to its end. */
+        @Nullable ModuleSidecar read(List<String> lines) {
+            try {
+                for (String line : lines) {
+                    accept(line);
+                    // Refuse to (mis-)parse a future format, and treat an older one as stale.
+                    if (version == FormatVersion.FUTURE) {
+                        return FUTURE_VERSION;
+                    }
+                    if (version == FormatVersion.STALE) {
+                        return null;
+                    }
+                }
+            } catch (IllegalArgumentException undecodable) {
+                // Read it fine, but a value is not decodable. With no trailer that is a write cut off
+                // inside the value, the same torn write the check below reports, and must not be
+                // pruned for it. With the trailer it is genuinely corrupt, so the caller prunes.
+                return isTorn(lines) ? UNREADABLE : null;
+            }
+            // Before the identity check, because that one deletes: a file cut short can lose its
+            // moduleId line as easily as its last body, and pruning a module's sidecar over a torn
+            // write takes that module out of every sibling's output until it recompiles.
+            if (isTorn(lines)) {
+                return UNREADABLE;
+            }
+            String id = moduleId;
+            return id == null || version == null ? null : toSidecar(id);
+        }
+
+        private void accept(String line) {
+            if (line.startsWith("#")) {
+                // The version header is the only comment acted on. Any other is skipped, which is
+                // what lets a newer writer add one without losing its older readers; see TRAILER.
+                if (line.startsWith(VERSION_HEADER)) {
+                    version = FormatVersion.of(line.substring(VERSION_HEADER.length()));
+                }
+                return;
+            }
+            int eq = line.indexOf('=');
+            if (eq >= 0) {
+                store(line.substring(0, eq), line.substring(eq + 1));
+            }
+        }
+
+        private void store(String key, String value) {
+            LineKind kind = LineKind.of(key);
+            String name = kind.nameIn(key);
+            switch (kind) {
+                case MODULE_ID -> { moduleId = value; }
+                case MODULE_PATH -> { modulePath = value; }
+                case REGION_ID -> { regionId = value; }
+                case GRANULAR_STEMS -> addNonBlankLines(decode(value), granularStems);
+                case ELEMENT_IDS -> addNonBlankLines(decode(value), elementIds);
+                case SOURCE_ROOTS -> addNonBlankLines(portable(decode(value)), sourceRoots);
+                case MODULE_GRANULAR_NAMING -> moduleGranularNaming.put(name, decode(value));
+                case GRANULAR_NAMING -> granularNaming.put(name, decode(value));
+                case MODULE_GRANULAR_UNIT -> putParsedContribution(moduleGranularUnits, name, decode(value));
+                case GRANULAR_UNIT -> putParsedContribution(granularUnits, name, decode(value));
+                case MODULE_BODY -> moduleBodies.put(name, decode(value));
+                case INDEX_DIGEST -> indexDigests.put(name, decode(value));
+                case UNROUTED_BODY -> unroutedBodies.put(name, decode(value));
+                case RESERVED -> {
+                    // Recognised and deliberately not stored, nor even decoded. Above all it is
+                    // kept out of SERVICE_BODY, which would render it into somebody's guardrail
+                    // file. Doing nothing here is the point.
+                }
+                case SERVICE_BODY -> bodies.put(name, decode(value));
+            }
+        }
+
+        /**
+         * Whether the write that produced these lines was cut short. Only a version that promises a
+         * trailer may be judged by one. A version-2 file has none to lose, so its absence says
+         * nothing about whether the write finished, and treating it as torn is what silently
+         * reduced a reactor to one region (issue #590).
+         */
+        private boolean isTorn(List<String> lines) {
+            return version == FormatVersion.PROMISES_TRAILER && !isWhole(lines);
+        }
+
+        private ModuleSidecar toSidecar(String id) {
+            // Sidecars written before the source-set split carry no regionId; their module id IS
+            // the region id, which is exactly what they meant.
+            String region = regionId != null && !regionId.isBlank() ? regionId : id;
+            ModuleSidecar sidecar = new ModuleSidecar(id, modulePath, region);
+            sidecar.bodies.putAll(bodies);
+            sidecar.moduleBodies.putAll(moduleBodies);
+            sidecar.indexDigests.putAll(indexDigests);
+            sidecar.unroutedBodies.putAll(unroutedBodies);
+            sidecar.granularStems.addAll(granularStems);
+            sidecar.elementIds.addAll(elementIds);
+            sidecar.sourceRoots.addAll(sourceRoots);
+            sidecar.granularUnits.putAll(named(granularUnits, granularNaming));
+            sidecar.moduleGranularUnits.putAll(named(moduleGranularUnits, moduleGranularNaming));
+            return sidecar;
+        }
+
+        /**
+         * {@code units} with each naming line applied to the contribution of its stem. Done once
+         * the whole file is in, because a naming line may precede or follow its contribution.
+         */
+        private static Map<String, GranularContribution> named(Map<String, GranularContribution> units,
+                                                               Map<String, String> naming) {
+            naming.forEach((stem, serialized) ->
+                units.computeIfPresent(stem, (unused, unit) -> unit.withNaming(serialized)));
+            return units;
         }
     }
 
