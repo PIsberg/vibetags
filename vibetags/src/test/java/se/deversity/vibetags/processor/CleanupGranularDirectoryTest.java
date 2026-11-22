@@ -181,6 +181,29 @@ class CleanupGranularDirectoryTest {
         assertTrue(Files.exists(keep), "Files with non-matching extension must be ignored");
     }
 
+    /**
+     * A start marker with no end marker after it is not a block VibeTags can remove: everything
+     * after it may be the developer's. The file is left byte for byte, and so is the hash-marked
+     * one, where the same holds.
+     */
+    @Test
+    void leavesFileUntouched_whenTheBlockHasNoEndMarker(@TempDir Path dir) throws IOException {
+        Path md = dir.resolve("com-example-Unterminated.md");
+        String mdContent = "<!-- VIBETAGS-START -->\nold rule\n\nMy own notes, written after the block lost its end.\n";
+        Files.writeString(md, mdContent, StandardCharsets.UTF_8);
+        Path hash = dir.resolve("com-example-UnterminatedHash.md");
+        String hashContent = "# VIBETAGS-START\nold rule\n\nMy own notes.\n";
+        Files.writeString(hash, hashContent, StandardCharsets.UTF_8);
+
+        GuardrailFileWriter p = newFileWriter();
+        p.cleanupGranularDirectory(dir, ".md");
+
+        assertEquals(mdContent, Files.readString(md, StandardCharsets.UTF_8),
+            "an unterminated markdown block must not be removed, or the developer's text after it goes with it");
+        assertEquals(hashContent, Files.readString(hash, StandardCharsets.UTF_8),
+            "an unterminated hash block must not be removed either");
+    }
+
     @Test
     void leavesFileUntouched_whenNoMarkersPresent(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("com-example-NoMarkers.md");
