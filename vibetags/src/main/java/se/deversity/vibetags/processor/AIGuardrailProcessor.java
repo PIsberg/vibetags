@@ -339,14 +339,30 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         Map<String, String> options = processingEnv.getOptions();
-
         Messager messager = processingEnv.getMessager();
+
+        resolveRoot(options, messager);
+        warnAboutUnrecognizedOptions(options, messager);
+        readOutputOptions(options);
+        configureLogging(options, messager);
+        readEnforcementOptions(options, messager);
+        configureCollection(options);
+        createWriters(options, messager);
+        configureTransitiveGuardrails(options, messager);
+        readWhatIsOnRecord();
+        resetRunState();
+    }
+
+    /** {@code -Avibetags.root}, else the JVM working directory; both named in a NOTE. */
+    private void resolveRoot(Map<String, String> options, Messager messager) {
         Path rootOverride = pathOption(options, "vibetags.root", messager);
         this.root = (rootOverride != null ? rootOverride : Paths.get("")).toAbsolutePath().normalize();
 
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Root resolved: " + this.root);
         messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: user.dir:      " + System.getProperty("user.dir"));
+    }
 
+    private void warnAboutUnrecognizedOptions(Map<String, String> options, Messager messager) {
         // javac forwards every -A option to every processor in the compilation, so only flag
         // keys under our own "vibetags." namespace — anything else may belong to a sibling
         // processor sharing the same javac invocation.
@@ -357,7 +373,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                     "VibeTags: unrecognized option '" + key + "' (possible typo) — supported options: " + supportedOptions);
             }
         }
+    }
 
+    /** The options that shape output without being annotations: the project and module names. */
+    private void readOutputOptions(Map<String, String> options) {
         this.projectName = options.getOrDefault("vibetags.project", "This Project");
 
         // Explicit module name. Only needed when the build cannot be read off the sources — for
@@ -366,12 +385,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         String moduleOption = options.get("vibetags.module");
         this.moduleIdOverride = (moduleOption != null && !moduleOption.isBlank())
             ? ModuleSidecar.sanitizeId(moduleOption.trim()) : null;
+    }
 
+    private void configureLogging(Map<String, String> options, Messager messager) {
         Path logPathOption = pathOption(options, "vibetags.log.path", messager);
         this.logPath = logPathOption == null ? null : logPathOption.toString();
         this.logLevel = options.get("vibetags.log.level");
         log = VibeTagsLogger.forRoot(this.root, logPath, logLevel);
+    }
 
+    /** Check mode, baseline recording and the enforced families, and what they need collected. */
+    private void readEnforcementOptions(Map<String, String> options, Messager messager) {
         this.checkMode = booleanOption(options, "vibetags.check", false, messager);
         this.baselineUpdate = booleanOption(options, "vibetags.baseline.update", false, messager);
         this.enforceFamilies = new GuardrailEnforcer(messager, log).parseFamilies(options.get("vibetags.enforce"));
@@ -379,6 +403,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // walks and sorts a type's whole visible member set. Same opt-in shape as the locks report
         // below: pay for it only when something is going to read it.
         collector.captureSignatures(!this.enforceFamilies.isEmpty() || this.baselineUpdate);
+    }
+
+    /** What the collection rounds do besides collecting: exclusions, lock positions, body scanning. */
+    private void configureCollection(Map<String, String> options) {
         // Elements that are collected but never published (#792). Set on the collector rather than
         // applied at a call site, because every call site that renders is inside the locked
         // generateFiles(); the collector hands the filtered model to the renderers and the
@@ -395,7 +423,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.locksReportEnabled = Files.exists(this.root.resolve(ServiceRegistry.LOCKS_REPORT_FILE));
         this.positionResolver = SourcePositionResolver.forEnv(processingEnv, this.root);
         this.bodyScanner = MethodBodyGuardrailScanner.forEnv(processingEnv);
+    }
 
+    /**
+     * The write cache, bound to the run context the options give it, and the writers over it.
+     * After {@link #readOutputOptions}: the context is made of the project and module names.
+     */
+    private void createWriters(Map<String, String> options, Messager messager) {
         if (booleanOption(options, "vibetags.cache", true, messager)) {
             this.writeCache = new WriteCache(this.root.resolve(WriteCache.DEFAULT_FILE_NAME));
             // Options that shape output without being part of the annotation fingerprint: the
@@ -411,7 +445,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         this.fileWriter = new GuardrailFileWriter(GENERATED_HEADER, processingEnv.getMessager(), log, this.writeCache);
         this.granularWriter = new GranularRulesWriter(this.fileWriter);
+    }
 
+    private void configureTransitiveGuardrails(Map<String, String> options, Messager messager) {
         // --- Transitive guardrails (dependency tree propagation) ---
         // Both halves are file-presence opt-ins, matching every other VibeTags output.
         this.manifestEmitEnabled = TransitiveManifestWriter.optedIn(this.root);
@@ -424,12 +460,6 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         }
         this.transitiveReader = TransitiveManifestReader.optedIn(this.root)
             ? new TransitiveManifestReader(log) : null;
-        // One streaming pass for both questions, keeping no rendered body: a sidecar holds every
-        // body of its module, and parsing them in full here was most of what a no-op rebuild
-        // still allocated (#834, #858).
-        ModuleSidecar.OnRecord onRecord = ModuleSidecar.onRecord(this.root);
-        this.testingFallbackPending = onRecord.withdrawnTestingFallback();
-        this.guardrailsOnRecord = onRecord.recordsElements();
         this.maxTransitiveAdvisory = parsePositiveInt(options.get("vibetags.manifest.max"), messager);
         Path dirOption = pathOption(options, "vibetags.manifest.dir", messager);
         this.manifestDir = dirOption != null ? this.root.resolve(dirOption).normalize() : null;
@@ -438,7 +468,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             ? List.of()
             : java.util.Arrays.stream(packagesOption.split(",")).map(String::strip)
                 .filter(s -> !s.isEmpty()).toList();
+    }
 
+    /** What the sidecars already on disk record, which the first round's early exit needs. */
+    private void readWhatIsOnRecord() {
+        // One streaming pass for both questions, keeping no rendered body: a sidecar holds every
+        // body of its module, and parsing them in full here was most of what a no-op rebuild
+        // still allocated (#834, #858).
+        ModuleSidecar.OnRecord onRecord = ModuleSidecar.onRecord(this.root);
+        this.testingFallbackPending = onRecord.withdrawnTestingFallback();
+        this.guardrailsOnRecord = onRecord.recordsElements();
+    }
+
+    private void resetRunState() {
         // Defensive only: super.init above throws on a second call, so an instance is never
         // re-initialised (AIGuardrailProcessorProcessTest pins it) and no field outlives it (#873).
         this.processed.set(false);
