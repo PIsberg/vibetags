@@ -204,9 +204,12 @@ browser, look for the file in real repositories on GitHub instead. Then act on w
 ### 0c. Count this month's releases
 
 Maven Central allows an organization 7 releases, 1,167 files and 78 MB per calendar month.
-Going over starts a grace period, and an organization that stays over is rate limited
+Going over starts a grace period; once it has ended, Central refuses any deployment past the limit
 ([publishing limits](https://central.sonatype.org/publish/maven-central-publishing-limits/),
-#863). The limits are per organization: async-test-lib and every other group under
+#863). Observed in 2026: October went over on 2026-10-24 with a grace period "through November 8";
+on 2026-11-14 the month's fifth to seventh deployments still published, and on 2026-11-21 the eighth,
+a vibetags release, failed with "Publishing blocked ... Usage resets 2026-12-01" (#1130). The
+limits are per organization: async-test-lib and every other group under
 `se.deversity` draw on the same 7. So:
 
 - **Count the organization's month before tagging:**
@@ -216,13 +219,18 @@ Going over starts a grace period, and an organization that stays over is rate li
   It reads repo1's public listings for every group under `se/deversity` and prints the month's
   releases, files and bytes against the three limits, one line per release. It exits 1 when one
   is already reached, so a release this month goes over it, and 2 when it cannot read repo1,
-  which is never reported as zero. On 2026-11-17 it reported November at 4 of 7 (three
-  async-test-lib releases and vibetags 1.4.2) and 534 of 1,167 files, where this repository's tags
-  showed 1.
+  which is never reported as zero. On 2026-11-22 it reported November at 7 of 7 (three
+  async-test-lib versions of two deployments each and vibetags 1.4.2) and 534 of 1,167 files,
+  where this repository's tags showed 1.
 - **One release is one deployment.** A group and version published as one bundle lands every
   artifact in the same minute; artifacts published more than 2 minutes apart count as separate
   deployments, as vibetags 1.4.0's five per-module uploads (5 to 15 minutes apart) or a resumed
-  partial publish do (#1111). That puts October 2026 at 11, as Central counted it.
+  partial publish do (#1111). A bundle uploaded by a deploy call of its own is a deployment
+  too, though repo1 shows it in the same second as the rest of its version: async-test-lib
+  uploads `async-test-maven-plugin` that way. The counter lists such artifacts in
+  `SEPARATE_DEPLOYMENTS`; a publish workflow in the organization that adds a deploy call must
+  add its artifact there, or the count reads low again (#1130: it said 4 of 7 while Central, at
+  7, refused the 2026-11-21 release). That puts October 2026 at 12.
 - **At most 3 vibetags releases a month**, and none that the count says goes over. The exception
   is a fix a consumer is blocked on, and the release PR says so, with the count. This
   repository's tags for the month:
@@ -245,8 +253,9 @@ Going over starts a grace period, and an organization that stays over is rate li
   deployment. `CentralPublishingBudgetTest` fails if a second deploy call or a module missing
   from the reactor comes back.
 - **Central's own number** is on the
-  [usage page](https://central.sonatype.com/publishing/usage?org=deversity) (owner login). When it
-  and the counter differ, it is the one that counts.
+  [usage page](https://central.sonatype.com/publishing/usage?org=deversity) (owner login). The
+  counter is a floor and says so on every run; when it and the page differ, the page is the one
+  that counts.
 
 ### 1. Prepare the release
 

@@ -150,6 +150,51 @@ run "$SPLIT" 2026-11
 expect "10: artifacts of one version published minutes apart are separate deployments" 0 \
   '^releases +2 of 7$' '^se/deversity/split 9\.1\.0: 3 files, 300 bytes \(2 deployments\)$'
 
+# A bundle uploaded by its own deploy call is a separate deployment even when repo1 shows it in the
+# same second as the rest of its version (#1130). async-test-lib uploads its reactor and then
+# async-test-maven-plugin as two bundles 13 seconds apart, and repo1 stamps both with one time, so
+# only the list of such artifacts (CENTRAL_SEPARATE_DEPLOYMENTS) can tell the counter about it.
+TWIN="$TMP/twin"
+listing "$TWIN" se/deversity "twin/|-|-"
+listing "$TWIN" se/deversity/twin "lib/|-|-" "plugin/|-|-"
+for name in lib plugin; do
+  listing "$TWIN" "se/deversity/twin/$name" "3.0.0/|2026-11-05 10:00|-" "maven-metadata.xml|2026-11-05 10:05|500"
+  listing "$TWIN" "se/deversity/twin/$name/3.0.0" "$name-3.0.0.pom|2026-11-05 10:00|100"
+done
+
+CENTRAL_SEPARATE_DEPLOYMENTS="se/deversity/twin/plugin" run "$TWIN" 2026-11
+expect "11: an artifact uploaded as its own bundle is a second deployment in the same minute" 0 \
+  '^releases +2 of 7$' '^se/deversity/twin 3\.0\.0: 2 files, 200 bytes \(2 deployments\)$'
+
+# November 2026 as Central counted it: async-test-lib 1.14.1, 1.14.2 and 1.14.3, each a reactor
+# bundle plus a separate async-test-maven-plugin bundle, and vibetags 1.4.2. Central refused the
+# next vibetags deployment on 2026-11-21 because the month had reached its limit, while repo1's minutes
+# alone read 4 of 7. With no override, the counter's own list must know about the plugin.
+NOV="$TMP/nov"
+listing "$NOV" se/deversity "async-test-lib/|-|-" "vibetags/|-|-"
+listing "$NOV" se/deversity/async-test-lib "async-test-lib/|-|-" "async-test-maven-plugin/|-|-"
+for name in async-test-lib async-test-maven-plugin; do
+  listing "$NOV" "se/deversity/async-test-lib/$name" \
+    "1.14.1/|2026-11-04 19:30|-" "1.14.2/|2026-11-08 20:49|-" "1.14.3/|2026-11-14 15:45|-" \
+    "maven-metadata.xml|2026-11-14 15:50|500"
+  for v in 1.14.1 1.14.2 1.14.3; do
+    listing "$NOV" "se/deversity/async-test-lib/$name/$v" "$name-$v.pom|2026-11-04 19:30|100"
+  done
+done
+listing "$NOV" se/deversity/vibetags "vibetags-processor/|-|-"
+listing "$NOV" se/deversity/vibetags/vibetags-processor \
+  "1.4.2/|2026-11-14 15:19|-" "maven-metadata.xml|2026-11-14 15:23|500"
+listing "$NOV" se/deversity/vibetags/vibetags-processor/1.4.2 "vibetags-processor-1.4.2.pom|2026-11-14 15:19|100"
+
+run "$NOV" 2026-11
+expect "12: by default async-test-maven-plugin is its own deployment, so November 2026 is at the limit" 1 \
+  '^releases +7 of 7$' '^se/deversity/async-test-lib 1\.14\.3: 2 files, 200 bytes \(2 deployments\)$'
+
+# A count under every limit is a floor, not a go: the run says where Central's own number is.
+run "$ORG" 2026-11
+expect "13: a count under the limits names Central's usage page as the authority" 0 \
+  'central\.sonatype\.com/publishing/usage'
+
 run "$TMP/missing" 2026-11
 expect "7: a listing that cannot be read fails the run" 2 'could not read'
 refuse "8: an unreadable month is not reported as zero usage" '^releases'
