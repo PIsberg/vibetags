@@ -228,9 +228,9 @@ public final class EnforcementBaseline {
         // second, so the first rename moves the other module's bytes into place and the second
         // fails with NoSuchFileException, which reaches the enforcer as a compile error.
         Path target = root.resolve(FILE_NAME);
-        Path tmp = ModuleSidecar.uniqueTempFile(root, FILE_NAME);
+        Path tmp = AtomicFileReplacer.uniqueTempFile(root, FILE_NAME);
         Files.writeString(tmp, sb, StandardCharsets.UTF_8);
-        ModuleSidecar.moveIntoPlace(tmp, target, ModuleSidecar.ATOMIC_REPLACE);
+        AtomicFileReplacer.moveIntoPlace(tmp, target, AtomicFileReplacer.ATOMIC_REPLACE);
         entries.clear();
         entries.putAll(merged);
     }

@@ -651,10 +651,10 @@ public final class WriteCache {
             if (tmpDir == null) {
                 return; // a cache path that is a filesystem root is not a cache location
             }
-            Path tmp = ModuleSidecar.uniqueTempFile(
+            Path tmp = AtomicFileReplacer.uniqueTempFile(
                     tmpDir, cacheFileName != null ? cacheFileName.toString() : DEFAULT_FILE_NAME);
             Files.writeString(tmp, sb.toString(), StandardCharsets.UTF_8);
-            ModuleSidecar.moveIntoPlace(tmp, cachePath, ModuleSidecar.ATOMIC_REPLACE);
+            AtomicFileReplacer.moveIntoPlace(tmp, cachePath, AtomicFileReplacer.ATOMIC_REPLACE);
             dirty = false;
             // On disk now; a later flush re-reads them, and must not re-assert a value a sibling
             // has replaced since.
