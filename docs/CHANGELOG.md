@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The atomic temp-file replace has a class of its own.** `WriteCache` and `EnforcementBaseline`
+  wrote their root-level files through `ModuleSidecar.uniqueTempFile` and
+  `ModuleSidecar.moveIntoPlace`, and `GuardrailFileWriter` kept a private copy of the atomic mover.
+  `AtomicFileReplacer` now owns the unique temp name, the retrying rename and its measured backoff,
+  and `replace(target, content)` is the one call the sidecar, cache and baseline writes make.
+  `ModuleSidecar` goes from 3,160 to 3,014 lines. No change to the files written; the retry tests moved
+  unchanged into `AtomicFileReplacerTest`.
+
 - **Dependabot no longer opens bumps that cannot pass (#1038).** Its Maven entry now ignores the
   KSP artifacts and `maven-compiler-plugin`, the two pins it can see whose versions are also copied
   into files it does not edit (the kotlin-ksp example, README snippets, the example poms). Each such
@@ -32,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds, `vibetags`'s Gradle build and the kotlin, kotlin-ksp, groovy, scala and basic examples.
 
 ### Fixed
+
+- **A write that fails part way no longer leaves its temp file in the reactor root (#1140).** A full disk
+  while writing a sidecar, `.vibetags-cache` or `.vibetags-baseline` left a
+  `<name>.<pid>-<tag>-<n>.tmp` file behind for good: only a failed rename deleted the temp file,
+  and nothing else ever does. `AtomicFileReplacer.replace` now deletes it and rethrows the write's
+  own error; `AtomicFileReplacerTest` failed on the leftover file before the fix.
 
 - **`central-month-usage.sh` counts a bundle uploaded on its own as a deployment (#1130).** It
   said November 2026 was at 4 of 7 releases on Maven Central, and the 1.4.3 publish was then refused
