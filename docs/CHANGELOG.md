@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`WriteCache.loadIfNeeded` is split into a reader and its rules.** The 128-line method is now
+  the read loop plus `HeaderReader` (which section a header belongs to), `readEntry`,
+  `entryKey`, `isReadableFormat` and `discardAll`. Every `.vibetags-cache` header prefix is one
+  constant shared by `flush()` and the loader, so the two sides cannot spell one differently. No
+  change to the file format. Two read-side rules that had no test are pinned first: a cache with
+  Windows line endings loads, and a `# source-digest:` before any `# module:` line is never
+  adopted.
 - **`AIGuardrailProcessor.process()` is split by round.** It was 230 lines doing three jobs: the
   runtime-failure guard, the final round and every collection round. It is now the guard and a
   dispatch (18 lines) to `finishProcessing` and `collectRound`, with `completeModel`,
@@ -49,6 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A corrupt `.vibetags-cache` row no longer fails the build (#1146).** A row whose path no
+  file system can name (a NUL byte from a damaged or hand-edited cache) threw
+  `InvalidPathException` out of `AIGuardrailProcessor.init()`, which is not covered by
+  `process()`'s failure guard (#1147), so every compile failed until the cache was deleted.
+  The row is now skipped like other corrupt rows; `anEntryWhosePathCannotBeParsedIsSkipped` failed
+  before the fix.
 - **A write that fails part way no longer leaves its temp file in the reactor root (#1140).** A full disk
   while writing a sidecar, `.vibetags-cache` or `.vibetags-baseline` left a
   `<name>.<pid>-<tag>-<n>.tmp` file behind for good: only a failed rename deleted the temp file,
