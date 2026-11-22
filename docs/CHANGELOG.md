@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`AIGuardrailProcessor.process()` is split by round.** It was 230 lines doing three jobs: the
+  runtime-failure guard, the final round and every collection round. It is now the guard and a
+  dispatch (18 lines) to `finishProcessing` and `collectRound`, with `completeModel`,
+  `generateUnderLock`, `presentAnnotationNames`, `recordLockedPositions` and
+  `reportProcessingFailure` pulled out. Statements and comments moved verbatim. `generateFiles()`
+  is byte-identical and only moved, so `.vibetags-locks` shifts its range (1254-1569 to
+  1305-1620). Two branches that had no test are pinned first: check mode fails the build when a
+  runtime failure stops the check, and a round delivered after the final one is not read.
 - **The atomic temp-file replace has a class of its own.** `WriteCache` and `EnforcementBaseline`
   wrote their root-level files through `ModuleSidecar.uniqueTempFile` and
   `ModuleSidecar.moveIntoPlace`, and `GuardrailFileWriter` kept a private copy of the atomic mover.

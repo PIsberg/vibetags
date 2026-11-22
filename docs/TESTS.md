@@ -284,7 +284,7 @@ assumed.
 | `AIIgnoreProcessorUnitTest` | `@AIIgnore` annotation definition and opt-in behaviour |
 | `AIPrivacyProcessorTest` | `@AIPrivacy` annotation definition, validation, and per-platform output |
 | `AIContractProcessorTest` | `@AIContract` annotation definition, validation (contradictory/overlap combinations), and per-platform output |
-| `AIGuardrailProcessorProcessTest` | `process()` method, `checkOrphanedAnnotations()`, `buildServiceFileMap()`, `writeFileIfChanged()` |
+| `AIGuardrailProcessorProcessTest` | `process()` method (including that a round delivered after the final one is not read), `checkOrphanedAnnotations()`, `buildServiceFileMap()`, `writeFileIfChanged()` |
 | `AnnotationProcessorEndToEndTest` | Generated file content |
 | `GranularRulesEndToEndTest` | Cursor/Trae/Roo granular rule file generation |
 | `NewPlatformsEndToEndTest` | Windsurf, Zed, Continue, Tabnine |
@@ -366,6 +366,7 @@ assumed.
 | `SourceDigestTest` | The early exit's key moves for each input on its own (a source edit, an opt-in added or changing kind, a `.vibetags-roles` edit, the version, an option, the module, the test round), stays put for sidecars, the cache and the locks report's content, ignores source order, and is absent when a source cannot be read. Also moves when only the file a stub's type lives in changes: a `.kapt_metadata` edit (#955) and a Groovy type moved to another `.groovy` file (#973), where the stub itself stays byte-identical. Pins the module name the module-path lookup uses to the `Automatic-Module-Name` both builds of the annotations jar declare (#1066) |
 | `FingerprintShortCircuitTest` | End-to-end short-circuit: a no-op recompile prints the `inputs unchanged since last run` NOTE; an edited annotation, a deleted output, a changed element kind, `-Avibetags.project` or `-Avibetags.module` does not, each after a control recompile that does |
 | `ErrorRaisedRoundGuardTest` | The final round leaves guardrail files, sidecars and cache untouched when the compilation already raised errors |
+| `ProcessorFailureGuardTest` | The runtime-failure guard in `process()`: a failure is a WARNING and the build succeeds, except in check mode, where it is an ERROR that fails the build; a failure during generation still releases the log (#1075) |
 | `WritePlanTest` | The per-file write decisions both writers act on (#766): an ignore file counts as carrying new rules only when the content is the multi-module merge (an empty round writing its own rendering, such as an unannotated test-compile, must not empty it), a single-module round follows its own annotations, a multi-module round asks every sidecar, a withdrawn service is rewritten (#781), and an unmapped service is named and not written |
 | `WritePlanSharingTest` | `generateFiles()` and `checkFiles()` both plan through `WritePlan` and sweep through `maySweepRoot`, and neither decides an ignore file or a service-name predicate itself; calls inside their lambdas count, since the old inline predicate lived in one (#766) |
 | `CheckModeTest` | Opt-in check mode (`-Avibetags.check=true`): pass/fail verdicts, zero writes, multi-module merge parity, dry-run `GuardrailFileWriter` |
