@@ -467,226 +467,277 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // see the annotations.
         try {
             if (roundEnv.processingOver()) {
-                if (roundEnv.errorRaised()) {
-                    // An earlier round reported an ERROR: any remaining source-generation rounds
-                    // were abandoned, so the collected annotation set may be incomplete — and the
-                    // build is failing anyway. Writing from that state would overwrite committed
-                    // guardrail files and this module's sidecar with a shrunken view, delete
-                    // granular rules as orphans, and record a fingerprint for a compile that never
-                    // succeeded. Leave every artifact exactly as this build found it.
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
-                        "VibeTags: compilation raised errors before the final round; guardrail files left untouched.");
-                    if (log != null) {
-                        log.info("Compilation raised errors; skipping generate phase (files untouched).");
-                        log.debug("round.skip reason=error-raised");
-                    }
-                    VibeTagsLogger.shutdown(root);
-                    return false;
-                }
-                // compareAndSet guarantees exactly one thread enters generateFiles() even if
-                // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
-                if (processed.compareAndSet(false, true)) {
-                    // The first round matched the last clean run's source digest, so there is no
-                    // collected model to publish, enforce, check or render (#834).
-                    if (sourcesUnchanged.get()) {
-                        finishUnchangedBuild();
-                        return false;
-                    }
-                    // Publishing this build's own package guardrails, and folding in the ones read
-                    // off the classpath, both run here rather than inside generateFiles(): its step
-                    // order is locked, and its fingerprint short-circuit returns before any of it.
-                    // The inherited rules must reach the collector BEFORE that fingerprint is
-                    // computed, or a dependency upgrade would be short-circuited past in silence.
-                    // First of all, though, every collected element is named as this last round
-                    // sees it: a type another processor generated now exists (#989).
-                    collector.resolveAgainst(processingEnv.getElementUtils());
-                    applyTransitiveRules();
-                    collector.setMirrorState(MirrorConfig.state(root));
-                    // Publishing runs in check mode too, and must. In a reactor that both
-                    // publishes and consumes, a module's manifest is what the next module reads
-                    // off the classpath — so a check-mode run that skipped publishing would have
-                    // every consuming module inherit nothing, compare that against committed files
-                    // that correctly carry the inherited rules, and report drift on a build where
-                    // nothing is wrong. Verified the hard way: moving this below the branch turned
-                    // examples/multimodule's check-mode gate red on every Maven leg.
-                    //
-                    // This does not weaken what check mode promises. CLASS_OUTPUT is the
-                    // compiler's own output directory, which javac is filling with class files
-                    // regardless; the guarantee is about the files VibeTags manages in the
-                    // project, and those are still untouched. See checkFiles().
-                    emitTransitiveManifests();
-                    // A compilation shown only some of its module's sources cannot regenerate that
-                    // module's guardrails from what it saw: everything it was not shown reads as
-                    // deleted. Same shape as the errorRaised guard above and refused for the same
-                    // reason — the round's view is incomplete, so every artifact is left as this
-                    // build found it, enforcement included: a subset of the module's elements is
-                    // not something to check a baseline against. Gradle's incremental compileJava
-                    // is where this actually happens; PartialRoundDetector holds what makes it
-                    // distinguishable from an annotation the developer really did remove.
-                    //
-                    // After applyTransitiveRules rather than before it: the comparison is against
-                    // the elements a previous round recorded, and those included the inherited
-                    // ones. Reading the set before they arrive makes every transitive build look
-                    // like it lost them.
-                    List<Path> unread =
-                        sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds(), currentSourceSet(), compilationRoot(), currentModuleId());
-                    if (!unread.isEmpty()) {
-                        reportPartialRound(unread);
-                        VibeTagsLogger.shutdown(root);
-                        return false;
-                    }
-                    // Enforcement runs BEFORE generation, and outside generateFiles(), for two
-                    // reasons: generateFiles() has a fingerprint short-circuit that would let an
-                    // unchanged-inputs build skip the check silently, and its step order is locked.
-                    enforceGuardrails();
-                    // Same placement, same two reasons: a hand-authored top-level key that
-                    // collides with a generated YAML block persists across unchanged builds, which
-                    // the short-circuit would silence (issue #635).
-                    warnAboutHandAuthoredYamlKeys();
-                    warnAboutModuleIdCollision();
-                    // The cache keeps one set of run headers per module (issue #556). Bound here
-                    // rather than in init(), where the cache is built: the module is known only
-                    // once a round has shown the processor its sources. Same id the sidecar
-                    // gets, so the two files agree on what a module is.
-                    if (writeCache != null) {
-                        writeCache.bindModule(currentModuleId());
-                    }
-                    if (checkMode) {
-                        checkFiles();
-                    } else {
-                        // A module round of a reactor generates under the root's lock (#908), so
-                        // a sibling cannot save, read and write between this round's sidecar read
-                        // and its root-file write; that sibling then read first and lost its region
-                        // to this round's older merge. Taken here, around generateFiles(), because
-                        // the span to protect is the whole of that method and its step order is
-                        // locked. See sharesRootWithSiblings() for which rounds take it.
-                        try (GenerationLock generation = sharesRootWithSiblings()
-                                ? GenerationLock.acquire(root, currentModuleId(), log)
-                                : GenerationLock.none()) {
-                            if (log != null && log.isDebugEnabled()) {
-                                log.debug("generate.lock module={} held={}", currentModuleId(), generation.held());
-                            }
-                            // Cleared before, recorded after: a generation that fails part-way must
-                            // not leave the last run's digest vouching for files it may have
-                            // half-written.
-                            forgetSourceDigest();
-                            // Asked before generation, whose sidecar read retires these modules.
-                            Set<String> departedModules = ModuleSidecar.staleModulePaths(root);
-                            generateFiles();
-                            // Before the record, so an early-exited rebuild replays what it printed.
-                            checkOrphansIfShortCircuited();
-                            warnAboutMergeStateIfShortCircuited();
-                            forgetOptedOutOutputs(departedModules);
-                            recordSourceDigest();
-                        }
-                    }
-                    // After, not beside the checks above: a rule file's length is a property of
-                    // what this build leaves on disk, and measuring before generation would miss
-                    // the build that made a file too long (issue #695). Still outside
-                    // generateFiles(), so a short-circuited build and check mode measure too.
-                    warnAboutOversizedRuleFiles();
-                }
-                return false;
+                finishProcessing(roundEnv);
+            } else if (!processed.get()) {
+                collectRound(annotations, roundEnv);
             }
-            if (processed.get()) return false;
-
-            // Before the early exit below, so an unchanged rebuild still names a processor the
-            // build dropped: the peer's own failure recurs on every build until the path is fixed.
-            if (!peersChecked) {
-                peersChecked = true;
-                ProcessorCoexistence.warnAboutDroppedPeers(processingEnv, roundEnv, log);
-            }
-
-            // Resolve the module root from this round's sources (first success wins). Must run
-            // while rounds are live — the Tree API cannot map elements back to source afterwards.
-            // Each root element mapped to its file once, for all three readers below (#857).
-            RoundSources sources = RoundSources.of(processingEnv, roundEnv);
-            if (moduleIdentity == null) {
-                // A source root outside the module directory has no build file naming its module;
-                // the module's sidecar recorded it, and that decides (#1065).
-                moduleIdentity = ModuleRootResolver.withRecordedOwner(
-                    ModuleRootResolver.fromRound(sources), sources, root);
-                // Set on every attempt, not only a successful one, so a reused processor whose
-                // identity did not resolve this time cannot keep the last compilation's answer.
-                collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());
-                warnIfMixedRoundCannotRoute(moduleIdentity);
-            }
-
-            // The early exit (#834), decided on the first round that has sources, before the
-            // collection walk: hashing the round's sources costs about 3 % of the walk it can skip.
-            if (skipThisRound(roundEnv, sources)) {
-                return false;
-            }
-
-            // Which sources this round was handed, for the same reason and under the same
-            // constraint: an element can only be mapped back to its file while its round is live.
-            sourceLedger.observe(sources);
-            collector.recordSourceFiles(sources);
-
-            // The annotation types javac reports as present this round. Lets AnnotationCollector
-            // skip getElementsAnnotatedWith() for the ~33 annotation types that are absent (each
-            // such query would scan every root element only to return empty). Empty/unknown →
-            // null → query every type (preserves behaviour for tests that don't populate it).
-            Set<String> presentFqns = null;
-            if (!annotations.isEmpty()) {
-                presentFqns = new java.util.HashSet<>(annotations.size() * 2);
-                for (TypeElement te : annotations) {
-                    presentFqns.add(te.getQualifiedName().toString());
-                }
-            }
-
-            // Recorded before collecting, and regardless of what is found: this says the round was
-            // given the project's sources to look at, which is what lets an empty result be read as
-            // "the project has nothing" rather than "the build showed us nothing". See
-            // AnnotationCollector.anyAnnotationsFound().
-            if (!roundEnv.getRootElements().isEmpty()) {
-                collector.noteSourceRoots();
-            }
-
-            collector.collect(roundEnv, presentFqns);
-            // Dependency manifests are looked up from this round's import list, so this must run
-            // while the round is live: once processing is over the Tree API can no longer map an
-            // element back to its compilation unit.
-            if (transitiveReader != null) {
-                transitiveReader.scanRound(processingEnv, roundEnv);
-            }
-            // Positions must be resolved while the round is live — the Tree API cannot map
-            // elements back to source once processing is over. Only needed for the .vibetags-locks
-            // report; skip when it isn't opted in, or when no @AILocked is present this round.
-            if (locksReportEnabled && (presentFqns == null || presentFqns.contains(AILocked.class.getName()))) {
-                // collect() ran a moment ago and asked javac this exact question; reuse it.
-                Set<? extends Element> locked = collector.elementsThisRound(AILocked.class);
-                if (locked == null) {
-                    locked = roundEnv.getElementsAnnotatedWith(AILocked.class);
-                }
-                for (Element e : locked) {
-                    collector.recordLockedPosition(e, positionResolver.resolve(e));
-                }
-            }
-            validateAnnotations(new CountingMessager(processingEnv.getMessager()), roundEnv, presentFqns,
-                collector.roundIndex());
-            // Guardrails written where JSR 269 cannot see them (local/anonymous declarations)
-            // are a silent no-op; the Tree API can still see them, so say so. Needs the live
-            // round for the same reason the position resolver does.
-            bodyScanner.scanAndWarn(roundEnv, sources);
         } catch (RuntimeException e) {
-            if (checkMode) {
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                    "VibeTags: check mode could not verify guardrail files (failing build): " + e);
-                if (log != null) log.error("Check mode failed; failing build (check is opt-in).", e);
-            } else {
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
-                    "VibeTags: guardrail generation failed and was skipped (build not affected): " + e);
-                if (log != null) log.error("Guardrail generation failed; skipping. Build is unaffected.", e);
-            }
-            // The exits of the final round each release the log, and a throw skips them all: the
-            // appender stayed attached and vibetags.log open, locked on Windows, for the rest of a
-            // daemon (#1075). An earlier round's failure leaves the final round to release it.
-            if (roundEnv.processingOver()) {
-                VibeTagsLogger.shutdown(root);
-            }
+            reportProcessingFailure(e, roundEnv.processingOver());
         }
         return false; // allow other processors to see the same annotations
+    }
+
+    /**
+     * The final round: everything that needs the whole collected model, then the write (or, in
+     * check mode, the comparison). Runs at most once per processor. Every early return leaves the
+     * guardrail files exactly as this build found them.
+     */
+    private void finishProcessing(RoundEnvironment roundEnv) {
+        if (roundEnv.errorRaised()) {
+            // An earlier round reported an ERROR: any remaining source-generation rounds
+            // were abandoned, so the collected annotation set may be incomplete — and the
+            // build is failing anyway. Writing from that state would overwrite committed
+            // guardrail files and this module's sidecar with a shrunken view, delete
+            // granular rules as orphans, and record a fingerprint for a compile that never
+            // succeeded. Leave every artifact exactly as this build found it.
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: compilation raised errors before the final round; guardrail files left untouched.");
+            if (log != null) {
+                log.info("Compilation raised errors; skipping generate phase (files untouched).");
+                log.debug("round.skip reason=error-raised");
+            }
+            VibeTagsLogger.shutdown(root);
+            return;
+        }
+        // compareAndSet guarantees exactly one thread enters generateFiles() even if
+        // two rounds somehow overlap (Gradle daemon / parallel incremental builds).
+        if (!processed.compareAndSet(false, true)) {
+            return;
+        }
+        // The first round matched the last clean run's source digest, so there is no
+        // collected model to publish, enforce, check or render (#834).
+        if (sourcesUnchanged.get()) {
+            finishUnchangedBuild();
+            return;
+        }
+        completeModel();
+        // A compilation shown only some of its module's sources cannot regenerate that
+        // module's guardrails from what it saw: everything it was not shown reads as
+        // deleted. Same shape as the errorRaised guard above and refused for the same
+        // reason — the round's view is incomplete, so every artifact is left as this
+        // build found it, enforcement included: a subset of the module's elements is
+        // not something to check a baseline against. Gradle's incremental compileJava
+        // is where this actually happens; PartialRoundDetector holds what makes it
+        // distinguishable from an annotation the developer really did remove.
+        //
+        // After applyTransitiveRules rather than before it: the comparison is against
+        // the elements a previous round recorded, and those included the inherited
+        // ones. Reading the set before they arrive makes every transitive build look
+        // like it lost them.
+        List<Path> unread =
+            sourceLedger.unreadAnnotatedSources(root, collector.model().elementIds(), currentSourceSet(), compilationRoot(), currentModuleId());
+        if (!unread.isEmpty()) {
+            reportPartialRound(unread);
+            VibeTagsLogger.shutdown(root);
+            return;
+        }
+        // Enforcement runs BEFORE generation, and outside generateFiles(), for two
+        // reasons: generateFiles() has a fingerprint short-circuit that would let an
+        // unchanged-inputs build skip the check silently, and its step order is locked.
+        enforceGuardrails();
+        // Same placement, same two reasons: a hand-authored top-level key that
+        // collides with a generated YAML block persists across unchanged builds, which
+        // the short-circuit would silence (issue #635).
+        warnAboutHandAuthoredYamlKeys();
+        warnAboutModuleIdCollision();
+        // The cache keeps one set of run headers per module (issue #556). Bound here
+        // rather than in init(), where the cache is built: the module is known only
+        // once a round has shown the processor its sources. Same id the sidecar
+        // gets, so the two files agree on what a module is.
+        if (writeCache != null) {
+            writeCache.bindModule(currentModuleId());
+        }
+        if (checkMode) {
+            checkFiles();
+        } else {
+            generateUnderLock();
+        }
+        // After, not beside the checks above: a rule file's length is a property of
+        // what this build leaves on disk, and measuring before generation would miss
+        // the build that made a file too long (issue #695). Still outside
+        // generateFiles(), so a short-circuited build and check mode measure too.
+        warnAboutOversizedRuleFiles();
+    }
+
+    /**
+     * Brings the collected model to what this build renders: elements renamed as the last round sees
+     * them, inherited rules folded in, the mirror state set, and this build's own manifests published.
+     */
+    private void completeModel() {
+        // Publishing this build's own package guardrails, and folding in the ones read
+        // off the classpath, both run here rather than inside generateFiles(): its step
+        // order is locked, and its fingerprint short-circuit returns before any of it.
+        // The inherited rules must reach the collector BEFORE that fingerprint is
+        // computed, or a dependency upgrade would be short-circuited past in silence.
+        // First of all, though, every collected element is named as this last round
+        // sees it: a type another processor generated now exists (#989).
+        collector.resolveAgainst(processingEnv.getElementUtils());
+        applyTransitiveRules();
+        collector.setMirrorState(MirrorConfig.state(root));
+        // Publishing runs in check mode too, and must. In a reactor that both
+        // publishes and consumes, a module's manifest is what the next module reads
+        // off the classpath — so a check-mode run that skipped publishing would have
+        // every consuming module inherit nothing, compare that against committed files
+        // that correctly carry the inherited rules, and report drift on a build where
+        // nothing is wrong. Verified the hard way: moving this below the branch turned
+        // examples/multimodule's check-mode gate red on every Maven leg.
+        //
+        // This does not weaken what check mode promises. CLASS_OUTPUT is the
+        // compiler's own output directory, which javac is filling with class files
+        // regardless; the guarantee is about the files VibeTags manages in the
+        // project, and those are still untouched. See checkFiles().
+        emitTransitiveManifests();
+    }
+
+    /** Runs {@link #generateFiles()} and the steps that bracket it, under the root's generation lock when one is needed. */
+    private void generateUnderLock() {
+        // A module round of a reactor generates under the root's lock (#908), so
+        // a sibling cannot save, read and write between this round's sidecar read
+        // and its root-file write; that sibling then read first and lost its region
+        // to this round's older merge. Taken here, around generateFiles(), because
+        // the span to protect is the whole of that method and its step order is
+        // locked. See sharesRootWithSiblings() for which rounds take it.
+        try (GenerationLock generation = sharesRootWithSiblings()
+                ? GenerationLock.acquire(root, currentModuleId(), log)
+                : GenerationLock.none()) {
+            if (log != null && log.isDebugEnabled()) {
+                log.debug("generate.lock module={} held={}", currentModuleId(), generation.held());
+            }
+            // Cleared before, recorded after: a generation that fails part-way must
+            // not leave the last run's digest vouching for files it may have
+            // half-written.
+            forgetSourceDigest();
+            // Asked before generation, whose sidecar read retires these modules.
+            Set<String> departedModules = ModuleSidecar.staleModulePaths(root);
+            generateFiles();
+            // Before the record, so an early-exited rebuild replays what it printed.
+            checkOrphansIfShortCircuited();
+            warnAboutMergeStateIfShortCircuited();
+            forgetOptedOutOutputs(departedModules);
+            recordSourceDigest();
+        }
+    }
+
+    /**
+     * A round before the final one: resolves the module, decides the early exit, and collects the
+     * round's annotated elements while the round is live, which is the only time the Tree API can
+     * map an element back to its source.
+     */
+    private void collectRound(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        // Before the early exit below, so an unchanged rebuild still names a processor the
+        // build dropped: the peer's own failure recurs on every build until the path is fixed.
+        if (!peersChecked) {
+            peersChecked = true;
+            ProcessorCoexistence.warnAboutDroppedPeers(processingEnv, roundEnv, log);
+        }
+
+        // Resolve the module root from this round's sources (first success wins). Must run
+        // while rounds are live — the Tree API cannot map elements back to source afterwards.
+        // Each root element mapped to its file once, for all three readers below (#857).
+        RoundSources sources = RoundSources.of(processingEnv, roundEnv);
+        if (moduleIdentity == null) {
+            // A source root outside the module directory has no build file naming its module;
+            // the module's sidecar recorded it, and that decides (#1065).
+            moduleIdentity = ModuleRootResolver.withRecordedOwner(
+                ModuleRootResolver.fromRound(sources), sources, root);
+            // Set on every attempt, not only a successful one, so a reused processor whose
+            // identity did not resolve this time cannot keep the last compilation's answer.
+            collector.testRound(moduleIdentity != null && moduleIdentity.isTestSourceSet());
+            warnIfMixedRoundCannotRoute(moduleIdentity);
+        }
+
+        // The early exit (#834), decided on the first round that has sources, before the
+        // collection walk: hashing the round's sources costs about 3 % of the walk it can skip.
+        if (skipThisRound(roundEnv, sources)) {
+            return;
+        }
+
+        // Which sources this round was handed, for the same reason and under the same
+        // constraint: an element can only be mapped back to its file while its round is live.
+        sourceLedger.observe(sources);
+        collector.recordSourceFiles(sources);
+
+        Set<String> presentFqns = presentAnnotationNames(annotations);
+
+        // Recorded before collecting, and regardless of what is found: this says the round was
+        // given the project's sources to look at, which is what lets an empty result be read as
+        // "the project has nothing" rather than "the build showed us nothing". See
+        // AnnotationCollector.anyAnnotationsFound().
+        if (!roundEnv.getRootElements().isEmpty()) {
+            collector.noteSourceRoots();
+        }
+
+        collector.collect(roundEnv, presentFqns);
+        // Dependency manifests are looked up from this round's import list, so this must run
+        // while the round is live: once processing is over the Tree API can no longer map an
+        // element back to its compilation unit.
+        if (transitiveReader != null) {
+            transitiveReader.scanRound(processingEnv, roundEnv);
+        }
+        recordLockedPositions(roundEnv, presentFqns);
+        validateAnnotations(new CountingMessager(processingEnv.getMessager()), roundEnv, presentFqns,
+            collector.roundIndex());
+        // Guardrails written where JSR 269 cannot see them (local/anonymous declarations)
+        // are a silent no-op; the Tree API can still see them, so say so. Needs the live
+        // round for the same reason the position resolver does.
+        bodyScanner.scanAndWarn(roundEnv, sources);
+    }
+
+    /**
+     * The annotation types javac reports as present this round. Lets AnnotationCollector skip
+     * getElementsAnnotatedWith() for the ~33 annotation types that are absent (each such query
+     * would scan every root element only to return empty). Empty/unknown → null → query every type
+     * (preserves behaviour for tests that don't populate it).
+     */
+    private static @Nullable Set<String> presentAnnotationNames(Set<? extends TypeElement> annotations) {
+        if (annotations.isEmpty()) {
+            return null;
+        }
+        Set<String> presentFqns = new java.util.HashSet<>(annotations.size() * 2);
+        for (TypeElement te : annotations) {
+            presentFqns.add(te.getQualifiedName().toString());
+        }
+        return presentFqns;
+    }
+
+    /**
+     * Positions must be resolved while the round is live — the Tree API cannot map
+     * elements back to source once processing is over. Only needed for the .vibetags-locks
+     * report; skip when it isn't opted in, or when no @AILocked is present this round.
+     */
+    private void recordLockedPositions(RoundEnvironment roundEnv, @Nullable Set<String> presentFqns) {
+        if (locksReportEnabled && (presentFqns == null || presentFqns.contains(AILocked.class.getName()))) {
+            // collect() ran a moment ago and asked javac this exact question; reuse it.
+            Set<? extends Element> locked = collector.elementsThisRound(AILocked.class);
+            if (locked == null) {
+                locked = roundEnv.getElementsAnnotatedWith(AILocked.class);
+            }
+            for (Element e : locked) {
+                collector.recordLockedPosition(e, positionResolver.resolve(e));
+            }
+        }
+    }
+
+    /**
+     * The one place a runtime failure inside {@link #process} ends up. Advisory everywhere except
+     * opt-in check mode, which fails closed.
+     */
+    private void reportProcessingFailure(RuntimeException e, boolean finalRound) {
+        if (checkMode) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                "VibeTags: check mode could not verify guardrail files (failing build): " + e);
+            if (log != null) log.error("Check mode failed; failing build (check is opt-in).", e);
+        } else {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: guardrail generation failed and was skipped (build not affected): " + e);
+            if (log != null) log.error("Guardrail generation failed; skipping. Build is unaffected.", e);
+        }
+        // The exits of the final round each release the log, and a throw skips them all: the
+        // appender stayed attached and vibetags.log open, locked on Windows, for the rest of a
+        // daemon (#1075). An earlier round's failure leaves the final round to release it.
+        if (finalRound) {
+            VibeTagsLogger.shutdown(root);
+        }
     }
 
     /**
