@@ -2156,6 +2156,49 @@ public final class ModuleSidecar {
     // -----------------------------------------------------------------------
 
     /**
+     * The comment style a module sub-marker is written in, which is whichever the file's own
+     * format reads as a comment. The marker text itself is the {@code SUB_MARKER_*_FORMAT}
+     * constants; this only chooses between them, once per merge.
+     */
+    private enum SubMarkers {
+        MARKDOWN {
+            @Override
+            String open(String regionId) {
+                return String.format(SUB_MARKER_MD_FORMAT, regionId);
+            }
+
+            @Override
+            String close(String regionId) {
+                return String.format(SUB_MARKER_MD_END_FORMAT, regionId);
+            }
+        },
+        HASH {
+            @Override
+            String open(String regionId) {
+                return String.format(SUB_MARKER_HASH_FORMAT, regionId);
+            }
+
+            @Override
+            String close(String regionId) {
+                return String.format(SUB_MARKER_HASH_END_FORMAT, regionId);
+            }
+        };
+
+        static SubMarkers of(boolean htmlMarkers) {
+            return htmlMarkers ? MARKDOWN : HASH;
+        }
+
+        abstract String open(String regionId);
+
+        abstract String close(String regionId);
+
+        /** {@code body} between this style's markers for {@code regionId}, each on a line of its own. */
+        String wrap(String regionId, String body) {
+            return open(regionId) + '\n' + body + '\n' + close(regionId) + '\n';
+        }
+    }
+
+    /**
      * Merges per-service bodies from all sidecars for {@code serviceKey}.
      *
      * <ul>
@@ -2175,6 +2218,7 @@ public final class ModuleSidecar {
      */
     @AIContract(reason = "Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile")
     public static String mergeFor(String serviceKey, List<ModuleSidecar> sidecars, boolean htmlMarkers) {
+        SubMarkers markers = SubMarkers.of(htmlMarkers);
         boolean indexMode = isRootIndexMode(sidecars);
         // A Markdown body that opens with YAML front matter (the Devin Desktop safety files, the
         // Claude skill) needs that header once, at the top of the file. Stacked per module it lands
@@ -2236,11 +2280,7 @@ public final class ModuleSidecar {
         // still the better of the two wrong answers.
         YamlMergeShape shape = PlatformRendererRegistry.mergeShapeFor(serviceKey);
         if (shape != null) {
-            String document = shape.merge(contributions,
-                id -> htmlMarkers ? String.format(SUB_MARKER_MD_FORMAT, id)
-                                  : String.format(SUB_MARKER_HASH_FORMAT, id),
-                id -> htmlMarkers ? String.format(SUB_MARKER_MD_END_FORMAT, id)
-                                  : String.format(SUB_MARKER_HASH_END_FORMAT, id));
+            String document = shape.merge(contributions, markers::open, markers::close);
             if (document != null) return document.strip();
         }
 
@@ -2250,19 +2290,7 @@ public final class ModuleSidecar {
 
         StringBuilder merged = new StringBuilder();
         for (Map.Entry<String, String> entry : contributions) {
-            String id = entry.getKey();
-            if (htmlMarkers) {
-                merged.append(String.format(SUB_MARKER_MD_FORMAT, id));
-            } else {
-                merged.append(String.format(SUB_MARKER_HASH_FORMAT, id));
-            }
-            merged.append('\n').append(entry.getValue()).append('\n');
-            if (htmlMarkers) {
-                merged.append(String.format(SUB_MARKER_MD_END_FORMAT, id));
-            } else {
-                merged.append(String.format(SUB_MARKER_HASH_END_FORMAT, id));
-            }
-            merged.append('\n');
+            merged.append(markers.wrap(entry.getKey(), entry.getValue()));
         }
         String document = merged.toString().strip();
         if (!scopedIndex.isEmpty()) {
@@ -2663,9 +2691,7 @@ public final class ModuleSidecar {
         }
         StringBuilder merged = new StringBuilder();
         for (Map.Entry<String, String> entry : regionBodies) {
-            merged.append(String.format(SUB_MARKER_MD_FORMAT, entry.getKey())).append('\n')
-                  .append(entry.getValue()).append('\n')
-                  .append(String.format(SUB_MARKER_MD_END_FORMAT, entry.getKey())).append('\n');
+            merged.append(SubMarkers.MARKDOWN.wrap(entry.getKey(), entry.getValue()));
         }
         return merged.toString().strip();
     }
