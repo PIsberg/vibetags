@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Generation and check mode share their round targets and sidecar.** `checkFiles()` carried a
+  copy of the code inside the `@AILocked` `generateFiles()` that resolves the service files, module
+  identity, module opt-ins and role configs, and that builds this round's sidecar. Both now call
+  `resolveRoundTargets()` and `assembleSidecar()`, and `WritePlanSharingTest` fails if either mode
+  goes back to its own copy. The owner approved editing the locked method for it. Only the two
+  duplicated blocks changed, the protected step order did not, and `generateFiles()` is 38 lines
+  shorter. Coverage first: `GenerateAndCheckTwinPathsTest` covers the five paths JaCoCo showed
+  untested, after which every reachable line and branch of both methods is covered.
 - **The orphan scrub removes a generated block through one code path.**
   `GuardrailFileWriter.scrubGranularFile` carried the block removal twice, for Markdown and for
   hash markers. It is now `withoutGeneratedBlock` (same precedence: a Markdown start marker means

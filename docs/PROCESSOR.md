@@ -402,10 +402,12 @@ exists is never dropped, and neither is a missing file under an opt-in that is s
 ## Check mode (CI drift enforcement)
 
 With `-Avibetags.check=true`, `process()` routes to `checkFiles()` instead of `generateFiles()`. It
-runs the same service resolution, content build, and multi-module merge (the module's sidecar save is
+runs the same service resolution, content build, and multi-module merge, through the same methods
+(`resolveRoundTargets`, `assembleSidecar`, `mergeAcrossModules`, `WritePlan`; `WritePlanSharingTest`
+fails if either mode stops calling one), and the module's sidecar save is
 simulated in memory: `ModuleSidecar.peekAllAfterSaving` puts the in-memory sidecar in place of its
 file, with the mtime the save would leave, before superseded regions are dropped, as generation's
-save-then-`readAll` does), but uses a dry-run `GuardrailFileWriter` (`dryRun=true` constructor flag) that
+save-then-`readAll` does. It writes through a dry-run `GuardrailFileWriter` (`dryRun=true` constructor flag) that
 records every would-be write/scrub/delete into `dryRunChanges()` instead of touching disk. Any
 recorded path fails the build via `Messager.ERROR`. The fingerprint short-circuit and write cache are
 bypassed so the verdict never depends on cache state; internal failures in check mode fail closed
