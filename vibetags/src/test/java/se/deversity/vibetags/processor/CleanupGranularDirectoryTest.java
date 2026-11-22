@@ -204,6 +204,21 @@ class CleanupGranularDirectoryTest {
             "an unterminated hash block must not be removed either");
     }
 
+    /**
+     * A rule file that does not decode as UTF-8 cannot be read for a block, so it is not ours to
+     * judge: it is left byte for byte, never deleted on the strength of a read that failed.
+     */
+    @Test
+    void leavesFileUntouched_whenItIsNotUtf8(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("com-example-Latin1.md");
+        byte[] bytes = {'n', 'o', 't', 'e', ' ', (byte) 0xE9, ' ', (byte) 0xC3, '(', '\n'};
+        Files.write(file, bytes);
+
+        newFileWriter().cleanupGranularDirectory(dir, ".md");
+
+        assertArrayEquals(bytes, Files.readAllBytes(file), "an unreadable file must be left as it is");
+    }
+
     @Test
     void leavesFileUntouched_whenNoMarkersPresent(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("com-example-NoMarkers.md");
