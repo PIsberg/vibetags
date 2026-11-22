@@ -2218,85 +2218,151 @@ public final class ModuleSidecar {
      */
     @AIContract(reason = "Sub-marker format constants (SUB_MARKER_*_FORMAT) are embedded in generated CLAUDE.md and .cursorrules; changing them silently corrupts multi-module merged output on the next compile")
     public static String mergeFor(String serviceKey, List<ModuleSidecar> sidecars, boolean htmlMarkers) {
-        SubMarkers markers = SubMarkers.of(htmlMarkers);
-        boolean indexMode = isRootIndexMode(sidecars);
-        // A Markdown body that opens with YAML front matter (the Devin Desktop safety files, the
-        // Claude skill) needs that header once, at the top of the file. Stacked per module it lands
-        // inside a sub-marker, where no tool reads it, and a file created by the merge opens with
-        // none at all, so a trigger: always_on rule never loads (issue #684). YAML documents take
-        // their own merge shape below and are left alone.
-        String frontMatter = htmlMarkers && PlatformRendererRegistry.mergeShapeFor(serviceKey) == null
-            ? sharedFrontMatter(reactorBodiesOf(serviceKey, sidecars))
-            : "";
-        // Same hoist, for a renderer that says in prose what the YAML platforms say in front
-        // matter: text about the file rather than about a module. Only TESTING.md declares one,
-        // and only when every region actually opens with it (issue #783).
-        if (frontMatter.isEmpty() && htmlMarkers) {
-            frontMatter = sharedPrologue(serviceKey, reactorBodiesOf(serviceKey, sidecars));
+        return new ReactorMerge(serviceKey, sidecars, SubMarkers.of(htmlMarkers)).document();
+    }
+
+    /**
+     * One merge of every region's body for one service into the text between the reactor file's
+     * markers: what {@link #mergeFor} documents, as the steps it takes.
+     *
+     * <p>Disk-free like its caller. Whatever needed the filesystem (the lean-index pointers, the
+     * {@code TESTING.md} opt-in) was stashed on the sidecars by {@link #readAll} beforehand.
+     */
+    private static final class ReactorMerge {
+
+        private final String serviceKey;
+        private final List<ModuleSidecar> sidecars;
+        private final SubMarkers markers;
+        private final boolean indexMode;
+        /** Text about the file rather than about a module, written once above the regions. */
+        private final String header;
+
+        /** Region id to that region's body, in output order; filled by {@link #collectRegions}. */
+        private final List<Map.Entry<String, String>> regions = new ArrayList<>();
+        /** Whether any region is linked rather than embedded: a lean-index pointer stands in for it. */
+        private boolean anyLinked;
+
+        ReactorMerge(String serviceKey, List<ModuleSidecar> sidecars, SubMarkers markers) {
+            this.serviceKey = serviceKey;
+            this.sidecars = sidecars;
+            this.markers = markers;
+            this.indexMode = isRootIndexMode(sidecars);
+            this.header = markers == SubMarkers.MARKDOWN ? hoistedHeader() : "";
         }
-        List<Map.Entry<String, String>> contributions = new ArrayList<>();
-        boolean anyPointer = false;
-        for (Map.Entry<String, List<ModuleSidecar>> region : groupByRegion(sidecars).entrySet()) {
+
+        String document() {
+            collectRegions();
+            if (regions.isEmpty()) {
+                return "";
+            }
+            // Historical behaviour is preserved whenever no pointer applies: a lone contribution is
+            // returned verbatim (no sub-markers), multiple are wrapped below. When at least one
+            // module was linked, always wrap so every pointer keeps its owning-module sub-marker
+            // context.
+            if (!anyLinked && regions.size() < MULTI_MODULE_THRESHOLD) {
+                return withFrontMatter(header, regions.get(0).getValue());
+            }
+            String yaml = asOneYamlDocument();
+            return yaml != null ? yaml : withFrontMatter(header, stacked());
+        }
+
+        /**
+         * The front matter or prologue every region opens with, to be written once for the file.
+         * Only asked for in comment style: in hash style each region keeps its own.
+         */
+        private String hoistedHeader() {
+            List<String> bodies = reactorBodiesOf(serviceKey, sidecars);
+            // A Markdown body that opens with YAML front matter (the Devin Desktop safety files,
+            // the Claude skill) needs that header once, at the top of the file. Stacked per module
+            // it lands inside a sub-marker, where no tool reads it, and a file created by the merge
+            // opens with none at all, so a trigger: always_on rule never loads (issue #684). YAML
+            // documents take their own merge shape and are left alone.
+            String frontMatter = PlatformRendererRegistry.mergeShapeFor(serviceKey) == null
+                ? sharedFrontMatter(bodies)
+                : "";
+            // Same hoist, for a renderer that says in prose what the YAML platforms say in front
+            // matter: text about the file rather than about a module. Only TESTING.md declares one,
+            // and only when every region actually opens with it (issue #783).
+            return frontMatter.isEmpty() ? sharedPrologue(serviceKey, bodies) : frontMatter;
+        }
+
+        private void collectRegions() {
+            for (Map.Entry<String, List<ModuleSidecar>> region : groupByRegion(sidecars).entrySet()) {
+                List<String> parts = partsOf(region.getValue());
+                if (!parts.isEmpty()) {
+                    regions.add(new AbstractMap.SimpleEntry<>(region.getKey(), joinParts(serviceKey, parts)));
+                }
+            }
+        }
+
+        /**
+         * What one region's source sets put into the file: each one's body, or for a linked module
+         * each one's safety digest followed by the module's one pointer.
+         */
+        private List<String> partsOf(List<ModuleSidecar> sourceSets) {
             List<String> parts = new ArrayList<>();
             String pointer = null;
-            for (ModuleSidecar s : region.getValue()) {
-                String body = s.reactorBody(serviceKey);
-                if (body == null || body.isBlank()) continue;
+            for (ModuleSidecar sourceSet : sourceSets) {
+                String body = sourceSet.reactorBody(serviceKey);
+                if (body == null || body.isBlank()) {
+                    continue;
+                }
                 // In lean-index mode a module that maintains its own per-module output for this
                 // service contributes its safety-tier digest plus a short pointer instead of its
-                // full body (see applyRootIndexMode() and issue #332).
-                String p = indexMode ? s.indexPointers.get(serviceKey) : null;
-                if (p != null) {
-                    pointer = p;
-                    String digest = s.indexDigests.get(serviceKey);
-                    if (digest != null && !digest.isBlank()) {
-                        parts.add(withoutFrontMatter(digest, frontMatter).strip());
-                    }
-                } else {
-                    parts.add(withoutFrontMatter(body, frontMatter).strip());
+                // full body (see applyRootIndexModeTo() and issue #332).
+                String own = indexMode ? sourceSet.indexPointers.get(serviceKey) : null;
+                addUnheaded(parts, own == null ? body : sourceSet.indexDigests.get(serviceKey));
+                if (own != null) {
+                    pointer = own;
                 }
             }
             if (pointer != null) {
-                anyPointer = true;
+                anyLinked = true;
                 parts.add(pointer); // one pointer per module, after every source set's digest
             }
-            if (parts.isEmpty()) continue;
-            contributions.add(new AbstractMap.SimpleEntry<>(region.getKey(), joinParts(serviceKey, parts)));
-        }
-        if (contributions.isEmpty()) return "";
-        // Historical behaviour is preserved whenever no pointer applies: a lone contribution is
-        // returned verbatim (no sub-markers), multiple are wrapped below. When at least one module
-        // was linked, always wrap so every pointer keeps its owning-module sub-marker context.
-        if (!anyPointer && contributions.size() < MULTI_MODULE_THRESHOLD) {
-            return withFrontMatter(frontMatter, contributions.get(0).getValue());
+            return parts;
         }
 
-        // A YAML platform has one rules:/reviews:/customModes: key, so stacking whole documents
-        // below produces a file whose top-level key repeats once per module — rejected by a strict
-        // parser, silently truncated to the last module by a lenient one. Those platforms declare
-        // where their scaffold ends and get it written once, with every module's entries under it.
-        // A null shape means the platform concatenates fine; a null merge means the declared anchor
-        // was not in the rendering (a renderer changed without its shape), and stacking is then
-        // still the better of the two wrong answers.
-        YamlMergeShape shape = PlatformRendererRegistry.mergeShapeFor(serviceKey);
-        if (shape != null) {
-            String document = shape.merge(contributions, markers::open, markers::close);
-            if (document != null) return document.strip();
+        /** Adds {@code text} without the hoisted header it may open with; nothing when it is blank. */
+        private void addUnheaded(List<String> parts, @Nullable String text) {
+            if (text != null && !text.isBlank()) {
+                parts.add(withoutFrontMatter(text, header).strip());
+            }
         }
 
-        // Every module rendered its own scoped-rules section; stacked, the heading and its preamble
-        // repeated once per module (#930). Written once, after the module blocks, with every line.
-        String scopedIndex = hoistScopedIndex(contributions);
+        /**
+         * Every region under the one scaffold a YAML platform allows, or {@code null} when this
+         * service is not such a platform or its shape no longer describes what was rendered.
+         *
+         * <p>A YAML platform has one rules:/reviews:/customModes: key, so stacking whole documents
+         * produces a file whose top-level key repeats once per module: rejected by a strict parser,
+         * silently truncated to the last module by a lenient one. Those platforms declare where
+         * their scaffold ends and get it written once, with every module's entries under it. A null
+         * merge means the declared anchor was not in the rendering (a renderer changed without its
+         * shape), and stacking is then still the better of the two wrong answers.
+         */
+        private @Nullable String asOneYamlDocument() {
+            YamlMergeShape shape = PlatformRendererRegistry.mergeShapeFor(serviceKey);
+            if (shape == null) {
+                return null;
+            }
+            String document = shape.merge(regions, markers::open, markers::close);
+            return document == null ? null : document.strip();
+        }
 
-        StringBuilder merged = new StringBuilder();
-        for (Map.Entry<String, String> entry : contributions) {
-            merged.append(markers.wrap(entry.getKey(), entry.getValue()));
+        /** Every region between its own sub-markers, one after the other. */
+        private String stacked() {
+            // Every module rendered its own scoped-rules section; stacked, the heading and its
+            // preamble repeated once per module (#930). Written once, after the module blocks, with
+            // every line.
+            String scopedIndex = hoistScopedIndex(regions);
+            StringBuilder merged = new StringBuilder();
+            for (Map.Entry<String, String> region : regions) {
+                merged.append(markers.wrap(region.getKey(), region.getValue()));
+            }
+            String document = merged.toString().strip();
+            return scopedIndex.isEmpty() ? document : document + "\n\n" + scopedIndex;
         }
-        String document = merged.toString().strip();
-        if (!scopedIndex.isEmpty()) {
-            document = document + "\n\n" + scopedIndex;
-        }
-        return withFrontMatter(frontMatter, document);
     }
 
     /** The heading a Markdown aggregate's scoped-rules section opens with. */
