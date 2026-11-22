@@ -19,7 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Its first run, against `main` with this changelog's six refactors as the new code, measured 98.3%
   coverage and 0% duplication, and failed `WriteCache.HeaderReader#read` at cognitive complexity
   26, which now reads its headers from a table. The Codecov patch comment, which still cited a 90%
-  floor that `target: auto` had replaced, now points at the gate.
+  floor that `target: auto` had replaced, now points at the gate. Run once on all of the
+  processor's code it measured 95.6% coverage, 0% duplication and 89 complexity findings in 82
+  methods, recorded in `docs/analysis/2026-11-22-quality-gate-whole-code.md`.
 
 ### Changed
 

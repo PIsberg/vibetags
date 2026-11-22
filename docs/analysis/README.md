@@ -12,6 +12,7 @@ The same rule governs [`archive/`](../archive/README.md) and
 
 | Document | Question it answered | Ran | Where the current answer lives |
 |---|---|---|---|
+| [`2026-11-22-quality-gate-whole-code.md`](2026-11-22-quality-gate-whole-code.md) | What the new-code quality gate says when every line of the processor counts as new: coverage, duplication, and every method over the complexity thresholds. | 2026-11-22, once | The gate itself, [`tools/quality-gate`](../../tools/quality-gate/README.md), which judges each pull request; re-run this way for a fresh whole-code view. |
 | [`2026-08-15-health-scorecard.md`](2026-08-15-health-scorecard.md) | How this repository scores against the 33-row scorecard in *Vibe Architecture*, Appendix A, and what it would take to close each gap. | 2026-08-15, in two passes | The gates the scorecard names, not the scorecard: [`WORKFLOW.md`](../WORKFLOW.md) for what CI runs, and [`CHANGELOG.md`](../CHANGELOG.md) 1.2.2 § Added for what shipped from it. |
 
 A survey that is expected to be re-run on a schedule belongs in the Evidence table of
