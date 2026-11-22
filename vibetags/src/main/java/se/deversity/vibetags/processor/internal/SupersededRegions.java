@@ -173,6 +173,13 @@ final class SupersededRegions {
 
     /** Whether what {@code other} claims counts against {@code region}, by where the two stand. */
     private static boolean outranks(Region other, Region region) {
+        // An unreadable mtime reads as Long.MAX_VALUE, i.e. maximally fresh. It must never be the
+        // reason a region is retired, wherever the two stand: duplication is recoverable, a dropped
+        // live region is not (#1158). The caller already refuses to retire a region whose own
+        // mtime is unreadable.
+        if (other.writtenAt() == Long.MAX_VALUE) {
+            return false;
+        }
         if (isNestedUnder(other.path(), region.path())) {
             // A descendant retires its ancestor on equal timestamps too (see the class javadoc).
             // Containment has already taken the cases where the descendants know strictly more;
@@ -203,10 +210,6 @@ final class SupersededRegions {
      */
     private static boolean yieldsOnSamePath(String region, String other,
                                             long writtenAt, long otherWrittenAt) {
-        // An unreadable mtime reads as Long.MAX_VALUE, i.e. maximally fresh. It must never be
-        // the reason a region is retired: duplication is recoverable, a dropped live region is
-        // not. The caller already refuses to retire a region whose own mtime is unreadable.
-        if (otherWrittenAt == Long.MAX_VALUE) return false;
         if (otherWrittenAt != writtenAt) return otherWrittenAt > writtenAt;
         boolean regionIsRoot = isRootRegionId(region);
         if (regionIsRoot != isRootRegionId(other)) return regionIsRoot;

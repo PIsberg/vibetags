@@ -74,6 +74,20 @@ class SupersededRegionsTest {
         assertEquals(Set.of(), retired(region("a", "x", 1_000, "A"), region("b", "x", UNREADABLE, "A")));
     }
 
+    /**
+     * An unreadable mtime reads as {@code Long.MAX_VALUE}, the freshest value there is. On one path
+     * the rule already refused to let that retire a region. Above and below it did not (#1158):
+     * a region whose own sidecar was fine was retired because a relative's timestamp was missing.
+     */
+    @Test
+    @DisplayName("above and below, a region whose timestamp could not be read retires nobody")
+    void anUnreadableTimestampAboveOrBelowRetiresNothing() {
+        assertEquals(Set.of(), retired(region("_root_", "", UNREADABLE, "A"), region("app", "app", 1_000, "A")),
+            "an ancestor of unknown age must not retire the module nested inside it");
+        assertEquals(Set.of(), retired(region("_root_", "", 1_000, "A"), region("app", "app", UNREADABLE, "A")),
+            "a nested module of unknown age must not retire its ancestor");
+    }
+
     @Test
     @DisplayName("siblings are never in a path relation, and a region with no elements says nothing")
     void siblingsAndEmptyRegionsAreLeftAlone() {
