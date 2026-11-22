@@ -475,6 +475,45 @@ public final class ModuleSidecar {
           .append('\n');
     }
 
+    /** What opens the one comment line a reader acts on; the format version follows it. */
+    private static final String VERSION_HEADER = KEY_FORMAT_VERSION + "=";
+
+    /**
+     * What a {@code # version=} header says about its file. The three readers that reach a verdict
+     * on a sidecar ({@link #load}, {@link SummaryScan} and {@link TrailerScan}) all take the answer
+     * from here, so none of them can read a header its own way (#1154).
+     *
+     * <p>{@link #readFormatVersionHeader} still reads the number itself. It names why a file was
+     * already refused, and for that an older format and a header that is not a number are two
+     * different reasons, where here they are one verdict.
+     */
+    private enum FormatVersion {
+        /** Newer than this processor reads: a newer sibling's file, skipped and never deleted. */
+        FUTURE,
+        /** Older than {@link #MIN_READABLE_VERSION}, or not a number: stale, and pruned. */
+        STALE,
+        /** Readable, and written before the trailer existed, so a missing one says nothing. */
+        PRE_TRAILER,
+        /** Readable, and held to its {@link #TRAILER}: without one the write was cut short. */
+        PROMISES_TRAILER;
+
+        /** Reads what follows {@link #VERSION_HEADER} on a header line. */
+        static FormatVersion of(String number) {
+            try {
+                int version = Integer.parseInt(number.trim());
+                if (version > FORMAT_VERSION) {
+                    return FUTURE;
+                }
+                if (version < MIN_READABLE_VERSION) {
+                    return STALE;
+                }
+                return version >= FORMAT_VERSION ? PROMISES_TRAILER : PRE_TRAILER;
+            } catch (NumberFormatException malformed) {
+                return STALE;
+            }
+        }
+    }
+
     /**
      * What a {@code key=value} line of a sidecar holds, told from its key. This is the one place
      * the format's keys are told apart: {@link #load} and {@link SummaryScan} both ask {@link #of},
@@ -567,13 +606,12 @@ public final class ModuleSidecar {
     static @Nullable ModuleSidecar load(Path path) {
         // Outside the try: the catch for an undecodable value below still has to judge the trailer.
         List<String> lines = List.of();
-        int loadedVersion = 0;
+        FormatVersion version = null;
         try {
             lines = Files.readAllLines(path, StandardCharsets.UTF_8);
             String moduleId = null;
             String modulePath = "";
             String regionId = null;
-            boolean sawCurrentVersion = false;
             Map<String, String> bodies = new LinkedHashMap<>();
             Map<String, String> moduleBodies = new LinkedHashMap<>();
             Map<String, String> indexDigests = new LinkedHashMap<>();
@@ -589,17 +627,10 @@ public final class ModuleSidecar {
                 if (line.startsWith("#")) {
                     // Enforce the format-version header: refuse to (mis-)parse future formats,
                     // and treat older formats (or a missing header) as stale.
-                    if (line.startsWith(KEY_FORMAT_VERSION + "=")) {
-                        try {
-                            int version = Integer.parseInt(
-                                    line.substring(KEY_FORMAT_VERSION.length() + 1).trim());
-                            if (version > FORMAT_VERSION) return FUTURE_VERSION;
-                            if (version < MIN_READABLE_VERSION) return null;
-                            loadedVersion = version;
-                            sawCurrentVersion = true;
-                        } catch (NumberFormatException malformed) {
-                            return null;
-                        }
+                    if (line.startsWith(VERSION_HEADER)) {
+                        version = FormatVersion.of(line.substring(VERSION_HEADER.length()));
+                        if (version == FormatVersion.FUTURE) return FUTURE_VERSION;
+                        if (version == FormatVersion.STALE) return null;
                     }
                     continue; // other comments — skip
                 }
@@ -637,8 +668,8 @@ public final class ModuleSidecar {
             // Only a version that promises a trailer may be judged by one. A version-2 file has
             // none to lose, so its absence says nothing about whether the write finished, and
             // treating it as torn is what silently reduced a reactor to one region (issue #590).
-            if (loadedVersion >= FORMAT_VERSION && !isWhole(lines)) return UNREADABLE;
-            if (moduleId == null || !sawCurrentVersion) return null;
+            if (version == FormatVersion.PROMISES_TRAILER && !isWhole(lines)) return UNREADABLE;
+            if (moduleId == null || version == null) return null;
             // Sidecars written before the source-set split carry no regionId; their module id IS
             // the region id, which is exactly what they meant.
             ModuleSidecar s = new ModuleSidecar(moduleId, modulePath,
@@ -665,7 +696,7 @@ public final class ModuleSidecar {
             // Read it fine, but a value is not decodable. With no trailer that is a write cut off
             // inside the value, the same torn write the trailer check above reports, and must not
             // be pruned for it. With the trailer it is genuinely corrupt, so the caller prunes.
-            return loadedVersion >= FORMAT_VERSION && !isWhole(lines) ? UNREADABLE : null;
+            return version == FormatVersion.PROMISES_TRAILER && !isWhole(lines) ? UNREADABLE : null;
         }
     }
 
@@ -1553,7 +1584,7 @@ public final class ModuleSidecar {
         }
         scan.endLine();
         // Only a version that promises a trailer may be judged by one; see load's own comment.
-        return scan.version >= FORMAT_VERSION && !scan.lastNonBlankIsTrailer;
+        return scan.version == FormatVersion.PROMISES_TRAILER && !scan.lastNonBlankIsTrailer;
     }
 
     /**
@@ -1575,9 +1606,7 @@ public final class ModuleSidecar {
          */
         private static final int CAPTURE_CHARS = 128;
 
-        private static final String VERSION_KEY = KEY_FORMAT_VERSION + "=";
-
-        private int version;
+        private @Nullable FormatVersion version;
         private boolean lastNonBlankIsTrailer;
 
         private final StringBuilder captured = new StringBuilder(CAPTURE_CHARS);
@@ -1586,7 +1615,7 @@ public final class ModuleSidecar {
         private int strippedLength;
         private boolean capturing;
         /**
-         * Whether this line opens with {@link #VERSION_KEY}. Such a line is captured to its end:
+         * Whether this line opens with {@link #VERSION_HEADER}. Such a line is captured to its end:
          * {@code load} parses all of it, so a number cut at {@link #CAPTURE_CHARS} would be read as
          * a different one, or as none (#1154).
          */
@@ -1615,10 +1644,10 @@ public final class ModuleSidecar {
             }
             if (capturing && (versionHeader || captured.length() < CAPTURE_CHARS)) {
                 captured.append(c);
-                if (captured.length() == VERSION_KEY.length()) {
+                if (captured.length() == VERSION_HEADER.length()) {
                     // firstNonBlank == 0 is what the startsWith in load requires: a header
                     // indented by a space is not one.
-                    versionHeader = firstNonBlank == 0 && VERSION_KEY.contentEquals(captured);
+                    versionHeader = firstNonBlank == 0 && VERSION_HEADER.contentEquals(captured);
                 }
             }
             column++;
@@ -1650,20 +1679,15 @@ public final class ModuleSidecar {
             if (!versionHeader) {
                 return null;
             }
-            try {
-                // Nothing after the "=" is still a header, and an unparseable one, as it is to load.
-                int parsed = Integer.parseInt(captured.substring(VERSION_KEY.length()).trim());
-                if (parsed > FORMAT_VERSION) {
-                    return Boolean.TRUE;
-                }
-                if (parsed < MIN_READABLE_VERSION) {
-                    return Boolean.FALSE;
-                }
-                version = parsed;
-                return null;
-            } catch (NumberFormatException malformed) {
+            FormatVersion header = FormatVersion.of(captured.substring(VERSION_HEADER.length()));
+            if (header == FormatVersion.FUTURE) {
+                return Boolean.TRUE;
+            }
+            if (header == FormatVersion.STALE) {
                 return Boolean.FALSE;
             }
+            version = header;
+            return null;
         }
 
         private void resetLine() {
@@ -1701,8 +1725,7 @@ public final class ModuleSidecar {
         private @Nullable String moduleId;
         private String modulePath = "";
         private @Nullable String regionId;
-        private boolean sawVersion;
-        private int loadedVersion;
+        private @Nullable FormatVersion version;
         private final Set<String> elementIds = new LinkedHashSet<>();
         private final Map<String, String> unrouted = new LinkedHashMap<>();
         private boolean lastNonBlankIsTrailer;
@@ -1758,8 +1781,7 @@ public final class ModuleSidecar {
             if (comment) {
                 // Only a version header is ever read back, so a comment stops being kept once it
                 // can no longer be one.
-                if (captured.length() <= KEY_FORMAT_VERSION.length()
-                        || captured.indexOf(KEY_FORMAT_VERSION + "=") == 0) {
+                if (captured.length() < VERSION_HEADER.length() || captured.indexOf(VERSION_HEADER) == 0) {
                     captured.append(c);
                 }
                 return;
@@ -1836,22 +1858,14 @@ public final class ModuleSidecar {
         }
 
         private void readVersionHeader() {
-            String prefix = KEY_FORMAT_VERSION + "=";
-            if (captured.indexOf(prefix) != 0) {
+            if (captured.indexOf(VERSION_HEADER) != 0) {
                 return;
             }
-            try {
-                int version = Integer.parseInt(captured.substring(prefix.length()).trim());
-                if (version > FORMAT_VERSION) {
-                    refuse(FUTURE_VERSION);
-                } else if (version < MIN_READABLE_VERSION) {
-                    refuse(null);
-                } else {
-                    loadedVersion = version;
-                    sawVersion = true;
-                }
-            } catch (NumberFormatException malformed) {
-                refuse(null);
+            FormatVersion header = FormatVersion.of(captured.substring(VERSION_HEADER.length()));
+            switch (header) {
+                case FUTURE -> refuse(FUTURE_VERSION);
+                case STALE -> refuse(null);
+                case PRE_TRAILER, PROMISES_TRAILER -> { version = header; }
             }
         }
 
@@ -1899,8 +1913,8 @@ public final class ModuleSidecar {
             if (refused) {
                 return verdict;
             }
-            if (loadedVersion >= FORMAT_VERSION && !lastNonBlankIsTrailer) return UNREADABLE;
-            if (undecodable || moduleId == null || !sawVersion) return null;
+            if (version == FormatVersion.PROMISES_TRAILER && !lastNonBlankIsTrailer) return UNREADABLE;
+            if (undecodable || moduleId == null || version == null) return null;
             ModuleSidecar s = new ModuleSidecar(moduleId, modulePath,
                 regionId != null && !regionId.isBlank() ? regionId : moduleId);
             s.elementIds.addAll(elementIds);
@@ -2937,9 +2951,9 @@ public final class ModuleSidecar {
     private static @Nullable Integer readFormatVersionHeader(Path sidecar) {
         try (java.io.BufferedReader reader = Files.newBufferedReader(sidecar, StandardCharsets.UTF_8)) {
             for (String line = reader.readLine(); line != null; line = reader.readLine()) {
-                if (line.startsWith(KEY_FORMAT_VERSION + "=")) {
+                if (line.startsWith(VERSION_HEADER)) {
                     try {
-                        return Integer.valueOf(line.substring(KEY_FORMAT_VERSION.length() + 1).trim());
+                        return Integer.valueOf(line.substring(VERSION_HEADER.length()).trim());
                     } catch (NumberFormatException unparseable) {
                         return null;
                     }
