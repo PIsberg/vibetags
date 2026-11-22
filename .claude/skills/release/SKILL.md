@@ -37,8 +37,8 @@ back empty.
 
 ## Step 1b — Count this month's releases against Central's allowance
 
-Maven Central allows an organization 7 releases, 1,167 files and 78 MB a month, and an org
-that stays over them is rate limited (#863). The limits are per organization, so async-test-lib
+Maven Central allows an organization 7 releases, 1,167 files and 78 MB a month; after a
+grace period, it refuses any deployment past the limit until the next month (#863, #1130). The limits are per organization, so async-test-lib
 and every other group under `se.deversity` draw on the same allowance as vibetags. Count the
 whole organization's month before going further:
 
@@ -63,8 +63,10 @@ the numbers. Then:
   ```
 
 Put the counter's lines in the release PR body. It counts each deployment (a version whose
-artifacts landed minutes apart counts once per burst), and Central's own number is on the usage page
-(https://central.sonatype.com/publishing/usage?org=deversity, owner login).
+artifacts landed minutes apart counts once per burst, and a bundle uploaded by a deploy call of its
+own, such as async-test-maven-plugin, counts on its own), but it is a floor: Central's own number is
+on the usage page (https://central.sonatype.com/publishing/usage?org=deversity, owner login), and an
+exit 0 is not a go when the owner has seen the page say otherwise.
 
 ## Step 2 — Preflight
 

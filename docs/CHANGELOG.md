@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`central-month-usage.sh` counts a bundle uploaded on its own as a deployment (#1130).** It
+  said November 2026 was at 4 of 7 releases on Maven Central, and the 1.4.3 publish was then refused
+  because Central's count had already reached 7. async-test-lib uploads each version as two
+  deployments, its reactor and then `async-test-maven-plugin` (deployments 6ef54da0 and 0b097b26 for
+  1.14.3, 13 seconds apart), and repo1 stamps both with the same second, so the counter took them for
+  one. Artifacts that a publish workflow uploads with a deploy call of its own are now listed in the
+  script's `SEPARATE_DEPLOYMENTS` and count separately; November reads 7 of 7 and exits 1, and
+  October 12. October's overage did not carry over by itself: deployments still published on
+  2026-11-14, after the grace period ended on 2026-11-08, until the month reached 7. Every run now
+  also prints that the count is a floor and where Central's own number is. Three new
+  `central-month-usage.test.sh` cases, written first and seen failing, pin the separate bundle, the
+  November layout under the default list, and the usage-page line.
+
 ## [1.4.3] - 2026-11-21
 
 **Upgrade note: no generated file moves, but a build that opts into `llms-full.txt` gets a new
