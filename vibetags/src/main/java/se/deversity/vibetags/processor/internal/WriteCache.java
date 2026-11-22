@@ -114,6 +114,15 @@ public final class WriteCache {
 
     /** Header of one recorded diagnostic, after a module's {@code # source-digest:} line. */
     private static final String SOURCE_DIAGNOSTIC = "# source-diagnostic: ";
+    // The header prefixes, one constant each because flush() writes them and loadIfNeeded() reads
+    // them back: a prefix spelled differently on the two sides would drop that header on every
+    // load with nothing failing.
+    private static final String FORMAT_HEADER = "# format: ";
+    private static final String MODULE_HEADER = "# module: ";
+    private static final String FINGERPRINT_HEADER = "# fingerprint: ";
+    private static final String SIDECAR_STAMP_HEADER = "# sidecar-stamp: ";
+    private static final String SOURCE_DIGEST_HEADER = "# source-digest: ";
+    private static final String CONTEXT_HEADER = "# context: ";
 
     /** The whole-root section a version-2 cache carries, and an unbound instance still uses. */
     private static final String LEGACY_SECTION = "";
@@ -615,9 +624,9 @@ public final class WriteCache {
 
         StringBuilder sb = new StringBuilder(64 + 128 * mergedEntries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n")
-            .append("# format: ").append(FORMAT_VERSION).append('\n');
+            .append(FORMAT_HEADER).append(FORMAT_VERSION).append('\n');
         if (mergedStamp != null) {
-            sb.append("# sidecar-stamp: ").append(mergedStamp).append('\n');
+            sb.append(SIDECAR_STAMP_HEADER).append(mergedStamp).append('\n');
         }
         // One header block per module. The legacy (unbound) section, when present, is written
         // first and without a "# module:" line, which is exactly the shape version 2 read.
@@ -627,7 +636,7 @@ public final class WriteCache {
         }
         for (Map.Entry<String, Section> section : mergedSections.entrySet()) {
             if (!LEGACY_SECTION.equals(section.getKey())) {
-                sb.append("# module: ").append(section.getKey()).append('\n');
+                sb.append(MODULE_HEADER).append(section.getKey()).append('\n');
                 appendHeaders(sb, section.getKey(), section.getValue());
             }
         }
@@ -658,13 +667,13 @@ public final class WriteCache {
     /** The fingerprint, sidecar-stamp, and context lines of one section; the current module's context is the bound one. */
     private void appendHeaders(StringBuilder sb, String moduleId, Section section) {
         if (section.fingerprint != null) {
-            sb.append("# fingerprint: ").append(section.fingerprint).append('\n');
+            sb.append(FINGERPRINT_HEADER).append(section.fingerprint).append('\n');
         }
         if (!LEGACY_SECTION.equals(moduleId) && section.sidecarStamp != null) {
-            sb.append("# sidecar-stamp: ").append(section.sidecarStamp).append('\n');
+            sb.append(SIDECAR_STAMP_HEADER).append(section.sidecarStamp).append('\n');
         }
         if (section.sourceDigest != null) {
-            sb.append("# source-digest: ").append(section.sourceDigest).append('\n');
+            sb.append(SOURCE_DIGEST_HEADER).append(section.sourceDigest).append('\n');
             for (String diagnostic : section.sourceDiagnostics) {
                 sb.append(SOURCE_DIAGNOSTIC).append(diagnostic).append('\n');
             }
@@ -672,7 +681,7 @@ public final class WriteCache {
         String effectiveContext = moduleId.equals(currentModule) && currentContext != null
             ? currentContext : section.storedContext;
         if (effectiveContext != null) {
-            sb.append("# context: ").append(effectiveContext).append('\n');
+            sb.append(CONTEXT_HEADER).append(effectiveContext).append('\n');
         }
     }
 
@@ -697,7 +706,7 @@ public final class WriteCache {
                     // Future-format guard: a cache written by a newer processor may use a line
                     // format this version cannot parse. Discard it wholesale — the cache is a
                     // pure optimisation and rebuilds on the next successful write.
-                    String formatPrefix = "# format: ";
+                    String formatPrefix = FORMAT_HEADER;
                     if (line.startsWith(formatPrefix)) {
                         try {
                             int version = Integer.parseInt(line.substring(formatPrefix.length()).trim());
@@ -717,7 +726,7 @@ public final class WriteCache {
                     }
                     // A "# module:" line opens that module's section; headers before any such
                     // line are the whole-root section a version-2 cache carries.
-                    String modulePrefix = "# module: ";
+                    String modulePrefix = MODULE_HEADER;
                     if (line.startsWith(modulePrefix)) {
                         String id = line.substring(modulePrefix.length()).trim();
                         if (!id.isEmpty()) {
@@ -727,7 +736,7 @@ public final class WriteCache {
                         continue;
                     }
                     // Recognise the fingerprint header; ignore other comments.
-                    String prefix = "# fingerprint: ";
+                    String prefix = FINGERPRINT_HEADER;
                     if (line.startsWith(prefix)) {
                         String fp = line.substring(prefix.length()).trim();
                         if (!fp.isEmpty()) {
@@ -735,7 +744,7 @@ public final class WriteCache {
                             if (readingLegacy) sections.putIfAbsent(LEGACY_SECTION, legacy);
                         }
                     }
-                    String sidecarPrefix = "# sidecar-stamp: ";
+                    String sidecarPrefix = SIDECAR_STAMP_HEADER;
                     if (line.startsWith(sidecarPrefix)) {
                         String st = line.substring(sidecarPrefix.length()).trim();
                         if (!st.isEmpty()) {
@@ -749,7 +758,7 @@ public final class WriteCache {
                     }
                     // Written only inside a module section, never before the first "# module:"
                     // line, so a digest can never be adopted from the whole-root section.
-                    String digestPrefix = "# source-digest: ";
+                    String digestPrefix = SOURCE_DIGEST_HEADER;
                     if (line.startsWith(digestPrefix) && !readingLegacy) {
                         String dg = line.substring(digestPrefix.length()).trim();
                         if (!dg.isEmpty()) {
@@ -761,7 +770,7 @@ public final class WriteCache {
                     if (line.startsWith(SOURCE_DIAGNOSTIC) && !readingLegacy) {
                         loading.sourceDiagnostics.add(line.substring(SOURCE_DIAGNOSTIC.length()));
                     }
-                    String contextPrefix = "# context: ";
+                    String contextPrefix = CONTEXT_HEADER;
                     if (line.startsWith(contextPrefix)) {
                         String cx = line.substring(contextPrefix.length()).trim();
                         if (!cx.isEmpty()) {
