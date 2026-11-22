@@ -139,7 +139,7 @@
              in vibetags-parent/version-mirrors.txt, tools/sync-version-mirrors.py writes them
              from these values, and BuildVersionParityTest fails when one disagrees. Edit the
              value here, never the copy. -->
-        <gradle.version>9.9.1</gradle.version>
+        <gradle.version>9.9.2</gradle.version>
         <!-- The Kotlin compiler and Gradle plugin the examples build with. Not kotlin-stdlib.version:
              that one follows what symbol-processing-api declares, this one is a consumer's choice. -->
         <kotlin.version>2.4.21</kotlin.version>
