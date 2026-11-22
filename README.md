@@ -267,7 +267,7 @@ through KSP, and CI fails unless its output matches the kapt build byte for byte
 ```kotlin
 plugins {
     kotlin("jvm") version "2.4.21"
-    id("com.google.devtools.ksp") version "2.3.13"
+    id("com.google.devtools.ksp") version "2.3.14"
 }
 
 dependencies {
