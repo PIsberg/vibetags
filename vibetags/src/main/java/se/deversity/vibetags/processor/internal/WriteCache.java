@@ -748,50 +748,76 @@ public final class WriteCache {
             return legacy.sidecarStamp;
         }
 
+        /**
+         * The headers whose value is trimmed and ignored when blank, each with what reading one
+         * does. Map.of has no iteration order, which is safe because no prefix is a prefix of
+         * another, so at most one ever matches a line.
+         */
+        private static final Map<String, java.util.function.BiConsumer<HeaderReader, String>> TRIMMED_HEADERS =
+            Map.of(
+                MODULE_HEADER, HeaderReader::openModule,
+                FINGERPRINT_HEADER, HeaderReader::readFingerprint,
+                SIDECAR_STAMP_HEADER, (reader, stamp) -> reader.loading.sidecarStamp = stamp,
+                SOURCE_DIGEST_HEADER, HeaderReader::readSourceDigest,
+                CONTEXT_HEADER, HeaderReader::readContext);
+
         /** Applies one header line; false when the whole cache must be discarded unread. */
         boolean read(String line) {
             if (line.startsWith(FORMAT_HEADER)) {
                 return isReadableFormat(line.substring(FORMAT_HEADER.length()).trim());
             }
-            if (line.startsWith(MODULE_HEADER)) {
-                // A "# module:" line opens that module's section; headers before any such
-                // line are the whole-root section a version-2 cache carries.
-                String id = line.substring(MODULE_HEADER.length()).trim();
-                if (!id.isEmpty()) {
-                    loading = sections.computeIfAbsent(id, k -> new Section());
-                    module = id;
-                }
-            } else if (line.startsWith(FINGERPRINT_HEADER)) {
-                String fp = line.substring(FINGERPRINT_HEADER.length()).trim();
-                if (!fp.isEmpty()) {
-                    loading.fingerprint = fp;
-                    registerLegacyIfReading();
-                }
-            } else if (line.startsWith(SIDECAR_STAMP_HEADER)) {
-                String st = line.substring(SIDECAR_STAMP_HEADER.length()).trim();
-                if (!st.isEmpty()) {
-                    loading.sidecarStamp = st;
-                }
-            } else if (line.startsWith(SOURCE_DIGEST_HEADER) && !readingLegacy()) {
-                // Written only inside a module section, never before the first "# module:"
-                // line, so a digest can never be adopted from the whole-root section.
-                String dg = line.substring(SOURCE_DIGEST_HEADER.length()).trim();
-                if (!dg.isEmpty()) {
-                    loading.sourceDigest = dg;
-                }
-            } else if (line.startsWith(SOURCE_DIAGNOSTIC) && !readingLegacy()) {
+            if (line.startsWith(SOURCE_DIAGNOSTIC)) {
                 // Kept verbatim, not trimmed: an encoded diagnostic may end in a separator.
-                // Read into module sections only, like the digest it belongs to.
-                loading.sourceDiagnostics.add(line.substring(SOURCE_DIAGNOSTIC.length()));
-            } else if (line.startsWith(CONTEXT_HEADER)) {
-                String cx = line.substring(CONTEXT_HEADER.length()).trim();
-                if (!cx.isEmpty()) {
-                    loading.storedContext = cx;
-                    registerLegacyIfReading();
+                readSourceDiagnostic(line.substring(SOURCE_DIAGNOSTIC.length()));
+                return true;
+            }
+            for (Map.Entry<String, java.util.function.BiConsumer<HeaderReader, String>> header
+                    : TRIMMED_HEADERS.entrySet()) {
+                if (line.startsWith(header.getKey())) {
+                    String value = line.substring(header.getKey().length()).trim();
+                    if (!value.isEmpty()) {
+                        header.getValue().accept(this, value);
+                    }
+                    return true;
                 }
             }
-            // Any other comment is ignored.
-            return true;
+            return true; // Any other comment is ignored.
+        }
+
+        /**
+         * A "# module:" line opens that module's section; headers before any such line are the
+         * whole-root section a version-2 cache carries.
+         */
+        private void openModule(String id) {
+            loading = sections.computeIfAbsent(id, k -> new Section());
+            module = id;
+        }
+
+        private void readFingerprint(String fingerprint) {
+            loading.fingerprint = fingerprint;
+            registerLegacyIfReading();
+        }
+
+        /**
+         * Written only inside a module section, never before the first "# module:" line, so a
+         * digest can never be adopted from the whole-root section.
+         */
+        private void readSourceDigest(String digest) {
+            if (!readingLegacy()) {
+                loading.sourceDigest = digest;
+            }
+        }
+
+        /** Read into module sections only, like the digest it belongs to. */
+        private void readSourceDiagnostic(String diagnostic) {
+            if (!readingLegacy()) {
+                loading.sourceDiagnostics.add(diagnostic);
+            }
+        }
+
+        private void readContext(String context) {
+            loading.storedContext = context;
+            registerLegacyIfReading();
         }
 
         /** Still before the first {@code # module:} line, so a header belongs to the whole-root section. */

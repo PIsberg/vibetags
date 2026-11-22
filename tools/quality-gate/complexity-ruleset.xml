@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The complexity half of the new-code quality gate (tools/quality-gate/README.md). These rules are
+  excluded from pmd-ruleset.xml, where they would have to pass on every method in the codebase,
+  including legacy ones a change does not touch. The gate runs them on the change and on its base
+  and fails only on a method that is new over a threshold or that the change made worse.
+
+  CognitiveComplexity 15 is the threshold Sonar's own rule (java:S3776) uses. NcssCount 60 is PMD's
+  default method level; the class level is set out of reach because the gate judges methods.
+-->
+<ruleset name="vibetags-new-code-complexity"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>Method complexity, measured by the new-code quality gate.</description>
+
+    <rule ref="category/java/design.xml/CognitiveComplexity">
+        <properties>
+            <property name="reportLevel" value="15"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/NcssCount">
+        <properties>
+            <property name="methodReportLevel" value="60"/>
+            <property name="classReportLevel" value="1000000"/>
+        </properties>
+    </rule>
+</ruleset>

@@ -42,6 +42,10 @@ jobs:
           egress-policy: audit
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Two commits: on a pull request HEAD is the merge commit, and the quality gate measures
+          # it against its first parent, the base branch as this PR would merge into it.
+          fetch-depth: 2
 
       - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
@@ -760,6 +764,18 @@ jobs:
           files: vibetags/target/site/jacoco/jacoco.xml
           flags: unittests
           fail_ci_if_error: false
+
+      # The new-code quality gate (tools/quality-gate/README.md): Sonar's "agentic AI" conditions,
+      # measured on what this pull request adds, from the reports this leg just wrote. JDK 21 only,
+      # where the coverage report above is uploaded. Its own tests run on every event, so a gate
+      # broken on main is caught before it can pass every pull request.
+      - name: Test the Quality Gate
+        if: matrix.java == '21'
+        run: python3 -m unittest discover -s tools/quality-gate -v
+
+      - name: Quality Gate On New Code
+        if: matrix.java == '21' && github.event_name == 'pull_request'
+        run: tools/quality-gate/run.sh HEAD^1
 
       # A CI-only failure without its log is undiagnosable from a laptop. On any red run,
       # keep the diagnostic channel (vibetags.log) and the surefire reports as artifacts,

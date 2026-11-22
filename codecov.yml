@@ -21,12 +21,11 @@ coverage:
         threshold: 1%
     patch:
       default:
-        # @SuppressWarnings annotations have RetentionPolicy.SOURCE — they are
-        # stripped from bytecode so JaCoCo never records coverage for those lines.
-        # On PMD-suppression commits every @SuppressWarnings in the diff counts as
-        # an uncovered line, making patch coverage misleading. Keep patch coverage
-        # as informational (reported but non-blocking); project-level target still
-        # enforces the 90% floor on overall coverage.
+        # Informational: the blocking check on the coverage of new code is the
+        # quality gate in build-maven (tools/quality-gate), which counts only the
+        # lines JaCoCo reports as executable. The project status above is the
+        # "may not lose coverage" gate (target auto, 1% threshold); the fixed 90%
+        # floor this comment used to cite was replaced by it.
         informational: true
 
 ignore:

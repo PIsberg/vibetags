@@ -262,6 +262,38 @@
                             <goal>cpd-check</goal>
                         </goals>
                     </execution>
+                    <!-- The complexity report the new-code quality gate compares across a change
+                         (tools/quality-gate/README.md). Bound to no phase: it runs only when called
+                         as pmd:pmd@complexity, so an ordinary build is unchanged. -->
+                    <execution>
+                        <id>complexity</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>pmd</goal>
+                        </goals>
+                        <configuration>
+                            <rulesets combine.self="override">
+                                <ruleset>${project.basedir}/../tools/quality-gate/complexity-ruleset.xml</ruleset>
+                            </rulesets>
+                            <targetDirectory>${project.build.directory}/pmd-complexity</targetDirectory>
+                            <format>xml</format>
+                            <linkXRef>false</linkXRef>
+                        </configuration>
+                    </execution>
+                    <!-- And the duplication report it reads, written where the gate looks rather than
+                         wherever the last verify left one. Same token threshold as cpd-check. -->
+                    <execution>
+                        <id>duplication</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>cpd</goal>
+                        </goals>
+                        <configuration>
+                            <targetDirectory>${project.build.directory}/cpd-new-code</targetDirectory>
+                            <format>xml</format>
+                            <linkXRef>false</linkXRef>
+                        </configuration>
+                    </execution>
                 </executions>
                 <!-- pmd-core/pmd-java are pinned by the parent's pluginManagement entry for this
                      plugin. Plugin-level <dependencies> do not take their versions from
