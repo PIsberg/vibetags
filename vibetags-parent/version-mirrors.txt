@@ -8,6 +8,8 @@
 #
 #   tools/sync-version-mirrors.py      writes every copy from the pom (run it after a bump)
 #   BuildVersionParityTest             fails when a copy disagrees, or a row matches nothing
+#   DependabotMirroredPinsTest         fails when Dependabot could bump a property listed here;
+#                                      its coordinates belong in .github/dependabot.yml's ignore list
 #
 # Format, one row per line: <property> <glob> <regex>
 #   property  a <properties> entry in vibetags-parent/pom.xml

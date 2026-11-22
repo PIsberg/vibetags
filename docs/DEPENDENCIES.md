@@ -177,12 +177,17 @@ release, toolchains included, and `BumpDependenciesTableTest` fails if the paren
 `vibetags-parent/pom.xml`, then run `python tools/sync-version-mirrors.py` to rewrite its copies.
 The procedure, with the gates that verify a bump, is the `bump-dependencies` skill.
 
-Dependabot edits the parent only, so its bump of a mirrored property (`maven-compiler-plugin`,
-`ksp`, `lombok`, `mapstruct`, `lombok-mapstruct-binding`) arrives with the copies behind and
-`BuildVersionParityTest` red. `.github/workflows/dependabot-mirrors.yml` runs the sync script on
-Dependabot's pull requests and pushes the result with a GitHub App token, once the App's
-`MIRROR_SYNC_APP_ID` and `MIRROR_SYNC_APP_KEY` are set as Dependabot secrets; until then it warns
-and pushes nothing, and the fix is the same command run by hand on the branch (#1038).
+Dependabot edits the parent only, so its bump of a mirrored property arrives with the copies behind
+and `BuildVersionParityTest` red: #1024 and #1092, both `ksp.version`, did. Two mirrored
+properties are visible to it, `ksp.version` and `maven-compiler-plugin.version`, and its Maven
+entry in `.github/dependabot.yml` ignores their coordinates, so they move only through
+`tools/bump-dependencies.sh` and the sync script. `DependabotMirroredPinsTest` derives that ignore
+list from the poms Dependabot reads and `version-mirrors.txt`: a newly mirrored pin Dependabot can
+see fails it until it is ignored, and so does an ignore that no longer names one. The other mirrored
+properties (`lombok`, `mapstruct`, `lombok-mapstruct-binding` and the toolchains) appear in no
+Maven declaration, so Dependabot never sees them. A workflow that pushed the synced copies back to
+Dependabot's branch needed a GitHub App credential, because a push made with `GITHUB_TOKEN` starts
+no CI; the App was never created, so the workflow pushed nothing and has been removed (#1038).
 
 The parent holds every version. Inside the Maven build nothing else holds any:
 
