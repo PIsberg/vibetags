@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`AIGuardrailProcessor.init()` is split into named steps.** The 119-line method is now ten calls
+  (`resolveRoot`, `warnAboutUnrecognizedOptions`, `readOutputOptions`, `configureLogging`,
+  `readEnforcementOptions`, `configureCollection`, `createWriters`,
+  `configureTransitiveGuardrails`, `readWhatIsOnRecord`, `resetRunState`). Statements moved
+  verbatim; `generateFiles()` is unchanged and `.vibetags-locks` shifts its range to 1347-1662.
+  The `exclude.active` log event, which had no test, is pinned first. Prepares #1147, which wraps
+  `init()` in a runtime-failure guard.
 - **`WriteCache.loadIfNeeded` is split into a reader and its rules.** The 128-line method is now
   the read loop plus `HeaderReader` (which section a header belongs to), `readEntry`,
   `entryKey`, `isReadableFormat` and `discardAll`. Every `.vibetags-cache` header prefix is one

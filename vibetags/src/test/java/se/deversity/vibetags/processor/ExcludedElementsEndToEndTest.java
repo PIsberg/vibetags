@@ -140,6 +140,26 @@ class ExcludedElementsEndToEndTest {
         assertTrue(claude().contains(KEPT_REASON), claude());
     }
 
+    /**
+     * An option that silently removes guardrails is one somebody will have to explain a missing rule
+     * by, so the build log names it and what it was given, and says nothing when it is off.
+     */
+    @Test
+    @DisplayName("an active exclusion is named in the build log")
+    void anActiveExclusionIsNamedInTheLog() throws IOException {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Path log = root.resolve("vibetags.log");
+
+        compile();
+        assertFalse(Files.readString(log).contains("exclude.active"),
+            "no exclusion was given, so none may be reported");
+
+        compile("-Avibetags.exclude=com.example.ledger.fixtures.*");
+        String text = Files.readString(log);
+        assertTrue(text.contains("exclude.active patterns=") && text.contains("com.example.ledger.fixtures.*"),
+            "the log must name the active exclusion and its pattern:\n" + text);
+    }
+
     /** Invariant 12: the option is an input to the output, so toggling it must regenerate. */
     @Test
     @DisplayName("toggling the option regenerates rather than hitting the write cache")
