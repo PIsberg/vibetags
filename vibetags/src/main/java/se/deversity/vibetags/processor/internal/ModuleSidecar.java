@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -927,104 +928,192 @@ public final class ModuleSidecar {
     private static List<ModuleSidecar> readAll(Path root, boolean prune, @Nullable Logger log, Loader loader,
                                                @Nullable ModuleSidecar saved) {
         if (!Files.isDirectory(root)) return new ArrayList<>();
-        List<ModuleSidecar> result = new ArrayList<>();
-        // Kept index-aligned with result so a sidecar dropped below can also be deleted.
-        List<Path> resultFiles = new ArrayList<>();
-        // listPaths is best-effort: a root we cannot read contributes no sidecars, which is the
-        // same outcome as a root with none. Failing here would fail a compile over a directory
-        // the build does not need.
-        for (Path p : listPaths(root)) {
-            ModuleSidecar s = loader.load(p);
-            if (s == UNREADABLE) {
+        return new RootRead(root, prune, log).read(loader, saved);
+    }
+
+    /**
+     * A sidecar this merge can use, with the file it was read from and that file's mtime in millis
+     * ({@link Long#MAX_VALUE} when it cannot be read). The file is kept so that a sidecar retired
+     * after every other one is known can still be named in the log and deleted.
+     */
+    private record Loaded(ModuleSidecar sidecar, Path file, long writtenAt) { }
+
+    /**
+     * One read of every sidecar under a root: load each file and leave out what this merge cannot
+     * use, then retire the leftovers that only show once the rest is known. Every sidecar left out
+     * says why in the log, and is deleted only when the read prunes.
+     */
+    private static final class RootRead {
+
+        private final Path root;
+        /** Whether a sidecar dropped for good is also deleted. Check mode and the questions asked before a round do not. */
+        private final boolean prune;
+        private final @Nullable Logger log;
+        /** What is still in the merge, in filename order. */
+        private final List<Loaded> loaded = new ArrayList<>();
+
+        RootRead(Path root, boolean prune, @Nullable Logger log) {
+            this.root = root;
+            this.prune = prune;
+            this.log = log;
+        }
+
+        List<ModuleSidecar> read(Loader loader, @Nullable ModuleSidecar saved) {
+            // listPaths is best-effort: a root we cannot read contributes no sidecars, which is the
+            // same outcome as a root with none. Failing here would fail a compile over a directory
+            // the build does not need.
+            for (Path file : listPaths(root)) {
+                ModuleSidecar sidecar = usable(file, loader.load(file));
+                if (sidecar != null) {
+                    loaded.add(new Loaded(sidecar, file, lastModified(file)));
+                }
+            }
+            if (saved != null) {
+                substitute(saved);
+            }
+            dropSupersededRegions();
+            dropMisreadSourceSets();
+            List<ModuleSidecar> sidecars = new ArrayList<>(loaded.size());
+            for (Loaded entry : loaded) {
+                sidecars.add(entry.sidecar());
+            }
+            return sidecars;
+        }
+
+        /** What {@code file} was loaded as when this merge can use it; otherwise {@code null}, having said why not. */
+        private @Nullable ModuleSidecar usable(Path file, @Nullable ModuleSidecar sidecar) {
+            if (sidecar == UNREADABLE) {
                 // Locked, vanished, or being renamed over by the module that owns it —
                 // a sibling save in a parallel reactor does exactly that on Windows.
                 // Skip this round (readAll already tolerates a missing sibling) and,
                 // above all, do not delete a file we never managed to look at.
-                logSkipped(log, p, "unreadable");
-                continue;
+                logSkipped(log, file, "unreadable");
+                return null;
             }
-            if (s == null) {
-                logDropped(log, prune, p, formatReason(p));
-                if (prune) tryDelete(p);
-                continue;
+            if (sidecar == null) {
+                drop(file, formatReason(file));
+                return null;
             }
-            if (s == FUTURE_VERSION) {
+            if (sidecar == FUTURE_VERSION) {
                 // Written by a newer processor in a mixed-version build: skip it (its
                 // module's content is missing from OUR merge, the newer module merges
                 // everything correctly) but never delete a sibling's valid sidecar.
-                logSkipped(log, p, "future-version");
-                continue;
+                logSkipped(log, file, "future-version");
+                return null;
             }
             // Stale check: if the module path (relative to root) no longer exists, prune.
-            if (!s.modulePath.isEmpty() && !"_root_".equals(s.modulePath)) {
-                ModuleDir dir = moduleDir(root, s.modulePath);
+            if (!sidecar.modulePath.isEmpty() && !"_root_".equals(sidecar.modulePath)) {
+                ModuleDir dir = moduleDir(root, sidecar.modulePath);
                 if (dir != ModuleDir.EXISTS) {
-                    logDropped(log, prune, p,
-                        dir == ModuleDir.UNREPRESENTABLE ? "invalid-module-path" : "module-gone");
-                    if (prune) tryDelete(p);
-                    continue;
+                    drop(file, dir == ModuleDir.UNREPRESENTABLE ? "invalid-module-path" : "module-gone");
+                    return null;
                 }
             }
-            result.add(s);
-            resultFiles.add(p);
+            return sidecar;
         }
-        List<Long> writtenAt = new ArrayList<>(resultFiles.size());
-        resultFiles.forEach(f -> writtenAt.add(lastModified(f)));
-        if (saved != null) {
-            substituteSaved(root, saved, result, resultFiles, writtenAt);
-        }
-        dropSupersededRegions(result, resultFiles, writtenAt, prune, log);
-        dropMisreadSourceSets(root, result, resultFiles, writtenAt, prune, log);
-        return result;
-    }
 
-    /**
-     * Drops a source-set sidecar written under a misread name, and deletes it when {@code prune} is
-     * set.
-     *
-     * <p>Before #1068 a source root that is itself {@code src/}, packages directly below it, had its
-     * source set read from the first package segment: {@code shared/src/com/...} was filed as
-     * {@code shared__com}, {@code shared/src/test/...} as {@code shared__test}. A build after the fix
-     * files the same sources as {@code shared}, and the old sidecar is not retired by any other rule:
-     * its module directory exists, its region is the module's own. Left in place it renders its
-     * guardrails a second time, and, because an emptied source set keeps its last contribution, it
-     * keeps an annotation that was deleted from the source in every generated file for good.
-     *
-     * <p>Such a sidecar is recognised by its sibling, not by its name: a non-main sidecar is retired
-     * when another sidecar of the same module and region, written no earlier, records a source root
-     * whose first {@code src} segment below the module directory is its last. A source root that
-     * is a flat {@code src/} cannot hold a {@code src/<set>/java} tree of a real second source set,
-     * so the pair is only ever the misread one. Freshness decides the direction: a sibling written
-     * earlier, or whose time cannot be read, retires nothing.
-     */
-    private static void dropMisreadSourceSets(Path root, List<ModuleSidecar> sidecars, List<Path> files,
-                                              List<Long> writtenAt, boolean prune, @Nullable Logger log) {
-        boolean[] misread = new boolean[sidecars.size()];
-        boolean any = false;
-        for (int i = 0; i < sidecars.size(); i++) {
-            ModuleSidecar candidate = sidecars.get(i);
-            if (ModuleIdentity.MAIN.equals(PartialRoundDetector.sourceSetOf(candidate))) {
-                continue;
+        /** Says why {@code file} is out of the merge for good, and deletes it when this read prunes. */
+        private void drop(Path file, String reason) {
+            logDropped(log, prune, file, reason);
+            if (prune) {
+                tryDelete(file);
             }
-            for (int j = 0; j < sidecars.size() && !misread[i]; j++) {
-                ModuleSidecar sibling = sidecars.get(j);
-                long siblingAt = writtenAt.get(j);
-                misread[i] = j != i
-                    && sibling.regionId.equals(candidate.regionId)
-                    && siblingAt != Long.MAX_VALUE
-                    && siblingAt >= writtenAt.get(i)
-                    && recordsAFlatSrcRoot(root, sibling);
-            }
-            any |= misread[i];
         }
-        if (!any) return;
-        for (int i = sidecars.size() - 1; i >= 0; i--) {
-            if (!misread[i]) continue;
-            logDropped(log, prune, files.get(i), "misread-source-set");
-            if (prune) tryDelete(files.get(i));
-            sidecars.remove(i);
-            files.remove(i);
-            writtenAt.remove(i);
+
+        /** Takes every loaded sidecar {@code retired} matches out of the merge, last file first. */
+        private void leaveOut(Predicate<Loaded> retired, String reason) {
+            for (int i = loaded.size() - 1; i >= 0; i--) {
+                if (retired.test(loaded.get(i))) {
+                    drop(loaded.get(i).file(), reason);
+                    loaded.remove(i);
+                }
+            }
+        }
+
+        /**
+         * Puts {@code saved} where {@link #save} would put it: in place of its own entry, or at its
+         * place in filename order when it has none. The time is what the save leaves: unchanged
+         * content is not rewritten (#556), so the file keeps its mtime; anything else is written
+         * now.
+         */
+        private void substitute(ModuleSidecar saved) {
+            Path target = root.resolve(SIDECAR_PREFIX + saved.moduleId);
+            long stamp = sameAsOnDisk(target, saved.serialized()) ? lastModified(target) : System.currentTimeMillis();
+            for (int i = 0; i < loaded.size(); i++) {
+                if (loaded.get(i).sidecar().moduleId.equals(saved.moduleId)) {
+                    loaded.set(i, new Loaded(saved, loaded.get(i).file(), stamp));
+                    return;
+                }
+            }
+            int at = 0;
+            while (at < loaded.size() && loaded.get(at).sidecar().moduleId.compareTo(saved.moduleId) < 0) {
+                at++;
+            }
+            loaded.add(at, new Loaded(saved, target, stamp));
+        }
+
+        /**
+         * Leaves out every region {@link SupersededRegions} names as a leftover identity for
+         * sources another region now speaks for.
+         */
+        private void dropSupersededRegions() {
+            if (loaded.size() < MULTI_MODULE_THRESHOLD) {
+                return;
+            }
+            Map<String, SupersededRegions.Region> regions = new LinkedHashMap<>();
+            for (Loaded entry : loaded) {
+                ModuleSidecar s = entry.sidecar();
+                // A region spans one sidecar per source set: joined, it keeps the first one's
+                // path, claims what any of them claims, and is as fresh as its freshest.
+                regions.merge(s.regionId,
+                    new SupersededRegions.Region(s.regionId, normalizeModulePath(s.modulePath),
+                        s.elementIds, entry.writtenAt()),
+                    SupersededRegions.Region::joinedWith);
+            }
+            Set<String> superseded = SupersededRegions.among(regions.values());
+            leaveOut(entry -> superseded.contains(entry.sidecar().regionId), "superseded");
+        }
+
+        /**
+         * Leaves out a source-set sidecar written under a misread name.
+         *
+         * <p>Before #1068 a source root that is itself {@code src/}, packages directly below it, had its
+         * source set read from the first package segment: {@code shared/src/com/...} was filed as
+         * {@code shared__com}, {@code shared/src/test/...} as {@code shared__test}. A build after the fix
+         * files the same sources as {@code shared}, and the old sidecar is not retired by any other rule:
+         * its module directory exists, its region is the module's own. Left in place it renders its
+         * guardrails a second time, and, because an emptied source set keeps its last contribution, it
+         * keeps an annotation that was deleted from the source in every generated file for good.
+         *
+         * <p>Such a sidecar is recognised by its sibling, not by its name: a non-main sidecar is retired
+         * when another sidecar of the same module and region, written no earlier, records a source root
+         * whose first {@code src} segment below the module directory is its last. A source root that
+         * is a flat {@code src/} cannot hold a {@code src/<set>/java} tree of a real second source set,
+         * so the pair is only ever the misread one. Freshness decides the direction: a sibling written
+         * earlier, or whose time cannot be read, retires nothing.
+         */
+        private void dropMisreadSourceSets() {
+            List<Loaded> misread = new ArrayList<>();
+            for (Loaded candidate : loaded) {
+                if (!ModuleIdentity.MAIN.equals(PartialRoundDetector.sourceSetOf(candidate.sidecar()))
+                        && hasANoOlderSiblingOnAFlatSrcRoot(candidate)) {
+                    misread.add(candidate);
+                }
+            }
+            leaveOut(misread::contains, "misread-source-set");
+        }
+
+        private boolean hasANoOlderSiblingOnAFlatSrcRoot(Loaded candidate) {
+            for (Loaded sibling : loaded) {
+                if (!sibling.equals(candidate)
+                        && sibling.sidecar().regionId.equals(candidate.sidecar().regionId)
+                        && sibling.writtenAt() != Long.MAX_VALUE
+                        && sibling.writtenAt() >= candidate.writtenAt()
+                        && recordsAFlatSrcRoot(root, sibling.sidecar())) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -1043,63 +1132,6 @@ public final class ModuleSidecar {
             }
         }
         return false;
-    }
-
-    /**
-     * Puts {@code saved} where {@link #save} would put it, index-aligned with the files and their
-     * times: in place of its own entry, or at its place in filename order when it has none. The
-     * time is what the save leaves: unchanged content is not rewritten (#556), so the file keeps
-     * its mtime; anything else is written now.
-     */
-    private static void substituteSaved(Path root, ModuleSidecar saved, List<ModuleSidecar> sidecars,
-                                        List<Path> files, List<Long> writtenAt) {
-        Path target = root.resolve(SIDECAR_PREFIX + saved.moduleId);
-        long stamp = sameAsOnDisk(target, saved.serialized()) ? lastModified(target) : System.currentTimeMillis();
-        for (int i = 0; i < sidecars.size(); i++) {
-            if (sidecars.get(i).moduleId.equals(saved.moduleId)) {
-                sidecars.set(i, saved);
-                writtenAt.set(i, stamp);
-                return;
-            }
-        }
-        int at = 0;
-        while (at < sidecars.size() && sidecars.get(at).moduleId.compareTo(saved.moduleId) < 0) {
-            at++;
-        }
-        sidecars.add(at, saved);
-        files.add(at, target);
-        writtenAt.add(at, stamp);
-    }
-
-    /**
-     * Leaves out every region {@link SupersededRegions} names as a leftover identity for sources
-     * another region now speaks for, and deletes their sidecars when {@code prune} is set.
-     */
-    private static void dropSupersededRegions(List<ModuleSidecar> sidecars,
-                                              List<Path> files, List<Long> writtenAtByFile,
-                                              boolean prune, @Nullable Logger log) {
-        if (sidecars.size() < MULTI_MODULE_THRESHOLD) return;
-        Map<String, SupersededRegions.Region> regions = new LinkedHashMap<>();
-        for (int i = 0; i < sidecars.size(); i++) {
-            ModuleSidecar s = sidecars.get(i);
-            // A region spans one sidecar per source set: joined, it keeps the first one's path,
-            // claims what any of them claims, and is as fresh as its freshest.
-            regions.merge(s.regionId,
-                new SupersededRegions.Region(s.regionId, normalizeModulePath(s.modulePath),
-                    s.elementIds, writtenAtByFile.get(i)),
-                SupersededRegions.Region::joinedWith);
-        }
-        Set<String> superseded = SupersededRegions.among(regions.values());
-        if (superseded.isEmpty()) return;
-
-        for (int i = sidecars.size() - 1; i >= 0; i--) {
-            if (!superseded.contains(sidecars.get(i).regionId)) continue;
-            logDropped(log, prune, files.get(i), "superseded");
-            if (prune) tryDelete(files.get(i));
-            sidecars.remove(i);
-            files.remove(i);
-            writtenAtByFile.remove(i);
-        }
     }
 
     /** Sidecar mtime in millis, or {@link Long#MAX_VALUE} when it cannot be read. */
