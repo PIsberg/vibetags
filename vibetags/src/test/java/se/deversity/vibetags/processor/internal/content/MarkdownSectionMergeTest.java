@@ -156,6 +156,20 @@ class MarkdownSectionMergeTest {
             "a lazy continuation line is not a shape any renderer writes");
     }
 
+    /**
+     * A section in the middle of the document whose two bodies close it with different paragraphs:
+     * the other processor version's sidecar the class comment names. The last section's closing
+     * text is taken as the document's tail, so only a middle one reaches this decline.
+     */
+    @Test
+    void aMiddleSectionClosedTwoDifferentWaysDeclines() {
+        String main = HEADER + "## S\n- a\n\nClosing A.\n\n## T\n- t";
+        String test = HEADER + "## S\n- b\n\nClosing B.\n\n## T\n- t2";
+
+        assertNull(MarkdownSectionMerge.merge(List.of(main, test)),
+            "two closings for one section cannot both be right, so the caller concatenates");
+    }
+
     @Test
     void oneBodyIsReturnedAsIs() {
         assertEquals("anything", MarkdownSectionMerge.merge(List.of("anything")));
