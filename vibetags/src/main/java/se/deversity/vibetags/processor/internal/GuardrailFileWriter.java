@@ -997,30 +997,37 @@ public final class GuardrailFileWriter {
      * found, and every build appends another one beneath it.
      */
     private static boolean insideFence(String content, int index) {
-        char fence = 0;
-        int fenceLength = 0;
+        String open = null;
         int start = 0;
         while (start < index) {
             int end = content.indexOf('\n', start);
             if (end < 0) {
                 end = content.length();
             }
-            String line = content.substring(start, end).strip();
-            int run = fenceRun(line);
-            if (run >= MIN_FENCE_LENGTH) {
-                String rest = line.substring(run);
-                if (fenceLength == 0) {
-                    if (line.charAt(0) == '~' || rest.indexOf('`') < 0) {
-                        fence = line.charAt(0);
-                        fenceLength = run;
-                    }
-                } else if (line.charAt(0) == fence && run >= fenceLength && rest.isBlank()) {
-                    fenceLength = 0;
-                }
-            }
+            open = fenceOpenAfter(open, content.substring(start, end).strip());
             start = end + 1;
         }
-        return fenceLength != 0;
+        return open != null;
+    }
+
+    /**
+     * The fence that is open after {@code line}, as the run of backticks or tildes that opened it,
+     * or {@code null} for none.
+     *
+     * @param open the fence open before this line, in the same form
+     */
+    private static @Nullable String fenceOpenAfter(@Nullable String open, String line) {
+        int run = fenceRun(line);
+        if (run < MIN_FENCE_LENGTH) {
+            return open;
+        }
+        String rest = line.substring(run);
+        if (open == null) {
+            boolean opens = line.charAt(0) == '~' || rest.indexOf('`') < 0;
+            return opens ? line.substring(0, run) : null;
+        }
+        boolean closes = line.charAt(0) == open.charAt(0) && run >= open.length() && rest.isBlank();
+        return closes ? null : open;
     }
 
     /** How many backticks, or how many tildes, {@code line} opens with; 0 when it opens with neither. */
