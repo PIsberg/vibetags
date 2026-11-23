@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`TomlValueSpans` reads as its cases.** Its line scan (cognitive complexity 43) and its
+  per-table merge (40) were each one method. The scan is now `LineScan`, with a method per state it
+  can be in, and the merge `TableMerge`: `header()` or `withTableAppended()`, `keyUnder(header)` or
+  `withKeyAdded(header)`, otherwise `withSpanIn(key)`. A document that cannot be merged is a
+  `Refused`, thrown where the reason is known. No change to any merged file:
+  `TomlValueSpansShapeTest` came first with the whole document for 35 shapes, and a record of 49
+  merges is byte-identical before and after.
 - **The cross-module merge is a class of its own.** `AIGuardrailProcessor.mergeAcrossModules`
   (cognitive complexity 44) decided service by service between every module's merged view and
   this module's own rendering, inside a 3,090-line class it needed nothing from. The decision is
@@ -142,6 +149,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A broken `.pr_agent.toml` is left alone instead of grown (#1171).** A string or an array that
+  is never closed hides every table header after it, so both tables were appended to the file again
+  on each merge. Such a file is now refused with `reason=unclosed-value` and a build warning.
+- **A dotted `pr_reviewer` key under another table no longer refuses the merge (#1172).**
+  `[tool]` followed by `pr_reviewer.x = 1` is `tool.pr_reviewer.x`; the dotted-key refusal now
+  applies only at the root of the document.
 - **A Groovy class below a string containing `/*` gets the right rule glob (#1168).** The lookup
   for the `.groovy` file that declares a type took a literal such as `"**/*.groovy"` for the start
   of a comment, did not see the declaration below it, and left the scoped rule with a glob for a
