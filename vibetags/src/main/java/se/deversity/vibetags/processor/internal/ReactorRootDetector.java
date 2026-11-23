@@ -102,21 +102,16 @@ public final class ReactorRootDetector {
     public static List<String> gradleIncludes(Path settings) {
         List<String> names = new ArrayList<>();
         try {
-            String raw = Files.readString(settings, StandardCharsets.UTF_8);
-            String text = withoutComments(raw);
-            // Searched with string contents blanked, so "include" in a literal is not a declaration;
-            // the two texts have the same length, so a match's offset reads the arguments in text.
-            Matcher include = GRADLE_INCLUDE.matcher(stripped(raw, true));
+            Uncommented script = Uncommented.of(Files.readString(settings, StandardCharsets.UTF_8));
+            // Searched with literal contents blanked, so "include" in a literal is not a declaration;
+            // the two forms have the same length, so a match's offset reads the arguments in the other.
+            Matcher include = GRADLE_INCLUDE.matcher(script.codeOutsideLiterals());
             while (include.find()) {
-                Matcher m = QUOTED.matcher(includeArguments(text, include.end()));
-                while (m.find()) {
-                    String name = m.group(1);
-                    while (name.startsWith(":")) {
-                        name = name.substring(1);
-                    }
-                    name = name.replace(':', '/');
-                    if (!name.isBlank()) {
-                        names.add(name);
+                Matcher quoted = QUOTED.matcher(includeArguments(script.code(), include.end()));
+                while (quoted.find()) {
+                    String directory = projectDirectory(quoted.group(1));
+                    if (!directory.isBlank()) {
+                        names.add(directory);
                     }
                 }
             }
@@ -162,51 +157,13 @@ public final class ReactorRootDetector {
         return i;
     }
 
-    /**
-     * {@code text} with its {@code //} and block comments blanked out, string literals left alone so
-     * a URL in a repository declaration is not cut at its {@code //}. Newlines are kept.
-     */
-    static String withoutComments(String text) {
-        return stripped(text, false);
-    }
-
-    /**
-     * {@link #withoutComments}, with the characters between a literal's quotes also blanked to spaces
-     * when {@code blankStrings} is set. Both forms of the same text have the same length.
-     */
-    private static String stripped(String text, boolean blankStrings) {
-        StringBuilder out = new StringBuilder(text.length());
-        char quote = 0;
-        int i = 0;
-        while (i < text.length()) {
-            char c = text.charAt(i);
-            char next = i + 1 < text.length() ? text.charAt(i + 1) : 0;
-            if (quote == 0 && c == '/' && next == '/') {
-                int newline = text.indexOf('\n', i);
-                i = newline < 0 ? text.length() : newline;
-            } else if (quote == 0 && c == '/' && next == '*') {
-                int end = text.indexOf("*/", i + 2);
-                out.append(' ');
-                i = end < 0 ? text.length() : end + 2;
-            } else if (quote == 0) {
-                if (c == '"' || c == '\'') {
-                    quote = c;
-                }
-                out.append(c);
-                i++;
-            } else {
-                boolean escaped = c == '\\' && next != 0;
-                boolean closes = !escaped && (c == quote || c == '\n');
-                out.append(blankStrings && !closes ? ' ' : c);
-                if (escaped) {
-                    out.append(blankStrings ? ' ' : next);
-                } else if (closes) {
-                    quote = 0;
-                }
-                i += escaped ? 2 : 1;
-            }
+    /** A Gradle project path as the directory it names by default: {@code :libs:core} is {@code libs/core}. */
+    private static String projectDirectory(String projectPath) {
+        String name = projectPath;
+        while (name.startsWith(":")) {
+            name = name.substring(1);
         }
-        return out.toString();
+        return name.replace(':', '/');
     }
 
     /**
