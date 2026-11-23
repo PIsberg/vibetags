@@ -171,4 +171,33 @@ class ModuleSidecarMergeShapeTest {
             + "<!-- VIBETAGS-MODULE-END: module-graph -->",
             ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true));
     }
+
+    @Test
+    @DisplayName("lean index: the root module's own guardrails stay inline even when the root has scoped rules")
+    void theRootModuleIsNeverLinked(@TempDir Path root) throws IOException {
+        leanRoot(root);
+        Files.createDirectories(root.resolve(".claude/rules"));
+        ModuleSidecar rootModule = new ModuleSidecar("_root_", "", "_root_");
+        rootModule.putBody("claude", "ROOT BODY");
+        rootModule.save(root);
+        sidecar("module-graph", "module-graph", "claude", "GRAPH MAIN BODY").save(root);
+
+        assertEquals("<!-- VIBETAGS-MODULE: _root_ -->\nROOT BODY\n<!-- VIBETAGS-MODULE-END: _root_ -->\n"
+            + "<!-- VIBETAGS-MODULE: module-graph -->\n" + GRAPH_POINTER + "\n"
+            + "<!-- VIBETAGS-MODULE-END: module-graph -->",
+            ModuleSidecar.mergeFor("claude", ModuleSidecar.readAll(root), true),
+            "the root's guardrails are kept nowhere else, so a pointer would lose them");
+    }
+
+    @Test
+    @DisplayName("lean index: a module is linked only from the aggregates it contributes to")
+    void aModuleIsLinkedOnlyWhereItContributes(@TempDir Path root) throws IOException {
+        leanRoot(root);
+        Files.createDirectories(root.resolve("module-graph/.cursor/rules"));
+        sidecar("module-graph", "module-graph", "claude", "GRAPH MAIN BODY").save(root);
+        sidecar("module-cli", "module-cli", "cursor", "CLI CURSOR BODY").save(root);
+
+        assertEquals("CLI CURSOR BODY", ModuleSidecar.mergeFor("cursor", ModuleSidecar.readAll(root), true),
+            "module-graph wrote nothing for .cursorrules, so it has no region there to point from");
+    }
 }
