@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **One scan for comments and string literals.** `ReactorRootDetector#stripped` (cognitive
+  complexity 47) removed comments from a Gradle settings script and, behind a boolean, also blanked
+  string contents; it was run twice per file and its two results had to stay the same length.
+  `Uncommented.of(text)` makes one pass and returns both forms, built so they cannot differ in
+  length. `StubSourceNames` reads Groovy files through it too, in place of a second comment
+  stripper of its own (22) that did not know where a string is.
 - **A marker write is one object with a method per case.** `GuardrailFileWriter.writeWithMarkers`
   (cognitive complexity 48, 80 statements, nine parameters) handled four different files in one
   ladder. `MarkerWrite` is built from what is being written and derives the front matter and the
@@ -128,6 +134,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Groovy class below a string containing `/*` gets the right rule glob (#1168).** The lookup
+  for the `.groovy` file that declares a type took a literal such as `"**/*.groovy"` for the start
+  of a comment, did not see the declaration below it, and left the scoped rule with a glob for a
+  file that does not exist. `groovyFileLookupKnowsWhereAStringIs` failed before the fix.
+- **Four ways a reactor's declared modules were misread.** A commented-out Maven `<module>` counted
+  as declared (#1165); a Maven module entry spelled `./core`, `core/`, with a backslash, through
+  `..` or as `core/pom.xml` was not recognised as the directory `core`, so the detached-module
+  warning of #296 was never printed for that pom (#1166); and an `include` line inside a
+  triple-quoted string in a Gradle settings script was read as a subproject (#1167). Each has a
+  test that failed first.
 - **Hand-written backticks above the generated block no longer hide it (#1161).** The check that
   keeps a marker pair shown as an example inside a code fence from being taken for the block read
   any line starting with three backticks as a fence, and did not keep a fence's length. A line
