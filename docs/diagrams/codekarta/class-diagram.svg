@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="3452" height="2742" viewBox="0 0 3452 2742">
+<svg xmlns="http://www.w3.org/2000/svg" width="3452" height="2832" viewBox="0 0 3452 2832">
 <defs>
 <style>
 svg { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -58,8 +58,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <path d="M0,0 L10,5 L0,10 Z" fill="#ffffff" stroke="#1d4ed8" stroke-width="1"/>
 </marker>
 </defs>
-<rect width="3452" height="2742" fill="#f9fafb"/>
-<rect width="3452" height="2742" fill="url(#dotGrid)"/>
+<rect width="3452" height="2832" fill="#f9fafb"/>
+<rect width="3452" height="2832" fill="url(#dotGrid)"/>
 <rect class="group-rect" x="1210.0" y="190.0" width="208.0" height="353.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="1216.0" y="203.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor</text>
 <rect class="group-rect" x="1434.0" y="190.0" width="408.0" height="548.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
@@ -70,7 +70,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text x="1040.0" y="857.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content.platforms</text>
 <rect class="group-rect" x="2058.0" y="844.0" width="1208.0" height="820.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="2064.0" y="857.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content.annotations</text>
-<rect class="group-rect" x="10.0" y="1588.0" width="1408.0" height="949.7" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
+<rect class="group-rect" x="10.0" y="1588.0" width="1408.0" height="1039.7" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="16.0" y="1601.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal</text>
 <rect class="group-rect" x="1858.0" y="190.0" width="608.0" height="700.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="1864.0" y="203.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.validation</text>
@@ -80,12 +80,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AIGuardrailProcessor" data-target="AtomicBoolean" data-type="HAS" x="813.5" y="177.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">processed</text>
 <path class="edge-line" data-source="AIGuardrailProcessor" data-target="Logger" data-type="HAS" d="M1224.0 344.0 Q921.4 170.2 592.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="AIGuardrailProcessor" data-target="Logger" data-type="HAS" x="914.7" y="178.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">log</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="GuardrailFileWriter" data-type="HAS" d="M1314.0 484.0 Q783.1 1340.3 314.0 2232.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="GuardrailFileWriter" data-type="HAS" x="798.5" y="1343.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">fileWriter</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="GranularRulesWriter" data-type="HAS" d="M1314.0 484.0 Q683.9 1337.3 114.0 2232.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="GranularRulesWriter" data-type="HAS" x="699.0" y="1341.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularWriter</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="WriteCache" data-type="HAS" d="M1314.0 484.0 Q881.9 1343.3 514.0 2232.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="WriteCache" data-type="HAS" x="898.0" y="1344.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">writeCache</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="GuardrailFileWriter" data-type="HAS" d="M1314.0 484.0 Q980.9 1346.7 714.0 2232.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="GuardrailFileWriter" data-type="HAS" x="997.5" y="1346.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">fileWriter</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="GranularRulesWriter" data-type="HAS" d="M1314.0 484.0 Q881.4 1343.1 514.0 2232.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="GranularRulesWriter" data-type="HAS" x="897.7" y="1344.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularWriter</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="WriteCache" data-type="HAS" d="M1314.0 484.0 Q1080.2 1350.3 914.0 2232.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="WriteCache" data-type="HAS" x="1097.1" y="1348.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">writeCache</text>
 <path class="edge-line" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" d="M1224.0 344.0 Q1025.1 174.0 792.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" x="1016.5" y="180.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">root</text>
 <path class="edge-line" data-source="AIGuardrailProcessor" data-target="SourcePositionResolver" data-type="HAS" d="M1314.0 484.0 Q689.4 1016.6 114.0 1602.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -112,8 +112,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AIGuardrailProcessor" data-target="TransitiveManifestReader" data-type="HAS" x="1198.2" y="1034.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveReader</text>
 <path class="edge-line" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" d="M1224.0 344.0 Q1025.1 174.0 792.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="AIGuardrailProcessor" data-target="Path" data-type="HAS" x="1016.5" y="180.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">manifestDir</text>
-<path class="edge-line" data-source="AIGuardrailProcessor" data-target="AnnotationCollector" data-type="HAS" d="M1314.0 484.0 Q1080.1 1356.1 914.0 2243.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AIGuardrailProcessor" data-target="AnnotationCollector" data-type="HAS" x="1097.1" y="1354.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">collector</text>
+<path class="edge-line" data-source="AIGuardrailProcessor" data-target="AnnotationCollector" data-type="HAS" d="M1314.0 484.0 Q782.6 1391.8 314.0 2333.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AIGuardrailProcessor" data-target="AnnotationCollector" data-type="HAS" x="798.3" y="1394.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">collector</text>
 <path class="edge-line" data-source="AIGuardrailProcessor" data-target="Runnable" data-type="HAS" d="M1314.0 204.0 Q1219.8 127.3 1102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="AIGuardrailProcessor" data-target="Runnable" data-type="HAS" x="1213.9" y="133.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">afterSidecarRead</text>
 <path class="edge-line" data-source="GuardrailAnnotations" data-target="Class" data-type="HAS" d="M1448.0 247.5 Q1445.3 143.9 1392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -520,10 +520,10 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="LazyFileAppender" data-target="OutputStreamAppender" data-type="EXTENDS" x="525.9" y="938.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">extends</text>
 <path class="edge-line" data-source="LazyFileAppender" data-target="DeferredFileStream" data-type="HAS" d="M314.0 1692.0 Q642.6 953.5 902.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="LazyFileAppender" data-target="DeferredFileStream" data-type="HAS" x="625.3" y="940.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">stream</text>
-<path class="edge-line" data-source="CrossModuleMerge" data-target="ModuleSidecar" data-type="HAS" d="M1204.0 2229.5 Q1204.6 2259.4 1224.0 2282.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="CrossModuleMerge" data-target="ModuleSidecar" data-type="HAS" x="1209.3" y="2251.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">sidecars</text>
-<path class="edge-line" data-source="CrossModuleMerge" data-target="Logger" data-type="HAS" d="M1114.0 2142.0 Q844.2 1109.2 502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="CrossModuleMerge" data-target="Logger" data-type="HAS" x="826.1" y="1108.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">debugLog</text>
+<path class="edge-line" data-source="CrossModuleMerge" data-target="ModuleSidecar" data-type="HAS" d="M204.0 2319.5 Q204.6 2349.4 224.0 2372.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="CrossModuleMerge" data-target="ModuleSidecar" data-type="HAS" x="209.3" y="2341.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">sidecars</text>
+<path class="edge-line" data-source="CrossModuleMerge" data-target="Logger" data-type="HAS" d="M114.0 2232.0 Q345.2 1171.8 502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="CrossModuleMerge" data-target="Logger" data-type="HAS" x="326.6" y="1162.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">debugLog</text>
 <path class="edge-line" data-source="SourcePositionResolver" data-target="Trees" data-type="HAS" d="M114.0 1602.0 Q638.5 916.3 1102.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="SourcePositionResolver" data-target="Trees" data-type="HAS" x="623.3" y="899.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">trees</text>
 <path class="edge-line" data-source="SourcePositionResolver" data-target="Source" data-type="HAS" d="M114.0 1602.0 Q736.8 919.2 1302.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -540,14 +540,14 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="RoundSources" data-target="Path" data-type="HAS" x="425.2" y="940.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">fileByElement</text>
 <path class="edge-line" data-source="RoundSources" data-target="Path" data-type="HAS" d="M114.0 1782.0 Q442.4 952.0 702.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="RoundSources" data-target="Path" data-type="HAS" x="425.2" y="940.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">files</text>
-<path class="edge-line" data-source="GuardrailContentBuilder" data-target="AnnotationCollector" data-type="HAS" d="M804.0 2368.7 Q811.3 2379.8 824.0 2383.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailContentBuilder" data-target="AnnotationCollector" data-type="HAS" x="812.7" y="2372.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">collector</text>
-<path class="edge-line" data-source="GuardrailContentBuilder" data-target="RoleConfig" data-type="HAS" d="M714.0 2243.7 Q542.5 1833.9 314.0 1453.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailContentBuilder" data-target="RoleConfig" data-type="HAS" x="528.3" y="1835.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
+<path class="edge-line" data-source="GuardrailContentBuilder" data-target="AnnotationCollector" data-type="HAS" d="M204.0 2473.7 Q214.0 2477.3 224.0 2473.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailContentBuilder" data-target="AnnotationCollector" data-type="HAS" x="214.0" y="2469.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">collector</text>
+<path class="edge-line" data-source="GuardrailContentBuilder" data-target="RoleConfig" data-type="HAS" d="M114.0 2333.7 Q244.5 1900.3 314.0 1453.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailContentBuilder" data-target="RoleConfig" data-type="HAS" x="229.2" y="1890.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
 <path class="edge-line" data-source="SingleLineAnnotation" data-target="ClassValue" data-type="HAS" d="M914.0 1782.0 Q1538.6 1007.8 2102.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="SingleLineAnnotation" data-target="ClassValue" data-type="HAS" x="1523.3" y="990.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">HAS_STRING_MEMBER</text>
-<path class="edge-line" data-source="FinalRoundElements" data-target="Elements" data-type="HAS" d="M1114.0 2322.0 Q1543.5 1268.1 1902.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FinalRoundElements" data-target="Elements" data-type="HAS" x="1525.7" y="1255.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">elements</text>
+<path class="edge-line" data-source="FinalRoundElements" data-target="Elements" data-type="HAS" d="M514.0 2412.0 Q1240.5 1320.3 1902.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FinalRoundElements" data-target="Elements" data-type="HAS" x="1224.2" y="1304.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">elements</text>
 <path class="edge-line" data-source="MethodBodyGuardrailScanner" data-target="Trees" data-type="HAS" d="M314.0 1602.0 Q739.8 912.7 1102.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="MethodBodyGuardrailScanner" data-target="Trees" data-type="HAS" x="723.9" y="897.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">trees</text>
 <path class="edge-line" data-source="MethodBodyGuardrailScanner" data-target="Class" data-type="HAS" d="M314.0 1602.0 Q838.8 870.2 1302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -592,54 +592,54 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AttributeRule" data-target="Class" data-type="HAS" x="1642.4" y="237.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">scans</text>
 <path class="edge-line" data-source="AttributeRule" data-target="Check" data-type="HAS" d="M2052.0 456.5 Q2347.5 328.6 2612.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="AttributeRule" data-target="Check" data-type="HAS" x="2339.8" y="308.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">body</text>
-<path class="edge-line" data-source="WriteCache" data-target="Path" data-type="HAS" d="M514.0 2232.0 Q644.7 1168.2 702.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="WriteCache" data-target="Path" data-type="HAS" x="626.4" y="1160.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">cachePath</text>
-<path class="edge-line" data-source="WriteCache" data-target="Path" data-type="HAS" d="M514.0 2232.0 Q644.7 1168.2 702.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="WriteCache" data-target="Path" data-type="HAS" x="626.4" y="1160.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">rootDir</text>
-<path class="edge-line" data-source="WriteCache" data-target="Entry" data-type="HAS" d="M604.0 2372.0 Q1834.7 1241.2 3012.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="WriteCache" data-target="Entry" data-type="HAS" x="1821.3" y="1221.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">entries</text>
-<path class="edge-line" data-source="WriteCache" data-target="Section" data-type="HAS" d="M514.0 2232.0 Q1536.0 1191.0 2502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="WriteCache" data-target="Section" data-type="HAS" x="1522.0" y="1172.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">sections</text>
+<path class="edge-line" data-source="WriteCache" data-target="Path" data-type="HAS" d="M914.0 2232.0 Q844.7 1161.4 702.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="WriteCache" data-target="Path" data-type="HAS" x="826.3" y="1157.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">cachePath</text>
+<path class="edge-line" data-source="WriteCache" data-target="Path" data-type="HAS" d="M914.0 2232.0 Q844.7 1161.4 702.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="WriteCache" data-target="Path" data-type="HAS" x="826.3" y="1157.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">rootDir</text>
+<path class="edge-line" data-source="WriteCache" data-target="Entry" data-type="HAS" d="M914.0 2232.0 Q2034.8 1192.5 3102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="WriteCache" data-target="Entry" data-type="HAS" x="2021.4" y="1172.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">entries</text>
+<path class="edge-line" data-source="WriteCache" data-target="Section" data-type="HAS" d="M914.0 2232.0 Q1738.4 1187.6 2502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="WriteCache" data-target="Section" data-type="HAS" x="1723.2" y="1170.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">sections</text>
 <path class="edge-line" data-source="JsonValueSpans" data-target="SharedKey" data-type="HAS" d="M804.0 2072.0 Q1834.4 1136.0 2812.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="JsonValueSpans" data-target="SharedKey" data-type="HAS" x="1821.2" y="1116.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GREPTILE</text>
 <path class="edge-line" data-source="JsonValueSpans" data-target="SharedKey" data-type="HAS" d="M804.0 2072.0 Q1834.4 1136.0 2812.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="JsonValueSpans" data-target="SharedKey" data-type="HAS" x="1821.2" y="1116.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GREPTILE_CONFIG</text>
 <path class="edge-line" data-source="ProcessorCoexistence" data-target="Peer" data-type="HAS" d="M1004.0 2057.0 Q2034.3 1128.6 3012.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="ProcessorCoexistence" data-target="Peer" data-type="HAS" x="2021.2" y="1108.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PEERS</text>
-<path class="edge-line" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" d="M1314.0 2142.0 Q842.1 1520.0 314.0 945.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" x="828.0" y="1525.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularUnits</text>
-<path class="edge-line" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" d="M1314.0 2142.0 Q842.1 1520.0 314.0 945.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" x="828.0" y="1525.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">moduleGranularUnits</text>
-<path class="edge-line" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" d="M1314.0 2142.0 Q1263.6 2282.0 1314.0 2422.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" x="1288.8" y="2276.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FUTURE_VERSION</text>
-<path class="edge-line" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" d="M1314.0 2142.0 Q1263.6 2282.0 1314.0 2422.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" x="1288.8" y="2276.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">UNREADABLE</text>
+<path class="edge-line" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" d="M314.0 2232.0 Q349.0 1588.5 314.0 945.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" x="331.5" y="1582.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularUnits</text>
+<path class="edge-line" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" d="M314.0 2232.0 Q349.0 1588.5 314.0 945.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ModuleSidecar" data-target="GranularContribution" data-type="HAS" x="331.5" y="1582.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">moduleGranularUnits</text>
+<path class="edge-line" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" d="M314.0 2232.0 Q263.6 2372.0 314.0 2512.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" x="288.8" y="2366.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FUTURE_VERSION</text>
+<path class="edge-line" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" d="M314.0 2232.0 Q263.6 2372.0 314.0 2512.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ModuleSidecar" data-target="ModuleSidecar" data-type="HAS" x="288.8" y="2366.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">UNREADABLE</text>
 <path class="edge-line" data-source="DeprecatedServices" data-target="Notice" data-type="HAS" d="M1404.0 2042.0 Q2335.6 1119.8 3212.0 145.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="DeprecatedServices" data-target="Notice" data-type="HAS" x="2321.8" y="1100.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">NOTICES</text>
 <path class="edge-line" data-source="TransitiveManifestReader" data-target="TransitiveRule" data-type="HAS" d="M1114.0 1602.0 Q1453.0 1182.2 1738.0 724.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TransitiveManifestReader" data-target="TransitiveRule" data-type="HAS" x="1439.5" y="1166.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">found</text>
 <path class="edge-line" data-source="TransitiveManifestReader" data-target="Logger" data-type="HAS" d="M1114.0 1602.0 Q841.5 836.4 502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TransitiveManifestReader" data-target="Logger" data-type="HAS" x="824.8" y="837.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">log</text>
-<path class="edge-line" data-source="AnnotationCollector" data-target="SourceLocation" data-type="HAS" d="M914.0 2243.7 Q1359.4 1372.4 1738.0 470.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AnnotationCollector" data-target="SourceLocation" data-type="HAS" x="1342.7" y="1358.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedPositions</text>
-<path class="edge-line" data-source="AnnotationCollector" data-target="TransitiveRule" data-type="HAS" d="M914.0 2243.7 Q1356.9 1500.6 1738.0 724.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AnnotationCollector" data-target="TransitiveRule" data-type="HAS" x="1341.5" y="1486.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveRules</text>
-<path class="edge-line" data-source="AnnotationCollector" data-target="GuardrailModel" data-type="HAS" d="M914.0 2243.7 Q1258.2 1472.5 1538.0 675.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AnnotationCollector" data-target="GuardrailModel" data-type="HAS" x="1242.1" y="1460.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">memo</text>
-<path class="edge-line" data-source="AnnotationCollector" data-target="GranularBody" data-type="HAS" d="M914.0 2243.7 Q945.9 1750.8 914.0 1258.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AnnotationCollector" data-target="GranularBody" data-type="HAS" x="930.0" y="1744.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularMemo</text>
-<path class="edge-line" data-source="AnnotationCollector" data-target="ElementExclusions" data-type="HAS" d="M1004.0 2383.7 Q1024.2 2358.9 1024.0 2327.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AnnotationCollector" data-target="ElementExclusions" data-type="HAS" x="1019.1" y="2351.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">exclusions</text>
-<path class="edge-line" data-source="AnnotationCollector" data-target="GuardrailModel" data-type="HAS" d="M914.0 2243.7 Q1258.2 1472.5 1538.0 675.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AnnotationCollector" data-target="GuardrailModel" data-type="HAS" x="1242.1" y="1460.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">publishedMemo</text>
-<path class="edge-line" data-source="AnnotationCollector" data-target="FinalRoundElements" data-type="HAS" d="M1004.0 2383.7 Q1008.0 2403.9 1024.0 2417.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="AnnotationCollector" data-target="FinalRoundElements" data-type="HAS" x="1011.0" y="2396.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">finalRound</text>
+<path class="edge-line" data-source="AnnotationCollector" data-target="SourceLocation" data-type="HAS" d="M314.0 2333.7 Q1055.9 1424.7 1738.0 470.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AnnotationCollector" data-target="SourceLocation" data-type="HAS" x="1040.9" y="1407.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedPositions</text>
+<path class="edge-line" data-source="AnnotationCollector" data-target="TransitiveRule" data-type="HAS" d="M314.0 2333.7 Q1053.3 1553.0 1738.0 724.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AnnotationCollector" data-target="TransitiveRule" data-type="HAS" x="1039.7" y="1534.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveRules</text>
+<path class="edge-line" data-source="AnnotationCollector" data-target="GuardrailModel" data-type="HAS" d="M314.0 2333.7 Q954.9 1526.0 1538.0 675.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AnnotationCollector" data-target="GuardrailModel" data-type="HAS" x="940.5" y="1509.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">memo</text>
+<path class="edge-line" data-source="AnnotationCollector" data-target="GranularBody" data-type="HAS" d="M314.0 2333.7 Q643.6 1812.3 914.0 1258.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AnnotationCollector" data-target="GranularBody" data-type="HAS" x="628.8" y="1798.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularMemo</text>
+<path class="edge-line" data-source="AnnotationCollector" data-target="ElementExclusions" data-type="HAS" d="M404.0 2473.7 Q424.2 2448.9 424.0 2417.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AnnotationCollector" data-target="ElementExclusions" data-type="HAS" x="419.1" y="2441.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">exclusions</text>
+<path class="edge-line" data-source="AnnotationCollector" data-target="GuardrailModel" data-type="HAS" d="M314.0 2333.7 Q954.9 1526.0 1538.0 675.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AnnotationCollector" data-target="GuardrailModel" data-type="HAS" x="940.5" y="1509.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">publishedMemo</text>
+<path class="edge-line" data-source="AnnotationCollector" data-target="FinalRoundElements" data-type="HAS" d="M404.0 2473.7 Q408.0 2493.9 424.0 2507.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="AnnotationCollector" data-target="FinalRoundElements" data-type="HAS" x="411.0" y="2486.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">finalRound</text>
 <path class="edge-line" data-source="TomlValueSpans" data-target="Pattern" data-type="HAS" d="M714.0 2052.0 Q1439.2 1097.2 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TomlValueSpans" data-target="Pattern" data-type="HAS" x="1423.6" y="1080.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">KEY_LINE</text>
-<path class="edge-line" data-source="GranularRulesWriter" data-target="GuardrailFileWriter" data-type="HAS" d="M204.0 2334.5 Q207.3 2356.9 224.0 2372.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GranularRulesWriter" data-target="GuardrailFileWriter" data-type="HAS" x="210.6" y="2349.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">fileWriter</text>
-<path class="edge-line" data-source="GranularRulesWriter" data-target="GranularFormat" data-type="HAS" d="M114.0 2232.0 Q145.2 1254.8 102.0 278.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GranularRulesWriter" data-target="GranularFormat" data-type="HAS" x="126.6" y="1248.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FORMATS</text>
+<path class="edge-line" data-source="GranularRulesWriter" data-target="GuardrailFileWriter" data-type="HAS" d="M604.0 2334.5 Q607.3 2356.9 624.0 2372.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GranularRulesWriter" data-target="GuardrailFileWriter" data-type="HAS" x="610.6" y="2349.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">fileWriter</text>
+<path class="edge-line" data-source="GranularRulesWriter" data-target="GranularFormat" data-type="HAS" d="M514.0 2232.0 Q344.5 1247.3 102.0 278.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GranularRulesWriter" data-target="GranularFormat" data-type="HAS" x="326.3" y="1245.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FORMATS</text>
 <path class="edge-line" data-source="GenerationLock" data-target="AutoCloseable" data-type="IMPLEMENTS" d="M1114.0 2052.0 Q741.5 1149.7 302.0 278.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="GenerationLock" data-target="AutoCloseable" data-type="IMPLEMENTS" x="724.7" y="1151.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="GenerationLock" data-target="Duration" data-type="HAS" d="M1114.0 2052.0 Q842.6 1153.1 502.0 278.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -660,32 +660,32 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="DestructiveRewriteWarner" data-target="Logger" data-type="HAS" x="326.4" y="1117.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">log</text>
 <path class="edge-line" data-source="WritePlan" data-target="Write" data-type="HAS" d="M514.0 2142.0 Q844.1 1221.4 1102.0 278.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="WritePlan" data-target="Write" data-type="HAS" x="826.1" y="1209.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">writes</text>
-<path class="edge-line" data-source="GuardrailFileWriter" data-target="Messager" data-type="HAS" d="M314.0 2232.0 Q1335.4 1236.6 2302.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailFileWriter" data-target="Messager" data-type="HAS" x="1321.7" y="1217.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">messager</text>
-<path class="edge-line" data-source="GuardrailFileWriter" data-target="Logger" data-type="HAS" d="M314.0 2232.0 Q444.7 1168.2 502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailFileWriter" data-target="Logger" data-type="HAS" x="426.4" y="1160.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">log</text>
-<path class="edge-line" data-source="GuardrailFileWriter" data-target="WriteCache" data-type="HAS" d="M404.0 2372.0 Q414.0 2375.6 424.0 2372.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailFileWriter" data-target="WriteCache" data-type="HAS" x="414.0" y="2367.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">writeCache</text>
-<path class="edge-line" data-source="GuardrailModelBuilder" data-target="Comparator" data-type="HAS" d="M714.0 2142.0 Q443.5 1153.9 102.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailModelBuilder" data-target="Comparator" data-type="HAS" x="425.8" y="1153.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_IDENTITY</text>
-<path class="edge-line" data-source="GuardrailModelBuilder" data-target="SourceLocation" data-type="HAS" d="M714.0 2142.0 Q1257.9 1325.5 1738.0 470.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailModelBuilder" data-target="SourceLocation" data-type="HAS" x="1241.9" y="1309.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedPositions</text>
-<path class="edge-line" data-source="GuardrailModelBuilder" data-target="TransitiveRule" data-type="HAS" d="M714.0 2142.0 Q1255.1 1454.0 1738.0 724.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="GuardrailModelBuilder" data-target="TransitiveRule" data-type="HAS" x="1240.5" y="1437.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveRules</text>
+<path class="edge-line" data-source="GuardrailFileWriter" data-target="Messager" data-type="HAS" d="M714.0 2232.0 Q1537.9 1233.2 2302.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailFileWriter" data-target="Messager" data-type="HAS" x="1522.9" y="1215.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">messager</text>
+<path class="edge-line" data-source="GuardrailFileWriter" data-target="Logger" data-type="HAS" d="M714.0 2232.0 Q644.7 1161.4 502.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailFileWriter" data-target="Logger" data-type="HAS" x="626.3" y="1157.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">log</text>
+<path class="edge-line" data-source="GuardrailFileWriter" data-target="WriteCache" data-type="HAS" d="M804.0 2372.0 Q814.0 2375.6 824.0 2372.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailFileWriter" data-target="WriteCache" data-type="HAS" x="814.0" y="2367.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">writeCache</text>
+<path class="edge-line" data-source="GuardrailModelBuilder" data-target="Comparator" data-type="HAS" d="M914.0 2142.0 Q542.5 1150.7 102.0 188.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailModelBuilder" data-target="Comparator" data-type="HAS" x="525.3" y="1151.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_IDENTITY</text>
+<path class="edge-line" data-source="GuardrailModelBuilder" data-target="SourceLocation" data-type="HAS" d="M914.0 2142.0 Q1359.3 1322.4 1738.0 470.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailModelBuilder" data-target="SourceLocation" data-type="HAS" x="1342.6" y="1308.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">lockedPositions</text>
+<path class="edge-line" data-source="GuardrailModelBuilder" data-target="TransitiveRule" data-type="HAS" d="M914.0 2142.0 Q1356.6 1450.8 1738.0 724.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="GuardrailModelBuilder" data-target="TransitiveRule" data-type="HAS" x="1341.3" y="1435.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">transitiveRules</text>
 <path class="edge-line" data-source="PartialRoundDetector" data-target="Path" data-type="HAS" d="M714.0 1602.0 Q743.7 849.7 702.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PartialRoundDetector" data-target="Path" data-type="HAS" x="725.8" y="843.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">compiledFiles</text>
 <path class="edge-line" data-source="PartialRoundDetector" data-target="Path" data-type="HAS" d="M714.0 1602.0 Q743.7 849.7 702.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PartialRoundDetector" data-target="Path" data-type="HAS" x="725.8" y="843.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">sourceRoots</text>
-<path class="edge-line" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" d="M914.0 2142.0 Q1540.7 1139.0 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" x="1524.4" y="1123.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">QUOTED</text>
-<path class="edge-line" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" d="M914.0 2142.0 Q1540.7 1139.0 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" x="1524.4" y="1123.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GRADLE_INCLUDE</text>
-<path class="edge-line" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" d="M914.0 2142.0 Q1540.7 1139.0 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" x="1524.4" y="1123.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MAVEN_MODULE</text>
-<path class="edge-line" data-source="ElementExclusions" data-target="ElementExclusions" data-type="HAS" d="M1114.0 2232.0 Q1079.8 2327.0 1114.0 2422.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ElementExclusions" data-target="ElementExclusions" data-type="HAS" x="1096.9" y="2321.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">NONE</text>
-<path class="edge-line" data-source="ElementExclusions" data-target="Pattern" data-type="HAS" d="M1114.0 2232.0 Q1642.5 1181.0 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="ElementExclusions" data-target="Pattern" data-type="HAS" x="1625.2" y="1167.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">compiled</text>
+<path class="edge-line" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" d="M1114.0 2142.0 Q1641.9 1136.4 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" x="1625.0" y="1122.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">QUOTED</text>
+<path class="edge-line" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" d="M1114.0 2142.0 Q1641.9 1136.4 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" x="1625.0" y="1122.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GRADLE_INCLUDE</text>
+<path class="edge-line" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" d="M1114.0 2142.0 Q1641.9 1136.4 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ReactorRootDetector" data-target="Pattern" data-type="HAS" x="1625.0" y="1122.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">MAVEN_MODULE</text>
+<path class="edge-line" data-source="ElementExclusions" data-target="ElementExclusions" data-type="HAS" d="M514.0 2322.0 Q479.8 2417.0 514.0 2512.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ElementExclusions" data-target="ElementExclusions" data-type="HAS" x="496.9" y="2411.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">NONE</text>
+<path class="edge-line" data-source="ElementExclusions" data-target="Pattern" data-type="HAS" d="M514.0 2322.0 Q1339.3 1232.3 2102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="ElementExclusions" data-target="Pattern" data-type="HAS" x="1323.6" y="1215.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">compiled</text>
 <g id="AIGuardrailProcessor">
   <title>AIGuardrailProcessor [CLASS]</title>
   <rect class="node-rect" x="1224.0" y="204.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
@@ -724,61 +724,61 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="GuardrailFileWriter">
   <title>GuardrailFileWriter [CLASS]</title>
-  <rect class="node-rect" x="224.0" y="2232.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="314.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailFileWriter</text>
-  <line x1="224.0" y1="2276.0" x2="404.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="232.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MIRROR_FILE_PREFIX: String</text>
-  <text x="232.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MARKER_START_MD: String</text>
-  <text x="232.0" y="2319.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MARKER_END_MD: String</text>
-  <text x="232.0" y="2334.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BYTE_ORDER_MARK: String</text>
-  <text x="232.0" y="2349.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MARKER_START_HASH: String</text>
-  <text x="232.0" y="2364.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MARKER_END_HASH: String</text>
-  <text x="232.0" y="2379.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+14 more)</text>
-  <line x1="224.0" y1="2393.0" x2="404.0" y2="2393.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="232.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">dryRunChanges(): List&lt;String&gt;</text>
-  <text x="232.0" y="2421.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeFileIfChanged(String, Stri…</text>
-  <text x="232.0" y="2436.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeOnce(Path, String, String,…</text>
-  <text x="232.0" y="2451.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeFailed(Path, String, IOExc…</text>
-  <text x="232.0" y="2466.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">undecodableEncoding(Path): Stri…</text>
-  <text x="232.0" y="2481.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">debug(String, Object): void</text>
-  <text x="232.0" y="2496.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+49 more)</text>
+  <rect class="node-rect" x="624.0" y="2232.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailFileWriter</text>
+  <line x1="624.0" y1="2276.0" x2="804.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MIRROR_FILE_PREFIX: String</text>
+  <text x="632.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MARKER_START_MD: String</text>
+  <text x="632.0" y="2319.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MARKER_END_MD: String</text>
+  <text x="632.0" y="2334.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BYTE_ORDER_MARK: String</text>
+  <text x="632.0" y="2349.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MARKER_START_HASH: String</text>
+  <text x="632.0" y="2364.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MARKER_END_HASH: String</text>
+  <text x="632.0" y="2379.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+14 more)</text>
+  <line x1="624.0" y1="2393.0" x2="804.0" y2="2393.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">dryRunChanges(): List&lt;String&gt;</text>
+  <text x="632.0" y="2421.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeFileIfChanged(String, Stri…</text>
+  <text x="632.0" y="2436.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeOnce(Path, String, String,…</text>
+  <text x="632.0" y="2451.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeFailed(Path, String, IOExc…</text>
+  <text x="632.0" y="2466.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">undecodableEncoding(Path): Stri…</text>
+  <text x="632.0" y="2481.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">debug(String, Object): void</text>
+  <text x="632.0" y="2496.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+49 more)</text>
 </g>
 <g id="GranularRulesWriter">
   <title>GranularRulesWriter [CLASS]</title>
-  <rect class="node-rect" x="24.0" y="2232.0" width="180.0" height="205.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="114.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GranularRulesWriter</text>
-  <line x1="24.0" y1="2276.0" x2="204.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="32.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">fileWriter: GuardrailFileWriter</text>
-  <text x="32.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMATS: List&lt;GranularFormat&gt;</text>
-  <line x1="24.0" y1="2318.0" x2="204.0" y2="2318.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="32.0" y="2331.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeAll(Map&lt;TaggedElement,Gran…</text>
-  <text x="32.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeAll(Map&lt;TaggedElement,Gran…</text>
-  <text x="32.0" y="2361.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeAll(Map&lt;TaggedElement,Gran…</text>
-  <text x="32.0" y="2376.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeMirrored(Map&lt;TaggedElement…</text>
-  <text x="32.0" y="2391.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contributionsFor(Map&lt;TaggedElem…</text>
-  <text x="32.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">write(Map&lt;TaggedElement,Granula…</text>
-  <text x="32.0" y="2421.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+22 more)</text>
+  <rect class="node-rect" x="424.0" y="2232.0" width="180.0" height="205.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GranularRulesWriter</text>
+  <line x1="424.0" y1="2276.0" x2="604.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">fileWriter: GuardrailFileWriter</text>
+  <text x="432.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMATS: List&lt;GranularFormat&gt;</text>
+  <line x1="424.0" y1="2318.0" x2="604.0" y2="2318.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="2331.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeAll(Map&lt;TaggedElement,Gran…</text>
+  <text x="432.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeAll(Map&lt;TaggedElement,Gran…</text>
+  <text x="432.0" y="2361.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeAll(Map&lt;TaggedElement,Gran…</text>
+  <text x="432.0" y="2376.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">writeMirrored(Map&lt;TaggedElement…</text>
+  <text x="432.0" y="2391.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contributionsFor(Map&lt;TaggedElem…</text>
+  <text x="432.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">write(Map&lt;TaggedElement,Granula…</text>
+  <text x="432.0" y="2421.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+22 more)</text>
 </g>
 <g id="WriteCache">
   <title>WriteCache [CLASS]</title>
-  <rect class="node-rect" x="424.0" y="2232.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="514.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">WriteCache</text>
-  <line x1="424.0" y1="2276.0" x2="604.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="432.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">DEFAULT_FILE_NAME: String</text>
-  <text x="432.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_VERSION: int</text>
-  <text x="432.0" y="2319.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SOURCE_DIAGNOSTIC: String</text>
-  <text x="432.0" y="2334.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_HEADER: String</text>
-  <text x="432.0" y="2349.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MODULE_HEADER: String</text>
-  <text x="432.0" y="2364.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FINGERPRINT_HEADER: String</text>
-  <text x="432.0" y="2379.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+18 more)</text>
-  <line x1="424.0" y1="2393.0" x2="604.0" y2="2393.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="432.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">cacheKey(Path): String</text>
-  <text x="432.0" y="2421.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getBuildFingerprint(): String</text>
-  <text x="432.0" y="2436.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">bindModule(String): void</text>
-  <text x="432.0" y="2451.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">section(): Section</text>
-  <text x="432.0" y="2466.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">setBuildFingerprint(String): vo…</text>
-  <text x="432.0" y="2481.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getSidecarStamp(): String</text>
-  <text x="432.0" y="2496.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+24 more)</text>
+  <rect class="node-rect" x="824.0" y="2232.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">WriteCache</text>
+  <line x1="824.0" y1="2276.0" x2="1004.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="832.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">DEFAULT_FILE_NAME: String</text>
+  <text x="832.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_VERSION: int</text>
+  <text x="832.0" y="2319.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SOURCE_DIAGNOSTIC: String</text>
+  <text x="832.0" y="2334.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_HEADER: String</text>
+  <text x="832.0" y="2349.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MODULE_HEADER: String</text>
+  <text x="832.0" y="2364.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FINGERPRINT_HEADER: String</text>
+  <text x="832.0" y="2379.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+18 more)</text>
+  <line x1="824.0" y1="2393.0" x2="1004.0" y2="2393.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="832.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">cacheKey(Path): String</text>
+  <text x="832.0" y="2421.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getBuildFingerprint(): String</text>
+  <text x="832.0" y="2436.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">bindModule(String): void</text>
+  <text x="832.0" y="2451.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">section(): Section</text>
+  <text x="832.0" y="2466.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">setBuildFingerprint(String): vo…</text>
+  <text x="832.0" y="2481.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">getSidecarStamp(): String</text>
+  <text x="832.0" y="2496.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+24 more)</text>
 </g>
 <g id="Path">
   <title>Path [CLASS]</title>
@@ -821,7 +821,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="232.0" y="1821.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">warningsReported(): int</text>
   <text x="232.0" y="1836.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">valuesFromOutsideTheRound(): int</text>
   <text x="232.0" y="1851.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">noop(): MethodBodyGuardrailScan…</text>
-  <text x="232.0" y="1866.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+13 more)</text>
+  <text x="232.0" y="1866.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+14 more)</text>
 </g>
 <g id="ModuleIdentity">
   <title>ModuleIdentity [CLASS]</title>
@@ -893,24 +893,24 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="AnnotationCollector">
   <title>AnnotationCollector [CLASS]</title>
-  <rect class="node-rect" x="824.0" y="2243.7" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="914.0" y="2265.7" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AnnotationCollector</text>
-  <line x1="824.0" y1="2287.7" x2="1004.0" y2="2287.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="832.0" y="2301.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets: Map&lt;Class&lt;? extends An…</text>
-  <text x="832.0" y="2316.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPositions: Map&lt;Element,So…</text>
-  <text x="832.0" y="2331.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules: Set&lt;Transitive…</text>
-  <text x="832.0" y="2346.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound: boolean</text>
-  <text x="832.0" y="2361.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sawSourceRoots: boolean</text>
-  <text x="832.0" y="2376.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">emptiedSourceSet: boolean</text>
-  <text x="832.0" y="2391.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+11 more)</text>
-  <line x1="824.0" y1="2404.7" x2="1004.0" y2="2404.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="832.0" y="2418.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sawSourceRoots(): boolean</text>
-  <text x="832.0" y="2433.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">markEmptiedSourceSet(): void</text>
-  <text x="832.0" y="2448.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">emptiedSourceSet(): boolean</text>
-  <text x="832.0" y="2463.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">setMirrorState(String): void</text>
-  <text x="832.0" y="2478.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mirrorState(): String</text>
-  <text x="832.0" y="2493.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">captureSignatures(boolean): void</text>
-  <text x="832.0" y="2508.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+71 more)</text>
+  <rect class="node-rect" x="224.0" y="2333.7" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="2355.7" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AnnotationCollector</text>
+  <line x1="224.0" y1="2377.7" x2="404.0" y2="2377.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="232.0" y="2391.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets: Map&lt;Class&lt;? extends An…</text>
+  <text x="232.0" y="2406.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPositions: Map&lt;Element,So…</text>
+  <text x="232.0" y="2421.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules: Set&lt;Transitive…</text>
+  <text x="232.0" y="2436.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">anyAnnotationsFound: boolean</text>
+  <text x="232.0" y="2451.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sawSourceRoots: boolean</text>
+  <text x="232.0" y="2466.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">emptiedSourceSet: boolean</text>
+  <text x="232.0" y="2481.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+11 more)</text>
+  <line x1="224.0" y1="2494.7" x2="404.0" y2="2494.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="232.0" y="2508.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sawSourceRoots(): boolean</text>
+  <text x="232.0" y="2523.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">markEmptiedSourceSet(): void</text>
+  <text x="232.0" y="2538.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">emptiedSourceSet(): boolean</text>
+  <text x="232.0" y="2553.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">setMirrorState(String): void</text>
+  <text x="232.0" y="2568.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mirrorState(): String</text>
+  <text x="232.0" y="2583.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">captureSignatures(boolean): void</text>
+  <text x="232.0" y="2598.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+71 more)</text>
 </g>
 <g id="Runnable">
   <title>Runnable [CLASS]</title>
@@ -2166,38 +2166,38 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="CrossModuleMerge">
   <title>CrossModuleMerge [CLASS]</title>
-  <rect class="node-rect" x="1024.0" y="2142.0" width="180.0" height="175.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1114.0" y="2164.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CrossModuleMerge</text>
-  <line x1="1024.0" y1="2186.0" x2="1204.0" y2="2186.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1032.0" y="2199.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ownContent: Map&lt;String,String&gt;</text>
-  <text x="1032.0" y="2214.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sidecars: List&lt;ModuleSidecar&gt;</text>
-  <text x="1032.0" y="2229.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">debugLog: Logger</text>
-  <line x1="1024.0" y1="2243.0" x2="1204.0" y2="2243.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1032.0" y="2256.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">of(Map&lt;String,String&gt;, Map&lt;Stri…</text>
-  <text x="1032.0" y="2271.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sharedContent(String, Path): St…</text>
-  <text x="1032.0" y="2286.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">wholeFile(String, Path): String</text>
-  <text x="1032.0" y="2301.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">betweenMarkers(String, boolean)…</text>
+  <rect class="node-rect" x="24.0" y="2232.0" width="180.0" height="175.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">CrossModuleMerge</text>
+  <line x1="24.0" y1="2276.0" x2="204.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="32.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ownContent: Map&lt;String,String&gt;</text>
+  <text x="32.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sidecars: List&lt;ModuleSidecar&gt;</text>
+  <text x="32.0" y="2319.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">debugLog: Logger</text>
+  <line x1="24.0" y1="2333.0" x2="204.0" y2="2333.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="32.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">of(Map&lt;String,String&gt;, Map&lt;Stri…</text>
+  <text x="32.0" y="2361.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sharedContent(String, Path): St…</text>
+  <text x="32.0" y="2376.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">wholeFile(String, Path): String</text>
+  <text x="32.0" y="2391.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">betweenMarkers(String, boolean)…</text>
 </g>
 <g id="ModuleSidecar">
   <title>ModuleSidecar [CLASS]</title>
-  <rect class="node-rect" x="1224.0" y="2142.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1314.0" y="2164.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ModuleSidecar</text>
-  <line x1="1224.0" y1="2186.0" x2="1404.0" y2="2186.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1232.0" y="2199.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SIDECAR_PREFIX: String</text>
-  <text x="1232.0" y="2214.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_VERSION: int</text>
-  <text x="1232.0" y="2229.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MIN_READABLE_VERSION: int</text>
-  <text x="1232.0" y="2244.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">KEY_FORMAT_VERSION: String</text>
-  <text x="1232.0" y="2259.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">TRAILER: String</text>
-  <text x="1232.0" y="2274.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SCAN_BUFFER_CHARS: int</text>
-  <text x="1232.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+42 more)</text>
-  <line x1="1224.0" y1="2303.0" x2="1404.0" y2="2303.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1232.0" y="2316.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">portable(String): String</text>
-  <text x="1232.0" y="2331.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putBody(String, String): void</text>
-  <text x="1232.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putModuleBody(String, String): …</text>
-  <text x="1232.0" y="2361.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putIndexDigest(String, String):…</text>
-  <text x="1232.0" y="2376.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putUnroutedBody(String, String)…</text>
-  <text x="1232.0" y="2391.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">setGranularStems(Set&lt;String&gt;): …</text>
-  <text x="1232.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+98 more)</text>
+  <rect class="node-rect" x="224.0" y="2232.0" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="314.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ModuleSidecar</text>
+  <line x1="224.0" y1="2276.0" x2="404.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="232.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SIDECAR_PREFIX: String</text>
+  <text x="232.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FORMAT_VERSION: int</text>
+  <text x="232.0" y="2319.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MIN_READABLE_VERSION: int</text>
+  <text x="232.0" y="2334.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">KEY_FORMAT_VERSION: String</text>
+  <text x="232.0" y="2349.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">TRAILER: String</text>
+  <text x="232.0" y="2364.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SCAN_BUFFER_CHARS: int</text>
+  <text x="232.0" y="2379.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+41 more)</text>
+  <line x1="224.0" y1="2393.0" x2="404.0" y2="2393.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="232.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">portable(String): String</text>
+  <text x="232.0" y="2421.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putBody(String, String): void</text>
+  <text x="232.0" y="2436.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putModuleBody(String, String): …</text>
+  <text x="232.0" y="2451.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putIndexDigest(String, String):…</text>
+  <text x="232.0" y="2466.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putUnroutedBody(String, String)…</text>
+  <text x="232.0" y="2481.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">setGranularStems(Set&lt;String&gt;): …</text>
+  <text x="232.0" y="2496.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+97 more)</text>
 </g>
 <g id="GuardrailModelViews">
   <title>GuardrailModelViews [CLASS]</title>
@@ -2348,22 +2348,24 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="GuardrailContentBuilder">
   <title>GuardrailContentBuilder [CLASS]</title>
-  <rect class="node-rect" x="624.0" y="2243.7" width="180.0" height="250.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="714.0" y="2265.7" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailContentBuilder</text>
-  <line x1="624.0" y1="2287.7" x2="804.0" y2="2287.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="2301.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">TESTING_POINTER: String</text>
-  <text x="632.0" y="2316.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">collector: AnnotationCollector</text>
-  <text x="632.0" y="2331.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">activeServices: Set&lt;String&gt;</text>
-  <text x="632.0" y="2346.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">projectName: String</text>
-  <text x="632.0" y="2361.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">generatedHeader: String</text>
-  <text x="632.0" y="2376.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roles: RoleConfig</text>
-  <text x="632.0" y="2391.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+2 more)</text>
-  <line x1="624.0" y1="2404.7" x2="804.0" y2="2404.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="2418.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">safetyDigest(): GuardrailConten…</text>
-  <text x="632.0" y="2433.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">unrouted(): GuardrailContentBui…</text>
-  <text x="632.0" y="2448.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">build(): Result</text>
-  <text x="632.0" y="2463.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">putRendered(Map&lt;String,String&gt;,…</text>
-  <text x="632.0" y="2478.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">withTransitiveAppendix(String, …</text>
+  <rect class="node-rect" x="24.0" y="2333.7" width="180.0" height="280.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="114.0" y="2355.7" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailContentBuilder</text>
+  <line x1="24.0" y1="2377.7" x2="204.0" y2="2377.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="32.0" y="2391.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">TESTING_POINTER: String</text>
+  <text x="32.0" y="2406.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">collector: AnnotationCollector</text>
+  <text x="32.0" y="2421.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">activeServices: Set&lt;String&gt;</text>
+  <text x="32.0" y="2436.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">projectName: String</text>
+  <text x="32.0" y="2451.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">generatedHeader: String</text>
+  <text x="32.0" y="2466.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roles: RoleConfig</text>
+  <text x="32.0" y="2481.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+2 more)</text>
+  <line x1="24.0" y1="2494.7" x2="204.0" y2="2494.7" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="32.0" y="2508.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">safetyDigest(): GuardrailConten…</text>
+  <text x="32.0" y="2523.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">unrouted(): GuardrailContentBui…</text>
+  <text x="32.0" y="2538.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">build(): Result</text>
+  <text x="32.0" y="2553.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">elementRules(): Map&lt;TaggedEleme…</text>
+  <text x="32.0" y="2568.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderingContext(GuardrailModel…</text>
+  <text x="32.0" y="2583.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderOptedIn(Map&lt;String,String…</text>
+  <text x="32.0" y="2598.2" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+4 more)</text>
 </g>
 <g id="SingleLineAnnotation">
   <title>SingleLineAnnotation [CLASS]</title>
@@ -2384,18 +2386,18 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="FinalRoundElements">
   <title>FinalRoundElements [CLASS]</title>
-  <rect class="node-rect" x="1024.0" y="2322.0" width="180.0" height="190.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1114.0" y="2344.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">FinalRoundElements</text>
-  <line x1="1024.0" y1="2366.0" x2="1204.0" y2="2366.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1032.0" y="2379.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">elements: Elements</text>
-  <line x1="1024.0" y1="2393.0" x2="1204.0" y2="2393.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1032.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">current(Element): Element</text>
-  <text x="1032.0" y="2421.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">forSignature(Element): Element</text>
-  <text x="1032.0" y="2436.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">currentParameter(VariableElemen…</text>
-  <text x="1032.0" y="2451.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">currentMember(Element): Element</text>
-  <text x="1032.0" y="2466.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sameMember(Element, Element): b…</text>
-  <text x="1032.0" y="2481.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sameType(TypeMirror, TypeMirror…</text>
-  <text x="1032.0" y="2496.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+3 more)</text>
+  <rect class="node-rect" x="424.0" y="2412.0" width="180.0" height="190.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="2434.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">FinalRoundElements</text>
+  <line x1="424.0" y1="2456.0" x2="604.0" y2="2456.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="2469.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">elements: Elements</text>
+  <line x1="424.0" y1="2483.0" x2="604.0" y2="2483.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="2496.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">current(Element): Element</text>
+  <text x="432.0" y="2511.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">forSignature(Element): Element</text>
+  <text x="432.0" y="2526.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">currentParameter(VariableElemen…</text>
+  <text x="432.0" y="2541.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">currentMember(Element): Element</text>
+  <text x="432.0" y="2556.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sameMember(Element, Element): b…</text>
+  <text x="432.0" y="2571.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sameType(TypeMirror, TypeMirror…</text>
+  <text x="432.0" y="2586.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+3 more)</text>
 </g>
 <g id="RuleFileLengthWarner">
   <title>RuleFileLengthWarner [CLASS]</title>
@@ -2827,18 +2829,18 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="ElementExclusions">
   <title>ElementExclusions [CLASS]</title>
-  <rect class="node-rect" x="1024.0" y="2232.0" width="180.0" height="190.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="1114.0" y="2254.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ElementExclusions</text>
-  <line x1="1024.0" y1="2276.0" x2="1204.0" y2="2276.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1032.0" y="2289.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">NONE: ElementExclusions</text>
-  <text x="1032.0" y="2304.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">patterns: List&lt;String&gt;</text>
-  <text x="1032.0" y="2319.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">compiled: List&lt;Pattern&gt;</text>
-  <line x1="1024.0" y1="2333.0" x2="1204.0" y2="2333.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="1032.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">parse(String): ElementExclusions</text>
-  <text x="1032.0" y="2361.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isEmpty(): boolean</text>
-  <text x="1032.0" y="2376.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">patterns(): List&lt;String&gt;</text>
-  <text x="1032.0" y="2391.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">excludes(TaggedElement): boolean</text>
-  <text x="1032.0" y="2406.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">regexFor(String): String</text>
+  <rect class="node-rect" x="424.0" y="2322.0" width="180.0" height="190.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="514.0" y="2344.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ElementExclusions</text>
+  <line x1="424.0" y1="2366.0" x2="604.0" y2="2366.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="2379.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">NONE: ElementExclusions</text>
+  <text x="432.0" y="2394.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">patterns: List&lt;String&gt;</text>
+  <text x="432.0" y="2409.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">compiled: List&lt;Pattern&gt;</text>
+  <line x1="424.0" y1="2423.0" x2="604.0" y2="2423.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="432.0" y="2436.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">parse(String): ElementExclusions</text>
+  <text x="432.0" y="2451.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isEmpty(): boolean</text>
+  <text x="432.0" y="2466.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">patterns(): List&lt;String&gt;</text>
+  <text x="432.0" y="2481.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">excludes(TaggedElement): boolean</text>
+  <text x="432.0" y="2496.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">regexFor(String): String</text>
 </g>
 <g id="TomlValueSpans">
   <title>TomlValueSpans [CLASS]</title>
@@ -2972,49 +2974,59 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <rect class="node-rect" x="1012.0" y="192.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="1102.0" y="235.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">Write</text>
 </g>
+<g id="ScopedIndexHoist">
+  <title>ScopedIndexHoist [CLASS]</title>
+  <rect class="node-rect" x="624.0" y="2142.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="714.0" y="2164.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ScopedIndexHoist</text>
+  <line x1="624.0" y1="2186.0" x2="804.0" y2="2186.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="2199.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">HEADING: String</text>
+  <line x1="624.0" y1="2213.0" x2="804.0" y2="2213.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="632.0" y="2226.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">hoist(List&lt;Map.Entry&lt;String,Str…</text>
+  <text x="632.0" y="2241.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">hoistEvery(List&lt;Map.Entry&lt;Strin…</text>
+</g>
 <g id="GuardrailModelBuilder">
   <title>GuardrailModelBuilder [CLASS]</title>
-  <rect class="node-rect" x="624.0" y="2142.0" width="180.0" height="235.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="714.0" y="2164.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailModelBuilder</text>
-  <line x1="624.0" y1="2186.0" x2="804.0" y2="2186.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="2199.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BY_IDENTITY: Comparator&lt;TaggedE…</text>
-  <text x="632.0" y="2214.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets: Map&lt;Class&lt;? extends An…</text>
-  <text x="632.0" y="2229.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPositions: Map&lt;TaggedElem…</text>
-  <text x="632.0" y="2244.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules: List&lt;Transitiv…</text>
-  <line x1="624.0" y1="2258.0" x2="804.0" y2="2258.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="2271.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRule(TransitiveRule):…</text>
-  <text x="632.0" y="2286.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules(Collection&lt;Tran…</text>
-  <text x="632.0" y="2301.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">add(Class&lt;? extends Annotation&gt;…</text>
-  <text x="632.0" y="2316.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPosition(TaggedElement, S…</text>
-  <text x="632.0" y="2331.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">build(): GuardrailModel</text>
-  <text x="632.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sorted(Set&lt;TaggedElement&gt;): Set…</text>
-  <text x="632.0" y="2361.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
+  <rect class="node-rect" x="824.0" y="2142.0" width="180.0" height="235.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="914.0" y="2164.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">GuardrailModelBuilder</text>
+  <line x1="824.0" y1="2186.0" x2="1004.0" y2="2186.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="832.0" y="2199.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BY_IDENTITY: Comparator&lt;TaggedE…</text>
+  <text x="832.0" y="2214.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">buckets: Map&lt;Class&lt;? extends An…</text>
+  <text x="832.0" y="2229.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPositions: Map&lt;TaggedElem…</text>
+  <text x="832.0" y="2244.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules: List&lt;Transitiv…</text>
+  <line x1="824.0" y1="2258.0" x2="1004.0" y2="2258.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="832.0" y="2271.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRule(TransitiveRule):…</text>
+  <text x="832.0" y="2286.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">transitiveRules(Collection&lt;Tran…</text>
+  <text x="832.0" y="2301.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">add(Class&lt;? extends Annotation&gt;…</text>
+  <text x="832.0" y="2316.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">lockedPosition(TaggedElement, S…</text>
+  <text x="832.0" y="2331.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">build(): GuardrailModel</text>
+  <text x="832.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">sorted(Set&lt;TaggedElement&gt;): Set…</text>
+  <text x="832.0" y="2361.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
 </g>
 <g id="ReactorRootDetector">
   <title>ReactorRootDetector [CLASS]</title>
-  <rect class="node-rect" x="824.0" y="2142.0" width="180.0" height="220.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
-  <text class="node-label" x="914.0" y="2164.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ReactorRootDetector</text>
-  <line x1="824.0" y1="2186.0" x2="1004.0" y2="2186.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="832.0" y="2199.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">QUOTED: Pattern</text>
-  <text x="832.0" y="2214.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">GRADLE_INCLUDE: Pattern</text>
-  <text x="832.0" y="2229.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MAVEN_MODULE: Pattern</text>
-  <line x1="824.0" y1="2243.0" x2="1004.0" y2="2243.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="832.0" y="2256.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">findReactorRootAbove(Path): Opt…</text>
-  <text x="832.0" y="2271.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">declaredModules(Path): List&lt;Str…</text>
-  <text x="832.0" y="2286.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">moduleDirectory(Path, String): …</text>
-  <text x="832.0" y="2301.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">withoutXmlComments(String): Str…</text>
-  <text x="832.0" y="2316.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">gradleIncludes(Path): List&lt;Stri…</text>
-  <text x="832.0" y="2331.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">includeArguments(String, int): …</text>
-  <text x="832.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+4 more)</text>
+  <rect class="node-rect" x="1024.0" y="2142.0" width="180.0" height="220.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <text class="node-label" x="1114.0" y="2164.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ReactorRootDetector</text>
+  <line x1="1024.0" y1="2186.0" x2="1204.0" y2="2186.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1032.0" y="2199.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">QUOTED: Pattern</text>
+  <text x="1032.0" y="2214.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">GRADLE_INCLUDE: Pattern</text>
+  <text x="1032.0" y="2229.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MAVEN_MODULE: Pattern</text>
+  <line x1="1024.0" y1="2243.0" x2="1204.0" y2="2243.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="1032.0" y="2256.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">findReactorRootAbove(Path): Opt…</text>
+  <text x="1032.0" y="2271.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">declaredModules(Path): List&lt;Str…</text>
+  <text x="1032.0" y="2286.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">moduleDirectory(Path, String): …</text>
+  <text x="1032.0" y="2301.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">withoutXmlComments(String): Str…</text>
+  <text x="1032.0" y="2316.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">gradleIncludes(Path): List&lt;Stri…</text>
+  <text x="1032.0" y="2331.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">includeArguments(String, int): …</text>
+  <text x="1032.0" y="2346.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+4 more)</text>
 </g>
-<rect x="3216.0" y="2583.7" width="220.0" height="124.0" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1" filter="url(#nodeShadow)"/>
-<text x="3232.0" y="2603.7" font-family="sans-serif" font-size="11" font-weight="bold" fill="#374151">Legend</text>
-<line x1="3232.0" y1="2627.7" x2="3268.0" y2="2627.7" stroke="#374151" stroke-width="2" marker-end="url(#marker-hollow-374151)"/>
-<text x="3276.0" y="2631.7" font-family="sans-serif" font-size="11" fill="#374151">extends</text>
-<line x1="3232.0" y1="2651.7" x2="3268.0" y2="2651.7" stroke="#374151" stroke-width="2" marker-end="url(#marker-open-374151)"/>
-<text x="3276.0" y="2655.7" font-family="sans-serif" font-size="11" fill="#374151">has</text>
-<line x1="3232.0" y1="2675.7" x2="3268.0" y2="2675.7" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text x="3276.0" y="2679.7" font-family="sans-serif" font-size="11" fill="#374151">implements</text>
+<rect x="3216.0" y="2673.7" width="220.0" height="124.0" rx="6" fill="#ffffff" stroke="#d1d5db" stroke-width="1" filter="url(#nodeShadow)"/>
+<text x="3232.0" y="2693.7" font-family="sans-serif" font-size="11" font-weight="bold" fill="#374151">Legend</text>
+<line x1="3232.0" y1="2717.7" x2="3268.0" y2="2717.7" stroke="#374151" stroke-width="2" marker-end="url(#marker-hollow-374151)"/>
+<text x="3276.0" y="2721.7" font-family="sans-serif" font-size="11" fill="#374151">extends</text>
+<line x1="3232.0" y1="2741.7" x2="3268.0" y2="2741.7" stroke="#374151" stroke-width="2" marker-end="url(#marker-open-374151)"/>
+<text x="3276.0" y="2745.7" font-family="sans-serif" font-size="11" fill="#374151">has</text>
+<line x1="3232.0" y1="2765.7" x2="3268.0" y2="2765.7" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text x="3276.0" y="2769.7" font-family="sans-serif" font-size="11" fill="#374151">implements</text>
 <script type="text/javascript">
 <![CDATA[
 document.addEventListener('DOMContentLoaded', () => {
@@ -3080,6 +3092,6 @@ document.addEventListener('DOMContentLoaded', () => {
 ]]>
 </script>
 <a class="diagram-attribution" href="https://github.com/PIsberg/codekarta" target="_blank" rel="noopener noreferrer">
-  <text x="3436.0" y="2725.7" text-anchor="end" font-family="sans-serif" font-size="11" fill="#6b7280" text-decoration="underline">Created with https://github.com/PIsberg/codekarta</text>
+  <text x="3436.0" y="2815.7" text-anchor="end" font-family="sans-serif" font-size="11" fill="#6b7280" text-decoration="underline">Created with https://github.com/PIsberg/codekarta</text>
 </a>
 </svg>
