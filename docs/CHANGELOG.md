@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The cross-module merge is a class of its own.** `AIGuardrailProcessor.mergeAcrossModules`
+  (cognitive complexity 44) decided service by service between every module's merged view and
+  this module's own rendering, inside a 3,090-line class it needed nothing from. The decision is
+  now `CrossModuleMerge`, with `sharedContent`, `wholeFile` and `betweenMarkers`;
+  `mergeAcrossModules` keeps its callers, its test seam and the single-module early return. No
+  change to any generated file or log event. `MergeAcrossModulesResultTest` came first and holds
+  the returned map, which until now only whole builds exercised. `generateFiles()` is unchanged and
+  `.vibetags-locks` moves its range up one line.
 - **One scan for comments and string literals.** `ReactorRootDetector#stripped` (cognitive
   complexity 47) removed comments from a Gradle settings script and, behind a boolean, also blanked
   string contents; it was run twice per file and its two results had to stay the same length.
