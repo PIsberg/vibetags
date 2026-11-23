@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -115,6 +116,38 @@ class MergeAcrossModulesLogContractTest {
         assertTrue(logged("merge.skip service=" + JSON_SERVICE + " reason=merger-declined"),
             "A declined merge silently publishes one module's view. It is the single most "
                 + "important thing this method can log:\n" + dump());
+    }
+
+    @Test
+    @DisplayName("a marker service nobody has a body for keeps this module's rendering, and says so")
+    void anEmptyMergedBodySaysSo() {
+        merge(MARKER_SERVICE, List.of(
+            sidecar("alpha", "cursor", "a rule for another service"),
+            sidecar("beta", "cursor", "another")));
+
+        assertTrue(logged("merge.skip service=" + MARKER_SERVICE + " reason=empty-merged-body html=true"),
+            "no module contributed to this file, which is not the same as a merge that ran:\n" + dump());
+    }
+
+    @Test
+    @DisplayName("the events of one merge, whole and in order")
+    void theEventsOfOneMergeInOrder() {
+        List<ModuleSidecar> sidecars = List.of(
+            sidecar("alpha", MARKER_SERVICE, "rule from alpha"),
+            sidecar("beta", MARKER_SERVICE, "rule from beta"));
+        int mergedBytes = ModuleSidecar.mergeFor(MARKER_SERVICE, sidecars, true).length();
+
+        merge(MARKER_SERVICE, sidecars);
+
+        assertEquals(List.of(
+                "merge.begin modules=2 regions=2 services=1",
+                "merge.markers service=" + MARKER_SERVICE + " html=true bytes=" + mergedBytes),
+            events());
+
+        appender.list.clear();
+        merge(MARKER_SERVICE, List.of(sidecar("solo", MARKER_SERVICE, "rule")));
+
+        assertEquals(List.of("merge.skip reason=single-module sidecars=1 services=1"), events());
     }
 
     @Test
