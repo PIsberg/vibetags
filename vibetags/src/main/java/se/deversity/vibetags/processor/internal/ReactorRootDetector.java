@@ -73,7 +73,7 @@ public final class ReactorRootDetector {
         Path pom = root.resolve("pom.xml");
         if (Files.isRegularFile(pom)) {
             try {
-                Matcher m = MAVEN_MODULE.matcher(Files.readString(pom, StandardCharsets.UTF_8));
+                Matcher m = MAVEN_MODULE.matcher(withoutXmlComments(Files.readString(pom, StandardCharsets.UTF_8)));
                 while (m.find()) {
                     modules.add(m.group(2));
                 }
@@ -88,6 +88,24 @@ public final class ReactorRootDetector {
             }
         }
         return modules;
+    }
+
+    /**
+     * {@code xml} with its comments removed, so that a module commented out of a pom is not read
+     * as declared (#1165). A comment that never closes runs to the end of the text, as the
+     * settings scan treats an unclosed block comment.
+     */
+    private static String withoutXmlComments(String xml) {
+        StringBuilder out = new StringBuilder(xml.length());
+        int at = 0;
+        int open = xml.indexOf("<!--");
+        while (open >= 0) {
+            out.append(xml, at, open);
+            int close = xml.indexOf("-->", open + "<!--".length());
+            at = close < 0 ? xml.length() : close + "-->".length();
+            open = close < 0 ? -1 : xml.indexOf("<!--", at);
+        }
+        return out.append(xml, at, xml.length()).toString();
     }
 
     /**

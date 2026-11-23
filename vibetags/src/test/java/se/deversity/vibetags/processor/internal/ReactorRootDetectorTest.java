@@ -328,6 +328,31 @@ class ReactorRootDetectorTest {
             "val notes = '''\ninclude(\"in-a-string\")\n'''\ninclude(\"real\")\n"));
     }
 
+    /**
+     * A module taken out of the build by commenting its entry out is not declared (#1165). Read
+     * as declared, a directory compiled on its own drew the "you are a module of a larger reactor"
+     * warning from a parent that no longer builds it.
+     */
+    @Test
+    void aCommentedOutMavenModuleIsNotDeclared(@TempDir Path root) throws IOException {
+        Path retired = root.resolve("retired");
+        Files.createDirectories(retired);
+        write(root.resolve("pom.xml"), """
+            <project>
+              <modules>
+                <!-- <module>retired</module> -->
+                <module>kept</module>
+                <!--
+                <module>also-retired</module>
+                -->
+              </modules>
+            </project>
+            """);
+
+        assertEquals(List.of("kept"), ReactorRootDetector.declaredModules(root));
+        assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(retired));
+    }
+
     private static List<String> includes(Path root, String settings) throws IOException {
         Path file = root.resolve("settings.gradle");
         write(file, settings);
