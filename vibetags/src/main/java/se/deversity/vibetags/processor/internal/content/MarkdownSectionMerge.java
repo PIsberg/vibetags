@@ -197,8 +197,23 @@ public final class MarkdownSectionMerge {
             return false;
         }
         int firstBullet = firstBullet(incoming.items);
+        if (firstBullet < 0) {
+            return foldIntro(existing, incoming.items);
+        }
         int lastBullet = lastBullet(incoming.items);
-        List<Item> intro = firstBullet < 0 ? incoming.items : incoming.items.subList(0, firstBullet);
+        if (!foldIntro(existing, incoming.items.subList(0, firstBullet))) {
+            return false;
+        }
+        foldBullets(existing, incoming.items.subList(firstBullet, lastBullet + 1));
+        return foldClosing(existing, incoming.items.subList(lastBullet + 1, incoming.items.size()));
+    }
+
+    /**
+     * The paragraphs before the incoming section's first bullet. One the existing section lacks
+     * goes at its very top, and only while the existing section has no intro of its own:
+     * otherwise the two intros differ, and that declines.
+     */
+    private static boolean foldIntro(Container existing, List<Item> intro) {
         for (Item paragraph : intro) {
             if (indexOfText(existing.items, paragraph.text()) >= 0) {
                 continue;
@@ -209,15 +224,16 @@ public final class MarkdownSectionMerge {
             }
             existing.items.add(0, paragraph);
         }
-        if (firstBullet < 0) {
-            return true;
-        }
+        return true;
+    }
+
+    /** Every incoming bullet the existing section lacks, after its own last bullet, in order. */
+    private static void foldBullets(Container existing, List<Item> bullets) {
         int insertAt = lastBullet(existing.items) + 1;
         if (insertAt == 0) {
             insertAt = existing.items.size();
         }
         boolean existingHasBullets = firstBullet(existing.items) >= 0;
-        List<Item> bullets = incoming.items.subList(firstBullet, lastBullet + 1);
         boolean first = true;
         for (Item bullet : bullets) {
             if (indexOfText(existing.items, bullet.text()) >= 0) {
@@ -227,7 +243,15 @@ public final class MarkdownSectionMerge {
             existing.items.add(insertAt++, new Item(true, bullet.text(), blanks));
             first = false;
         }
-        for (Item paragraph : incoming.items.subList(lastBullet + 1, incoming.items.size())) {
+    }
+
+    /**
+     * The paragraphs after the incoming section's last bullet. One the existing section lacks is
+     * appended only while nothing follows its own last bullet: otherwise the closings differ, and
+     * that declines.
+     */
+    private static boolean foldClosing(Container existing, List<Item> closing) {
+        for (Item paragraph : closing) {
             if (indexOfText(existing.items, paragraph.text()) >= 0) {
                 continue;
             }
