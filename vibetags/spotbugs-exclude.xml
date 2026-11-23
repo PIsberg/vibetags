@@ -239,8 +239,8 @@
        failure mode of a false fold is a shared file carrying both elements, which is the fix's
        normal output, not a loss. Locale.ROOT is passed explicitly. -->
   <Match>
-    <Class name="se.deversity.vibetags.processor.internal.ModuleSidecar"/>
-    <Method name="mergeGranularUnits"/>
+    <Class name="se.deversity.vibetags.processor.internal.GranularMerge"/>
+    <Method name="caseFoldGroups"/>
     <Bug pattern="IMPROPER_UNICODE"/>
   </Match>
 
