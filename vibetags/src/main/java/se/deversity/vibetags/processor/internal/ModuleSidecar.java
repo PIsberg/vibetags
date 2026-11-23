@@ -26,7 +26,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -186,7 +185,7 @@ public final class ModuleSidecar {
     /** Separator between a module id and its non-primary source set. */
     static final String SOURCE_SET_SEPARATOR = "__";
 
-    private static final int MULTI_MODULE_THRESHOLD = 2;
+    static final int MULTI_MODULE_THRESHOLD = 2;
 
     /** Cap on the readable half of an out-of-tree module id; the rest is a hash. */
     private static final int MAX_READABLE_ID = 24;
@@ -2025,7 +2024,7 @@ public final class ModuleSidecar {
      * format reads as a comment. The marker text itself is the {@code SUB_MARKER_*_FORMAT}
      * constants; this only chooses between them, once per merge.
      */
-    private enum SubMarkers {
+    enum SubMarkers {
         MARKDOWN {
             @Override
             String open(String regionId) {
@@ -2505,18 +2504,13 @@ public final class ModuleSidecar {
      * role declared in a reactor-root {@code .vibetags-roles} routes classes from several modules
      * into one file, and each of them resolves the same path, so before this every module's compile
      * replaced the file with its own classes alone
-     * (<a href="https://github.com/PIsberg/vibetags/issues/365">issue #365</a>). Contributions are
-     * grouped by region first, so a module compiled once per source set is one contributor and its
-     * source sets are simply concatenated; several regions are wrapped in {@code VIBETAGS-MODULE}
-     * sub-markers, exactly as the aggregate files are. Granular files are markdown on every
-     * platform, so the HTML marker form always applies.
-     *
-     * <p>A lone contributor's body is returned verbatim, which keeps the single-module output
-     * byte-for-byte what it was. Globs are unioned across contributors in the same encounter order
-     * for every module, so which module compiles last cannot change the file.
+     * (<a href="https://github.com/PIsberg/vibetags/issues/365">issue #365</a>). Several regions
+     * are wrapped in {@code VIBETAGS-MODULE} sub-markers, exactly as the aggregate files are;
+     * granular files are markdown on every platform, so the HTML marker form always applies. How
+     * regions, source sets and case-colliding stems fold is {@code GranularMerge}'s to say.
      */
     public static Map<String, GranularContribution> mergeGranular(List<ModuleSidecar> sidecars) {
-        return mergeGranularUnits(sidecars, s -> s.granularUnits, true, null);
+        return GranularMerge.of(sidecars, s -> s.granularUnits, true, null);
     }
 
     /**
@@ -2529,102 +2523,7 @@ public final class ModuleSidecar {
      */
     public static Map<String, GranularContribution> mergeModuleGranular(List<ModuleSidecar> sidecars,
                                                                         String regionId) {
-        return mergeGranularUnits(sidecars, s -> s.moduleGranularUnits, false, regionId);
-    }
-
-    private static Map<String, GranularContribution> mergeGranularUnits(
-            List<ModuleSidecar> sidecars,
-            java.util.function.Function<ModuleSidecar, Map<String, GranularContribution>> source,
-            boolean subMarkers,
-            @Nullable String regionOnly) {
-        // stem → region → the contributions of that region's source sets, in encounter order.
-        Map<String, Map<String, List<GranularContribution>>> byStem = new LinkedHashMap<>();
-        for (ModuleSidecar s : sidecars) {
-            if (regionOnly != null && !s.regionId.equals(regionOnly)) continue;
-            source.apply(s).forEach((stem, contribution) -> {
-                if (contribution.isEmpty()) return;
-                byStem.computeIfAbsent(stem, k -> new LinkedHashMap<>())
-                      .computeIfAbsent(s.regionId, k -> new ArrayList<>())
-                      .add(contribution);
-            });
-        }
-
-        // Stems that differ only in capitalisation share one physical file on a case-insensitive
-        // filesystem, and each was merged separately here, so whichever module compiled last
-        // replaced the shared file with its own element alone — the cross-module twin of issue
-        // #510 (<a href="https://github.com/PIsberg/vibetags/issues/525">issue #525</a>). Folding
-        // them into one shared contribution makes every colliding stem's file byte-identical, the
-        // same answer the within-plan fold gives: whichever names the filesystem collapses, the
-        // surviving file carries every element. Identical contributions inside a fold group are
-        // kept once — a module whose own plan already folded the collision records the same
-        // contribution under each of its colliding stems, and appending both would double the body.
-        Map<String, List<Map.Entry<String, Map<String, List<GranularContribution>>>>> byFoldedCase =
-            new LinkedHashMap<>();
-        for (Map.Entry<String, Map<String, List<GranularContribution>>> entry : byStem.entrySet()) {
-            byFoldedCase.computeIfAbsent(entry.getKey().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
-                .add(entry);
-        }
-
-        Map<String, GranularContribution> merged = new LinkedHashMap<>();
-        for (List<Map.Entry<String, Map<String, List<GranularContribution>>>> group : byFoldedCase.values()) {
-            Map<String, List<GranularContribution>> byRegion = new LinkedHashMap<>();
-            for (Map.Entry<String, Map<String, List<GranularContribution>>> stemEntry : group) {
-                stemEntry.getValue().forEach((region, contributions) -> {
-                    List<GranularContribution> kept =
-                        byRegion.computeIfAbsent(region, k -> new ArrayList<>());
-                    for (GranularContribution c : contributions) {
-                        if (!kept.contains(c)) {
-                            kept.add(c);
-                        }
-                    }
-                });
-            }
-            Set<String> globs = new LinkedHashSet<>();
-            // The heading and description travel with each contribution and are joined here the
-            // way the single-module fold joins them, so a file two modules write under two
-            // spellings of one name is headed the same whichever compiled last (issue #579).
-            // Deduplicated by value: a role file spanning modules names the role once.
-            Set<String> displayNames = new LinkedHashSet<>();
-            Set<String> subjects = new LinkedHashSet<>();
-            List<Map.Entry<String, String>> regionBodies = new ArrayList<>();
-            byRegion.forEach((region, contributions) -> {
-                List<String> parts = new ArrayList<>();
-                for (GranularContribution c : contributions) {
-                    globs.addAll(c.globs());
-                    parts.add(c.body().strip());
-                    if (c.isNamed()) {
-                        displayNames.add(c.displayName());
-                        subjects.add(c.subject());
-                    }
-                }
-                regionBodies.add(new AbstractMap.SimpleEntry<>(region, String.join("\n\n", parts)));
-            });
-            GranularContribution shared = new GranularContribution(new ArrayList<>(globs),
-                joinRegions(regionBodies, subMarkers),
-                String.join(", ", displayNames),
-                displayNames.isEmpty() ? ""
-                    : GranularContribution.DESCRIPTION_PREFIX + String.join(", ", subjects));
-            for (Map.Entry<String, Map<String, List<GranularContribution>>> stemEntry : group) {
-                merged.put(stemEntry.getKey(), shared);
-            }
-        }
-        return merged;
-    }
-
-    /** One region → its body verbatim; several → each wrapped in its own module sub-markers. */
-    private static String joinRegions(List<Map.Entry<String, String>> regionBodies, boolean subMarkers) {
-        if (!subMarkers || regionBodies.size() < MULTI_MODULE_THRESHOLD) {
-            List<String> parts = new ArrayList<>();
-            for (Map.Entry<String, String> entry : regionBodies) {
-                parts.add(entry.getValue());
-            }
-            return String.join("\n\n", parts);
-        }
-        StringBuilder merged = new StringBuilder();
-        for (Map.Entry<String, String> entry : regionBodies) {
-            merged.append(SubMarkers.MARKDOWN.wrap(entry.getKey(), entry.getValue()));
-        }
-        return merged.toString().strip();
+        return GranularMerge.of(sidecars, s -> s.moduleGranularUnits, false, regionId);
     }
 
     /** Sidecars grouped by region id, preserving the (filename-sorted) encounter order. */
