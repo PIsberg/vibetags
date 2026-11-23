@@ -63,8 +63,9 @@ public final class ReactorRootDetector {
     /**
      * The directories {@code root}'s own build declares as modules, relative to it with forward
      * slashes: Maven {@code <module>} and Maven 4 {@code <subproject>} entries in its
-     * {@code pom.xml}, then the {@code include}s of {@code settings.gradle} and
-     * {@code settings.gradle.kts}. Empty for a single-project build and for a build file this
+     * {@code pom.xml}, each read as the path Maven reads it as, then the {@code include}s of
+     * {@code settings.gradle} and {@code settings.gradle.kts}. Empty for a single-project build
+     * and for a build file this
      * cannot read or decode. A pattern match rather than a parse, like the rest of this class, so a
      * build file it does not fully understand yields no signal instead of an error.
      */
@@ -75,7 +76,7 @@ public final class ReactorRootDetector {
             try {
                 Matcher m = MAVEN_MODULE.matcher(withoutXmlComments(Files.readString(pom, StandardCharsets.UTF_8)));
                 while (m.find()) {
-                    modules.add(m.group(2));
+                    modules.add(moduleDirectory(root, m.group(2)));
                 }
             } catch (IOException | RuntimeException unreadable) {
                 // No signal: a build file this cannot decode is not evidence of anything.
@@ -88,6 +89,27 @@ public final class ReactorRootDetector {
             }
         }
         return modules;
+    }
+
+    /**
+     * The directory a Maven module entry names, relative to {@code root} with forward slashes.
+     * Maven reads the entry as a path, so {@code ./core}, {@code core/}, {@code core\} and
+     * {@code sub/../core} are all {@code core}, and so is {@code core/pom.xml}: an entry may name
+     * the module's pom file in place of its directory (#1166). An entry this cannot resolve,
+     * or one that resolves to the root itself, is returned as written.
+     */
+    private static String moduleDirectory(Path root, String entry) {
+        try {
+            Path base = root.toAbsolutePath().normalize();
+            Path target = base.resolve(entry.replace('\\', '/')).normalize();
+            if (Files.isRegularFile(target) && target.getParent() != null) {
+                target = target.getParent();
+            }
+            String relative = PathStrings.relative(base, target);
+            return relative.isEmpty() ? entry : relative;
+        } catch (RuntimeException unresolvable) {
+            return entry;
+        }
     }
 
     /**

@@ -353,6 +353,25 @@ class ReactorRootDetectorTest {
         assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(retired));
     }
 
+    /**
+     * Maven reads a module entry as a path: {@code ./core}, {@code core/}, a backslash, a detour
+     * through {@code ..} and the module's own pom file all name the directory {@code core}
+     * (#1166). Compared as text they named nothing, and the module compiled as its own root
+     * with nothing said, which is issue #296 again for a build file spelled another way.
+     */
+    @Test
+    void aMavenModuleEntryIsReadAsAPath(@TempDir Path root) throws IOException {
+        Path core = root.resolve("core");
+        Files.createDirectories(core);
+        Files.writeString(core.resolve("pom.xml"), "<project/>");
+        for (String entry : List.of("./core", "core/", "core\\", "sub/../core", "core/pom.xml", ".\\core")) {
+            write(root.resolve("pom.xml"), "<project><modules><module>" + entry + "</module></modules></project>");
+
+            assertEquals(List.of("core"), ReactorRootDetector.declaredModules(root), entry);
+            assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(core), entry);
+        }
+    }
+
     private static List<String> includes(Path root, String settings) throws IOException {
         Path file = root.resolve("settings.gradle");
         write(file, settings);
