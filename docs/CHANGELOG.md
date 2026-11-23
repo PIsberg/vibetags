@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The JSON reader reads numbers and escapes in named steps.** `Json.isJsonNumber` (cognitive
+  complexity 26) is now `integerPartEnd` and `digitsEnd`, so it reads as the number grammar, and
+  `readString` (17) hands escapes to `appendEscape` and `readUnicodeEscape`. Reading the parser for
+  it found #1186.
 - **Granular files are planned in three named steps.** `GranularRulesWriter.plan` (cognitive
   complexity 23) split owners between roles and per-class files and planned both in one method of
   nested lambdas. `Routing.of` makes the split; `perClass`, `roleFilesByStem` and `roleFile` plan
