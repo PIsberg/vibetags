@@ -81,6 +81,37 @@ class MarkdownSectionMergeTest {
             MarkdownSectionMerge.merge(List.of(main, test)));
     }
 
+    /**
+     * {@code llms-full.txt} writes {@code ### <class>} under every annotation's section, so a class
+     * carrying two annotations has the same heading twice in one body, under two parents. Keyed by
+     * the heading line alone, the test source set's second copy was folded into its first, and its
+     * context rule was filed under LOCKED while CONTEXT lost the class (issue #1190). A section is
+     * the heading under its parents.
+     */
+    @Test
+    void aHeadingRepeatedUnderTwoParentsStaysUnderEach() {
+        String main = HEADER + "## LOCKED\n\n### com.Foo\n- **Reason**: r\n\n## CONTEXT\n\n### com.Foo\n- **Focus**: f";
+        String test = HEADER + "## LOCKED\n\n### com.FooTest\n- **Reason**: rt\n\n## CONTEXT\n\n### com.FooTest\n- **Focus**: ft";
+
+        assertEquals(HEADER
+                + "## LOCKED\n\n### com.Foo\n- **Reason**: r\n\n### com.FooTest\n- **Reason**: rt\n\n"
+                + "## CONTEXT\n\n### com.Foo\n- **Focus**: f\n\n### com.FooTest\n- **Focus**: ft",
+            MarkdownSectionMerge.merge(List.of(main, test)),
+            "each class's rule stays under the annotation it came from");
+    }
+
+    @Test
+    void aHeadingBothBodiesShareUnderOneParentIsStillFoldedOnce() {
+        String main = HEADER + "## LOCKED\n\n### com.Foo\n- **Reason**: r\n\n## CONTEXT\n\n### com.Foo\n- **Focus**: f";
+        String test = HEADER + "## CONTEXT\n\n### com.Foo\n- **Focus**: f\n- **Avoid**: a";
+
+        assertEquals(HEADER
+                + "## LOCKED\n\n### com.Foo\n- **Reason**: r\n\n"
+                + "## CONTEXT\n\n### com.Foo\n- **Focus**: f\n- **Avoid**: a",
+            MarkdownSectionMerge.merge(List.of(main, test)),
+            "the same heading under the same parent is one section, as before");
+    }
+
     @Test
     void aBulletIsComparedWithItsNestedLinesAsOneBlock() {
         // The transitive appendix nests rules under a package bullet. Two source sets naming the

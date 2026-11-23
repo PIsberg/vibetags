@@ -203,6 +203,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A repeated heading keeps its rules under its own section when source sets merge (#1190).**
+  `llms-full.txt` writes `### <class>` under each annotation's section, so a class with two
+  annotations has one heading twice. Merging a module's main and test bodies matched sections by the
+  heading line alone, and filed the second copy's rules under the first copy's section: a test
+  class's context rule appeared under LOCKED, and CONTEXT lost the class. A section is now matched
+  by its heading under its parents. A sub-section new to the merge also goes after the shared
+  section's own sub-sections when nothing later is shared, so main entries come first there too, as
+  they already did in every other section.
+
 - **The manifest reader refuses malformed strings (#1186).** A transitive manifest's JSON is read
   from a dependency JAR, and the reader's contract is that malformed input raises. It accepted an
   unescaped control character inside a string, which RFC 8259 forbids, and a sign inside a unicode
