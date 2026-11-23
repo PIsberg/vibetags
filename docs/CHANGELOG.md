@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A marker write is one object with a method per case.** `GuardrailFileWriter.writeWithMarkers`
+  (cognitive complexity 48, 80 statements, nine parameters) handled four different files in one
+  ladder. `MarkerWrite` is built from what is being written and derives the front matter and the
+  wrapped body once; `over(fileText, attrs)` picks `replaceBlock`, `repairUnterminatedBlock`,
+  `upgradeLegacyFile` or `appendBlock`. No change to any file it writes:
+  `GuardrailFileWriterMarkerShapeTest` came first and compares the complete file in thirteen cases,
+  and a record of every return value, message, debug event and file for 25 scenarios is
+  byte-identical before and after. That record also showed #1162 and #1163.
 - **The superseded-region rule has a class of its own, and `readAll` reads through one list.**
   `ModuleSidecar.dropSupersededRegions` (cognitive complexity 45) decided which of several
   overlapping module identities are leftovers over three maps keyed by region, and could only be
@@ -120,6 +128,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Hand-written backticks above the generated block no longer hide it (#1161).** The check that
+  keeps a marker pair shown as an example inside a code fence from being taken for the block read
+  any line starting with three backticks as a fence, and did not keep a fence's length. A line
+  beginning with a triple-backtick code span, or a four-backtick fence around a three-backtick one,
+  left the rest of the file looking like code: the real block was never found again, every build
+  appended another one, and the stale blocks stayed. The same misreading let an example inside a
+  nested fence be overwritten. Fences now follow CommonMark; `vibetags doctor` reads markers through
+  the same search. Two cases in `MarkerInProseTest` failed before the fix.
 - **An unreadable sidecar timestamp never retires a neighbouring region (#1158).** A sidecar whose
   mtime cannot be read counts as maximally fresh. The superseded-region rule refused to act on that
   for two regions on one path, but not above or below: an ancestor or a nested module of unknown age
