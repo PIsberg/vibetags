@@ -319,6 +319,15 @@ class ReactorRootDetectorTest {
             "includeFlat 'y'\nsettings.include 'z'\nrootProject.name = 'include'\n"));
     }
 
+    /** An include written inside a multi-line string is part of that string (#1167). */
+    @Test
+    void anIncludeInsideATripleQuotedStringIsNotASubproject(@TempDir Path root) throws IOException {
+        assertEquals(List.of("real"), includes(root,
+            "def notes = \"\"\"\ninclude 'in-a-string'\n\"\"\"\ninclude 'real'\n"));
+        assertEquals(List.of("real"), includes(root,
+            "val notes = '''\ninclude(\"in-a-string\")\n'''\ninclude(\"real\")\n"));
+    }
+
     private static List<String> includes(Path root, String settings) throws IOException {
         Path file = root.resolve("settings.gradle");
         write(file, settings);

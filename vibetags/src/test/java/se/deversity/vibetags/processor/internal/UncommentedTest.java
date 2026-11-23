@@ -45,6 +45,20 @@ class UncommentedTest {
         scans("s = \"ends with a backslash \\", "s = \"ends with a backslash \\", "s = \"                       ");
     }
 
+    /**
+     * Groovy and Kotlin write a multi-line string between triple quotes. Read as an empty literal
+     * followed by an ordinary one, it ended at its first newline, and every later line of it was
+     * scanned as code (#1167).
+     */
+    @Test
+    @DisplayName("a triple-quoted literal runs to its closing triple quote, across lines")
+    void aTripleQuotedLiteralSpansLines() {
+        scans("s = \"\"\"a\n// b\n\"\"\" // c", "s = \"\"\"a\n// b\n\"\"\" ", "s = \"\"\" \n    \n\"\"\" ");
+        scans("s = '''it's\n/* x */'''\nnext", "s = '''it's\n/* x */'''\nnext", "s = '''    \n       '''\nnext");
+        scans("s = \"\"\"never closed\nnext", "s = \"\"\"never closed\nnext", "s = \"\"\"            \n    ");
+        scans("e = \"\" + 'x'", "e = \"\" + 'x'", "e = \"\" + ' '");
+    }
+
     @Test
     @DisplayName("text with nothing to take out comes back as it is")
     void plainTextIsUnchanged() {
