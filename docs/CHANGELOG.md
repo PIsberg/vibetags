@@ -212,9 +212,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   annotations has one heading twice. Merging a module's main and test bodies matched sections by the
   heading line alone, and filed the second copy's rules under the first copy's section: a test
   class's context rule appeared under LOCKED, and CONTEXT lost the class. A section is now matched
-  by its heading under its parents. A sub-section new to the merge also goes after the shared
-  section's own sub-sections when nothing later is shared, so main entries come first there too, as
-  they already did in every other section.
+  by its heading under its parents.
 
 - **The manifest reader refuses malformed strings (#1186).** A transitive manifest's JSON is read
   from a dependency JAR, and the reader's contract is that malformed input raises. It accepted an

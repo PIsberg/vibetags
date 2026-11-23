@@ -174,7 +174,7 @@ public final class MarkdownSectionMerge {
             int at = indexOf(merged, section.key);
             if (at < 0) {
                 int before = nextShared(merged, incoming, k);
-                int position = before >= 0 ? before : anyShared ? endOfSubtree(merged, cursor) : merged.size();
+                int position = before >= 0 ? before : anyShared ? cursor + 1 : merged.size();
                 merged.add(position, section);
                 cursor = position;
                 continue;
@@ -285,24 +285,6 @@ public final class MarkdownSectionMerge {
             }
         }
         return false;
-    }
-
-    /**
-     * The index just past the section at {@code at} and every section nested under it: where a
-     * section new to the merge goes when no later section is shared. Right after the shared
-     * heading, as before, put a test source set's sub-section ahead of the main one's (#1190).
-     */
-    private static int endOfSubtree(List<Container> merged, int at) {
-        String key = merged.get(at).key;
-        int end = at + 1;
-        while (key != null && end < merged.size() && isNestedUnder(merged.get(end).key, key)) {
-            end++;
-        }
-        return end;
-    }
-
-    private static boolean isNestedUnder(@Nullable String key, String parent) {
-        return key != null && key.length() > parent.length() && key.startsWith(parent);
     }
 
     /** Where in {@code merged} the first section after {@code incoming[k]} that both have sits, or -1. */

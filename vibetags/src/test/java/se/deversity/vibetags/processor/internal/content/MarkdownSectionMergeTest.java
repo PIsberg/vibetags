@@ -95,9 +95,10 @@ class MarkdownSectionMergeTest {
 
         assertEquals(HEADER
                 + "## LOCKED\n\n### com.Foo\n- **Reason**: r\n\n### com.FooTest\n- **Reason**: rt\n\n"
-                + "## CONTEXT\n\n### com.Foo\n- **Focus**: f\n\n### com.FooTest\n- **Focus**: ft",
+                + "## CONTEXT\n\n### com.FooTest\n- **Focus**: ft\n\n### com.Foo\n- **Focus**: f",
             MarkdownSectionMerge.merge(List.of(main, test)),
-            "each class's rule stays under the annotation it came from");
+            "each class's rule stays under the annotation it came from. In the last shared section a "
+                + "test-only sub-section still goes first (issue #1192)");
     }
 
     @Test
