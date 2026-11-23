@@ -70,6 +70,11 @@ final class JsonLineArraysMerge implements WholeFileMerge {
             }
         });
 
+        return render(byKey);
+    }
+
+    /** The document in the renderer's own layout, so a single module's file is unchanged. */
+    private static String render(Map<String, Set<String>> byKey) {
         StringBuilder out = new StringBuilder(1024).append("{\n");
         List<String> keys = new ArrayList<>(byKey.keySet());
         for (int k = 0; k < keys.size(); k++) {
@@ -96,59 +101,87 @@ final class JsonLineArraysMerge implements WholeFileMerge {
      */
     private static @Nullable Map<String, List<String>> parse(String json) {
         String[] rows = json.split("\n", -1);
-        if (rows.length == 0 || !"{".equals(rows[0])) {
+        if (!"{".equals(rows[0])) {
             return null;
         }
-        Map<String, List<String>> arrays = new LinkedHashMap<>();
-        String current = null;
-        List<String> lines = new ArrayList<>();
-        boolean closed = false;
+        Document document = new Document();
         for (int r = 1; r < rows.length; r++) {
-            String row = rows[r];
+            if (!document.accept(rows[r])) {
+                return null;
+            }
+        }
+        return document.isComplete() ? document.arrays : null;
+    }
+
+    /** The document read so far, one row at a time; a row it does not expect is refused. */
+    private static final class Document {
+        final Map<String, List<String>> arrays = new LinkedHashMap<>();
+        private @Nullable String open;
+        private List<String> lines = new ArrayList<>();
+        private boolean closed;
+
+        boolean accept(String row) {
             if (closed) {
-                if (!row.isEmpty()) {
-                    return null;
-                }
-                continue;
+                return row.isEmpty();
             }
-            if (current == null) {
-                if ("}".equals(row)) {
-                    closed = true;
-                    continue;
-                }
-                String key = keyOf(row);
-                if (key == null) {
-                    return null;
-                }
-                String rest = row.substring(("  \"" + key + "\": [").length());
-                if ("]".equals(rest) || "],".equals(rest)) {
-                    arrays.put(key, new ArrayList<>());
-                } else if (rest.isEmpty()) {
-                    current = key;
-                    lines = new ArrayList<>();
-                } else {
-                    return null;
-                }
-                continue;
+            String key = open;
+            return key == null ? acceptKeyOrEnd(row) : acceptLineOrClose(key, row);
+        }
+
+        /** Whether the closing brace was read; that is only accepted outside an array. */
+        boolean isComplete() {
+            return closed;
+        }
+
+        /** Outside an array: the closing brace, an empty array, or the start of one. */
+        private boolean acceptKeyOrEnd(String row) {
+            if ("}".equals(row)) {
+                closed = true;
+                return true;
             }
+            String key = keyOf(row);
+            if (key == null) {
+                return false;
+            }
+            String rest = row.substring(("  \"" + key + "\": [").length());
+            if ("]".equals(rest) || "],".equals(rest)) {
+                arrays.put(key, new ArrayList<>());
+                return true;
+            }
+            if (rest.isEmpty()) {
+                open = key;
+                lines = new ArrayList<>();
+                return true;
+            }
+            return false;
+        }
+
+        /** Inside {@code key}'s array: one literal per row, or the row that closes it. */
+        private boolean acceptLineOrClose(String key, String row) {
             if ("  ]".equals(row) || "  ],".equals(row)) {
-                arrays.put(current, lines);
-                current = null;
-                continue;
+                arrays.put(key, lines);
+                open = null;
+                return true;
             }
-            if (!row.startsWith("    \"")) {
-                return null;
-            }
-            String literal = row.substring(4);
-            if (literal.endsWith(",")) {
-                literal = literal.substring(0, literal.length() - 1);
-            }
-            if (literal.length() < 2 || !literal.endsWith("\"")) {
-                return null;
+            String literal = literalOf(row);
+            if (literal == null) {
+                return false;
             }
             lines.add(literal);
+            return true;
         }
-        return closed && current == null ? arrays : null;
+    }
+
+    /** The quoted literal on an array row, its separator comma removed, or {@code null}. */
+    private static @Nullable String literalOf(String row) {
+        if (!row.startsWith("    \"")) {
+            return null;
+        }
+        String literal = row.substring(4);
+        if (literal.endsWith(",")) {
+            literal = literal.substring(0, literal.length() - 1);
+        }
+        return literal.length() < 2 || !literal.endsWith("\"") ? null : literal;
     }
 
     /** The key of a {@code   "key": [} row, or {@code null} if the row is not one. */
