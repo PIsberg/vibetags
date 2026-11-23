@@ -63,8 +63,9 @@ public final class ReactorRootDetector {
     /**
      * The directories {@code root}'s own build declares as modules, relative to it with forward
      * slashes: Maven {@code <module>} and Maven 4 {@code <subproject>} entries in its
-     * {@code pom.xml}, then the {@code include}s of {@code settings.gradle} and
-     * {@code settings.gradle.kts}. Empty for a single-project build and for a build file this
+     * {@code pom.xml}, each read as the path Maven reads it as, then the {@code include}s of
+     * {@code settings.gradle} and {@code settings.gradle.kts}. Empty for a single-project build
+     * and for a build file this
      * cannot read or decode. A pattern match rather than a parse, like the rest of this class, so a
      * build file it does not fully understand yields no signal instead of an error.
      */
@@ -73,9 +74,9 @@ public final class ReactorRootDetector {
         Path pom = root.resolve("pom.xml");
         if (Files.isRegularFile(pom)) {
             try {
-                Matcher m = MAVEN_MODULE.matcher(Files.readString(pom, StandardCharsets.UTF_8));
+                Matcher m = MAVEN_MODULE.matcher(withoutXmlComments(Files.readString(pom, StandardCharsets.UTF_8)));
                 while (m.find()) {
-                    modules.add(m.group(2));
+                    modules.add(moduleDirectory(root, m.group(2)));
                 }
             } catch (IOException | RuntimeException unreadable) {
                 // No signal: a build file this cannot decode is not evidence of anything.
@@ -91,6 +92,45 @@ public final class ReactorRootDetector {
     }
 
     /**
+     * The directory a Maven module entry names, relative to {@code root} with forward slashes.
+     * Maven reads the entry as a path, so {@code ./core}, {@code core/}, {@code core\} and
+     * {@code sub/../core} are all {@code core}, and so is {@code core/pom.xml}: an entry may name
+     * the module's pom file in place of its directory (#1166). An entry this cannot resolve,
+     * or one that resolves to the root itself, is returned as written.
+     */
+    private static String moduleDirectory(Path root, String entry) {
+        try {
+            Path base = root.toAbsolutePath().normalize();
+            Path target = base.resolve(entry.replace('\\', '/')).normalize();
+            if (Files.isRegularFile(target) && target.getParent() != null) {
+                target = target.getParent();
+            }
+            String relative = PathStrings.relative(base, target);
+            return relative.isEmpty() ? entry : relative;
+        } catch (RuntimeException unresolvable) {
+            return entry;
+        }
+    }
+
+    /**
+     * {@code xml} with its comments removed, so that a module commented out of a pom is not read
+     * as declared (#1165). A comment that never closes runs to the end of the text, as the
+     * settings scan treats an unclosed block comment.
+     */
+    private static String withoutXmlComments(String xml) {
+        StringBuilder out = new StringBuilder(xml.length());
+        int at = 0;
+        int open = xml.indexOf("<!--");
+        while (open >= 0) {
+            out.append(xml, at, open);
+            int close = xml.indexOf("-->", open + "<!--".length());
+            at = close < 0 ? xml.length() : close + "-->".length();
+            open = close < 0 ? -1 : xml.indexOf("<!--", at);
+        }
+        return out.append(xml, at, xml.length()).toString();
+    }
+
+    /**
      * Directory names a Gradle settings file includes, with the leading colon path flattened.
      *
      * <p>Read over the whole file with comments removed, not line by line: an {@code include(...)}
@@ -102,21 +142,16 @@ public final class ReactorRootDetector {
     public static List<String> gradleIncludes(Path settings) {
         List<String> names = new ArrayList<>();
         try {
-            String raw = Files.readString(settings, StandardCharsets.UTF_8);
-            String text = withoutComments(raw);
-            // Searched with string contents blanked, so "include" in a literal is not a declaration;
-            // the two texts have the same length, so a match's offset reads the arguments in text.
-            Matcher include = GRADLE_INCLUDE.matcher(stripped(raw, true));
+            Uncommented script = Uncommented.of(Files.readString(settings, StandardCharsets.UTF_8));
+            // Searched with literal contents blanked, so "include" in a literal is not a declaration;
+            // the two forms have the same length, so a match's offset reads the arguments in the other.
+            Matcher include = GRADLE_INCLUDE.matcher(script.codeOutsideLiterals());
             while (include.find()) {
-                Matcher m = QUOTED.matcher(includeArguments(text, include.end()));
-                while (m.find()) {
-                    String name = m.group(1);
-                    while (name.startsWith(":")) {
-                        name = name.substring(1);
-                    }
-                    name = name.replace(':', '/');
-                    if (!name.isBlank()) {
-                        names.add(name);
+                Matcher quoted = QUOTED.matcher(includeArguments(script.code(), include.end()));
+                while (quoted.find()) {
+                    String directory = projectDirectory(quoted.group(1));
+                    if (!directory.isBlank()) {
+                        names.add(directory);
                     }
                 }
             }
@@ -162,51 +197,13 @@ public final class ReactorRootDetector {
         return i;
     }
 
-    /**
-     * {@code text} with its {@code //} and block comments blanked out, string literals left alone so
-     * a URL in a repository declaration is not cut at its {@code //}. Newlines are kept.
-     */
-    static String withoutComments(String text) {
-        return stripped(text, false);
-    }
-
-    /**
-     * {@link #withoutComments}, with the characters between a literal's quotes also blanked to spaces
-     * when {@code blankStrings} is set. Both forms of the same text have the same length.
-     */
-    private static String stripped(String text, boolean blankStrings) {
-        StringBuilder out = new StringBuilder(text.length());
-        char quote = 0;
-        int i = 0;
-        while (i < text.length()) {
-            char c = text.charAt(i);
-            char next = i + 1 < text.length() ? text.charAt(i + 1) : 0;
-            if (quote == 0 && c == '/' && next == '/') {
-                int newline = text.indexOf('\n', i);
-                i = newline < 0 ? text.length() : newline;
-            } else if (quote == 0 && c == '/' && next == '*') {
-                int end = text.indexOf("*/", i + 2);
-                out.append(' ');
-                i = end < 0 ? text.length() : end + 2;
-            } else if (quote == 0) {
-                if (c == '"' || c == '\'') {
-                    quote = c;
-                }
-                out.append(c);
-                i++;
-            } else {
-                boolean escaped = c == '\\' && next != 0;
-                boolean closes = !escaped && (c == quote || c == '\n');
-                out.append(blankStrings && !closes ? ' ' : c);
-                if (escaped) {
-                    out.append(blankStrings ? ' ' : next);
-                } else if (closes) {
-                    quote = 0;
-                }
-                i += escaped ? 2 : 1;
-            }
+    /** A Gradle project path as the directory it names by default: {@code :libs:core} is {@code libs/core}. */
+    private static String projectDirectory(String projectPath) {
+        String name = projectPath;
+        while (name.startsWith(":")) {
+            name = name.substring(1);
         }
-        return out.toString();
+        return name.replace(':', '/');
     }
 
     /**

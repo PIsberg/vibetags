@@ -288,6 +288,90 @@ class ReactorRootDetectorTest {
             "println \"say include ':fake' to add one\"\ndef s = \"x \\\" include 'bogus' \"\ninclude ':real'\n"));
     }
 
+    /**
+     * Where a comment or a literal ends decides which {@code include} is read. The cases above each
+     * show one way to get that wrong; these are the rest of the scanner's rules, one line each, so
+     * that rewriting it cannot move a boundary unnoticed.
+     */
+    @Test
+    void commentsAndLiteralsEndWhereTheLanguageEndsThem(@TempDir Path root) throws IOException {
+        assertEquals(List.of("a"), includes(root,
+            "println \"see http://example.com//x\" // a real comment\ninclude 'a'\n"),
+            "a // inside a literal is not a comment, and the one after the literal is");
+        assertEquals(List.of("yes"), includes(root, "def s = 'it\\'s include \"not\"'\ninclude 'yes'\n"),
+            "the other kind of quote does not end a literal");
+        assertEquals(List.of("after"), includes(root, "def s = 'a\\\\'\ninclude 'after'\n"),
+            "an escaped backslash does not escape the quote after it");
+        assertEquals(List.of("kept", "next"), includes(root,
+            "/* include 'gone' */ include 'kept' /* x\n y */ include 'next'\n"));
+        assertEquals(List.of(), includes(root, "/* never closed include 'gone'\ninclude 'also gone'\n"),
+            "a block comment that never closes runs to the end of the file");
+        assertEquals(List.of("a", "b", "e"), includes(root,
+            "include 'a'\r\ninclude 'b' // c\r\n/* d */include 'e'\r\n"), "Windows line endings");
+        assertEquals(List.of("a"), includes(root, "x = 1 / 2 // half\ny = 'q' /*c*/ + \"r\"\ninclude 'a'\n"),
+            "a lone slash is division");
+        assertEquals(List.of("app", "libs/core"), includes(root,
+            "include(\n  \":app\",   // the app\n  \":libs:core\" /* core */,\n)\n"),
+            "comments between the arguments of a call are not arguments");
+        assertEquals(List.of("a/b", "c"), includes(root, "include ':a:b', \"::c\", ':'\n"),
+            "leading colons go, inner ones are directories, and a path of colons alone names nothing");
+        assertEquals(List.of("z"), includes(root,
+            "includeFlat 'y'\nsettings.include 'z'\nrootProject.name = 'include'\n"));
+    }
+
+    /** An include written inside a multi-line string is part of that string (#1167). */
+    @Test
+    void anIncludeInsideATripleQuotedStringIsNotASubproject(@TempDir Path root) throws IOException {
+        assertEquals(List.of("real"), includes(root,
+            "def notes = \"\"\"\ninclude 'in-a-string'\n\"\"\"\ninclude 'real'\n"));
+        assertEquals(List.of("real"), includes(root,
+            "val notes = '''\ninclude(\"in-a-string\")\n'''\ninclude(\"real\")\n"));
+    }
+
+    /**
+     * A module taken out of the build by commenting its entry out is not declared (#1165). Read
+     * as declared, a directory compiled on its own drew the "you are a module of a larger reactor"
+     * warning from a parent that no longer builds it.
+     */
+    @Test
+    void aCommentedOutMavenModuleIsNotDeclared(@TempDir Path root) throws IOException {
+        Path retired = root.resolve("retired");
+        Files.createDirectories(retired);
+        write(root.resolve("pom.xml"), """
+            <project>
+              <modules>
+                <!-- <module>retired</module> -->
+                <module>kept</module>
+                <!--
+                <module>also-retired</module>
+                -->
+              </modules>
+            </project>
+            """);
+
+        assertEquals(List.of("kept"), ReactorRootDetector.declaredModules(root));
+        assertEquals(Optional.empty(), ReactorRootDetector.findReactorRootAbove(retired));
+    }
+
+    /**
+     * Maven reads a module entry as a path: {@code ./core}, {@code core/}, a backslash, a detour
+     * through {@code ..} and the module's own pom file all name the directory {@code core}
+     * (#1166). Compared as text they named nothing, and the module compiled as its own root
+     * with nothing said, which is issue #296 again for a build file spelled another way.
+     */
+    @Test
+    void aMavenModuleEntryIsReadAsAPath(@TempDir Path root) throws IOException {
+        Path core = root.resolve("core");
+        Files.createDirectories(core);
+        Files.writeString(core.resolve("pom.xml"), "<project/>");
+        for (String entry : List.of("./core", "core/", "core\\", "sub/../core", "core/pom.xml", ".\\core")) {
+            write(root.resolve("pom.xml"), "<project><modules><module>" + entry + "</module></modules></project>");
+
+            assertEquals(List.of("core"), ReactorRootDetector.declaredModules(root), entry);
+            assertEquals(Optional.of(root), ReactorRootDetector.findReactorRootAbove(core), entry);
+        }
+    }
+
     private static List<String> includes(Path root, String settings) throws IOException {
         Path file = root.resolve("settings.gradle");
         write(file, settings);

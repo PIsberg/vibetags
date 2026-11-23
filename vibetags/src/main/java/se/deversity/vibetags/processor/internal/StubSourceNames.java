@@ -138,7 +138,7 @@ final class StubSourceNames {
             try (DirectoryStream<Path> files = Files.newDirectoryStream(dir, "*.groovy")) {
                 for (Path file : files) {
                     if (!Files.isRegularFile(file) || Files.size(file) > MAX_BYTES
-                        || !declares.matcher(withoutComments(Files.readString(file, StandardCharsets.UTF_8))).find()) {
+                        || !declares.matcher(codeOf(file)).find()) {
                         continue;
                     }
                     if (found != null) {
@@ -155,34 +155,13 @@ final class StubSourceNames {
     }
 
     /**
-     * {@code source} with its block and line comments blanked out, newlines kept, so a commented-out
-     * declaration does not read as one. A linear scan rather than a regular expression, for the
-     * reason {@code ElementNaming.stripAnnotations} gives. String literals are not tracked: a
-     * {@code //} inside one blanks the rest of its line, which never holds a type declaration.
+     * A Groovy file's text as the declaration pattern should see it: comments gone, so a
+     * commented-out declaration does not read as one, and the contents of string literals blanked,
+     * so a {@code /*} inside one opens no comment and a line of a multi-line string is no
+     * declaration (#1168).
      */
-    private static String withoutComments(String source) {
-        StringBuilder out = new StringBuilder(source.length());
-        int i = 0;
-        int n = source.length();
-        while (i < n) {
-            char c = source.charAt(i);
-            char next = i + 1 < n ? source.charAt(i + 1) : 0;
-            if (c == '/' && next == '*') {
-                int end = source.indexOf("*/", i + 2);
-                int stop = end < 0 ? n : end + 2;
-                for (int j = i; j < stop; j++) {
-                    out.append(source.charAt(j) == '\n' ? '\n' : ' ');
-                }
-                i = stop;
-            } else if (c == '/' && next == '/') {
-                int end = source.indexOf('\n', i);
-                i = end < 0 ? n : end;
-            } else {
-                out.append(c);
-                i++;
-            }
-        }
-        return out.toString();
+    private static String codeOf(Path file) throws IOException {
+        return Uncommented.of(Files.readString(file, StandardCharsets.UTF_8)).codeOutsideLiterals();
     }
 
     /**
