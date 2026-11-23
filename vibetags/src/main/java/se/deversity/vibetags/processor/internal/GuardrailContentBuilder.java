@@ -93,25 +93,45 @@ public final class GuardrailContentBuilder {
         }
     }
 
+    /**
+     * Renders every active service: the opted-in files first, in the order they were given, then
+     * the implicit children of active parents, then {@code .aiexclude}. That order is the map's
+     * iteration order, and {@code GuardrailContentBuilderPhaseOrderTest} pins it.
+     */
     public Result build() {
         // publishedModel, not model: anything -Avibetags.exclude names is collected so the source
         // ledger stays satisfied, and dropped here so it reaches no file (#792).
         GuardrailModel model = collector.publishedModel();
+        Map<TaggedElement, GranularBody> elementRules = elementRules();
+        RenderingContext context = renderingContext(model, elementRules);
+        RoutedViews views = new RoutedViews(model,
+            !unrouted && collector.isTestRound() && activeServices.contains("testing"));
+
+        Map<String, String> contentByService = new java.util.LinkedHashMap<>();
+        renderOptedIn(contentByService, views, context);
+        renderImplicitChildren(contentByService, views, context);
+        renderAiExclude(contentByService, model, context);
+        return new Result(contentByService, elementRules);
+    }
+
+    /**
+     * The per-element granular rules, computed once before rendering when any granular directory is
+     * active, and empty otherwise. Aggregate renderers whose granular sibling is active read the
+     * owners from the {@link RenderingContext} to emit a scoped-rules index instead of duplicating
+     * each element's full guardrails inline. They depend only on the model, so computing them
+     * ahead of the per-service loop is safe and avoids a per-element walk inside each renderer.
+     */
+    private Map<TaggedElement, GranularBody> elementRules() {
+        boolean granularActive = activeServices.stream().anyMatch(ServiceRegistry::writesDirectory);
+        return granularActive ? collector.granularRules() : new java.util.LinkedHashMap<>();
+    }
+
+    /** What every renderer of this build is told besides its model. */
+    private RenderingContext renderingContext(GuardrailModel model, Map<TaggedElement, GranularBody> elementRules) {
         // Pre-size renderer output buffers from the collected element count: ~160 bytes of rendered
         // content per annotated reference plus a fixed preamble allowance. Avoids repeated
         // grow-and-copy reallocation of the per-platform StringBuilders on large projects.
         int estimatedContentSize = model.totalAnnotatedReferences() * 160 + 2048;
-
-        // Compute the granular owner set once, before rendering. Aggregate renderers whose granular
-        // sibling is active read it from the RenderingContext to emit a scoped-rules index instead
-        // of duplicating each element's full guardrails inline. renderGranular depends only on the
-        // model, so ordering it ahead of the per-service loop is safe and avoids a redundant
-        // per-element walk inside each renderer.
-        boolean granularActive = activeServices.stream().anyMatch(ServiceRegistry::writesDirectory);
-        Map<TaggedElement, GranularBody> elementRules = granularActive
-                ? collector.granularRules()
-                : new java.util.LinkedHashMap<>();
-
         Set<TaggedElement> indexOwners = new java.util.LinkedHashSet<>();
         elementRules.forEach((owner, body) -> {
             if (body.beyondSafetyTier()) {
@@ -128,57 +148,67 @@ public final class GuardrailContentBuilder {
             // today only TESTING.md's renderer asks.
             context = context.asTestRound();
         }
-        Map<String, String> contentByService = new java.util.LinkedHashMap<>();
-        RoutedViews views = new RoutedViews(model,
-            !unrouted && collector.isTestRound() && activeServices.contains("testing"));
+        return context;
+    }
 
-        // Render each active service (excluding granular directories and special-case exclusions)
+    /**
+     * Every active file service, in the order given, with the transitive appendix and the
+     * {@code TESTING.md} pointer where they apply. Granular directories are rendered elsewhere, and
+     * {@code .aiexclude} by {@link #renderAiExclude}.
+     */
+    private void renderOptedIn(Map<String, String> contentByService, RoutedViews views, RenderingContext context) {
         for (String serviceKey : activeServices) {
-            if (serviceKey.equals("aiexclude")) {
+            if (serviceKey.equals("aiexclude") || ServiceRegistry.writesDirectory(serviceKey)) {
                 continue;
             }
-            if (ServiceRegistry.writesDirectory(serviceKey)) {
-                continue;
-            }
-
             Platform platform = Platform.fromServiceKey(serviceKey);
-            if (platform != null) {
-                GuardrailModel view = views.of(serviceKey);
-                String content = PlatformRendererRegistry.getRenderer(platform).render(view, platform, context);
-                if (content != null) {
-                    contentByService.put(serviceKey,
-                        views.withPointer(serviceKey, withTransitiveAppendix(content, view, platform)));
-                }
+            if (platform == null) {
+                continue;
+            }
+            GuardrailModel view = views.of(serviceKey);
+            String content = PlatformRendererRegistry.getRenderer(platform).render(view, platform, context);
+            if (content != null) {
+                contentByService.put(serviceKey,
+                    views.withPointer(serviceKey, withTransitiveAppendix(content, view, platform)));
             }
         }
+    }
 
-        // Implicit platform activations, the documented exceptions to invariant 1: an output whose
-        // own presence on disk is not the opt-in, because another service's is. The descriptor
-        // table names the parent (PlatformDescriptor.implicitParent), ServiceRegistry.optInKeys()
-        // is derived from it, and this walks the same field rather than repeating it as one `if`
-        // per child (issue #830). ImplicitActivationFanOutTest drives this loop off the table, so a
-        // sixth entry is rendered the day it is added rather than silently written by nobody.
-        //
-        // The Codex sidecar is the file-per-tool exception (.codex/rules/vibetags.rules; it had a
-        // .codex/config.toml twin until #934). The three *_safety files are the rules-directory exception:
-        // a directory whose aggregate is the same path has nowhere else to put the always-loaded
-        // safety tier, so it gets a file inside the directory (issues #648, #684), and the renderer
-        // decides whether the tier belongs there or is already loaded from another file.
-        //
-        // Qwen has no implicit outputs. .qwen/settings.json is the user's Qwen Code settings file
-        // and is never written (#650); .qwen/commands/refactor.md is an ordinary opt-in, rendered
-        // by the loop above only when the file exists (#655). Cody is an ordinary opt-in too.
-        //
-        // views.of for everyone, where the Codex pair asked the router before and the three safety
-        // files were handed the whole model. That is the same thing for them: routesTestGuardrails
-        // answers false for every *_safety key, so views.of gives back the whole model, and it
-        // answers false for a reason rather than by accident, since a safety file carries the six
-        // always-loaded buckets and those are exactly the guardrails that never move to TESTING.md.
-        // (codex_rules does route, and routed before this too.) Asking the router is also what
-        // keeps a future child's answer in ServiceRoutingContractTest, where every key is decided
-        // by hand, rather than in an `if` written here. Pinned by the last case in
-        // ImplicitActivationFanOutTest, which is where the first draft of this comment, claiming
-        // no implicit child routes at all, was caught being wrong about codex_rules.
+    /**
+     * Implicit platform activations, the documented exceptions to invariant 1: an output whose
+     * own presence on disk is not the opt-in, because another service's is. The descriptor
+     * table names the parent ({@code PlatformDescriptor.implicitParent}),
+     * {@code ServiceRegistry.optInKeys()} is derived from it, and this walks the same field rather
+     * than repeating it as one {@code if} per child (issue #830). {@code ImplicitActivationFanOutTest}
+     * drives this loop off the table, so a sixth entry is rendered the day it is added rather than
+     * silently written by nobody.
+     *
+     * <p>The Codex sidecar is the file-per-tool exception ({@code .codex/rules/vibetags.rules}; it
+     * had a {@code .codex/config.toml} twin until #934). The three {@code *_safety} files are the
+     * rules-directory exception: a directory whose aggregate is the same path has nowhere else to
+     * put the always-loaded safety tier, so it gets a file inside the directory (issues #648,
+     * #684), and the renderer decides whether the tier belongs there or is already loaded from
+     * another file.
+     *
+     * <p>Qwen has no implicit outputs. {@code .qwen/settings.json} is the user's Qwen Code settings
+     * file and is never written (#650); {@code .qwen/commands/refactor.md} is an ordinary opt-in,
+     * rendered by {@link #renderOptedIn} only when the file exists (#655). Cody is an ordinary
+     * opt-in too.
+     *
+     * <p>{@code views.of} for everyone, where the Codex pair asked the router before and the three
+     * safety files were handed the whole model. That is the same thing for them:
+     * {@code routesTestGuardrails} answers false for every {@code *_safety} key, so {@code views.of}
+     * gives back the whole model, and it answers false for a reason rather than by accident, since
+     * a safety file carries the six always-loaded buckets and those are exactly the guardrails that
+     * never move to {@code TESTING.md}. ({@code codex_rules} does route, and routed before this
+     * too.) Asking the router is also what keeps a future child's answer in
+     * {@code ServiceRoutingContractTest}, where every key is decided by hand, rather than in an
+     * {@code if} written here. Pinned by the last case in {@code ImplicitActivationFanOutTest},
+     * which is where the first draft of this comment, claiming no implicit child routes at all,
+     * was caught being wrong about {@code codex_rules}.
+     */
+    private void renderImplicitChildren(Map<String, String> contentByService, RoutedViews views,
+                                        RenderingContext context) {
         for (PlatformDescriptor child : PlatformDescriptors.ALL) {
             String parent = child.implicitParent();
             Platform platform = child.platform();
@@ -188,21 +218,19 @@ public final class GuardrailContentBuilder {
             putRendered(contentByService, child.serviceKey(), platform,
                 views.of(child.serviceKey()), context);
         }
+    }
 
-        // Special case for AIExclude platform, which has strict activation criteria: it needs a Gemini
-        // or Codex instruction file beside it. GEMINI.md took gemini_instructions.md's place in
-        // #645, so a user who followed that file's deprecation notice keeps .aiexclude.
-        if (activeServices.contains("aiexclude") && (activeServices.contains("gemini_md") || activeServices.contains("codex"))) {
-            Platform p = Platform.AI_EXCLUDE;
-            String content = PlatformRendererRegistry.getRenderer(p).render(model, p, context);
-            if (content != null) {
-                contentByService.put("aiexclude", content);
-            }
+    /**
+     * The AIExclude platform has strict activation criteria: it needs a Gemini or Codex instruction
+     * file beside it. {@code GEMINI.md} took {@code gemini_instructions.md}'s place in #645, so a
+     * user who followed that file's deprecation notice keeps {@code .aiexclude}.
+     */
+    private void renderAiExclude(Map<String, String> contentByService, GuardrailModel model,
+                                 RenderingContext context) {
+        if (activeServices.contains("aiexclude")
+                && (activeServices.contains("gemini_md") || activeServices.contains("codex"))) {
+            putRendered(contentByService, "aiexclude", Platform.AI_EXCLUDE, model, context);
         }
-
-        // (granular owner set + elementRules are computed above, before the render loop)
-
-        return new Result(contentByService, elementRules);
     }
 
     private static void putRendered(Map<String, String> contentByService, String serviceKey,
