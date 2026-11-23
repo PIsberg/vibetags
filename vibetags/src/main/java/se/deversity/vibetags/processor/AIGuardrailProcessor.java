@@ -9,6 +9,7 @@ import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.processor.internal.AnnotationCollector;
 import se.deversity.vibetags.processor.internal.AnnotationValidator;
 import se.deversity.vibetags.processor.internal.BuildFingerprint;
+import se.deversity.vibetags.processor.internal.CrossModuleMerge;
 import se.deversity.vibetags.processor.internal.DestructiveRewriteWarner;
 import se.deversity.vibetags.processor.internal.ReactorRootDetector;
 import se.deversity.vibetags.processor.internal.GranularRulesWriter;
@@ -18,8 +19,6 @@ import se.deversity.vibetags.processor.internal.GuardrailEnforcer;
 import se.deversity.vibetags.processor.internal.GuardrailContentBuilder;
 import se.deversity.vibetags.processor.internal.GuardrailModelViews;
 import se.deversity.vibetags.processor.internal.content.Platform;
-import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
-import se.deversity.vibetags.processor.internal.content.WholeFileMerge;
 import se.deversity.vibetags.processor.internal.GenerationLock;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.HandAuthoredYamlKeyWarner;
@@ -2913,13 +2912,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * As above, narrating each decision to {@code log} at DEBUG.
-     *
-     * <p>Every branch here ends in one of two outcomes: this module's own rendering is published,
-     * or the merged view of every module is. From the written file alone the two are hard to tell
-     * apart, because both are valid documents and the wrong one is merely missing its siblings.
-     * Issue #265 was exactly that, and it survived as long as it did because nothing recorded which
-     * branch ran. So every path states its reason, and {@code merge.skip} never omits one.
+     * As above, narrating each decision to {@code log} at DEBUG. A build that is not multi-module
+     * keeps its own content and says so; otherwise {@link CrossModuleMerge} decides service by
+     * service, and states its reason on every path.
      *
      * @param log where to narrate, or {@code null} to merge silently
      */
@@ -2941,75 +2936,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             }
             return contentByService;
         }
-        if (debugLog != null) {
-            // The count, not the names: each service that merges says so on its own line
-            // below, and 44 of them on one line buries the two that matter.
-            debugLog.debug("merge.begin modules={} regions={} services={}",
-                allSidecars.size(), ModuleSidecar.regionCount(allSidecars),
-                contentByService.size());
-        }
-        Map<String, String> merged = new java.util.LinkedHashMap<>(contentByService);
-        for (Map.Entry<String, Path> entry : serviceFiles.entrySet()) {
-            String service = entry.getKey();
-            if (!contentByService.containsKey(service)) continue;
-            // Path.getFileName() returns null only for root paths — guard for correctness.
-            Path fileName = entry.getValue().getFileName();
-            if (fileName == null) continue;
-            String[] markers = GuardrailFileWriter.getMarkersFor(fileName.toString());
-            if (markers == null) {
-                // JSON and TOML have nowhere to put a marker, so these files are whole-file
-                // overwrites. Keeping the compiling module's rendering publishes one module's view
-                // of the project; the renderer supplies a format-aware merge where the file holds
-                // per-element content (issue #265). Where it does not — the static configs — there
-                // is nothing to merge and every module renders the same bytes anyway.
-                WholeFileMerge wholeFile = PlatformRendererRegistry.wholeFileMergeFor(service);
-                if (wholeFile == null) {
-                    if (debugLog != null) {
-                        debugLog.debug("merge.skip service={} reason=no-whole-file-merger file={}",
-                            service, fileName);
-                    }
-                    continue;
-                }
-                List<Map.Entry<String, String>> contributions =
-                    ModuleSidecar.contributionsFor(service, allSidecars);
-                String document = wholeFile.merge(contributions);
-                if (document != null && !document.isBlank()) {
-                    merged.put(service, document);
-                    if (debugLog != null) {
-                        debugLog.debug("merge.wholefile service={} contributions={} bytes={}",
-                            service, contributions.size(), document.length());
-                    }
-                } else if (debugLog != null) {
-                    // The merger declined: an unexpected document shape, so it refuses to guess
-                    // rather than corrupt the file. This module's own rendering ships instead,
-                    // which is valid but sibling-blind. That trade is worth a line in the log.
-                    debugLog.debug("merge.skip service={} reason={} contributions={}",
-                        service, document == null ? "merger-declined" : "merger-empty",
-                        contributions.size());
-                }
-                continue;
-            }
-            boolean htmlMarkers = GuardrailFileWriter.MARKER_START_MD.equals(markers[0]);
-            String mergedBody = ModuleSidecar.mergeFor(service, allSidecars, htmlMarkers);
-            if (mergedBody.isBlank()) {
-                if (debugLog != null) {
-                    debugLog.debug("merge.skip service={} reason=empty-merged-body html={}",
-                        service, htmlMarkers);
-                }
-                continue;
-            }
-            merged.put(service, mergedBody);
-            if (debugLog != null) {
-                debugLog.debug("merge.markers service={} html={} bytes={}",
-                    service, htmlMarkers, mergedBody.length());
-                // Deleting TESTING.md changes what the merge reads for a module, and the file it
-                // writes cannot say so: the body is well formed either way.
-                for (String module : ModuleSidecar.testingFallbackModules(service, allSidecars)) {
-                    debugLog.debug("merge.testing.fallback service={} module={}", service, module);
-                }
-            }
-        }
-        return merged;
+        return CrossModuleMerge.of(contentByService, serviceFiles, allSidecars, debugLog);
     }
 
     /**
