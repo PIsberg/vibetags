@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Granular files are planned in three named steps.** `GranularRulesWriter.plan` (cognitive
+  complexity 23) split owners between roles and per-class files and planned both in one method of
+  nested lambdas. `Routing.of` makes the split; `perClass`, `roleFilesByStem` and `roleFile` plan
+  the files. No change to any rule file; the granular, role and mirror suites cover each step.
 - **Condition (1) of the partial-round guard returns what it found.**
   `PartialRoundDetector.missingRecordedElements` (cognitive complexity 23, seven parameters) filled
   two of its caller's sets as output arguments; it now returns a `Missing` record. Two of its four

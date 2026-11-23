@@ -235,21 +235,9 @@ public final class GranularRulesWriter {
                                           String filePrefix,
                                           List<String> extraGlobs) {
         // One name for "roles are on", non-null when they are: a separate boolean flag says the
-        // same thing to a reader but nothing to the compiler, and every use below is in a lambda.
+        // same thing to a reader but nothing to the compiler.
         final RoleConfig activeRoles = (roles != null && !roles.isEmpty()) ? roles : null;
-
-        // Partition owners: role members (first-match, config order) vs. unmatched. Insertion order
-        // is preserved so output stays deterministic (elementRules is a LinkedHashMap).
-        Map<String, List<TaggedElement>> roleMembers = new LinkedHashMap<>();
-        Map<TaggedElement, GranularBody> unmatched = new LinkedHashMap<>();
-        elementRules.forEach((owner, body) -> {
-            String role = activeRoles != null ? activeRoles.roleFor(owner).orElse(null) : null;
-            if (role != null) {
-                roleMembers.computeIfAbsent(role, k -> new ArrayList<>()).add(owner);
-            } else {
-                unmatched.put(owner, body);
-            }
-        });
+        Routing routing = Routing.of(elementRules, activeRoles);
 
         // A list, not a map keyed by stem: two elements can plan the same stem outright (the
         // nested com.example.Foo.Bar and the top-level com.example.Foo_Bar both become
@@ -257,67 +245,100 @@ public final class GranularRulesWriter {
         // the second put replaced the first before foldCaseCollisions ever saw it, and one
         // element had no guardrail in any output while the index still pointed at the file.
         List<Map.Entry<String, Planned>> planned = new ArrayList<>();
+        routing.unmatched().forEach((owner, body) ->
+            planned.add(Map.entry(filePrefix + owner.granularQName(), perClass(owner, body, extraGlobs))));
+        roleFilesByStem(routing.roleMembers(), filePrefix).forEach((stem, rolesInFile) ->
+            planned.add(Map.entry(stem, roleFile(rolesInFile, elementRules, activeRoles, extraGlobs))));
+        return foldCaseCollisions(planned);
+    }
 
-        // Unmatched elements → one file per class/package (unchanged output).
-        unmatched.forEach((owner, body) -> {
-            String qName = filePrefix + owner.granularQName();
-            List<String> globs = withExtra(List.of(defaultGlob(owner)), extraGlobs);
-            planned.add(Map.entry(qName, new Planned(owner.simpleName(), String.valueOf(owner), globs,
-                body.entries(),
-                new Unit(owner.simpleName(), "AI rules for " + owner,
-                    new GranularContribution(globs, body.toString().trim())))));
-        });
+    /**
+     * Owners split into role members (first match, config order) and the unmatched. Insertion order
+     * is preserved so output stays deterministic ({@code elementRules} is a {@code LinkedHashMap}).
+     *
+     * @param roleMembers role name to its members, in the order roles were first matched
+     * @param unmatched   the owners no role claims, each with its body
+     */
+    private record Routing(Map<String, List<TaggedElement>> roleMembers,
+                           Map<TaggedElement, GranularBody> unmatched) {
 
-        // Role members → one grouped, human-named file per role. Grouped by the stem first,
-        // because the stem is what a file is: RoleConfig.sanitize maps everything a filename
-        // cannot carry to a dash, so "api endpoints" and "api-endpoints" are two roles with one
-        // filename. Planning them one at a time let the second overwrite the first and the first
-        // role's classes lost their rule file with nothing said, while the scoped-rules index went
-        // on pointing them at the survivor. A file several producers write is merged, never
-        // replaced — the same answer the multi-module case gives (issue #365).
+        static Routing of(Map<TaggedElement, GranularBody> elementRules, @Nullable RoleConfig activeRoles) {
+            Routing routing = new Routing(new LinkedHashMap<>(), new LinkedHashMap<>());
+            elementRules.forEach((owner, body) -> {
+                String role = activeRoles != null ? activeRoles.roleFor(owner).orElse(null) : null;
+                if (role != null) {
+                    routing.roleMembers().computeIfAbsent(role, k -> new ArrayList<>()).add(owner);
+                } else {
+                    routing.unmatched().put(owner, body);
+                }
+            });
+            return routing;
+        }
+    }
+
+    /** One file for one class or package, named after it: the output before roles existed. */
+    private static Planned perClass(TaggedElement owner, GranularBody body, List<String> extraGlobs) {
+        List<String> globs = withExtra(List.of(defaultGlob(owner)), extraGlobs);
+        return new Planned(owner.simpleName(), String.valueOf(owner), globs, body.entries(),
+            new Unit(owner.simpleName(), "AI rules for " + owner,
+                new GranularContribution(globs, body.toString().trim())));
+    }
+
+    /**
+     * The roles grouped by the file they are written to. Grouped by the stem first, because the
+     * stem is what a file is: {@link RoleConfig#sanitize} maps everything a filename cannot carry to
+     * a dash, so "api endpoints" and "api-endpoints" are two roles with one filename. Planning them
+     * one at a time let the second overwrite the first and the first role's classes lost their rule
+     * file with nothing said, while the scoped-rules index went on pointing them at the survivor. A
+     * file several producers write is merged, never replaced, the same answer the multi-module case
+     * gives (issue #365).
+     */
+    private static Map<String, Map<String, List<TaggedElement>>> roleFilesByStem(
+            Map<String, List<TaggedElement>> roleMembers, String filePrefix) {
         Map<String, Map<String, List<TaggedElement>>> byStem = new LinkedHashMap<>();
         roleMembers.forEach((roleName, members) ->
             byStem.computeIfAbsent(filePrefix + RoleConfig.sanitize(roleName), k -> new LinkedHashMap<>())
                   .put(roleName, members));
+        return byStem;
+    }
 
-        byStem.forEach((stem, rolesInFile) -> {
-            List<TaggedElement> members = new ArrayList<>();
-            Set<String> globs = new LinkedHashSet<>();
-            rolesInFile.forEach((roleName, ofRole) -> {
-                members.addAll(ofRole);
-                List<String> declared = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
-                if (declared.isEmpty()) {
-                    // Role defined only by FQNs — derive globs from its own members' class/package
-                    // globs. Per role rather than per stem: a role with no globs sharing a filename
-                    // with one that has them still needs its members reachable.
-                    for (TaggedElement m : ofRole) {
-                        globs.add(defaultGlob(m));
-                    }
-                } else {
-                    globs.addAll(declared);
+    /** One human-named file for every role written under one stem, its members' stanzas together. */
+    private static Planned roleFile(Map<String, List<TaggedElement>> rolesInFile,
+                                    Map<TaggedElement, GranularBody> elementRules,
+                                    @Nullable RoleConfig activeRoles, List<String> extraGlobs) {
+        List<TaggedElement> members = new ArrayList<>();
+        Set<String> globs = new LinkedHashSet<>();
+        rolesInFile.forEach((roleName, ofRole) -> {
+            members.addAll(ofRole);
+            List<String> declared = activeRoles == null ? List.of() : activeRoles.globsFor(roleName);
+            if (declared.isEmpty()) {
+                // Role defined only by FQNs: derive globs from its own members' class/package
+                // globs. Per role rather than per stem: a role with no globs sharing a filename
+                // with one that has them still needs its members reachable.
+                for (TaggedElement m : ofRole) {
+                    globs.add(defaultGlob(m));
                 }
-            });
-            List<String> fileGlobs = withExtra(new ArrayList<>(globs), extraGlobs);
-            // A role file spans several owners, so its stanzas are re-rendered together in
-            // qualified mode: organised by topic (section) with fully-qualified element headings,
-            // and with each section's shared rule sentence hoisted once instead of repeated per
-            // element (issue #313).
-            List<GranularBody.Entry> stanzas = new ArrayList<>();
-            for (TaggedElement m : members) {
-                GranularBody memberBody = elementRules.get(m);
-                if (memberBody != null) {
-                    stanzas.addAll(memberBody.entries());
-                }
+            } else {
+                globs.addAll(declared);
             }
-            // One name is the name; several are all named, so the heading says which config lines
-            // feed the file rather than picking one and looking like the others were dropped.
-            String displayName = String.join(", ", rolesInFile.keySet());
-            planned.add(Map.entry(stem, new Planned(displayName, "role " + displayName, fileGlobs, stanzas,
-                new Unit(displayName, "AI rules for role " + displayName,
-                    new GranularContribution(fileGlobs, GranularSections.renderTopic(stanzas).trim())))));
         });
-
-        return foldCaseCollisions(planned);
+        List<String> fileGlobs = withExtra(new ArrayList<>(globs), extraGlobs);
+        // A role file spans several owners, so its stanzas are re-rendered together in qualified
+        // mode: organised by topic (section) with fully-qualified element headings, and with each
+        // section's shared rule sentence hoisted once instead of repeated per element (issue #313).
+        List<GranularBody.Entry> stanzas = new ArrayList<>();
+        for (TaggedElement m : members) {
+            GranularBody memberBody = elementRules.get(m);
+            if (memberBody != null) {
+                stanzas.addAll(memberBody.entries());
+            }
+        }
+        // One name is the name; several are all named, so the heading says which config lines feed
+        // the file rather than picking one and looking like the others were dropped.
+        String displayName = String.join(", ", rolesInFile.keySet());
+        return new Planned(displayName, "role " + displayName, fileGlobs, stanzas,
+            new Unit(displayName, "AI rules for role " + displayName,
+                new GranularContribution(fileGlobs, GranularSections.renderTopic(stanzas).trim())));
     }
 
     /**
