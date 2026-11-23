@@ -288,6 +288,37 @@ class ReactorRootDetectorTest {
             "println \"say include ':fake' to add one\"\ndef s = \"x \\\" include 'bogus' \"\ninclude ':real'\n"));
     }
 
+    /**
+     * Where a comment or a literal ends decides which {@code include} is read. The cases above each
+     * show one way to get that wrong; these are the rest of the scanner's rules, one line each, so
+     * that rewriting it cannot move a boundary unnoticed.
+     */
+    @Test
+    void commentsAndLiteralsEndWhereTheLanguageEndsThem(@TempDir Path root) throws IOException {
+        assertEquals(List.of("a"), includes(root,
+            "println \"see http://example.com//x\" // a real comment\ninclude 'a'\n"),
+            "a // inside a literal is not a comment, and the one after the literal is");
+        assertEquals(List.of("yes"), includes(root, "def s = 'it\\'s include \"not\"'\ninclude 'yes'\n"),
+            "the other kind of quote does not end a literal");
+        assertEquals(List.of("after"), includes(root, "def s = 'a\\\\'\ninclude 'after'\n"),
+            "an escaped backslash does not escape the quote after it");
+        assertEquals(List.of("kept", "next"), includes(root,
+            "/* include 'gone' */ include 'kept' /* x\n y */ include 'next'\n"));
+        assertEquals(List.of(), includes(root, "/* never closed include 'gone'\ninclude 'also gone'\n"),
+            "a block comment that never closes runs to the end of the file");
+        assertEquals(List.of("a", "b", "e"), includes(root,
+            "include 'a'\r\ninclude 'b' // c\r\n/* d */include 'e'\r\n"), "Windows line endings");
+        assertEquals(List.of("a"), includes(root, "x = 1 / 2 // half\ny = 'q' /*c*/ + \"r\"\ninclude 'a'\n"),
+            "a lone slash is division");
+        assertEquals(List.of("app", "libs/core"), includes(root,
+            "include(\n  \":app\",   // the app\n  \":libs:core\" /* core */,\n)\n"),
+            "comments between the arguments of a call are not arguments");
+        assertEquals(List.of("a/b", "c"), includes(root, "include ':a:b', \"::c\", ':'\n"),
+            "leading colons go, inner ones are directories, and a path of colons alone names nothing");
+        assertEquals(List.of("z"), includes(root,
+            "includeFlat 'y'\nsettings.include 'z'\nrootProject.name = 'include'\n"));
+    }
+
     private static List<String> includes(Path root, String settings) throws IOException {
         Path file = root.resolve("settings.gradle");
         write(file, settings);
