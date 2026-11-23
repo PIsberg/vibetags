@@ -137,6 +137,7 @@ class ElementNamingFormatParityTest {
         public class Annotated {
             public void takesNullable(@Nullable String a, int b) {}
             public void returnsAndTakes(@Nullable Object o) {}
+            public <T> void takesNullableVariable(@Nullable T value) {}
         }
         """;
 
@@ -165,6 +166,29 @@ class ElementNamingFormatParityTest {
                 + "it, and granularQName turns it into a rule filename. Including the annotation "
                 + "would rename a committed rule file, and break a lock match, every time a "
                 + "@Nullable was added or removed without the signature changing.");
+    }
+
+    /**
+     * The same rule at a type variable's use site. javac renders the parameter as
+     * {@code @org.jspecify.annotations.Nullable T}, so a type variable read through its
+     * {@code toString()} would carry the annotation into the identity; it is read through its
+     * declaring element instead.
+     */
+    @Test
+    @DisplayName("a type-use annotation on a type variable is left out of the identity too")
+    void typeUseAnnotationsOnATypeVariableAreNotPartOfTheIdentity() throws IOException {
+        javacRendering.clear();
+        derivedRendering.clear();
+        compile(ANNOTATED_FIXTURE, "Annotated");
+
+        String annotatedByJavac = javacRendering.stream()
+            .filter(s -> s.contains("takesNullableVariable"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("the fixture lost its annotated type variable: " + javacRendering));
+        assertTrue(annotatedByJavac.contains("@org.jspecify.annotations.Nullable"),
+            "javac stopped annotating the type variable, so this checks nothing: " + annotatedByJavac);
+        assertEquals("fixture.Annotated.<T>takesNullableVariable(T)",
+            derivedRendering.get(javacRendering.indexOf(annotatedByJavac)));
     }
 
     private void compileFixture() throws IOException {
