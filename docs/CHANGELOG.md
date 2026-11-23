@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The method-body scanner answers both of its value questions with one walk.**
+  `MethodBodyGuardrailScanner` asked "is this value spelled out?" (cognitive complexity 26) and
+  "does this round determine it?" (33) by two recursions over the same six shapes that only combine
+  other values, so a shape added to one and not the other would have made the early exit disagree
+  with the spelled-out test. `operandsOf` names those shapes once and `everyOperand` walks them;
+  the questions differ only in the leaf test. The annotation and text-fallback loops lost a level
+  each (18 and 22). No change to what is counted: `MethodBodyGuardrailScannerValueCountTest` came
+  first and pins the exact count for 22 value shapes, which until now only whole builds reached.
 - **The granular merge is a class of its own.** `ModuleSidecar.mergeGranularUnits` (cognitive
   complexity 31) folded every module's contribution to each granular rule file in one method over a
   four-level map: by stem and region, then by case-folded stem, then per region with
