@@ -52,6 +52,8 @@ public final class RoundSources {
     private final Map<Element, String> nameByElement = new IdentityHashMap<>();
     private final Set<Path> files = new LinkedHashSet<>();
     private boolean everyRootOnDisk = true;
+    private @Nullable Trees trees;
+    private boolean treesAsked;
 
     private RoundSources(ProcessingEnvironment env, RoundEnvironment roundEnv) {
         this.env = env;
@@ -105,51 +107,59 @@ public final class RoundSources {
             return;
         }
         resolved = true;
+        elements = elementUtilsOf(env);
+        for (Element element : roundEnv.getRootElements()) {
+            URI uri = viaStandardApi(element);
+            record(element, uri != null ? uri : viaTrees(trees(), element));
+        }
+    }
+
+    /** The compiler's {@link Elements}, or {@code null} when this environment will not give one. */
+    private static @Nullable Elements elementUtilsOf(ProcessingEnvironment env) {
         try {
-            elements = env.getElementUtils();
+            return env.getElementUtils();
         } catch (RuntimeException | Error unavailable) {
-            elements = null;
+            return null;
         }
-        Set<? extends Element> roots = roundEnv.getRootElements();
-        if (roots.isEmpty()) {
-            return;
+    }
+
+    /** What {@link Elements#getFileObjectOf} names, or {@code null} when it cannot answer. */
+    private @Nullable URI viaStandardApi(Element element) {
+        if (elements == null) {
+            return null;
         }
-        // Looked up only if the standard call cannot answer: unwrapping a decorated environment
-        // is reflective and would otherwise be paid by every round of every build.
-        Trees trees = null;
-        boolean treesAsked = false;
-        for (Element element : roots) {
-            URI uri = null;
-            boolean answered = false;
-            if (elements != null) {
-                try {
-                    JavaFileObject object = elements.getFileObjectOf(element);
-                    if (object != null) {
-                        uri = object.toUri();
-                        answered = true;
-                    }
-                } catch (RuntimeException | Error unavailable) {
-                    // An older or other compiler: fall back to the Tree API below.
-                }
-            }
-            if (!answered) {
-                if (!treesAsked) {
-                    trees = SourcePositionResolver.treesFor(env);
-                    treesAsked = true;
-                }
-                uri = viaTrees(trees, element);
-            }
-            Path file = uri == null ? null : onDisk(uri);
-            String name = uri == null ? null : lastSegment(uri);
-            if (name != null) {
-                nameByElement.put(element, name);
-            }
-            fileByElement.put(element, file);
-            if (file == null) {
-                everyRootOnDisk = false;
-            } else {
-                files.add(file);
-            }
+        try {
+            JavaFileObject object = elements.getFileObjectOf(element);
+            return object == null ? null : object.toUri();
+        } catch (RuntimeException | Error unavailable) {
+            return null; // an older or other compiler: the Tree API is asked instead
+        }
+    }
+
+    /**
+     * The Tree API, looked up on first need only: unwrapping a decorated environment is reflective
+     * and would otherwise be paid by every round of every build, though the standard call answers.
+     */
+    private @Nullable Trees trees() {
+        if (!treesAsked) {
+            trees = SourcePositionResolver.treesFor(env);
+            treesAsked = true;
+        }
+        return trees;
+    }
+
+    /** Files {@code element} under the file and the name {@code uri} gives, or under none. */
+    private void record(Element element, @Nullable URI uri) {
+        Path file = uri == null ? null : onDisk(uri);
+        String name = uri == null ? null : lastSegment(uri);
+        if (name != null) {
+            nameByElement.put(element, name);
+        }
+        fileByElement.put(element, file);
+        if (file == null) {
+            everyRootOnDisk = false;
+        } else {
+            files.add(file);
         }
     }
 
