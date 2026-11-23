@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The granular merge is a class of its own.** `ModuleSidecar.mergeGranularUnits` (cognitive
+  complexity 31) folded every module's contribution to each granular rule file in one method over a
+  four-level map: by stem and region, then by case-folded stem, then per region with
+  de-duplication, then into one heading, glob list and body. `GranularMerge` does each step in a
+  method of its own (`collect`, `caseFoldGroups`, `regionsOf`, `shared`, `body`);
+  `mergeGranular` and `mergeModuleGranular` keep their signatures. No change to any rule file:
+  `GranularMergeShapeTest` came first and compares the whole merged contribution in seven cases.
 - **`TomlValueSpans` reads as its cases.** Its line scan (cognitive complexity 43) and its
   per-table merge (40) were each one method. The scan is now `LineScan`, with a method per state it
   can be in, and the merge `TableMerge`: `header()` or `withTableAppended()`, `keyUnder(header)` or
