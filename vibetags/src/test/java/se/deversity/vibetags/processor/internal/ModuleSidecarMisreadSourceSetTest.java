@@ -60,6 +60,22 @@ class ModuleSidecarMisreadSourceSetTest {
         assertEquals(List.of("app", "core__com"), ids(ModuleSidecar.readAll(root)));
     }
 
+    /**
+     * The sibling that retires a source set is another sidecar. A non-main sidecar that records a
+     * flat {@code src} root of its own satisfies every other clause of the rule against itself
+     * (same region, written no earlier than itself), and would delete its own file on every build.
+     */
+    @Test
+    void aSourceSetSidecarIsNotRetiredByItsOwnFlatRoot(@TempDir Path root) throws IOException {
+        // The round compiled from the conventional tree and from a second directory ending in src:
+        // "it/src" is a root whose first src segment is its last, which is what the rule looks for.
+        Files.createDirectories(root.resolve("core/src/it/java"));
+        Files.createDirectories(root.resolve("core/it/src"));
+        save(root, "core__it", List.of("core/src/it/java", "core/it/src"), NEWER);
+
+        assertEquals(List.of("core__it"), ids(ModuleSidecar.readAll(root)));
+    }
+
     private static void save(Path root, String moduleId, List<String> sourceRoots, long mtime) throws IOException {
         String region = moduleId.contains(ModuleSidecar.SOURCE_SET_SEPARATOR)
             ? moduleId.substring(0, moduleId.indexOf(ModuleSidecar.SOURCE_SET_SEPARATOR)) : moduleId;

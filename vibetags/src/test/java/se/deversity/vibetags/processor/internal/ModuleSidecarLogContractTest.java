@@ -136,6 +136,34 @@ class ModuleSidecarLogContractTest {
     }
 
     @Test
+    @DisplayName("a region whose elements a nested module accounts for says superseded")
+    void aSupersededRegionSaysSo(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        ModuleSidecar ancestor = new ModuleSidecar("_root_", "");
+        ancestor.putBody("claude", "the same sources, read as the root");
+        ancestor.setElementIds(java.util.Set.of("com.example.A"));
+        ancestor.save(root);
+        ModuleSidecar nested = new ModuleSidecar("app", "app");
+        nested.putBody("claude", "the same sources, read as the module");
+        nested.setElementIds(java.util.Set.of("com.example.A", "com.example.B"));
+        nested.save(root);
+
+        ModuleSidecar.peekAll(root, logger);
+
+        assertTrue(logged("sidecar.skip reason=superseded path=" + SIDECAR_PREFIX + "_root_"),
+            "check mode leaves the region out and deletes nothing, so it is a skip:\n" + dump());
+        assertFalse(logged("sidecar.prune"), "check mode deleted nothing and must say nothing else");
+
+        ModuleSidecar.readAll(root, logger);
+
+        assertTrue(logged("sidecar.prune reason=superseded path=" + SIDECAR_PREFIX + "_root_"),
+            "a region retired in favour of a nested module is a module vanishing from every generated "
+                + "file under that name, and the reason is the only thing that says it was deliberate:\n"
+                + dump());
+        assertFalse(logged("path=" + SIDECAR_PREFIX + "app"), "the surviving module is not mentioned:\n" + dump());
+    }
+
+    @Test
     @DisplayName("a module path this filesystem cannot spell is named separately")
     void anUnrepresentableModulePathSaysSo(@TempDir Path root) throws IOException {
         write(root, "nul", "# version=2\nmoduleId=nul\nmodulePath=core" + (char) 0

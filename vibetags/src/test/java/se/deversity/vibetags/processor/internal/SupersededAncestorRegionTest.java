@@ -124,6 +124,73 @@ class SupersededAncestorRegionTest {
         assertFalse(Files.exists(root.resolve(".vibetags-mod-_root_")));
     }
 
+    /**
+     * The merge writes regions in the order {@code readAll} returns them, so the survivors' order is
+     * part of every generated file. The other cases here compare sorted ids and would not see a
+     * retirement that also reordered what was left.
+     */
+    @Test
+    void theSurvivorsKeepTheirFilenameOrder(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        Files.createDirectories(root.resolve("lib"));
+        Files.createDirectories(root.resolve("zeta"));
+        writeSidecar(root, "zeta", "zeta", "com.example.Z");
+        writeSidecar(root, "lib", "lib", "com.example.L");
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "app", "app", "com.example.A", "com.example.B");
+
+        List<String> moduleIds = ModuleSidecar.readAll(root).stream().map(ModuleSidecar::getModuleId).toList();
+
+        assertEquals(List.of("app", "lib", "zeta"), moduleIds);
+    }
+
+    @Test
+    void everySourceSetOfARetiredRegionGoesWithIt(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A");
+        ModuleSidecar rootTests = new ModuleSidecar("_root___test", "", "_root_");
+        rootTests.putBody("claude", "body of the root's test source set");
+        rootTests.setElementIds(Set.of("com.example.ATest"));
+        rootTests.save(root);
+        writeSidecar(root, "app", "app", "com.example.A", "com.example.ATest", "com.example.B");
+
+        List<String> moduleIds = ModuleSidecar.readAll(root).stream().map(ModuleSidecar::getModuleId).toList();
+
+        assertEquals(List.of("app"), moduleIds, "a region is retired whole, not one source set of it");
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-_root_")));
+        assertFalse(Files.exists(root.resolve(".vibetags-mod-_root___test")),
+            "a source set left behind would render the retired region again on the next build");
+    }
+
+    /**
+     * Check mode asks what the files would be after this round's save, and the save changes the
+     * freshness the rule compares: a sidecar whose content changed is written now, one whose
+     * content is unchanged is not rewritten and keeps its time (#556, #766). The module about to
+     * save here is the stale-looking ancestor of a fresher module with the same elements.
+     */
+    @Test
+    void aSidecarAboutToBeSavedCountsAsWrittenNowOnlyWhenItsContentChanged(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("app"));
+        writeSidecar(root, "_root_", "", "com.example.A");
+        writeSidecar(root, "app", "app", "com.example.A");
+        writtenAt(root, "_root_", 1_000_000_000_000L);
+        writtenAt(root, "app", 1_100_000_000_000L);
+        assertEquals(List.of("app"), regionIds(ModuleSidecar.peekAll(root)), "fixture assumption: on disk, app is fresher");
+
+        ModuleSidecar unchanged = new ModuleSidecar("_root_", "");
+        unchanged.putBody("claude", "body of _root_");
+        unchanged.setElementIds(Set.of("com.example.A"));
+        assertEquals(List.of("app"), regionIds(ModuleSidecar.peekAllAfterSaving(root, unchanged, null)),
+            "a save that rewrites nothing leaves the file as old as it was");
+
+        ModuleSidecar changed = new ModuleSidecar("_root_", "");
+        changed.putBody("claude", "an edited body of _root_");
+        changed.setElementIds(Set.of("com.example.A"));
+        assertEquals(List.of("_root_"), regionIds(ModuleSidecar.peekAllAfterSaving(root, changed, null)),
+            "a save that changes the content writes the file now, which makes it the fresher of the two");
+        assertTrue(Files.exists(root.resolve(".vibetags-mod-app")), "and asking the question deleted nothing");
+    }
+
     @Test
     void aSidecarThatRecordsNoElementsIsLeftAlone(@TempDir Path root) throws IOException {
         Files.createDirectories(root.resolve("app"));

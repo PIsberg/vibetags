@@ -25,6 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The superseded-region rule has a class of its own, and `readAll` reads through one list.**
+  `ModuleSidecar.dropSupersededRegions` (cognitive complexity 45) decided which of several
+  overlapping module identities are leftovers over three maps keyed by region, and could only be
+  tested by saving sidecar files and stamping their mtimes. The decision is now
+  `SupersededRegions.among`, a pure function over four values per region, 167 lines out of
+  `ModuleSidecar`. `readAll` (26) no longer keeps three index-aligned lists of sidecars, files and
+  mtimes: `RootRead` holds one list of `Loaded` entries and its steps are `usable`, `substitute`,
+  `dropSupersededRegions`, `dropMisreadSourceSets` and one `leaveOut`. Two rules of the read that
+  no test held are pinned first: a sidecar is not its own sibling, and a sidecar about to be saved
+  counts as written now only when its content changed. Reading the misread-source-set rule for it
+  found #1159.
 - **`ModuleSidecar.mergeFor` is split into the steps of one merge.** The 95-line method (cognitive
   complexity 47) keeps its signature and now builds a `ReactorMerge`, whose steps are
   `hoistedHeader`, `collectRegions`, `partsOf`, `asOneYamlDocument` and `stacked`. `SubMarkers`
@@ -109,6 +120,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An unreadable sidecar timestamp never retires a neighbouring region (#1158).** A sidecar whose
+  mtime cannot be read counts as maximally fresh. The superseded-region rule refused to act on that
+  for two regions on one path, but not above or below: an ancestor or a nested module of unknown age
+  retired the region beside it, and a pruning read deleted that region's sidecar. The guard now
+  stands ahead of all three relations. `anUnreadableTimestampAboveOrBelowRetiresNothing` failed
+  before the fix.
 - **The unreadable-sidecar warning reads a version header as the loader does (#1154).**
   `unreadableSidecarNames` parsed the `# version=` header with its own copy of the rule. A header
   with nothing after the `=` was not a header to it, so the round could warn that a sidecar was
