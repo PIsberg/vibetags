@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The JSON reader reads numbers and escapes in named steps.** `Json.isJsonNumber` (cognitive
+  complexity 26) is now `integerPartEnd` and `digitsEnd`, so it reads as the number grammar, and
+  `readString` (17) hands escapes to `appendEscape` and `readUnicodeEscape`. Reading the parser for
+  it found #1186.
 - **Granular files are planned in three named steps.** `GranularRulesWriter.plan` (cognitive
   complexity 23) split owners between roles and per-class files and planned both in one method of
   nested lambdas. `Routing.of` makes the split; `perClass`, `roleFilesByStem` and `roleFile` plan
@@ -194,6 +198,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds, `vibetags`'s Gradle build and the kotlin, kotlin-ksp, groovy, scala and basic examples.
 
 ### Fixed
+
+- **The manifest reader refuses malformed strings (#1186).** A transitive manifest's JSON is read
+  from a dependency JAR, and the reader's contract is that malformed input raises. It accepted an
+  unescaped control character inside a string, which RFC 8259 forbids, and a sign inside a unicode
+  escape, which `Integer.parseInt` took for a number. Both now raise like any other malformed
+  manifest. Nothing reached a consumer's files that legal escapes could not also write.
 
 - **No missing-file warning for a stem that differs only in case (#1181).** Two modules whose
   granular stems differ only in capitalisation, a class `com.example.Payment` and a package

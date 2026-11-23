@@ -266,7 +266,7 @@ assumed.
 | Class | Coverage |
 |---|---|
 | `AnnotationDefinitionsTest` | Annotation structure and defaults (the original 27 annotations; the 12 newest are covered by `NewAnnotationsV4`/`V5` definition tests) |
-| `JsonTest` | The dependency-free JSON reader: escapes, ordering, and above all what it does with malformed input from a JAR the build did not write |
+| `JsonTest` | The dependency-free JSON reader: escapes, ordering, and above all what it does with malformed input from a JAR the build did not write; an unescaped control character in a string and a sign inside a unicode escape are refused, the escaped forms read (#1186) |
 | `TransitiveRuleTest` | The inherited-rule value type: immutability (which earns a SpotBugs exclusion), ordering, equality |
 | `TransitiveManifestTest` | Manifest format: round-trip, byte-stable serialisation, version skip, and re-deriving the tier rather than trusting the JAR's claim |
 | `TransitiveManifestMemberOrderTest` | That an annotation's attributes are ordered by name. `Class.getDeclaredMethods()` is unordered and differs between JDK 25 and 26, which made the same sources publish different manifests depending on who compiled them |

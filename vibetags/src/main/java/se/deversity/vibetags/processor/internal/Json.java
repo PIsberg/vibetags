@@ -76,53 +76,50 @@ public final class Json {
      * which suits a check that runs once per numeric token.
      */
     private static boolean isJsonNumber(String s) {
-        int i = 0;
         int n = s.length();
-        if (i < n && s.charAt(i) == '-') {
-            i++;
+        int i = integerPartEnd(s, s.startsWith("-") ? 1 : 0);
+        if (i >= 0 && i < n && s.charAt(i) == '.') {
+            i = digitsEnd(s, i + 1);
         }
-        if (i >= n) {
-            return false;
-        }
-        // Integer part: a lone zero, or a non-zero digit followed by any digits. "01" is invalid.
-        if (s.charAt(i) == '0') {
-            i++;
-        } else if (isDigit(s.charAt(i))) {
-            while (i < n && isDigit(s.charAt(i))) {
-                i++;
+        if (i >= 0 && i < n && isExponentMarker(s.charAt(i))) {
+            int digits = i + 1;
+            if (digits < n && isSign(s.charAt(digits))) {
+                digits++;
             }
-        } else {
-            return false;
-        }
-        if (i < n && s.charAt(i) == '.') {
-            i++;
-            int fractionStart = i;
-            while (i < n && isDigit(s.charAt(i))) {
-                i++;
-            }
-            if (i == fractionStart) {
-                return false;
-            }
-        }
-        if (i < n && isExponentMarker(s.charAt(i))) {
-            i++;
-            if (i < n && isSign(s.charAt(i))) {
-                i++;
-            }
-            int exponentStart = i;
-            while (i < n && isDigit(s.charAt(i))) {
-                i++;
-            }
-            if (i == exponentStart) {
-                return false;
-            }
+            i = digitsEnd(s, digits);
         }
         return i == n;
+    }
+
+    /** Where an integer part starting at {@code from} ends: a lone zero, or digits; {@code -1} if none. */
+    private static int integerPartEnd(String s, int from) {
+        // "01" is invalid: a leading zero is the whole integer part.
+        return from < s.length() && s.charAt(from) == '0' ? from + 1 : digitsEnd(s, from);
+    }
+
+    /** Where one or more ASCII digits starting at {@code from} end, or {@code -1} when there are none. */
+    private static int digitsEnd(String s, int from) {
+        int i = from;
+        while (i < s.length() && isDigit(s.charAt(i))) {
+            i++;
+        }
+        return i == from ? -1 : i;
     }
 
     /** An ASCII digit. Not {@link Character#isDigit}, which accepts every Unicode decimal digit. */
     private static boolean isDigit(char c) {
         return c >= '0' && c <= '9';
+    }
+
+    /** The value of an ASCII hex digit, or {@code -1} for anything else. */
+    private static int hexValue(char c) {
+        if (isDigit(c)) {
+            return c - '0';
+        }
+        if (c >= 'a' && c <= 'f') {
+            return c - 'a' + 10;
+        }
+        return c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
     }
 
     private static boolean isExponentMarker(char c) {
@@ -310,38 +307,57 @@ public final class Json {
                 if (c == '"') {
                     return sb.toString();
                 }
+                if (c < 0x20) {
+                    // RFC 8259 section 7: a control character must be escaped (#1186).
+                    throw new JsonException("unescaped control character 0x" + Integer.toHexString(c)
+                        + " in a string at offset " + (pos - 1));
+                }
                 if (c != '\\') {
                     sb.append(c);
                     continue;
                 }
-                if (atEnd()) {
-                    throw new JsonException("unterminated escape");
-                }
-                char esc = src.charAt(pos++);
-                switch (esc) {
-                    case '"'  -> sb.append('"');
-                    case '\\' -> sb.append('\\');
-                    case '/'  -> sb.append('/');
-                    case 'n'  -> sb.append('\n');
-                    case 'r'  -> sb.append('\r');
-                    case 't'  -> sb.append('\t');
-                    case 'b'  -> sb.append('\b');
-                    case 'f'  -> sb.append('\f');
-                    case 'u'  -> {
-                        if (pos + 4 > src.length()) {
-                            throw new JsonException("truncated \\u escape");
-                        }
-                        String hex = src.substring(pos, pos + 4);
-                        try {
-                            sb.append((char) Integer.parseInt(hex, 16));
-                        } catch (NumberFormatException e) {
-                            throw new JsonException("bad \\u escape: " + hex, e);
-                        }
-                        pos += 4;
-                    }
-                    default -> throw new JsonException("unknown escape \\" + esc);
-                }
+                appendEscape(sb);
             }
+        }
+
+        /** Appends the character the escape after a backslash stands for. */
+        private void appendEscape(StringBuilder sb) {
+            if (atEnd()) {
+                throw new JsonException("unterminated escape");
+            }
+            char esc = src.charAt(pos++);
+            switch (esc) {
+                case '"'  -> sb.append('"');
+                case '\\' -> sb.append('\\');
+                case '/'  -> sb.append('/');
+                case 'n'  -> sb.append('\n');
+                case 'r'  -> sb.append('\r');
+                case 't'  -> sb.append('\t');
+                case 'b'  -> sb.append('\b');
+                case 'f'  -> sb.append('\f');
+                case 'u'  -> sb.append(readUnicodeEscape());
+                default -> throw new JsonException("unknown escape \\" + esc);
+            }
+        }
+
+        /** The character a unicode escape's four hex digits name; {@code pos} is just past the u. */
+        private char readUnicodeEscape() {
+            if (pos + 4 > src.length()) {
+                throw new JsonException("truncated \\u escape");
+            }
+            // Four hex digits and nothing else: Integer.parseInt also takes a sign, which read +041
+            // as 'A' (#1186).
+            String hex = src.substring(pos, pos + 4);
+            int code = 0;
+            for (int k = 0; k < hex.length(); k++) {
+                int digit = hexValue(hex.charAt(k));
+                if (digit < 0) {
+                    throw new JsonException("bad \\u escape: " + hex);
+                }
+                code = code * 16 + digit;
+            }
+            pos += 4;
+            return (char) code;
         }
 
         /**
