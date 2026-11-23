@@ -1173,27 +1173,34 @@ public final class ModuleSidecar {
         if (!Files.exists(root.resolve(ServiceRegistry.ROOT_INDEX_FILE))) return;
         for (ModuleSidecar s : sidecars) {
             s.rootIndexMode = true;
-            // The root module's own guardrails are not duplicated elsewhere — keep them inline.
-            if (s.modulePath.isEmpty() || "_root_".equals(s.moduleId)) continue;
-            Path moduleDir = root.resolve(s.modulePath);
-            if (!Files.isDirectory(moduleDir)) continue;
-            // Only the eight keys buildIndexPointer consults, and only for aggregates this
-            // module actually contributes to. resolveActiveServices would stat every opt-in
-            // path instead: measured at 85 per call, 4 calls per build of the indexed example,
-            // 340 of that build's 850 opt-in stats, to read 8 answers. Its one post-filter
-            // drops codex, which is not among the eight, so narrowing changes no verdict.
-            Map<String, Path> moduleFiles = ServiceRegistry.buildServiceFileMap(moduleDir);
-            Set<String> moduleActive = new LinkedHashSet<>();
-            for (String agg : INDEXABLE_AGGREGATES) {
-                if (!s.bodies.containsKey(agg)) continue;
-                addIfOptedIn(moduleActive, moduleFiles, agg);
-                addIfOptedIn(moduleActive, moduleFiles, aggregateGranularKey(agg));
-            }
-            for (String agg : INDEXABLE_AGGREGATES) {
-                if (!s.bodies.containsKey(agg)) continue; // module contributes nothing for this service
-                String pointer = buildIndexPointer(agg, s.modulePath, moduleActive);
-                if (pointer != null) s.indexPointers.put(agg, pointer);
-            }
+            s.linkFromRoot(root);
+        }
+    }
+
+    /**
+     * Records, for each indexable aggregate this module contributes to, the pointer the lean root
+     * writes in place of its body. Nothing for the root module, whose guardrails are not duplicated
+     * elsewhere and stay inline, nor for a module whose directory is gone.
+     */
+    private void linkFromRoot(Path root) {
+        if (modulePath.isEmpty() || "_root_".equals(moduleId)) return;
+        Path moduleDir = root.resolve(modulePath);
+        if (!Files.isDirectory(moduleDir)) return;
+        List<String> contributed = INDEXABLE_AGGREGATES.stream().filter(bodies::containsKey).toList();
+        // Only the eight keys buildIndexPointer consults, and only for aggregates this module
+        // actually contributes to. resolveActiveServices would stat every opt-in path instead:
+        // measured at 85 per call, 4 calls per build of the indexed example, 340 of that build's
+        // 850 opt-in stats, to read 8 answers. Its one post-filter drops codex, which is not among
+        // the eight, so narrowing changes no verdict.
+        Map<String, Path> moduleFiles = ServiceRegistry.buildServiceFileMap(moduleDir);
+        Set<String> moduleActive = new LinkedHashSet<>();
+        for (String agg : contributed) {
+            addIfOptedIn(moduleActive, moduleFiles, agg);
+            addIfOptedIn(moduleActive, moduleFiles, aggregateGranularKey(agg));
+        }
+        for (String agg : contributed) {
+            String pointer = buildIndexPointer(agg, modulePath, moduleActive);
+            if (pointer != null) indexPointers.put(agg, pointer);
         }
     }
 
