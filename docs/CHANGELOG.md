@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The reactor root's scoped-index hoist is a class of its own.** `ModuleSidecar.hoistScopedIndex`
+  (cognitive complexity 23) is now `ScopedIndexHoist`, whose `Section.in` reads one module's
+  section and refuses one of another shape, and `applyRootIndexModeTo` (20) links each module
+  through `linkFromRoot`. No change to any generated file: `ScopedIndexHoistTest` came first with
+  ten shapes compared whole, and two lean-index cases now hold the rule that the root module is
+  never linked, which no test failed without.
 - **`GuardrailContentBuilder.build` reads as its phases.** The 100-line method (cognitive
   complexity 25) computed the granular rules, assembled the rendering context and rendered three
   kinds of service in one body. It now calls `elementRules`, `renderingContext`, `renderOptedIn`,
