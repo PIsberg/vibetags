@@ -247,13 +247,7 @@ public final class GuardrailFileWriter {
         debug("write.compare file={} exists={} markers={} oldBytes={} newBytes={} hasNewRules={}",
             fileName, fileExists, supportsMarkers, existingSize, contentByteLen, hasNewRules);
         if (markers != null) {
-            // A byte order mark an editor saved in front of the file is encoding, not content.
-            // Left in place it hid a first-line START marker (U+FEFF is not whitespace, so the
-            // marker no longer owned its line) and the old block was kept as hand-written text
-            // beside a new one. The markers are looked for behind it, and it is written back.
-            String bom = existing.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
-            return writeWithMarkers(filePath, fileName, path, content, existing.substring(bom.length()), bom,
-                hasNewRules, markers, existingAttrs);
+            return new MarkerWrite(filePath, path, content, hasNewRules, markers).over(existing, existingAttrs);
         }
         return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules,
             existingAttrs);
@@ -425,131 +419,191 @@ public final class GuardrailFileWriter {
         }
     }
 
-    private boolean writeWithMarkers(Path filePath, String fileName, String path, String content,
-                                     String existing, String bom, boolean hasNewRules, String[] markers,
-                                     @Nullable BasicFileAttributes existingAttrs)
-            throws IOException {
-        String markerStart = markers[0];
-        String markerEnd = markers[1];
+    /**
+     * One write of a rendered body into a file that keeps it between a marker pair: what the
+     * rendering is, and the four things the file on disk can turn out to be. Each case works out
+     * the text the file should hold, with everything hand-written kept, and writes it unless the
+     * file already holds it or the round has no rules to write.
+     */
+    private final class MarkerWrite {
 
-        // Front-matter: markers MUST come after the YAML header
-        String frontMatter = "";
-        String body = content;
-        int renderedClose = frontMatterEnd(content);
-        if (renderedClose != -1) {
-            frontMatter = content.substring(0, renderedClose).trim();
-            body = content.substring(renderedClose).trim();
+        private final Path filePath;
+        private final String fileName;
+        private final String path;
+        private final String content;
+        private final boolean hasNewRules;
+        private final String markerStart;
+        private final String markerEnd;
+        /** The rendered YAML header, {@code ""} when the content has none. */
+        private final String frontMatter;
+        /** The rendered body between its markers, any marker line inside it defused. */
+        private final String wrappedBody;
+
+        private String existing = "";
+        private String bom = "";
+        private @Nullable BasicFileAttributes existingAttrs;
+
+        MarkerWrite(Path filePath, String path, String content, boolean hasNewRules, String[] markers) {
+            this.filePath = filePath;
+            this.fileName = fileName(filePath);
+            this.path = path;
+            this.content = content;
+            this.hasNewRules = hasNewRules;
+            this.markerStart = markers[0];
+            this.markerEnd = markers[1];
+            // Front-matter: markers MUST come after the YAML header
+            int renderedClose = frontMatterEnd(content);
+            this.frontMatter = renderedClose == -1 ? "" : content.substring(0, renderedClose).trim();
+            String body = renderedClose == -1 ? content : content.substring(renderedClose).trim();
+            this.wrappedBody = markerStart + "\n" + neutraliseMarkers(body.trim(), markers) + "\n" + markerEnd;
         }
 
-        String wrappedBody = markerStart + "\n" + neutraliseMarkers(body.trim(), markers) + "\n" + markerEnd;
+        /**
+         * Merges the rendering into {@code fileText}, the file as read ({@code ""} when there is
+         * none), and writes the result when it differs.
+         *
+         * @param attrs the file's attributes from before it was read, {@code null} when it was absent
+         * @return {@code true} if the file was written
+         */
+        boolean over(String fileText, @Nullable BasicFileAttributes attrs) throws IOException {
+            // A byte order mark an editor saved in front of the file is encoding, not content.
+            // Left in place it hid a first-line START marker (U+FEFF is not whitespace, so the
+            // marker no longer owned its line) and the old block was kept as hand-written text
+            // beside a new one. The markers are looked for behind it, and it is written back.
+            bom = fileText.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : "";
+            existing = fileText.substring(bom.length());
+            existingAttrs = attrs;
 
-        int start = indexOfBlockStart(existing, markerStart);
-        if (start >= 0) {
-            int end = indexOfMarkerLine(existing, markerEnd, start + markerStart.length());
-            if (end == -1) {
-                // The repair below throws away everything after START, which is right only when that
-                // text is a generated block that lost its END. A real block opens with the generated
-                // header; without it the START line is stray (an example the developer pasted, a
-                // leftover) and the text after it is theirs, so nothing is rewritten (#865).
-                if (!hasLegacyHeaderLine(existing.substring(start + markerStart.length()))) {
-                    messager.printMessage(Diagnostic.Kind.WARNING,
-                        "VibeTags: " + path + " has a " + markerStart + " line with no " + markerEnd
-                            + " after it, and the text after it is not a generated block, so the file was left"
-                            + " untouched. Remove the stray start line, or add the end line after the generated block.");
-                    debug("write.skip file={} reason=stray-start-marker", fileName);
-                    return declined(filePath);
-                }
-                messager.printMessage(Diagnostic.Kind.WARNING,
-                    "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
-                String before = withRenderedFrontMatter(
-                    stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing()), frontMatter);
-                String finalContent = afterBlankLine(before, wrappedBody + "\n");
-                if (contentMatches(existing, finalContent)) {
-                    debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
-                    noteCurrent(filePath, content, existingAttrs);
-                    return false;
-                }
-                // As on every other path: a round with no annotations does not replace a block.
-                if (!hasNewRules) {
-                    skipUpdateMsg(fileName);
-                    return false;
-                }
-                debug("write.update file={} reason=malformed-markers-repaired newBytes={}",
-                    fileName, finalContent.length());
-                writeAndCache(filePath, bom + finalContent, content, existingAttrs);
-                return true;
+            int start = indexOfBlockStart(existing, markerStart);
+            if (start >= 0) {
+                int end = indexOfMarkerLine(existing, markerEnd, start + markerStart.length());
+                return end == -1 ? repairUnterminatedBlock(start) : replaceBlock(start, end + markerEnd.length());
             }
-            end += markerEnd.length();
-            String before = withRenderedFrontMatter(
-                stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing()), frontMatter);
+            if (!existing.isEmpty() && hasLegacyHeaderLine(existing)) {
+                return upgradeLegacyFile();
+            }
+            return appendBlock();
+        }
+
+        /** The ordinary case: a block is there, and the text around it stays where it is. */
+        private boolean replaceBlock(int start, int end) throws IOException {
+            String before = handTextBefore(start);
             String after = existing.substring(end).stripLeading();
 
             StringBuilder sb = new StringBuilder();
             if (!before.isEmpty()) sb.append(before).append("\n\n");
             sb.append(wrappedBody);
             if (!after.isEmpty()) sb.append("\n\n").append(after);
-            String finalContent = sb.toString().trim() + "\n";
+            String merged = sb.toString().trim() + "\n";
 
-            if (contentMatches(existing, finalContent)) {
+            if (contentMatches(existing, merged)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=true",
-                    fileName, finalContent.length());
-                noteCurrent(filePath, content, existingAttrs);
-                return false;
+                    fileName, merged.length());
+                return leftCurrent();
             }
-
-            if (!hasNewRules && !existing.isEmpty()) {
-                skipUpdateMsg(fileName);
-                return false;
+            if (!hasNewRules) {
+                return leftForLackOfRules();
             }
-
             debug("write.update file={} reason=marker-block-differs oldBytes={} newBytes={} markers=true",
-                fileName, existing.length(), finalContent.length());
-            writeAndCache(filePath, bom + finalContent, content, existingAttrs);
+                fileName, existing.length(), merged.length());
+            commit(merged);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
             return true;
-        } else if (!existing.isEmpty() && hasLegacyHeaderLine(existing)) {
-            // Legacy file (no markers but has VibeTags header): upgrade to markers. The hand-authored
-            // text around the legacy block survives, exactly as on the malformed-marker path above;
-            // rewriting the whole file from the rendered content alone deleted it.
+        }
+
+        /** A start marker with no end marker after it: a generated block that lost its END, or a stray line. */
+        private boolean repairUnterminatedBlock(int start) throws IOException {
+            // The repair below throws away everything after START, which is right only when that
+            // text is a generated block that lost its END. A real block opens with the generated
+            // header; without it the START line is stray (an example the developer pasted, a
+            // leftover) and the text after it is theirs, so nothing is rewritten (#865).
+            if (!hasLegacyHeaderLine(existing.substring(start + markerStart.length()))) {
+                messager.printMessage(Diagnostic.Kind.WARNING,
+                    "VibeTags: " + path + " has a " + markerStart + " line with no " + markerEnd
+                        + " after it, and the text after it is not a generated block, so the file was left"
+                        + " untouched. Remove the stray start line, or add the end line after the generated block.");
+                debug("write.skip file={} reason=stray-start-marker", fileName);
+                return declined(filePath);
+            }
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: malformed markers in " + path + " (no end marker). Preserving content before start marker.");
+            String merged = afterBlankLine(handTextBefore(start), wrappedBody + "\n");
+            if (contentMatches(existing, merged)) {
+                debug("write.skip file={} reason=identical-bytes markers=malformed", fileName);
+                return leftCurrent();
+            }
+            // As on every other path: a round with no annotations does not replace a block.
+            if (!hasNewRules) {
+                return leftForLackOfRules();
+            }
+            debug("write.update file={} reason=malformed-markers-repaired newBytes={}",
+                fileName, merged.length());
+            commit(merged);
+            return true;
+        }
+
+        /**
+         * A legacy file (no markers but has the VibeTags header): upgrade to markers. The
+         * hand-authored text around the legacy block survives, exactly as on the unterminated path;
+         * rewriting the whole file from the rendered content alone deleted it.
+         */
+        private boolean upgradeLegacyFile() throws IOException {
             String human = stripLegacyVibeTagsBlock(existing);
             String before = human.isEmpty() ? frontMatter : withRenderedFrontMatter(human, frontMatter);
-            String finalContent = afterBlankLine(before, wrappedBody + "\n");
-            if (contentMatches(existing, finalContent)) {
+            String merged = afterBlankLine(before, wrappedBody + "\n");
+            if (contentMatches(existing, merged)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=legacy",
-                    fileName, finalContent.length());
-                noteCurrent(filePath, content, existingAttrs);
-                return false;
+                    fileName, merged.length());
+                return leftCurrent();
             }
-
             if (!hasNewRules) {
-                skipUpdateMsg(fileName);
-                return false;
+                return leftForLackOfRules();
             }
             debug("write.update file={} reason=legacy-upgrade oldBytes={} newBytes={} markers=legacy",
-                fileName, existing.length(), finalContent.length());
-
-            writeAndCache(filePath, bom + finalContent, content, existingAttrs);
+                fileName, existing.length(), merged.length());
+            commit(merged);
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated legacy file " + fileName);
             return true;
-        } else {
-            // Section missing or non-VibeTags file: append at end
-            String updated = existing.isEmpty()
+        }
+
+        /** No block and nothing of ours in the file: the block goes at the end, or is the file. */
+        private boolean appendBlock() throws IOException {
+            String merged = existing.isEmpty()
                 ? (frontMatter.isEmpty() ? "" : frontMatter + "\n\n") + wrappedBody + "\n"
                 : withRenderedFrontMatter(existing.stripTrailing(), frontMatter) + "\n\n" + wrappedBody + "\n";
-            if (contentMatches(existing, updated)) {
-                noteCurrent(filePath, content, existingAttrs);
-                return false;
+            if (contentMatches(existing, merged)) {
+                return leftCurrent();
             }
-
+            // An empty file is the opt-in itself, so it gets its block whatever the round found.
             if (!hasNewRules && !existing.isEmpty()) {
-                skipUpdateMsg(fileName);
-                return false;
+                return leftForLackOfRules();
             }
-
-            writeAndCache(filePath, bom + updated, content, existingAttrs);
+            commit(merged);
             String action = existing.isEmpty() ? "wrote" : "appended";
             messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: " + action + " " + fileName);
             return true;
+        }
+
+        /** The hand-written text above the block, under the rendered front matter when there is one. */
+        private String handTextBefore(int start) {
+            return withRenderedFrontMatter(
+                stripLegacyVibeTagsBlock(existing.substring(0, start).stripTrailing()), frontMatter);
+        }
+
+        /** The file already holds what this write would produce: record it as current. */
+        private boolean leftCurrent() {
+            noteCurrent(filePath, content, existingAttrs);
+            return false;
+        }
+
+        /** A round with no annotations does not replace what an earlier round wrote. */
+        private boolean leftForLackOfRules() {
+            skipUpdateMsg(fileName);
+            return false;
+        }
+
+        private void commit(String merged) throws IOException {
+            writeAndCache(filePath, bom + merged, content, existingAttrs);
         }
     }
 
@@ -927,10 +981,20 @@ public final class GuardrailFileWriter {
         return indexOfBlockStart(content, markerEnd) >= 0;
     }
 
+    /** The shortest run of backticks or tildes that makes a code fence. */
+    private static final int MIN_FENCE_LENGTH = 3;
+
     /**
-     * Whether {@code index} lies inside a fenced code block: an odd number of fence lines above it.
-     * A fence opens with a line starting {@code ```} or {@code ~~~} (an info string may follow) and
-     * closes with a line of the same fence characters and nothing else, as CommonMark has it.
+     * Whether {@code index} lies inside a fenced code block, by CommonMark's rules for one. A fence
+     * opens with a line starting with three or more backticks or tildes (an info string may
+     * follow) and closes with a line of the same character, at least as many of them, and nothing
+     * else. A backtick fence's info string cannot contain a backtick, so a line that begins with an
+     * inline code span is not a fence.
+     *
+     * <p>Both halves of that matter here (#1161). Taking every line that starts with three
+     * backticks for an opener, or closing a four-backtick fence at the first line of three, leaves
+     * this believing a fence is open for the rest of the file: the real block below is then never
+     * found, and every build appends another one beneath it.
      */
     private static boolean insideFence(String content, int index) {
         String open = null;
@@ -940,17 +1004,42 @@ public final class GuardrailFileWriter {
             if (end < 0) {
                 end = content.length();
             }
-            String line = content.substring(start, end).strip();
-            if (open == null) {
-                if (line.startsWith("```") || line.startsWith("~~~")) {
-                    open = line.substring(0, 3);
-                }
-            } else if (line.startsWith(open) && line.replace(open.charAt(0), ' ').isBlank()) {
-                open = null;
-            }
+            open = fenceOpenAfter(open, content.substring(start, end).strip());
             start = end + 1;
         }
         return open != null;
+    }
+
+    /**
+     * The fence that is open after {@code line}, as the run of backticks or tildes that opened it,
+     * or {@code null} for none.
+     *
+     * @param open the fence open before this line, in the same form
+     */
+    private static @Nullable String fenceOpenAfter(@Nullable String open, String line) {
+        int run = fenceRun(line);
+        if (run < MIN_FENCE_LENGTH) {
+            return open;
+        }
+        String rest = line.substring(run);
+        if (open == null) {
+            boolean opens = line.charAt(0) == '~' || rest.indexOf('`') < 0;
+            return opens ? line.substring(0, run) : null;
+        }
+        boolean closes = line.charAt(0) == open.charAt(0) && run >= open.length() && rest.isBlank();
+        return closes ? null : open;
+    }
+
+    /** How many backticks, or how many tildes, {@code line} opens with; 0 when it opens with neither. */
+    private static int fenceRun(String line) {
+        if (line.isEmpty() || (line.charAt(0) != '`' && line.charAt(0) != '~')) {
+            return 0;
+        }
+        int run = 1;
+        while (run < line.length() && line.charAt(run) == line.charAt(0)) {
+            run++;
+        }
+        return run;
     }
 
     /** True when only whitespace separates the match from the start and end of its line. */

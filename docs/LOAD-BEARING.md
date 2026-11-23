@@ -57,7 +57,11 @@ Generated content is written between markers so a file can hold hand-authored co
 
 A marker inside a fenced code block (```` ``` ```` or `~~~`) is an example, not a delimiter: a
 file that documents VibeTags can show the pair in a fence, and the block is looked for outside it
-(`MarkerInProseTest`).
+(`MarkerInProseTest`). What counts as a fence is CommonMark's rule, not "a line starting with three
+backticks": a fence closes only on a line of the same character at least as long as the one that
+opened it, and a backtick line whose remainder contains a backtick is an inline code span. Read
+more loosely, ordinary hand-written Markdown above the block left it looking like code for the
+rest of the file, and every build appended another block (#1161).
 
 A START marker with no END is repaired only when the generated header follows it, so the text after it is a generated block that lost its END; otherwise the START line is stray, the text after it is hand-written, and the file is left untouched with a WARNING (`GuardrailFileRecoveryEndToEndTest`, #865). A round with no annotations does not repair it either.
 

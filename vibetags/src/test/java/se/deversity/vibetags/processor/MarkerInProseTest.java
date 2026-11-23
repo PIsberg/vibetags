@@ -101,6 +101,53 @@ class MarkerInProseTest {
             "the generated block belongs after the fence, not inside it:\n" + after);
     }
 
+    /**
+     * The fence check that keeps an example out of the block must not take ordinary Markdown for an
+     * open fence (#1161). Two shapes did: a line that begins with an inline code span written
+     * with three backticks, which CommonMark does not read as a fence because the "info string"
+     * would contain a backtick; and a four-backtick fence around a three-backtick one, which the
+     * inner closing line ended early, so the outer closing line opened a fence that never closed.
+     * Either way everything below read as code, the real block was never found again, and each
+     * build appended another block beneath the stale ones.
+     */
+    @Test
+    void handWrittenBackticksAboveTheBlockDoNotHideIt(@TempDir Path tmp) throws IOException {
+        String inlineSpan = "```mvn test``` runs the fast tier.";
+        String nestedFence = "````markdown\n```java\nint x;\n```\n````";
+        String longerClose = "```java\nint x;\n`````";
+        String tildeAroundBackticks = "~~~~\n```\n~~~\n~~~~";
+        for (String human : new String[] {inlineSpan, nestedFence, longerClose, tildeAroundBackticks}) {
+            GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, null, null);
+            Path file = tmp.resolve("case" + human.length()).resolve("CLAUDE.md");
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, "# Notes\n\n" + human + "\n\n"
+                + "<!-- VIBETAGS-START -->\nOLD RULES\n<!-- VIBETAGS-END -->\n\nTrailing human notes.\n");
+
+            writer.writeFileIfChanged(file.toString(), "NEW RULES 1", true);
+            writer.writeFileIfChanged(file.toString(), "NEW RULES 2", true);
+
+            String after = Files.readString(file);
+            assertEquals("# Notes\n\n" + human + "\n\n"
+                    + "<!-- VIBETAGS-START -->\nNEW RULES 2\n<!-- VIBETAGS-END -->\n\nTrailing human notes.\n",
+                after, "the block is replaced where it stands, once, whatever backticks precede it");
+        }
+    }
+
+    /** What must keep working: a fence that really is open above a marker still hides it. */
+    @Test
+    void aMarkerInsideAFenceOfAnyLengthIsStillNotTheBlock(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, null, null, null);
+        Path file = tmp.resolve("CLAUDE.md");
+        String example = "````markdown\n```\n<!-- VIBETAGS-START -->\nexample\n<!-- VIBETAGS-END -->\n```\n````\n";
+        Files.writeString(file, "# Docs\n\n" + example);
+
+        writer.writeFileIfChanged(file.toString(), "NEW RULES", true);
+
+        String after = Files.readString(file);
+        assertEquals("# Docs\n\n" + example + "\n<!-- VIBETAGS-START -->\nNEW RULES\n<!-- VIBETAGS-END -->\n", after,
+            "an example inside the outer fence is text, and the real block goes after it");
+    }
+
     /** A real block must still be found and replaced, even when prose above it mentions the markers. */
     @Test
     void realBlockIsStillReplacedWhenProseMentionsMarkers(@TempDir Path tmp) throws IOException {
