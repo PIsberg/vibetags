@@ -328,6 +328,20 @@ class RoleConfigTest {
         assertEquals("api", roles.roleFor(type("com.example.Legacy")).orElse(null));
     }
 
+    /** Some editors save U+FEFF first; it is encoding, not the first role's name (#1197). */
+    @Test
+    @DisplayName("a byte order mark is not part of the first role's name")
+    void aByteOrderMarkIsNotPartOfTheFirstRoleName(@TempDir Path dir) throws IOException {
+        Files.writeString(dir.resolve(RoleConfig.FILE_NAME),
+            "\uFEFFapi = **/*Controller.java\napi = com.example.Legacy\n", StandardCharsets.UTF_8);
+        RoleConfig roles = RoleConfig.load(dir);
+
+        assertEquals("api", roles.roleFor(type("com.example.web.OrderController")).orElse(null));
+        assertEquals("api", roles.granularStemFor(type("com.example.web.OrderController")),
+            "one rule file for the role, not a second one named -api");
+        assertEquals(List.of("**/*Controller.java"), roles.globsFor("api"));
+    }
+
     @Test
     @DisplayName("a commented-out role line is a comment, '=' and all")
     void aCommentedOutRoleIsNoRole(@TempDir Path dir) throws IOException {

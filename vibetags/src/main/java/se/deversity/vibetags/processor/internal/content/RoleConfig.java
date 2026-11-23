@@ -42,6 +42,9 @@ public final class RoleConfig {
     /** Opt-in signal file: its presence at a root activates role-based granular routing there. */
     public static final String FILE_NAME = ".vibetags-roles";
 
+    /** U+FEFF, which some editors save at the start of a UTF-8 file: encoding, not a role name. */
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
+
     private final List<Role> roles;
     private final String contentHash;
 
@@ -66,13 +69,22 @@ public final class RoleConfig {
             return null;
         }
         List<Role> parsed = new ArrayList<>();
-        for (String raw : content.split("\\r\\n|\\r|\\n", -1)) {
+        for (String raw : linesOf(content)) {
             Role role = Role.parse(raw.trim());
             if (role != null) {
                 parsed.add(role);
             }
         }
         return new RoleConfig(parsed, ContentHash.of(content));
+    }
+
+    /**
+     * {@code content}'s lines, after any leading byte order mark: left in, it became part of the
+     * first role's name and split that role between two rule files (#1197).
+     */
+    private static String[] linesOf(String content) {
+        String text = content.isEmpty() || content.charAt(0) != BYTE_ORDER_MARK ? content : content.substring(1);
+        return text.split("\\r\\n|\\r|\\n", -1);
     }
 
     /**
