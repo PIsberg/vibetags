@@ -156,6 +156,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A guardrail on a local class in an initializer or a field-initializer lambda warns again
+  (#1176).** Annotation processing cannot see a named local class in a `static { }` or instance
+  initializer, or in a lambda that initializes a field, any more than one in a method body. Only a
+  method body counted as "inside a body", so those guardrails generated nothing and drew no warning.
+  The body scan now reports a named class anywhere inside a block or a lambda.
+
 - **A broken `.pr_agent.toml` is left alone instead of grown (#1171).** A string or an array that
   is never closed hides every table header after it, so both tables were appended to the file again
   on each merge. Such a file is now refused with `reason=unclosed-value` and a build warning.

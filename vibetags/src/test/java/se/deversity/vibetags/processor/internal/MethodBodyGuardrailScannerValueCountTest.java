@@ -132,6 +132,14 @@ class MethodBodyGuardrailScannerValueCountTest {
             Arguments.of("a local class in a method", "void host() { class Local { " + locked + " void m() { } } }", 1, 0),
             Arguments.of("an anonymous class member",
                 "Runnable host() { return new Runnable() { " + locked + " public void run() { } }; }", 1, 0),
+            Arguments.of("a local class in a static initializer",
+                "static { class Local { " + locked + " void m() { } } }", 1, 0),
+            Arguments.of("a local class in an instance initializer",
+                "{ class Local { " + locked + " void m() { } } }", 1, 0),
+            Arguments.of("a local class in a lambda in a field initializer",
+                "Runnable task = () -> { class Local { " + locked + " void m() { } } };", 1, 0),
+            Arguments.of("an anonymous class in a field initializer",
+                "Runnable task = new Runnable() { " + locked + " public void run() { } };", 1, 0),
             Arguments.of("an annotation on a local variable",
                 "void host() { @SuppressWarnings(\"x\") " + locked.replace("@AILocked", "@Deprecated @AIContext")
                     .replace("reason = JarFile.MANIFEST_NAME", "focus = JarFile.MANIFEST_NAME")

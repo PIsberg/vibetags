@@ -13,7 +13,6 @@ import com.sun.source.tree.ImportTree;
 import com.sun.source.tree.LambdaExpressionTree;
 import com.sun.source.tree.LiteralTree;
 import com.sun.source.tree.MemberSelectTree;
-import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.NewArrayTree;
 import com.sun.source.tree.ParenthesizedTree;
 import com.sun.source.tree.Tree;
@@ -423,7 +422,8 @@ public final class MethodBodyGuardrailScanner {
 
     /**
      * Finds declarations the element model cannot reach: any anonymous class (empty simple name),
-     * and any named class declared while inside a method body. Named member classes at nesting
+     * and any named class declared inside a block or a lambda: a method body, an initializer, or a
+     * lambda in a field initializer. Named member classes at nesting
      * depth zero are ordinary elements and are left to the normal processing path.
      */
     private final class BodyScanner extends TreeScanner<Void, Void> {
@@ -431,8 +431,10 @@ public final class MethodBodyGuardrailScanner {
         private final CompilationUnitTree unit;
         private final boolean imported;
         private final Set<? extends Element> roots;
-        private int methodDepth;
-        /** Depth inside statements, whose annotations javac has not attributed yet during processing. */
+        /**
+         * Depth inside statements (blocks and lambdas): a class declared there is local, and
+         * annotations there have not been attributed by javac yet during processing.
+         */
         private int statementDepth;
 
         BodyScanner(CompilationUnitTree unit, boolean imported, Set<? extends Element> roots) {
@@ -617,19 +619,11 @@ public final class MethodBodyGuardrailScanner {
         }
 
         @Override
-        public Void visitMethod(MethodTree method, Void p) {
-            methodDepth++;
-            try {
-                return super.visitMethod(method, null);
-            } finally {
-                methodDepth--;
-            }
-        }
-
-        @Override
         public Void visitClass(ClassTree type, Void p) {
+            // A named class inside a block or a lambda is local, whether that block is a method body,
+            // an initializer or a lambda in a field initializer: processing reaches none of them (#1176).
             boolean anonymous = type.getSimpleName().isEmpty();
-            if (anonymous || methodDepth > 0) {
+            if (anonymous || statementDepth > 0) {
                 reportEveryGuardrailIn(type);
                 return null; // the whole subtree was just reported; do not visit it twice
             }
