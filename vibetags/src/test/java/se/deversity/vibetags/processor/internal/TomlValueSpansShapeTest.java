@@ -304,4 +304,19 @@ class TomlValueSpansShapeTest {
         refuses("pr_reviewer = { extra_instructions = \"x\" }\n",
             "dotted-key", "pr_reviewer is set with a dotted key or an inline table");
     }
+
+    /**
+     * A string or an array left open swallows every line after it, the table headers included, so
+     * the tables were never found and both were appended again on every merge (#1171). The file
+     * is not valid TOML to begin with; growing it on each build is not a repair.
+     */
+    @Test
+    @DisplayName("a file that ends inside a string or an array is refused, not appended to on every build")
+    void aFileThatEndsInsideAValueIsRefused() {
+        String detail = "the file ends inside a string or an array that is never closed";
+        refuses("x = [1, 2\n[pr_reviewer]\n", "unclosed-value", detail);
+        refuses("notes = \"\"\"\nnever closed\n[pr_reviewer]\n", "unclosed-value", detail);
+        refuses("notes = '''\nnever closed\n", "unclosed-value", detail);
+        refuses("[pr_reviewer]\nnum = 3\nx = [1, 2\n", "unclosed-value", detail);
+    }
 }

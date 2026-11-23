@@ -21,8 +21,9 @@ import java.util.regex.Pattern;
  *
  * <p>A document that cannot be merged without guessing is refused, and the caller writes nothing:
  * a table defined twice, the key defined twice, a value that is not a {@code """} string, a start
- * marker with no end, or the table reached through a dotted key or an array of tables, which the
- * table scan cannot see.
+ * marker with no end, the table reached through a dotted key or an array of tables, which the
+ * table scan cannot see, or a table that would have to be added to a file that ends inside a
+ * string or an array nobody closed.
  *
  * <p>The span body is the renderer's {@code extra_instructions} text, already
  * {@code Escape.tomlMultiline}-encoded, so it cannot close the string; its own marker lines are
@@ -122,6 +123,7 @@ public final class TomlValueSpans {
         private final String span;
         private final String nl;
         private final List<Line> lines;
+        private final boolean endsInsideAValue;
         /** An {@code extra_instructions} key holding the span and nothing else, on lines of its own. */
         private final String newKey;
 
@@ -130,7 +132,9 @@ public final class TomlValueSpans {
             this.table = table;
             this.span = span;
             this.nl = nl;
-            this.lines = new LineScan(doc).lines();
+            LineScan scan = new LineScan(doc);
+            this.lines = scan.lines();
+            this.endsInsideAValue = scan.endsInsideAValue();
             this.newKey = OPEN + nl + span + nl + QUOTES + nl;
         }
 
@@ -170,6 +174,12 @@ public final class TomlValueSpans {
         }
 
         private String withTableAppended() {
+            // An open string or array swallowed every line after it, this table's header perhaps
+            // among them, and whatever is appended lands inside it too: the next merge would not
+            // find the table either and would append it again (#1171).
+            if (endsInsideAValue) {
+                throw new Refused("unclosed-value", "the file ends inside a string or an array that is never closed");
+            }
             String head = doc.isEmpty() || doc.endsWith("\n") ? doc : doc + nl;
             return head + (head.isBlank() ? "" : nl) + "[" + table + "]" + nl + newKey;
         }
@@ -306,6 +316,11 @@ public final class TomlValueSpans {
                 i++;
             }
             return lines;
+        }
+
+        /** Whether the document stops with a multi-line string or an array still open. Asked after {@link #lines}. */
+        boolean endsInsideAValue() {
+            return state != State.NORMAL || arrayDepth > 0;
         }
 
         private void endLine() {
