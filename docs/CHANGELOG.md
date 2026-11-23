@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`ModuleSidecar.mergeFor` is split into the steps of one merge.** The 95-line method (cognitive
+  complexity 47) keeps its signature and now builds a `ReactorMerge`, whose steps are
+  `hoistedHeader`, `collectRegions`, `partsOf`, `asOneYamlDocument` and `stacked`. `SubMarkers`
+  chooses between the comment and the hash sub-marker once per merge, where the choice was written
+  five times. No change to any generated file: `ModuleSidecarMergeShapeTest` came first and compares
+  the whole merged text in nine cases, and 15 merge scenarios captured before the refactor are
+  byte-identical after it. Reading the lean-index path for it found #1156.
 - **`ModuleSidecar.load` is split, and the sidecar's readers share their rules.** The method the
   whole-code quality run ranked first (cognitive complexity 86, 106 statements) now reads the file
   and hands its lines to `LineReader`, whose steps are `read`, `accept`, `store`, `isTorn` and
