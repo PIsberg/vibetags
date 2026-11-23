@@ -66,46 +66,10 @@ public final class RoleConfig {
             return null;
         }
         List<Role> parsed = new ArrayList<>();
-        for (String raw : content.split("\r\n|\r|\n", -1)) {
-            String line = raw.trim();
-            if (line.isEmpty() || line.startsWith("#")) {
-                continue;
-            }
-            int eq = line.indexOf('=');
-            if (eq <= 0) {
-                continue; // no name or no '=' — skip silently
-            }
-            String name = line.substring(0, eq).trim();
-            if (name.isEmpty()) {
-                continue;
-            }
-            List<String> globs = new ArrayList<>();
-            List<Pattern> globPatterns = new ArrayList<>();
-            Set<String> fqns = new LinkedHashSet<>();
-            for (String token : splitMatchers(line.substring(eq + 1))) {
-                String t = token.trim();
-                if (t.isEmpty()) {
-                    continue;
-                }
-                if (isGlob(t)) {
-                    Pattern pattern;
-                    try {
-                        pattern = globToRegex(t);
-                    } catch (java.util.regex.PatternSyntaxException malformed) {
-                        // A glob that does not compile (an unclosed brace group is the usual one)
-                        // matches nothing. Throwing here reached the top of the generate phase and
-                        // stopped every output of the build over one typo; the file's other
-                        // matchers are unaffected by it and keep routing.
-                        continue;
-                    }
-                    globs.add(t);
-                    globPatterns.add(pattern);
-                } else {
-                    fqns.add(t);
-                }
-            }
-            if (!globs.isEmpty() || !fqns.isEmpty()) {
-                parsed.add(new Role(name, globs, globPatterns, fqns));
+        for (String raw : content.split("\\r\\n|\\r|\\n", -1)) {
+            Role role = Role.parse(raw.trim());
+            if (role != null) {
+                parsed.add(role);
             }
         }
         return new RoleConfig(parsed, ContentHash.of(content));
@@ -250,43 +214,122 @@ public final class RoleConfig {
      * segment), {@code ?}, and {@code {a,b}} alternation.
      */
     static Pattern globToRegex(String glob) {
-        StringBuilder sb = new StringBuilder("^");
-        int braceDepth = 0;
-        int i = 0;
-        int n = glob.length();
-        while (i < n) {
-            char c = glob.charAt(i);
-            if (c == '*') {
-                if (i + 1 < n && glob.charAt(i + 1) == '*') {
-                    if (i + 2 < n && glob.charAt(i + 2) == '/') {
-                        sb.append("(?:.*/)?"); // '**/' → zero or more path segments
-                        i += 3;
-                    } else {
-                        sb.append(".*");       // trailing/standalone '**'
-                        i += 2;
-                    }
-                } else {
-                    sb.append("[^/]*");        // '*' → within one segment
-                    i += 1;
-                }
-                continue;
-            }
-            switch (c) {
-                case '?': sb.append("[^/]"); break;
-                case '.': sb.append("\\."); break;
-                case '{': braceDepth++; sb.append("(?:"); break;
-                case '}': if (braceDepth > 0) { braceDepth--; sb.append(')'); } else { sb.append("\\}"); } break;
-                case ',': sb.append(braceDepth > 0 ? "|" : "\\,"); break;
-                case '\\': case '(': case ')': case '[': case ']':
-                case '^': case '$': case '+': case '|':
-                    sb.append('\\').append(c); break;
-                default: sb.append(c);
-            }
-            i++;
+        return Pattern.compile(new GlobRegex(glob).translate());
+    }
+
+    /** One glob's translation, a character at a time; the open brace groups are its only state. */
+    private static final class GlobRegex {
+
+        private final String glob;
+        private final StringBuilder regex = new StringBuilder("^");
+        private int braceDepth;
+
+        GlobRegex(String glob) {
+            this.glob = glob;
         }
-        return Pattern.compile(sb.append('$').toString());
+
+        String translate() {
+            int i = 0;
+            while (i < glob.length()) {
+                i = glob.charAt(i) == '*' ? star(i) : other(i);
+            }
+            return regex.append('$').toString();
+        }
+
+        /** The star run at {@code i}, returning the index after it. */
+        private int star(int i) {
+            if (!glob.startsWith("**", i)) {
+                regex.append("[^/]*"); // '*' stays within one segment
+                return i + 1;
+            }
+            if (glob.startsWith("**/", i)) {
+                regex.append("(?:.*/)?"); // '**/' is zero or more whole segments
+                return i + 3;
+            }
+            regex.append(".*"); // a trailing or standalone '**' is any depth
+            return i + 2;
+        }
+
+        /** Any character but a star, returning the index after it. */
+        private int other(int i) {
+            char c = glob.charAt(i);
+            switch (c) {
+                case '?' -> regex.append("[^/]");
+                case '.' -> regex.append("\\.");
+                case '{' -> openGroup();
+                case '}' -> closeGroup();
+                case ',' -> regex.append(braceDepth > 0 ? "|" : "\\,");
+                case '\\', '(', ')', '[', ']', '^', '$', '+', '|' -> regex.append('\\').append(c);
+                default -> regex.append(c);
+            }
+            return i + 1;
+        }
+
+        private void openGroup() {
+            braceDepth++;
+            regex.append("(?:");
+        }
+
+        /** Closes the innermost group; a brace with none open is a literal. */
+        private void closeGroup() {
+            if (braceDepth > 0) {
+                braceDepth--;
+                regex.append(')');
+            } else {
+                regex.append("\\}");
+            }
+        }
     }
 
     /** One role: name, its glob strings (for frontmatter), compiled glob patterns, and exact FQNs. */
-    private record Role(String name, List<String> globs, List<Pattern> globPatterns, Set<String> fqns) {}
+    private record Role(String name, List<String> globs, List<Pattern> globPatterns, Set<String> fqns) {
+
+        /**
+         * The role a trimmed {@code line} declares, or {@code null} for a blank line, a comment,
+         * a line without a name before its first {@code =}, or one whose matchers are all empty
+         * or malformed.
+         */
+        static @Nullable Role parse(String line) {
+            int eq = line.indexOf('=');
+            if (eq <= 0 || line.startsWith("#")) {
+                return null; // a trimmed line with '=' past column 0 has a non-blank name
+            }
+            Role role = new Role(line.substring(0, eq).trim(), new ArrayList<>(), new ArrayList<>(),
+                new LinkedHashSet<>());
+            for (String token : splitMatchers(line.substring(eq + 1))) {
+                role.add(token.trim());
+            }
+            return role.globs.isEmpty() && role.fqns.isEmpty() ? null : role;
+        }
+
+        /** Adds one matcher: a glob when it has a glob character or a separator, else an exact name. */
+        private void add(String token) {
+            if (token.isEmpty()) {
+                return;
+            }
+            if (!isGlob(token)) {
+                fqns.add(token);
+                return;
+            }
+            Pattern pattern = compiled(token);
+            if (pattern != null) {
+                globs.add(token);
+                globPatterns.add(pattern);
+            }
+        }
+
+        /**
+         * {@code glob} compiled, or {@code null} when it does not compile (an unclosed brace group
+         * is the usual one), which then matches nothing. Throwing here reached the top of the
+         * generate phase and stopped every output of the build over one typo; the file's other
+         * matchers are unaffected by it and keep routing.
+         */
+        private static @Nullable Pattern compiled(String glob) {
+            try {
+                return globToRegex(glob);
+            } catch (java.util.regex.PatternSyntaxException malformed) {
+                return null;
+            }
+        }
+    }
 }
