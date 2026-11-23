@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **An element's type is rendered one kind at a time.** `ElementNaming.typeString` (cognitive
+  complexity 23) is a pattern switch with `wildcardString`, `declaredString` and `variableString`.
+  A new parity case pins that a type-use annotation on a type variable stays out of the identity,
+  which no test failed without; reading the method for it found #1188.
 - **The JSON reader reads numbers and escapes in named steps.** `Json.isJsonNumber` (cognitive
   complexity 26) is now `integerPartEnd` and `digitsEnd`, so it reads as the number grammar, and
   `readString` (17) hands escapes to `appendEscape` and `readUnicodeEscape`. Reading the parser for
