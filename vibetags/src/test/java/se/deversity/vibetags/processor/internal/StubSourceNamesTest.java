@@ -145,6 +145,30 @@ class StubSourceNamesTest {
         assertEquals("Shipping.groovy", StubSourceNames.groovyFileName(stub, "Parcel"));
     }
 
+    /**
+     * The scan for a declaration removed comments without knowing where a string literal is
+     * (#1168). A glob such as {@code "**&#47;*.groovy"} then opened a block comment that ran to the
+     * next {@code *&#47;} or to the end of the file, and the declaration below it was never seen. A
+     * line that only looks like a declaration, inside a multi-line string, counted as one.
+     */
+    @Test
+    @DisplayName("a string literal neither hides the declaration below it nor counts as one")
+    void groovyFileLookupKnowsWhereAStringIs(@TempDir Path project) throws IOException {
+        Path sources = Files.createDirectories(project.resolve("src/main/groovy/com/example"));
+        Path stub = project.resolve("build/tmp/compileGroovy/groovy-java-stubs/com/example/Parcel.java");
+        Files.writeString(sources.resolve("Shipping.groovy"),
+            "package com.example\n\nclass Globs {\n    static final String ALL = \"**/*.groovy\"\n}\n\nclass Parcel {}\n");
+
+        assertEquals("Shipping.groovy", StubSourceNames.groovyFileName(stub, "Parcel"),
+            "a /* inside a string is not the start of a comment");
+
+        Files.writeString(sources.resolve("Notes.groovy"),
+            "package com.example\n\nclass Notes {\n    static final String TEXT = \"\"\"\nclass Parcel is described here\n\"\"\"\n}\n");
+
+        assertEquals("Shipping.groovy", StubSourceNames.groovyFileName(stub, "Parcel"),
+            "a line of a multi-line string is not a second declaration");
+    }
+
     @Test
     @DisplayName("a layout that is not Gradle's, or a missing package directory, leaves the guess in place (#973)")
     void groovyFileOutsideGradlesLayoutIsNotGuessed(@TempDir Path project) throws IOException {
