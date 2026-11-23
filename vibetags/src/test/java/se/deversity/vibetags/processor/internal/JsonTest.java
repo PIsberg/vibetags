@@ -161,6 +161,37 @@ class JsonTest {
         assertThrows(Json.JsonException.class, () -> Json.parse("{\"a\":\"unclosed"));
     }
 
+    /**
+     * RFC 8259 section 7: the characters U+0000 to U+001F must be escaped inside a string. The
+     * reader appended them as they came, so a manifest line with a raw newline or NUL in a value was
+     * read where every other JSON parser would refuse it. The escaped form reads the same text and
+     * is still accepted (issue #1186).
+     */
+    @ParameterizedTest(name = "0x{0}")
+    @ValueSource(ints = {0x00, 0x09, 0x0A, 0x0D, 0x1F})
+    void rejectsAControlCharacterLeftUnescapedInAString(int codePoint) {
+        String c = String.valueOf((char) codePoint);
+        assertThrows(Json.JsonException.class, () -> Json.parse("\"a" + c + "b\""), "in a value");
+        assertThrows(Json.JsonException.class, () -> Json.parse("{\"k" + c + "\":1}"), "in a key");
+    }
+
+    /**
+     * A unicode escape is exactly four hex digits. The four were handed to Integer.parseInt, which
+     * also takes a leading sign, so a plus sign read as 'A' for +041 and a minus as U+FFFF for -001
+     * (issue #1186).
+     */
+    @Test
+    void rejectsASignInAUnicodeEscape() {
+        for (String bad : List.of("+041", "-001", "+FFF")) {
+            assertThrows(Json.JsonException.class, () -> Json.parse("\"\\u" + bad + "\""), bad);
+        }
+    }
+
+    @Test
+    void stillReadsTheEscapedFormOfEveryControlCharacter() {
+        assertEquals("a" + (char) 10 + "b" + (char) 0 + (char) 31, Json.parse("\"a\\nb\\u0000\\u001F\""));
+    }
+
     @Test
     void rejectsTruncatedUnicodeEscape() {
         assertThrows(Json.JsonException.class, () -> Json.parse("{\"a\":\"\\u00\"}"));

@@ -195,6 +195,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The manifest reader refuses malformed strings (#1186).** A transitive manifest's JSON is read
+  from a dependency JAR, and the reader's contract is that malformed input raises. It accepted an
+  unescaped control character inside a string, which RFC 8259 forbids, and a sign inside a unicode
+  escape, which `Integer.parseInt` took for a number. Both now raise like any other malformed
+  manifest. Nothing reached a consumer's files that legal escapes could not also write.
+
 - **No missing-file warning for a stem that differs only in case (#1181).** Two modules whose
   granular stems differ only in capitalisation, a class `com.example.Payment` and a package
   `com.example.payment`, share one rule file on Windows and macOS, and the cross-module merge gives

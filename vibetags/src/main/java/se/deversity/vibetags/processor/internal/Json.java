@@ -125,6 +125,17 @@ public final class Json {
         return c >= '0' && c <= '9';
     }
 
+    /** The value of an ASCII hex digit, or {@code -1} for anything else. */
+    private static int hexValue(char c) {
+        if (isDigit(c)) {
+            return c - '0';
+        }
+        if (c >= 'a' && c <= 'f') {
+            return c - 'a' + 10;
+        }
+        return c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
+    }
+
     private static boolean isExponentMarker(char c) {
         return c == 'e' || c == 'E';
     }
@@ -310,6 +321,11 @@ public final class Json {
                 if (c == '"') {
                     return sb.toString();
                 }
+                if (c < 0x20) {
+                    // RFC 8259 section 7: a control character must be escaped (#1186).
+                    throw new JsonException("unescaped control character 0x" + Integer.toHexString(c)
+                        + " in a string at offset " + (pos - 1));
+                }
                 if (c != '\\') {
                     sb.append(c);
                     continue;
@@ -331,12 +347,18 @@ public final class Json {
                         if (pos + 4 > src.length()) {
                             throw new JsonException("truncated \\u escape");
                         }
+                        // Four hex digits and nothing else: Integer.parseInt also takes a sign,
+                        // which read +041 as 'A' (#1186).
                         String hex = src.substring(pos, pos + 4);
-                        try {
-                            sb.append((char) Integer.parseInt(hex, 16));
-                        } catch (NumberFormatException e) {
-                            throw new JsonException("bad \\u escape: " + hex, e);
+                        int code = 0;
+                        for (int k = 0; k < hex.length(); k++) {
+                            int digit = hexValue(hex.charAt(k));
+                            if (digit < 0) {
+                                throw new JsonException("bad \\u escape: " + hex);
+                            }
+                            code = code * 16 + digit;
                         }
+                        sb.append((char) code);
                         pos += 4;
                     }
                     default -> throw new JsonException("unknown escape \\" + esc);
