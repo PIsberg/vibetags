@@ -87,68 +87,111 @@ public final class SourceDigest {
     public static @Nullable String of(String version, Map<String, String> options, String moduleId,
                                       boolean testRound, Path root, Path compilationRoot,
                                       Collection<Path> sourceFiles, String annotations) {
-        MessageDigest sha = sha256();
+        Hasher key = new Hasher(root.toAbsolutePath().normalize());
+        key.settings(version, options, moduleId, testRound, annotations);
+        Set<Path> dirs = new LinkedHashSet<>(List.of(key.base, compilationRoot.toAbsolutePath().normalize()));
+        for (Path dir : dirs) {
+            if (!key.directory(dir)) {
+                return null;
+            }
+        }
+        return key.sources(sourceFiles) ? key.digest() : null;
+    }
+
+    /**
+     * One key being built. The order in which lines reach the hash is part of the key, so every
+     * consumer's next build takes the early exit only if it stays: settings, then each directory,
+     * then the sources in name order.
+     */
+    @SuppressWarnings("PMD.AvoidMessageDigestField") // one Hasher per call to of(), never shared between threads
+    private static final class Hasher {
+        private final MessageDigest sha = sha256();
         // One instance for every file: getInstance does a provider lookup, and per file that was
         // most of what hashing a large round allocated. digest() resets it for the next file.
-        MessageDigest fileSha = sha256();
-        byte[] buffer = new byte[8192];
-        Path base = root.toAbsolutePath().normalize();
-        line(sha, "vibetags " + version);
-        new TreeMap<>(options).forEach((key, value) -> line(sha, "option " + key + "=" + value));
-        line(sha, "module " + moduleId);
-        line(sha, "test " + testRound);
-        if (!annotations.isEmpty()) {
-            line(sha, "annotations " + annotations);
+        private final MessageDigest fileSha = sha256();
+        private final byte[] buffer = new byte[8192];
+        private final Path base;
+
+        Hasher(Path base) {
+            this.base = base;
         }
-        // Mirror targets live in sibling modules, outside both directories hashed below.
-        String mirrors = MirrorConfig.state(base);
-        if (!mirrors.isEmpty()) {
-            line(sha, "mirrors " + mirrors);
+
+        /** Everything that is not a file: the version, the options, the round and the mirrors. */
+        void settings(String version, Map<String, String> options, String moduleId, boolean testRound,
+                      String annotations) {
+            line(sha, "vibetags " + version);
+            new TreeMap<>(options).forEach((key, value) -> line(sha, "option " + key + "=" + value));
+            line(sha, "module " + moduleId);
+            line(sha, "test " + testRound);
+            if (!annotations.isEmpty()) {
+                line(sha, "annotations " + annotations);
+            }
+            // Mirror targets live in sibling modules, outside both directories hashed below.
+            String mirrors = MirrorConfig.state(base);
+            if (!mirrors.isEmpty()) {
+                line(sha, "mirrors " + mirrors);
+            }
         }
-        Set<Path> dirs = new LinkedHashSet<>(List.of(base, compilationRoot.toAbsolutePath().normalize()));
-        for (Path dir : dirs) {
+
+        /** The opt-in files and the {@code .vibetags-*} configuration of {@code dir}; false if unreadable. */
+        boolean directory(Path dir) {
             line(sha, "dir " + name(base, dir));
             new TreeMap<>(ServiceRegistry.buildServiceFileMap(dir))
                 .forEach((key, path) -> line(sha, "opt-in " + key + " " + kindOf(path) + marked(key, path)));
             List<Path> config = configFiles(dir);
             if (config == null) {
-                return null;
+                return false;
             }
             for (Path file : config) {
                 String hash = hashOf(fileSha, buffer, file);
                 if (hash == null) {
-                    return null;
+                    return false;
                 }
                 line(sha, "config " + file.getFileName() + " " + hash);
             }
+            return true;
         }
-        Map<String, Path> sources = new TreeMap<>();
-        for (Path file : sourceFiles) {
-            // Files from RoundSources are already absolute and normalized.
-            sources.put(name(base, file.isAbsolute() ? file : file.toAbsolutePath().normalize()), file);
-        }
-        for (Map.Entry<String, Path> source : sources.entrySet()) {
-            String hash = hashOf(fileSha, buffer, source.getValue());
-            if (hash == null) {
-                return null;
+
+        /** Every source in name order, with what a stub's rule glob also depends on; false if unreadable. */
+        boolean sources(Collection<Path> sourceFiles) {
+            Map<String, Path> sources = new TreeMap<>();
+            for (Path file : sourceFiles) {
+                // Files from RoundSources are already absolute and normalized.
+                sources.put(name(base, file.isAbsolute() ? file : file.toAbsolutePath().normalize()), file);
             }
-            line(sha, "source " + source.getKey() + " " + hash);
-            // A Groovy stub is byte-identical whichever .groovy file declares its type, and that
-            // file is what the type's rule glob names (#973), so it is an input of its own. The
-            // path test is a string match, so a Java build reads nothing more.
-            Path file = source.getValue();
-            // Likewise a kapt stub of a class: the .kapt_metadata beside it names the .kt file (#955).
+            for (Map.Entry<String, Path> source : sources.entrySet()) {
+                String hash = hashOf(fileSha, buffer, source.getValue());
+                if (hash == null) {
+                    return false;
+                }
+                line(sha, "source " + source.getKey() + " " + hash);
+                stubInputs(source.getKey(), source.getValue());
+            }
+            return true;
+        }
+
+        /**
+         * What a stub's rule glob names besides the stub itself. A kapt stub of a class: the
+         * {@code .kapt_metadata} beside it names the {@code .kt} file (#955). A Groovy stub is
+         * byte-identical whichever {@code .groovy} file declares its type, and that file is what the
+         * type's rule glob names (#973). Both tests are string matches, so a Java build reads nothing
+         * more.
+         */
+        private void stubInputs(String name, Path file) {
             Path metadata = StubSourceNames.kaptMetadataOf(file);
             if (metadata != null) {
-                line(sha, "kapt-metadata " + source.getKey() + " " + hashOf(fileSha, buffer, metadata));
+                line(sha, "kapt-metadata " + name + " " + hashOf(fileSha, buffer, metadata));
             }
             if (StubSourceNames.isGroovyStub(file)) {
                 String stub = String.valueOf(file.getFileName());
                 String type = stub.endsWith(".java") ? stub.substring(0, stub.length() - ".java".length()) : stub;
-                line(sha, "groovy-source " + source.getKey() + " " + StubSourceNames.groovyFileName(file, type));
+                line(sha, "groovy-source " + name + " " + StubSourceNames.groovyFileName(file, type));
             }
         }
-        return HexFormat.of().formatHex(sha.digest());
+
+        String digest() {
+            return HexFormat.of().formatHex(sha.digest());
+        }
     }
 
     /** The {@code .vibetags-*} configuration files directly in {@code dir}, sorted; {@code null} if unlistable. */
