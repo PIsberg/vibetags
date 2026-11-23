@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal.validation;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -42,6 +43,9 @@ public final class DuplicateYamlKeyRule {
 
     /** A YAML document separator. Keys either side of one belong to different mappings. */
     private static final Pattern DOCUMENT_START = Pattern.compile("^---(?:[ \\t].*)?$");
+
+    /** U+FEFF, which some editors save at the start of a UTF-8 file and the writer writes back. */
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
 
     /**
      * Files whose reading tool is known, and known to keep the last occurrence. Only named where it
@@ -104,8 +108,14 @@ public final class DuplicateYamlKeyRule {
      * @param markerEnd   the line that closes it
      */
     public static List<Finding> find(String content, Set<String> ownedKeys, String markerStart, String markerEnd) {
-        String[] lines = content.replace("\r\n", "\n").split("\n", -1);
-        return Occurrences.scan(lines, ownedKeys, Block.locate(lines, markerStart, markerEnd)).findings();
+        String text = content.replace("\r\n", "\n");
+        // A byte order mark is encoding, not content: the writer looks for its markers behind one
+        // and writes it back, and left in place it hid the block and a first-line key (#1194).
+        if (!text.isEmpty() && text.charAt(0) == BYTE_ORDER_MARK) {
+            text = text.substring(1);
+        }
+        String[] lines = text.split("\n", -1);
+        return Occurrences.scan(lines, ownedKeys, Block.locate(text, lines.length, markerStart, markerEnd)).findings();
     }
 
     /**
@@ -115,17 +125,27 @@ public final class DuplicateYamlKeyRule {
      */
     private record Block(int start, int end) {
 
-        static Block locate(String[] lines, String markerStart, String markerEnd) {
-            int start = -1;
-            for (int i = 0; i < lines.length; i++) {
-                String line = lines[i].stripTrailing();
-                if (start < 0) {
-                    start = line.equals(markerStart) ? i : -1;
-                } else if (line.equals(markerEnd)) {
-                    return new Block(start, i);
-                }
+        /**
+         * The block the writer would replace in {@code text}, found with the writer's own search
+         * rather than a second marker rule: a marker with whitespace before it still owns its line,
+         * and one inside a code fence is not the block (#1194).
+         */
+        static Block locate(String text, int lineCount, String markerStart, String markerEnd) {
+            int start = GuardrailFileWriter.indexOfBlockStart(text, markerStart);
+            if (start < 0) {
+                return new Block(-1, lineCount);
             }
-            return new Block(start, lines.length);
+            int end = GuardrailFileWriter.indexOfMarkerLine(text, markerEnd, start + markerStart.length());
+            return new Block(lineOf(text, start), end < 0 ? lineCount : lineOf(text, end));
+        }
+
+        /** The 0-based line {@code index} falls on. */
+        private static int lineOf(String text, int index) {
+            int line = 0;
+            for (int i = text.indexOf('\n'); i >= 0 && i < index; i = text.indexOf('\n', i + 1)) {
+                line++;
+            }
+            return line;
         }
 
         boolean exists() {
@@ -170,11 +190,13 @@ public final class DuplicateYamlKeyRule {
                     occurrences.add(i, document, topLevelKey(lines[i]), ownedKeys);
                 }
             }
+            // An appended block goes below everything, into the document the last separator
+            // opens, whether or not a line follows it (#1194).
+            occurrences.lastDocument = document;
             return occurrences;
         }
 
         private void add(int index, int document, @Nullable String key, Set<String> ownedKeys) {
-            lastDocument = document;
             if (index == block.start()) {
                 blockDocument = document;
             }

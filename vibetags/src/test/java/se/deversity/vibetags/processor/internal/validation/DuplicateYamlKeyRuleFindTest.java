@@ -128,4 +128,30 @@ class DuplicateYamlKeyRuleFindTest {
     void aSecondStartMarker_isInsideTheFirstBlock() {
         assertEquals(List.of(), find(START, "read: [a]", START, "read: [b]", END));
     }
+
+    // ------------------------------------------------- the block as the writer finds it (#1194)
+
+    /** U+FEFF, which some editors save at the start of a UTF-8 file, and the writer writes back. */
+    private static final String BOM = "\uFEFF";
+
+    @Test
+    void aByteOrderMarkBeforeTheStartMarker_doesNotHideTheBlock() {
+        assertEquals(List.of(), find(BOM + START, "read: [a]", END));
+    }
+
+    @Test
+    void aByteOrderMarkBeforeAHandKeyOnTheFirstLine_doesNotHideTheKey() {
+        assertEquals(List.of(new Finding("read", 1, 3, 3)), find(BOM + "read: [x]", START, "read: [a]", END));
+    }
+
+    @Test
+    void indentedMarkers_delimitTheBlock_asTheyDoForTheWriter() {
+        assertEquals(List.of(new Finding("read", 1, 3, 3)),
+            find("read: [x]", "  " + START, "read: [a]", "  " + END));
+    }
+
+    @Test
+    void withNoBlock_aSeparatorOnTheLastLine_startsTheDocumentTheBlockIsAppendedTo_withOrWithoutANewline() {
+        assertEquals(List.of(), DuplicateYamlKeyRule.find("read: [x]\n---", OWNED, START, END));
+    }
 }

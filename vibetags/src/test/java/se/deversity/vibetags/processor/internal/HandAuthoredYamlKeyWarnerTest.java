@@ -196,6 +196,18 @@ class HandAuthoredYamlKeyWarnerTest {
         assertEquals(1, warnings.size(), "must warn on messager even when logger is null");
     }
 
+    /** The writer keeps an editor's byte order mark and finds its markers behind it; so must this (#1194). */
+    @Test
+    void warn_aByteOrderMarkInFrontOfTheBlock_isSilent(@TempDir Path root) throws IOException {
+        Path aiderConf = root.resolve(".aider.conf.yml");
+        Files.writeString(aiderConf, "\uFEFF# VIBETAGS-START\nread:\n  - gen-file.txt\n# VIBETAGS-END\n",
+            StandardCharsets.UTF_8);
+
+        HandAuthoredYamlKeyWarner.warn(messager, logger, root, Map.of("aider_conf", aiderConf));
+
+        assertEquals(List.of(), warnings, "the generated block's own key is not a hand-written duplicate");
+    }
+
     @Test
     void warn_noDuplicateKey_isSilent(@TempDir Path root) throws IOException {
         Path aiderConf = root.resolve(".aider.conf.yml");
