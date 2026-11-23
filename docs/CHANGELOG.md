@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Condition (1) of the partial-round guard returns what it found.**
+  `PartialRoundDetector.missingRecordedElements` (cognitive complexity 23, seven parameters) filled
+  two of its caller's sets as output arguments; it now returns a `Missing` record. Two of its four
+  rules were held by no test, since #1065 and #1119 had made them reachable only through a sidecar
+  written before #1065; a case for each now makes one and fails without the rule.
 - **The early-exit key is built by one `Hasher`.** `SourceDigest.of` (cognitive complexity 23,
   eight parameters) threaded a running hash, a per-file hash and a buffer through one body; the
   nested `Hasher` holds them and names the phases `settings`, `directory` and `sources`. The
