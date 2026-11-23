@@ -286,4 +286,63 @@ class RoleConfigTest {
             "legacy = com.example.legacy.WeirdEndpoint");
         assertEquals("endpoints", roles.roleFor(type("com.example.legacy.WeirdEndpoint")).orElse(null));
     }
+
+    @Test
+    @DisplayName("a role of exact names only routes them and declares no glob")
+    void aRoleOfExactNamesOnly(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "legacy = com.example.A, com.example.B");
+
+        assertEquals("legacy", roles.roleFor(type("com.example.B")).orElse(null));
+        assertTrue(roles.roleFor(type("com.example.C")).isEmpty());
+        assertEquals(List.of(), roles.globsFor("legacy"));
+    }
+
+    @Test
+    @DisplayName("a line whose only matcher does not compile is no role, and the name's later line still is")
+    void aLineOfOnlyAMalformedGlobIsNoRole(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir,
+            "api = **/*{Controller.java",
+            "api = **/*Endpoint.java");
+
+        assertEquals(List.of("**/*Endpoint.java"), roles.globsFor("api"));
+        assertEquals("api", roles.roleFor(type("com.example.OrderEndpoint")).orElse(null));
+    }
+
+    @Test
+    @DisplayName("whitespace around the name and each matcher is not part of them")
+    void whitespaceAroundNameAndMatchersIsTrimmed(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "\t api  =   **/*Controller.java  ,\t com.example.Legacy  ");
+
+        assertEquals(List.of("**/*Controller.java"), roles.globsFor("api"));
+        assertEquals("api", roles.roleFor(type("com.example.Legacy")).orElse(null));
+        assertEquals("api", roles.granularStemFor(type("com.example.web.OrderController")));
+    }
+
+    @Test
+    @DisplayName("a comma inside a brace group belongs to the glob, one outside it separates matchers")
+    void aBraceGroupKeepsItsComma(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "api = **/*{Controller,Service}.java, com.example.Legacy");
+
+        assertEquals(List.of("**/*{Controller,Service}.java"), roles.globsFor("api"));
+        assertEquals("api", roles.roleFor(type("com.example.OrderService")).orElse(null));
+        assertEquals("api", roles.roleFor(type("com.example.Legacy")).orElse(null));
+    }
+
+    @Test
+    @DisplayName("a commented-out role line is a comment, '=' and all")
+    void aCommentedOutRoleIsNoRole(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "# api = **/*Controller.java", "  #models = **/*Entity.java");
+
+        assertTrue(roles.isEmpty());
+        assertTrue(roles.roleFor(type("com.example.OrderController")).isEmpty());
+    }
+
+    @Test
+    @DisplayName("everything after the first '=' is matchers")
+    void onlyTheFirstEqualsSeparatesTheName(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "api = **/*Controller.java = **/*Service.java");
+
+        assertEquals(List.of("**/*Controller.java = **/*Service.java"), roles.globsFor("api"));
+        assertFalse(roles.isEmpty());
+    }
 }
