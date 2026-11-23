@@ -136,6 +136,45 @@ class PartialRoundGuardrailLossTest {
     }
 
     /**
+     * The same case with the test sidecar written before #1065, so recording no source roots: a
+     * consumer upgrading keeps such files on disk until their source set recompiles. Without roots
+     * the sidecar is judged by containment alone, which it passes, and only the source-set check
+     * keeps its elements out of a main round's missing ones. No other case reached that check, since
+     * a sidecar that recorded roots is left out earlier.
+     */
+    @Test
+    void aMainRoundIsNotPartialBecauseAnOlderTestSidecarRecordsElementsOfItsOwn(@TempDir Path root)
+            throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve("core"));
+        Files.writeString(root.resolve("core/pom.xml"), "<project><artifactId>core</artifactId></project>",
+            StandardCharsets.UTF_8);
+        Path alpha = lockedSource(root, "core/src/main/java/com/example/Alpha.java", "Alpha", "alpha-v1");
+        lockedSource(root, "core/src/main/java/com/example/Excluded.java", "Excluded", "excluded");
+        Path alphaTest = lockedSource(root, "core/src/test/java/com/example/AlphaTest.java", "AlphaTest", "fixture");
+        compileSources(root, alpha);
+        compileSources(root, alphaTest);
+        forgetRecordedRoots(root.resolve(".vibetags-mod-core__test"));
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        lockedSource(root, "core/src/main/java/com/example/Alpha.java", "Alpha", "alpha-v2");
+        compileSources(root, alpha);
+
+        assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("alpha-v2"),
+            "an older test sidecar's elements were never the main round's to produce");
+    }
+
+    /** Takes the recorded source roots out of a sidecar, as one written before #1065 has none. */
+    private static void forgetRecordedRoots(Path sidecar) throws IOException {
+        assertTrue(Files.isRegularFile(sidecar), "precondition: " + sidecar.getFileName() + " exists");
+        List<String> lines = Files.readAllLines(sidecar, StandardCharsets.UTF_8);
+        List<String> kept = lines.stream().filter(line -> !line.startsWith("~roots=")).toList();
+        assertTrue(kept.size() < lines.size(), "precondition: " + sidecar.getFileName() + " recorded its roots");
+        Files.write(sidecar, kept, StandardCharsets.UTF_8);
+    }
+
+    /**
      * Condition (1) consults every sidecar whose module directory contains this round's source
      * root, and the reactor root's sidecar has the whole tree as its directory. A root that compiles
      * sources of its own records elements no module round produces, so while that sidecar existed
@@ -191,6 +230,35 @@ class PartialRoundGuardrailLossTest {
                 + "the round was never shown it and must not retire its rule file");
         assertTrue(Files.readString(root.resolve("CLAUDE.md"), StandardCharsets.UTF_8).contains("Beta"),
             "the aggregate must keep indexing Beta as well");
+    }
+
+    /**
+     * The same round with a sidecar written before #1065, which recorded no source roots: then the
+     * module directory is all the walk for the missing element has, and it is what finds Beta in
+     * the root this round did not compile. No other case needed the directory, because a sidecar
+     * that recorded its roots names {@code src/main/extra} itself.
+     */
+    @Test
+    void anOlderSidecarStillHasItsModuleDirectoryWalkedForTheOtherRoot(@TempDir Path root)
+            throws Exception {
+        Files.createDirectories(root.resolve(".claude/rules"));
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Path alpha = write(root, "Alpha", "alpha-routing");
+        Path beta = writeUnder(root, "src/main/extra", "Beta", "@AIContext(focus = " + Q + "beta-routing" + Q + ")");
+        compileAll(root, alpha, beta);
+        assertTrue(Files.exists(rule(root, "Beta")), "precondition: Beta's rule file was written");
+        try (java.util.stream.Stream<Path> sidecars = Files.list(root)) {
+            for (Path sidecar : sidecars.filter(p -> String.valueOf(p.getFileName()).startsWith(".vibetags-mod-")).toList()) {
+                forgetRecordedRoots(sidecar);
+            }
+        }
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        VibeTagsLogger.shutdown();
+        compileSubset(root, alpha);
+
+        assertTrue(Files.exists(rule(root, "Beta")),
+            "Beta is still annotated in src/main/extra; an older sidecar's round must not retire it");
     }
 
     /**
