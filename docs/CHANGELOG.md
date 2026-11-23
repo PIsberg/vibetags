@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`GuardrailContentBuilder.build` reads as its phases.** The 100-line method (cognitive
+  complexity 25) computed the granular rules, assembled the rendering context and rendered three
+  kinds of service in one body. It now calls `elementRules`, `renderingContext`, `renderOptedIn`,
+  `renderImplicitChildren` and `renderAiExclude`, in the order the returned map holds them. No
+  change to any generated file: `GuardrailContentBuilderPhaseOrderTest` came first and pins the
+  order and the set of services rendered, which only presence checks covered before.
 - **The method-body scanner answers both of its value questions with one walk.**
   `MethodBodyGuardrailScanner` asked "is this value spelled out?" (cognitive complexity 26) and
   "does this round determine it?" (33) by two recursions over the same six shapes that only combine
