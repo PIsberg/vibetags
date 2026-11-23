@@ -151,6 +151,7 @@ public final class TomlValueSpans {
         /** The line that opens the table, or {@code null} when the document has no such table. */
         private @Nullable Line header() {
             List<Line> headers = new ArrayList<>();
+            boolean atRoot = true;
             for (Line line : lines) {
                 if (!line.normal()) {
                     continue;
@@ -163,9 +164,12 @@ public final class TomlValueSpans {
                 }
                 if (compact.equals("[" + table + "]") || compact.startsWith("[" + table + "]#")) {
                     headers.add(line);
-                } else if (compact.startsWith(table + ".") || compact.startsWith(table + "=")) {
+                } else if (atRoot && (compact.startsWith(table + ".") || compact.startsWith(table + "="))) {
                     throw new Refused("dotted-key", table + " is set with a dotted key or an inline table");
                 }
+                // Below a header, the same key belongs to that header's table: [tool] followed by
+                // pr_reviewer.x is tool.pr_reviewer.x, and nothing this merge is looking for (#1172).
+                atRoot = atRoot && !compact.startsWith("[");
             }
             if (headers.size() > 1) {
                 throw new Refused("duplicate-table", "[" + table + "] is defined twice");

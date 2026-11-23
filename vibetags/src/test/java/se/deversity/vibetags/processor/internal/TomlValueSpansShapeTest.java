@@ -319,4 +319,18 @@ class TomlValueSpansShapeTest {
         refuses("notes = '''\nnever closed\n", "unclosed-value", detail);
         refuses("[pr_reviewer]\nnum = 3\nx = [1, 2\n", "unclosed-value", detail);
     }
+
+    /**
+     * {@code pr_reviewer.x} under {@code [tool]} is {@code tool.pr_reviewer.x}, another table
+     * altogether (#1172). Only at the root, before any header, does a dotted key or an inline
+     * table define the table this merge is looking for.
+     */
+    @Test
+    @DisplayName("a dotted key inside another table is that table's business")
+    void aDottedKeyInsideAnotherTableIsNotThisTable() {
+        merges("[tool]\npr_reviewer.x = 1\npr_code_suggestions = { y = 2 }\n",
+            "[tool]\npr_reviewer.x = 1\npr_code_suggestions = { y = 2 }\n\n[pr_reviewer]\nextra_instructions = \"\"\"\n" + SPAN + "\n\"\"\"\n\n[pr_code_suggestions]\nextra_instructions = \"\"\"\n" + SPAN + "\n\"\"\"\n");
+        refuses("pr_reviewer.x = 1\n[tool]\ny = 2\n",
+            "dotted-key", "pr_reviewer is set with a dotted key or an inline table");
+    }
 }
