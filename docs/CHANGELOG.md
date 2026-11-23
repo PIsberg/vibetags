@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The missing-sibling-rule-file warning reads as its steps.**
+  `AIGuardrailProcessor.warnAboutSiblingRuleFilesThatAreMissing` (cognitive complexity 25) was four
+  loops deep; `granularDirectories` and `addMissingSiblingStems` now take the first two steps. A
+  case added first pins that a module's first build does not report the files it is about to
+  write, which no test failed without; reading the check for it found #1181.
 - **The reactor root's scoped-index hoist is a class of its own.** `ModuleSidecar.hoistScopedIndex`
   (cognitive complexity 23) is now `ScopedIndexHoist`, whose `Section.in` reads one module's
   section and refuses one of another shape, and `applyRootIndexModeTo` (20) links each module
