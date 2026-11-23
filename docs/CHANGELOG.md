@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A shared Markdown section folds its intro, bullets and closing in separate steps.**
+  `MarkdownSectionMerge.foldSection` (cognitive complexity 23) is now `foldIntro`, `foldBullets`
+  and `foldClosing`. A new case pins that a middle section closed two different ways declines,
+  which no test failed without; reading the merge for it found #1190.
 - **An element's type is rendered one kind at a time.** `ElementNaming.typeString` (cognitive
   complexity 23) is a pattern switch with `wildcardString`, `declaredString` and `variableString`.
   A new parity case pins that a type-use annotation on a type variable stays out of the identity,
