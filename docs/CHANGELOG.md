@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The early-exit key is built by one `Hasher`.** `SourceDigest.of` (cognitive complexity 23,
+  eight parameters) threaded a running hash, a per-file hash and a buffer through one body; the
+  nested `Hasher` holds them and names the phases `settings`, `directory` and `sources`. The
+  key is unchanged, so no consumer misses an exit: nine digests captured before the change are
+  byte-identical after it.
 - **The missing-sibling-rule-file warning reads as its steps.**
   `AIGuardrailProcessor.warnAboutSiblingRuleFilesThatAreMissing` (cognitive complexity 25) was four
   loops deep; `granularDirectories` and `addMissingSiblingStems` now take the first two steps. A
