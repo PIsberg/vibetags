@@ -36,6 +36,9 @@ public final class MarkdownSectionMerge {
     private static final Pattern ANY_HEADING = Pattern.compile("#{1,6} \\S.*");
     private static final Pattern BULLET = Pattern.compile("(?:[-*+]|\\d+\\.) .*");
 
+    /** The deepest Markdown heading level. */
+    private static final int MAX_LEVEL = 6;
+
     private MarkdownSectionMerge() {
     }
 
@@ -73,8 +76,10 @@ public final class MarkdownSectionMerge {
 
     private static @Nullable List<Container> parse(String body) {
         List<Container> containers = new ArrayList<>();
-        Container current = new Container(null);
+        Container current = new Container(null, null);
         containers.add(current);
+        // The heading open at each level, so a section is known by its parents too (#1190).
+        String[] path = new String[MAX_LEVEL + 1];
         boolean inSections = false;
         Item open = null;
         int blanks = 0;
@@ -86,7 +91,7 @@ public final class MarkdownSectionMerge {
             }
             if ((inSections ? ANY_HEADING : SECTION_HEADING).matcher(line).matches()) {
                 current.trailingBlanks = blanks;
-                current = new Container(line);
+                current = new Container(line, pathTo(path, line));
                 containers.add(current);
                 inSections = true;
                 open = null;
@@ -142,7 +147,7 @@ public final class MarkdownSectionMerge {
             }
             return tail;
         }
-        Container same = merged == null ? null : find(merged, last.heading);
+        Container same = merged == null ? null : find(merged, last.key);
         if (same == null) {
             return tail;
         }
@@ -166,7 +171,7 @@ public final class MarkdownSectionMerge {
         boolean anyShared = false;
         for (int k = 1; k < incoming.size(); k++) {
             Container section = incoming.get(k);
-            int at = indexOf(merged, section.heading);
+            int at = indexOf(merged, section.key);
             if (at < 0) {
                 int before = nextShared(merged, incoming, k);
                 int position = before >= 0 ? before : anyShared ? cursor + 1 : merged.size();
@@ -192,8 +197,23 @@ public final class MarkdownSectionMerge {
             return false;
         }
         int firstBullet = firstBullet(incoming.items);
+        if (firstBullet < 0) {
+            return foldIntro(existing, incoming.items);
+        }
         int lastBullet = lastBullet(incoming.items);
-        List<Item> intro = firstBullet < 0 ? incoming.items : incoming.items.subList(0, firstBullet);
+        if (!foldIntro(existing, incoming.items.subList(0, firstBullet))) {
+            return false;
+        }
+        foldBullets(existing, incoming.items.subList(firstBullet, lastBullet + 1));
+        return foldClosing(existing, incoming.items.subList(lastBullet + 1, incoming.items.size()));
+    }
+
+    /**
+     * The paragraphs before the incoming section's first bullet. One the existing section lacks
+     * goes at its very top, and only while the existing section has no intro of its own:
+     * otherwise the two intros differ, and that declines.
+     */
+    private static boolean foldIntro(Container existing, List<Item> intro) {
         for (Item paragraph : intro) {
             if (indexOfText(existing.items, paragraph.text()) >= 0) {
                 continue;
@@ -204,15 +224,16 @@ public final class MarkdownSectionMerge {
             }
             existing.items.add(0, paragraph);
         }
-        if (firstBullet < 0) {
-            return true;
-        }
+        return true;
+    }
+
+    /** Every incoming bullet the existing section lacks, after its own last bullet, in order. */
+    private static void foldBullets(Container existing, List<Item> bullets) {
         int insertAt = lastBullet(existing.items) + 1;
         if (insertAt == 0) {
             insertAt = existing.items.size();
         }
         boolean existingHasBullets = firstBullet(existing.items) >= 0;
-        List<Item> bullets = incoming.items.subList(firstBullet, lastBullet + 1);
         boolean first = true;
         for (Item bullet : bullets) {
             if (indexOfText(existing.items, bullet.text()) >= 0) {
@@ -222,7 +243,15 @@ public final class MarkdownSectionMerge {
             existing.items.add(insertAt++, new Item(true, bullet.text(), blanks));
             first = false;
         }
-        for (Item paragraph : incoming.items.subList(lastBullet + 1, incoming.items.size())) {
+    }
+
+    /**
+     * The paragraphs after the incoming section's last bullet. One the existing section lacks is
+     * appended only while nothing follows its own last bullet: otherwise the closings differ, and
+     * that declines.
+     */
+    private static boolean foldClosing(Container existing, List<Item> closing) {
+        for (Item paragraph : closing) {
             if (indexOfText(existing.items, paragraph.text()) >= 0) {
                 continue;
             }
@@ -261,7 +290,7 @@ public final class MarkdownSectionMerge {
     /** Where in {@code merged} the first section after {@code incoming[k]} that both have sits, or -1. */
     private static int nextShared(List<Container> merged, List<Container> incoming, int k) {
         for (int j = k + 1; j < incoming.size(); j++) {
-            int at = indexOf(merged, incoming.get(j).heading);
+            int at = indexOf(merged, incoming.get(j).key);
             if (at >= 0) {
                 return at;
             }
@@ -294,19 +323,40 @@ public final class MarkdownSectionMerge {
         return sb.substring(0, end);
     }
 
-    private static @Nullable Container find(List<Container> containers, @Nullable String heading) {
-        int at = heading == null ? 0 : indexOf(containers, heading);
+    private static @Nullable Container find(List<Container> containers, @Nullable String key) {
+        int at = key == null ? 0 : indexOf(containers, key);
         return at < 0 ? null : containers.get(at);
     }
 
-    private static int indexOf(List<Container> containers, @Nullable String heading) {
+    private static int indexOf(List<Container> containers, @Nullable String key) {
         for (int i = 1; i < containers.size(); i++) {
-            String candidate = containers.get(i).heading;
-            if (candidate != null && candidate.equals(heading)) {
+            String candidate = containers.get(i).key;
+            if (candidate != null && candidate.equals(key)) {
                 return i;
             }
         }
         return -1;
+    }
+
+    /**
+     * Records {@code heading} at its level in {@code path}, closes every deeper level, and returns
+     * the headings now open, outermost first: the section's key.
+     */
+    private static String pathTo(@Nullable String[] path, String heading) {
+        int level = 0;
+        while (level < heading.length() && heading.charAt(level) == '#') {
+            level++;
+        }
+        path[level] = heading;
+        StringBuilder key = new StringBuilder();
+        for (int l = 1; l <= MAX_LEVEL; l++) {
+            if (l > level) {
+                path[l] = null;
+            } else if (path[l] != null) {
+                key.append(path[l]).append('\n');
+            }
+        }
+        return key.toString();
     }
 
     private static int indexOfText(List<Item> items, String text) {
@@ -344,14 +394,20 @@ public final class MarkdownSectionMerge {
         return -1;
     }
 
-    /** The lead ({@code heading == null}) or one section, with the blank lines that follow it. */
+    /**
+     * The lead ({@code heading == null}) or one section, with the blank lines that follow it. A
+     * section is matched across bodies by {@code key}, its heading under the headings that enclose
+     * it, so one heading under two parents is two sections (#1190).
+     */
     private static final class Container {
         final @Nullable String heading;
+        final @Nullable String key;
         final List<Item> items = new ArrayList<>();
         int trailingBlanks;
 
-        Container(@Nullable String heading) {
+        Container(@Nullable String heading, @Nullable String key) {
             this.heading = heading;
+            this.key = key;
         }
     }
 

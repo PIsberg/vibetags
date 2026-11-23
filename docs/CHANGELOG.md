@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A shared Markdown section folds its intro, bullets and closing in separate steps.**
+  `MarkdownSectionMerge.foldSection` (cognitive complexity 23) is now `foldIntro`, `foldBullets`
+  and `foldClosing`. A new case pins that a middle section closed two different ways declines,
+  which no test failed without; reading the merge for it found #1190.
 - **An element's type is rendered one kind at a time.** `ElementNaming.typeString` (cognitive
   complexity 23) is a pattern switch with `wildcardString`, `declaredString` and `variableString`.
   A new parity case pins that a type-use annotation on a type variable stays out of the identity,
@@ -202,6 +206,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds, `vibetags`'s Gradle build and the kotlin, kotlin-ksp, groovy, scala and basic examples.
 
 ### Fixed
+
+- **A repeated heading keeps its rules under its own section when source sets merge (#1190).**
+  `llms-full.txt` writes `### <class>` under each annotation's section, so a class with two
+  annotations has one heading twice. Merging a module's main and test bodies matched sections by the
+  heading line alone, and filed the second copy's rules under the first copy's section: a test
+  class's context rule appeared under LOCKED, and CONTEXT lost the class. A section is now matched
+  by its heading under its parents.
 
 - **The manifest reader refuses malformed strings (#1186).** A transitive manifest's JSON is read
   from a dependency JAR, and the reader's contract is that malformed input raises. It accepted an
