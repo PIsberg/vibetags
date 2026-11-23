@@ -33,7 +33,8 @@ Two places an annotation can be written and silently mean nothing, both inherent
 rather than to VibeTags:
 
 - **Method bodies.** Annotation processing sees declarations, not statements: `@AI*` on a local
-  class or an anonymous class member never reaches the processor. Whenever the processor runs at
+  class (in a method body, an initializer block or a lambda) or on an anonymous class member never
+  reaches the processor. Whenever the processor runs at
   all it detects these through the javac Tree API and emits a WARNING (hoist the guarded logic to
   a named member); a compilation whose *only* VibeTags annotations sit inside bodies never
   triggers the processor in the first place — see the SPI section of

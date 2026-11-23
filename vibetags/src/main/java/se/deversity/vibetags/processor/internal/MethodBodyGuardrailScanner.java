@@ -13,7 +13,6 @@ import com.sun.source.tree.ImportTree;
 import com.sun.source.tree.LambdaExpressionTree;
 import com.sun.source.tree.LiteralTree;
 import com.sun.source.tree.MemberSelectTree;
-import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.NewArrayTree;
 import com.sun.source.tree.ParenthesizedTree;
 import com.sun.source.tree.Tree;
@@ -45,6 +44,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -215,20 +215,26 @@ public final class MethodBodyGuardrailScanner {
                     continue;
                 }
                 for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
-                    for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
-                        if (!annotation.equals(mirror.getAnnotationType().asElement())) {
-                            continue;
-                        }
-                        for (AnnotationValue value : mirror.getElementValues().values()) {
-                            if (!spelledOutInTheRound(value.getValue(), element, roots, sources)) {
-                                outsideValues++;
-                            }
-                        }
-                    }
+                    countExplicitValues(element, annotation, roots, sources);
                 }
             }
         } catch (RuntimeException unanswerable) {
             outsideValues++; // a round this cannot read is not one to vouch for
+        }
+    }
+
+    /** Adds each value {@code element}'s {@code annotation} sets that the round's text does not spell. */
+    private void countExplicitValues(Element element, TypeElement annotation, Set<? extends Element> roots,
+                                     RoundSources sources) {
+        for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
+            if (!annotation.equals(mirror.getAnnotationType().asElement())) {
+                continue;
+            }
+            for (AnnotationValue value : mirror.getElementValues().values()) {
+                if (!spelledOutInTheRound(value.getValue(), element, roots, sources)) {
+                    outsideValues++;
+                }
+            }
         }
     }
 
@@ -260,7 +266,7 @@ public final class MethodBodyGuardrailScanner {
         if (value instanceof VariableElement || value instanceof TypeMirror || value == UseSiteAnnotationValues.NAMED) {
             return true; // an enum constant or a class literal: the source names it
         }
-        if (value instanceof java.util.List<?> list) {
+        if (value instanceof List<?> list) {
             for (Object item : list) {
                 Object inner = item instanceof AnnotationValue av ? av.getValue() : item;
                 if (!spelledOutInTheRound(inner, element, roots, sources)) {
@@ -408,9 +414,16 @@ public final class MethodBodyGuardrailScanner {
         return false;
     }
 
+    /** A test applied to each leaf of a value; see {@code BodyScanner#everyOperand}. */
+    @FunctionalInterface
+    private interface Leaf {
+        boolean accepts(@Nullable TreePath path, Tree leaf);
+    }
+
     /**
      * Finds declarations the element model cannot reach: any anonymous class (empty simple name),
-     * and any named class declared while inside a method body. Named member classes at nesting
+     * and any named class declared inside a block or a lambda: a method body, an initializer, or a
+     * lambda in a field initializer. Named member classes at nesting
      * depth zero are ordinary elements and are left to the normal processing path.
      */
     private final class BodyScanner extends TreeScanner<Void, Void> {
@@ -418,8 +431,10 @@ public final class MethodBodyGuardrailScanner {
         private final CompilationUnitTree unit;
         private final boolean imported;
         private final Set<? extends Element> roots;
-        private int methodDepth;
-        /** Depth inside statements, whose annotations javac has not attributed yet during processing. */
+        /**
+         * Depth inside statements (blocks and lambdas): a class declared there is local, and
+         * annotations there have not been attributed by javac yet during processing.
+         */
         private int statementDepth;
 
         BodyScanner(CompilationUnitTree unit, boolean imported, Set<? extends Element> roots) {
@@ -457,25 +472,30 @@ public final class MethodBodyGuardrailScanner {
         @Override
         public Void visitAnnotation(AnnotationTree annotation, Void p) {
             if (statementDepth == 0 && isGuardrail(annotation)) {
-                String name = annotation.getAnnotationType().toString();
-                Class<? extends Annotation> type = BY_SIMPLE_NAME.get(name.substring(name.lastIndexOf('.') + 1));
-                TreePath annotationPath = null;
-                for (ExpressionTree argument : annotation.getArguments()) {
-                    ExpressionTree value = argument instanceof AssignmentTree assigned
-                        ? assigned.getExpression() : argument;
-                    if (spelledOut(value) || isEnumAttribute(type, argument)) {
-                        continue;
-                    }
-                    if (annotationPath == null) {
-                        annotationPath = TreePath.getPath(unit, annotation);
-                    }
-                    if (annotationPath == null
-                            || !determinedByTheRound(new TreePath(annotationPath, argument), value)) {
-                        outsideValues++;
-                    }
-                }
+                countValuesFromOutsideTheRound(annotation);
             }
             return super.visitAnnotation(annotation, null);
+        }
+
+        /** Adds each argument of {@code annotation} that this round's sources do not determine. */
+        private void countValuesFromOutsideTheRound(AnnotationTree annotation) {
+            String name = annotation.getAnnotationType().toString();
+            Class<? extends Annotation> type = BY_SIMPLE_NAME.get(name.substring(name.lastIndexOf('.') + 1));
+            TreePath annotationPath = null;
+            for (ExpressionTree argument : annotation.getArguments()) {
+                ExpressionTree value = argument instanceof AssignmentTree assigned
+                    ? assigned.getExpression() : argument;
+                if (spelledOut(value) || isEnumAttribute(type, argument)) {
+                    continue;
+                }
+                if (annotationPath == null) {
+                    annotationPath = TreePath.getPath(unit, annotation);
+                }
+                if (annotationPath == null
+                        || !determinedByTheRound(new TreePath(annotationPath, argument), value)) {
+                    outsideValues++;
+                }
+            }
         }
 
         private boolean isGuardrail(AnnotationTree annotation) {
@@ -506,38 +526,8 @@ public final class MethodBodyGuardrailScanner {
         }
 
         /** Whether {@code value} is written out in full: literals, class literals, and operators over them. */
-        private boolean spelledOut(@Nullable Tree value) {
-            if (value instanceof LiteralTree) {
-                return true;
-            }
-            if (value instanceof ParenthesizedTree parenthesized) {
-                return spelledOut(parenthesized.getExpression());
-            }
-            if (value instanceof UnaryTree unary) {
-                return spelledOut(unary.getExpression());
-            }
-            if (value instanceof BinaryTree binary) {
-                return spelledOut(binary.getLeftOperand()) && spelledOut(binary.getRightOperand());
-            }
-            if (value instanceof ConditionalExpressionTree conditional) {
-                return spelledOut(conditional.getCondition()) && spelledOut(conditional.getTrueExpression())
-                    && spelledOut(conditional.getFalseExpression());
-            }
-            if (value instanceof TypeCastTree cast) {
-                return spelledOut(cast.getExpression());
-            }
-            if (value instanceof NewArrayTree array) {
-                if (array.getInitializers() == null) {
-                    return false;
-                }
-                for (ExpressionTree element : array.getInitializers()) {
-                    if (!spelledOut(element)) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            return value instanceof MemberSelectTree select && select.getIdentifier().contentEquals("class");
+        private static boolean spelledOut(@Nullable Tree value) {
+            return value != null && everyOperand(null, value, (path, leaf) -> isWrittenOut(leaf));
         }
 
         /**
@@ -546,52 +536,73 @@ public final class MethodBodyGuardrailScanner {
          * initializer. {@code parent} is the path of the tree {@code value} sits directly in.
          */
         private boolean determinedByTheRound(TreePath parent, Tree value) {
-            if (spelledOut(value)) {
-                return true;
-            }
+            return everyOperand(parent, value, (path, leaf) -> isWrittenOut(leaf) || namesARoundConstant(path, leaf));
+        }
+
+        /**
+         * Whether {@code leaf} accepts every leaf of {@code value}, looking through what only combines
+         * other values ({@link #operandsOf}). Each leaf is offered with its own path when
+         * {@code parent} is the path of the tree {@code value} sits directly in, and with none when
+         * {@code parent} is {@code null}.
+         */
+        private static boolean everyOperand(@Nullable TreePath parent, Tree value, Leaf leaf) {
             // Trees compare by identity; equals() is that comparison, spelled the way PMD accepts.
-            TreePath here = parent.getLeaf().equals(value) ? parent : new TreePath(parent, value);
-            if (value instanceof ParenthesizedTree parenthesized) {
-                return determinedByTheRound(here, parenthesized.getExpression());
+            TreePath here = (parent == null || parent.getLeaf().equals(value)) ? parent : new TreePath(parent, value);
+            List<? extends Tree> operands = operandsOf(value);
+            if (operands == null) {
+                return leaf.accepts(here, value);
             }
-            if (value instanceof UnaryTree unary) {
-                return determinedByTheRound(here, unary.getExpression());
-            }
-            if (value instanceof TypeCastTree cast) {
-                return determinedByTheRound(here, cast.getExpression());
-            }
-            if (value instanceof BinaryTree binary) {
-                return determinedByTheRound(here, binary.getLeftOperand())
-                    && determinedByTheRound(here, binary.getRightOperand());
-            }
-            if (value instanceof ConditionalExpressionTree conditional) {
-                return determinedByTheRound(here, conditional.getCondition())
-                    && determinedByTheRound(here, conditional.getTrueExpression())
-                    && determinedByTheRound(here, conditional.getFalseExpression());
-            }
-            if (value instanceof NewArrayTree array && array.getInitializers() != null) {
-                for (ExpressionTree element : array.getInitializers()) {
-                    if (!determinedByTheRound(here, element)) {
-                        return false;
-                    }
+            for (Tree operand : operands) {
+                if (!everyOperand(here, operand, leaf)) {
+                    return false;
                 }
-                return true;
             }
+            return true;
+        }
+
+        /**
+         * The values {@code value} combines without adding one of its own: the operand of
+         * parentheses, a unary operator or a cast, both of a binary operator, all three of a
+         * conditional, every element of an array initializer. {@code null} for a leaf, which
+         * includes an array created by size, since it has no initializer to look through.
+         */
+        private static @Nullable List<? extends Tree> operandsOf(Tree value) {
+            return switch (value) {
+                case ParenthesizedTree parenthesized -> List.of(parenthesized.getExpression());
+                case UnaryTree unary -> List.of(unary.getExpression());
+                case TypeCastTree cast -> List.of(cast.getExpression());
+                case BinaryTree binary -> List.of(binary.getLeftOperand(), binary.getRightOperand());
+                case ConditionalExpressionTree conditional -> List.of(conditional.getCondition(),
+                    conditional.getTrueExpression(), conditional.getFalseExpression());
+                case NewArrayTree array -> array.getInitializers();
+                default -> null;
+            };
+        }
+
+        /** A literal or a class literal: a leaf whose value the source itself spells. */
+        private static boolean isWrittenOut(Tree leaf) {
+            return leaf instanceof LiteralTree
+                || (leaf instanceof MemberSelectTree select && select.getIdentifier().contentEquals("class"));
+        }
+
+        /**
+         * Whether {@code leaf}, at {@code path}, names an enum constant or a field a root type of
+         * this round declares with a spelled-out initializer.
+         */
+        private boolean namesARoundConstant(@Nullable TreePath path, Tree leaf) {
             Trees api = trees;
-            if (api == null || !(value instanceof IdentifierTree || value instanceof MemberSelectTree)) {
+            if (api == null || path == null || !(leaf instanceof IdentifierTree || leaf instanceof MemberSelectTree)) {
                 return false;
             }
-            Element named = api.getElement(here);
+            Element named = api.getElement(path);
             if (named == null) {
                 return false;
             }
-            if (named.getKind() == ElementKind.ENUM_CONSTANT) {
-                return true;
-            }
-            if (named.getKind() != ElementKind.FIELD || !roots.contains(outermostTypeOf(named))) {
-                return false;
-            }
-            return api.getTree(named) instanceof VariableTree declared && spelledOut(declared.getInitializer());
+            return named.getKind() == ElementKind.ENUM_CONSTANT
+                || (named.getKind() == ElementKind.FIELD
+                    && roots.contains(outermostTypeOf(named))
+                    && api.getTree(named) instanceof VariableTree declared
+                    && spelledOut(declared.getInitializer()));
         }
 
         /** The top-level type {@code element} is declared in, or {@code null} when it has none. */
@@ -608,19 +619,11 @@ public final class MethodBodyGuardrailScanner {
         }
 
         @Override
-        public Void visitMethod(MethodTree method, Void p) {
-            methodDepth++;
-            try {
-                return super.visitMethod(method, null);
-            } finally {
-                methodDepth--;
-            }
-        }
-
-        @Override
         public Void visitClass(ClassTree type, Void p) {
+            // A named class inside a block or a lambda is local, whether that block is a method body,
+            // an initializer or a lambda in a field initializer: processing reaches none of them (#1176).
             boolean anonymous = type.getSimpleName().isEmpty();
-            if (anonymous || methodDepth > 0) {
+            if (anonymous || statementDepth > 0) {
                 reportEveryGuardrailIn(type);
                 return null; // the whole subtree was just reported; do not visit it twice
             }

@@ -119,6 +119,46 @@ class LocalAndAnonymousElementsEndToEndTest {
                 + "warning is possible — the boundary docs/PROCESSOR.md states: " + diagnostics);
     }
 
+    /**
+     * A local class need not sit in a method: an initializer block and a lambda in a field
+     * initializer declare one too, and processing cannot see it there either. Before #1176 only a
+     * method body counted as "inside a body", so these drew no warning and the guardrail did nothing
+     * in silence.
+     */
+    @Test
+    void guardrailsInInitializers_areInvisible_andSaySo(@TempDir Path tmp) throws IOException {
+        ProcessorTestHarness h = new ProcessorTestHarness(tmp, false);
+        h.touchOptIn("CLAUDE.md");
+        h.addSource("com.example.Init",
+            "package com.example;\n"
+                + "import se.deversity.vibetags.annotations.AIContext;\n"
+                + "import se.deversity.vibetags.annotations.AILocked;\n"
+                + "@AIContext(focus = \"reachable declaration so the processor runs\", avoids = \"\")\n"
+                + "public class Init {\n"
+                + "    static {\n"
+                + "        @AILocked(reason = \"static init lock reason\")\n"
+                + "        class InStaticInit { }\n"
+                + "    }\n"
+                + "    Runnable task = () -> {\n"
+                + "        @AILocked(reason = \"field lambda lock reason\")\n"
+                + "        class InFieldLambda { }\n"
+                + "    };\n"
+                + "}\n");
+        List<Diagnostic<? extends JavaFileObject>> diagnostics = h.compileReturningDiagnostics();
+
+        String claude = h.readFile("CLAUDE.md");
+        assertTrue(claude.contains("reachable declaration so the processor runs"), claude);
+        assertFalse(claude.contains("static init lock reason"),
+            "a local class in an initializer is out of processing's reach:\n" + claude);
+        assertFalse(claude.contains("field lambda lock reason"),
+            "so is one in a lambda in a field initializer:\n" + claude);
+        assertEquals(2, diagnostics.stream()
+                .filter(d -> d.getKind() == Diagnostic.Kind.WARNING)
+                .filter(d -> d.getMessage(null).contains("invisible to annotation processing"))
+                .count(),
+            "each must warn that it is a silent no-op: " + diagnostics);
+    }
+
     /** A named member class is an ordinary element — the body scanner must stay quiet for it. */
     @Test
     void memberClassGuardrails_doNotTripTheBodyWarning(@TempDir Path tmp) throws IOException {

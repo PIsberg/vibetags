@@ -525,8 +525,9 @@ is why the claim widens to `"*"` whenever a `.vibetags-mod-*` sidecar at the roo
 (see below). A project with no sidecar, which is every project that has never had an annotation,
 still never pays for the processor. What remains out of reach is a source set with no sources left
 at all, which no build compiles.
-The round universe is also declaration-scoped: an `@AI*` annotation inside a method body (a local
-class, an anonymous class member) neither triggers the processor nor reaches it. When the
+The round universe is also declaration-scoped: an `@AI*` annotation inside a method body, an
+initializer block or a lambda (a local class, an anonymous class member) neither triggers the
+processor nor reaches it. When the
 processor runs for some other reason, `MethodBodyGuardrailScanner` spots those through the Tree
 API and warns instead of letting them be a silent no-op; a compilation whose only guardrails sit
 inside bodies stays wholly invisible.

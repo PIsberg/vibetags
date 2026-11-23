@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The method-body scanner answers both of its value questions with one walk.**
+  `MethodBodyGuardrailScanner` asked "is this value spelled out?" (cognitive complexity 26) and
+  "does this round determine it?" (33) by two recursions over the same six shapes that only combine
+  other values, so a shape added to one and not the other would have made the early exit disagree
+  with the spelled-out test. `operandsOf` names those shapes once and `everyOperand` walks them;
+  the questions differ only in the leaf test. The annotation and text-fallback loops lost a level
+  each (18 and 22). No change to what is counted: `MethodBodyGuardrailScannerValueCountTest` came
+  first and pins the exact count for 22 value shapes, which until now only whole builds reached.
 - **The granular merge is a class of its own.** `ModuleSidecar.mergeGranularUnits` (cognitive
   complexity 31) folded every module's contribution to each granular rule file in one method over a
   four-level map: by stem and region, then by case-folded stem, then per region with
@@ -155,6 +163,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds, `vibetags`'s Gradle build and the kotlin, kotlin-ksp, groovy, scala and basic examples.
 
 ### Fixed
+
+- **A guardrail on a local class in an initializer or a field-initializer lambda warns again
+  (#1176).** Annotation processing cannot see a named local class in a `static { }` or instance
+  initializer, or in a lambda that initializes a field, any more than one in a method body. Only a
+  method body counted as "inside a body", so those guardrails generated nothing and drew no warning.
+  The body scan now reports a named class anywhere inside a block or a lambda.
 
 - **A broken `.pr_agent.toml` is left alone instead of grown (#1171).** A string or an array that
   is never closed hides every table header after it, so both tables were appended to the file again
