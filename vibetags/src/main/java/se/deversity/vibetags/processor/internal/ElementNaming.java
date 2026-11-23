@@ -317,47 +317,57 @@ public final class ElementNaming {
      * from javac.
      */
     private static String typeString(TypeMirror type) {
-        if (type instanceof ArrayType array) {
-            return typeString(array.getComponentType()) + "[]";
+        // In this order: an error type is also a DeclaredType, and is read as one.
+        return switch (type) {
+            case ArrayType array -> typeString(array.getComponentType()) + "[]";
+            case WildcardType wildcard -> wildcardString(wildcard);
+            case DeclaredType declared -> declaredString(declared);
+            case TypeVariable variable -> variableString(variable);
+            default -> type.getKind().isPrimitive() || type.getKind() == TypeKind.VOID
+                ? type.getKind().name().toLowerCase(Locale.ROOT)
+                // Intersections, and anything a future language version adds. toString() is all
+                // that is left, with any annotations taken back off so an exotic type cannot
+                // smuggle one into the identity either.
+                : stripAnnotations(type.toString());
+        };
+    }
+
+    /** {@code ?}, {@code ? extends B} or {@code ? super B}, as javac writes them. */
+    private static String wildcardString(WildcardType wildcard) {
+        if (wildcard.getExtendsBound() != null) {
+            return "? extends " + typeString(wildcard.getExtendsBound());
         }
-        if (type instanceof WildcardType wildcard) {
-            if (wildcard.getExtendsBound() != null) {
-                return "? extends " + typeString(wildcard.getExtendsBound());
+        if (wildcard.getSuperBound() != null) {
+            return "? super " + typeString(wildcard.getSuperBound());
+        }
+        return "?";
+    }
+
+    /** The qualified name, then the type arguments comma-separated with no spaces. */
+    private static String declaredString(DeclaredType declared) {
+        StringBuilder sb = new StringBuilder(qualifiedName(declared.asElement()));
+        List<? extends TypeMirror> arguments = declared.getTypeArguments();
+        if (!arguments.isEmpty()) {
+            StringJoiner joined = new StringJoiner(",", "<", ">");
+            for (TypeMirror argument : arguments) {
+                joined.add(typeString(argument));
             }
-            if (wildcard.getSuperBound() != null) {
-                return "? super " + typeString(wildcard.getSuperBound());
-            }
-            return "?";
+            sb.append(joined);
         }
-        if (type instanceof DeclaredType declared) {
-            StringBuilder sb = new StringBuilder(qualifiedName(declared.asElement()));
-            List<? extends TypeMirror> arguments = declared.getTypeArguments();
-            if (!arguments.isEmpty()) {
-                StringJoiner joined = new StringJoiner(",", "<", ">");
-                for (TypeMirror argument : arguments) {
-                    joined.add(typeString(argument));
-                }
-                sb.append(joined);
-            }
-            return sb.toString();
-        }
-        if (type instanceof TypeVariable variable) {
-            // Read through to the declaring element rather than taking toString(). A type
-            // variable at an annotated use renders as "@org.jspecify.annotations.Nullable A",
-            // and that annotation would then be part of the element's identity - the one thing
-            // the whole derivation exists to avoid. The declared parameters get the same
-            // treatment above; this is the use site.
-            Element declared = variable.asElement();
-            String name = declared == null ? "" : simpleNameOf(declared);
-            return name.isEmpty() ? stripAnnotations(type.toString()) : name;
-        }
-        if (type.getKind().isPrimitive() || type.getKind() == TypeKind.VOID) {
-            return type.getKind().name().toLowerCase(Locale.ROOT);
-        }
-        // Error types under an incomplete classpath, intersections, and anything a future
-        // language version adds. toString() is all that is left, with any annotations taken back
-        // off so an exotic type cannot smuggle one into the identity either.
-        return stripAnnotations(type.toString());
+        return sb.toString();
+    }
+
+    /**
+     * The name of the type parameter, read through to the declaring element rather than taken from
+     * {@code toString()}. A type variable at an annotated use renders as
+     * {@code @org.jspecify.annotations.Nullable A}, and that annotation would then be part of the
+     * element's identity, the one thing the whole derivation exists to avoid. The declared
+     * parameters get the same treatment in {@link #memberSignature}; this is the use site.
+     */
+    private static String variableString(TypeVariable variable) {
+        Element declared = variable.asElement();
+        String name = declared == null ? "" : simpleNameOf(declared);
+        return name.isEmpty() ? stripAnnotations(variable.toString()) : name;
     }
 
     /**
