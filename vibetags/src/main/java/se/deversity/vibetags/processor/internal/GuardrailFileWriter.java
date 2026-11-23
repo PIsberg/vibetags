@@ -927,13 +927,24 @@ public final class GuardrailFileWriter {
         return indexOfBlockStart(content, markerEnd) >= 0;
     }
 
+    /** The shortest run of backticks or tildes that makes a code fence. */
+    private static final int MIN_FENCE_LENGTH = 3;
+
     /**
-     * Whether {@code index} lies inside a fenced code block: an odd number of fence lines above it.
-     * A fence opens with a line starting {@code ```} or {@code ~~~} (an info string may follow) and
-     * closes with a line of the same fence characters and nothing else, as CommonMark has it.
+     * Whether {@code index} lies inside a fenced code block, by CommonMark's rules for one. A fence
+     * opens with a line starting with three or more backticks or tildes (an info string may
+     * follow) and closes with a line of the same character, at least as many of them, and nothing
+     * else. A backtick fence's info string cannot contain a backtick, so a line that begins with an
+     * inline code span is not a fence.
+     *
+     * <p>Both halves of that matter here (#1161). Taking every line that starts with three
+     * backticks for an opener, or closing a four-backtick fence at the first line of three, leaves
+     * this believing a fence is open for the rest of the file: the real block below is then never
+     * found, and every build appends another one beneath it.
      */
     private static boolean insideFence(String content, int index) {
-        String open = null;
+        char fence = 0;
+        int fenceLength = 0;
         int start = 0;
         while (start < index) {
             int end = content.indexOf('\n', start);
@@ -941,16 +952,33 @@ public final class GuardrailFileWriter {
                 end = content.length();
             }
             String line = content.substring(start, end).strip();
-            if (open == null) {
-                if (line.startsWith("```") || line.startsWith("~~~")) {
-                    open = line.substring(0, 3);
+            int run = fenceRun(line);
+            if (run >= MIN_FENCE_LENGTH) {
+                String rest = line.substring(run);
+                if (fenceLength == 0) {
+                    if (line.charAt(0) == '~' || rest.indexOf('`') < 0) {
+                        fence = line.charAt(0);
+                        fenceLength = run;
+                    }
+                } else if (line.charAt(0) == fence && run >= fenceLength && rest.isBlank()) {
+                    fenceLength = 0;
                 }
-            } else if (line.startsWith(open) && line.replace(open.charAt(0), ' ').isBlank()) {
-                open = null;
             }
             start = end + 1;
         }
-        return open != null;
+        return fenceLength != 0;
+    }
+
+    /** How many backticks, or how many tildes, {@code line} opens with; 0 when it opens with neither. */
+    private static int fenceRun(String line) {
+        if (line.isEmpty() || (line.charAt(0) != '`' && line.charAt(0) != '~')) {
+            return 0;
+        }
+        int run = 1;
+        while (run < line.length() && line.charAt(run) == line.charAt(0)) {
+            run++;
+        }
+        return run;
     }
 
     /** True when only whitespace separates the match from the start and end of its line. */
