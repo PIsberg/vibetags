@@ -1887,11 +1887,16 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /**
      * Adds {@code "<region>'s <stem>"} to {@code missing}, once, for each stem a sibling recorded at
-     * the root that has no file in {@code dir} and that this build does not write itself.
+     * the root that has no file in {@code dir} and that this build does not write itself, compared
+     * case-folded.
      */
     private static void addMissingSiblingStems(List<String> missing, Path dir, Set<String> mine,
                                                List<ModuleSidecar> allSidecars) {
-        Set<String> present = stemsWithAFileIn(dir);
+        // Folded, as GranularMerge folds them: stems that differ only in case are one file on a
+        // case-insensitive filesystem and carry one merged contribution everywhere, so whichever
+        // spelling is on disk or about to be written states every colliding element (#1181).
+        Set<String> written = foldedStems(mine);
+        Set<String> present = foldedStems(stemsWithAFileIn(dir));
         for (ModuleSidecar sidecar : allSidecars) {
             // getGranularStems() is the union of two different namespaces: the stems this module
             // writes at the ROOT, and the stems it writes into its OWN granular directory. Only the
@@ -1904,12 +1909,26 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             Set<String> moduleScoped = sidecar.getModuleGranularContributions().keySet();
             for (String stem : sidecar.getGranularStems()) {
                 String entry = sidecar.getRegionId() + "'s " + stem;
-                boolean accountedFor = mine.contains(stem) || moduleScoped.contains(stem) || present.contains(stem);
+                String folded = foldedStem(stem);
+                boolean accountedFor = moduleScoped.contains(stem) || written.contains(folded) || present.contains(folded);
                 if (!accountedFor && !missing.contains(entry)) {
                     missing.add(entry);
                 }
             }
         }
+    }
+
+    /** {@code stem} as a case-insensitive filesystem and the cross-module merge see it (#525, #1181). */
+    private static String foldedStem(String stem) {
+        return stem.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private static Set<String> foldedStems(Set<String> stems) {
+        Set<String> folded = new java.util.HashSet<>();
+        for (String stem : stems) {
+            folded.add(foldedStem(stem));
+        }
+        return folded;
     }
 
     /**
