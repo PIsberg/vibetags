@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The missing-sibling-rule-file warning reads as its steps.**
+  `AIGuardrailProcessor.warnAboutSiblingRuleFilesThatAreMissing` (cognitive complexity 25) was four
+  loops deep; `granularDirectories` and `addMissingSiblingStems` now take the first two steps. A
+  case added first pins that a module's first build does not report the files it is about to
+  write, which no test failed without; reading the check for it found #1181.
 - **The reactor root's scoped-index hoist is a class of its own.** `ModuleSidecar.hoistScopedIndex`
   (cognitive complexity 23) is now `ScopedIndexHoist`, whose `Section.in` reads one module's
   section and refuses one of another shape, and `applyRootIndexModeTo` (20) links each module
@@ -175,6 +180,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds, `vibetags`'s Gradle build and the kotlin, kotlin-ksp, groovy, scala and basic examples.
 
 ### Fixed
+
+- **No missing-file warning for a stem that differs only in case (#1181).** Two modules whose
+  granular stems differ only in capitalisation, a class `com.example.Payment` and a package
+  `com.example.payment`, share one rule file on Windows and macOS, and the cross-module merge gives
+  both spellings the same content. The check for siblings' lost rule files compared stems exactly,
+  so the next build warned that the other spelling was "not on disk" and its guardrails "stated
+  nowhere". It now folds case the way the merge does. A rule file that is really gone is still
+  reported.
 
 - **A guardrail on a local class in an initializer or a field-initializer lambda warns again
   (#1176).** Annotation processing cannot see a named local class in a `static { }` or instance

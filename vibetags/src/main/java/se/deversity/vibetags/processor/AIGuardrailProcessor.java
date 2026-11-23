@@ -1849,46 +1849,15 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (allSidecars.size() < 2) {
             return; // Nobody else to have lost a file.
         }
-        Set<String> granularServices = new java.util.LinkedHashSet<>();
-        for (String service : activeServices) {
-            if (ServiceRegistry.writesDirectory(service) && serviceFiles.get(service) != null) {
-                granularServices.add(service);
-            }
-        }
-        if (granularServices.isEmpty()) {
+        List<Path> granularDirs = granularDirectories(activeServices, serviceFiles);
+        if (granularDirs.isEmpty()) {
             return;
         }
         Set<String> mine = GranularRulesWriter
             .contributionsFor(elementRules, RoleConfig.load(root)).keySet();
-
         List<String> missing = new java.util.ArrayList<>();
-        for (String service : granularServices) {
-            Path dir = serviceFiles.get(service);
-            if (dir == null) {
-                continue; // Re-checked for the null analysis: the map lookup is @Nullable.
-            }
-            Set<String> present = stemsWithAFileIn(dir);
-            for (ModuleSidecar sidecar : allSidecars) {
-                // getGranularStems() is the union of two different namespaces: the stems this
-                // module writes at the ROOT, and the stems it writes into its OWN granular
-                // directory. Only the first kind can be looked for here, because `dir` is a root
-                // directory. The two coincide unless a role config renames one of them, which is
-                // exactly when they diverge: the root contributions are routed through the root's
-                // .vibetags-roles into a shared role file, while the module-scoped ones resolve
-                // against the module's own (usually absent) config and keep per-class names.
-                // Comparing those per-class names against the root directory reported files as
-                // missing that were never meant to be there. See issue #443.
-                Set<String> moduleScoped = sidecar.getModuleGranularContributions().keySet();
-                for (String stem : sidecar.getGranularStems()) {
-                    if (mine.contains(stem) || moduleScoped.contains(stem) || present.contains(stem)) {
-                        continue;
-                    }
-                    String entry = sidecar.getRegionId() + "'s " + stem;
-                    if (!missing.contains(entry)) {
-                        missing.add(entry);
-                    }
-                }
-            }
+        for (Path dir : granularDirs) {
+            addMissingSiblingStems(missing, dir, mine, allSidecars);
         }
         if (missing.isEmpty()) {
             return;
@@ -1902,6 +1871,64 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (log != null) {
             log.warn("granular.missing entries={} reason=sibling-file-absent", missing);
         }
+    }
+
+    /** The directory of every active granular service, in the order the services are active. */
+    private static List<Path> granularDirectories(Set<String> activeServices, Map<String, Path> serviceFiles) {
+        List<Path> dirs = new java.util.ArrayList<>();
+        for (String service : activeServices) {
+            Path dir = serviceFiles.get(service);
+            if (dir != null && ServiceRegistry.writesDirectory(service)) {
+                dirs.add(dir);
+            }
+        }
+        return dirs;
+    }
+
+    /**
+     * Adds {@code "<region>'s <stem>"} to {@code missing}, once, for each stem a sibling recorded at
+     * the root that has no file in {@code dir} and that this build does not write itself, compared
+     * case-folded.
+     */
+    private static void addMissingSiblingStems(List<String> missing, Path dir, Set<String> mine,
+                                               List<ModuleSidecar> allSidecars) {
+        // Folded, as GranularMerge folds them: stems that differ only in case are one file on a
+        // case-insensitive filesystem and carry one merged contribution everywhere, so whichever
+        // spelling is on disk or about to be written states every colliding element (#1181).
+        Set<String> written = foldedStems(mine);
+        Set<String> present = foldedStems(stemsWithAFileIn(dir));
+        for (ModuleSidecar sidecar : allSidecars) {
+            // getGranularStems() is the union of two different namespaces: the stems this module
+            // writes at the ROOT, and the stems it writes into its OWN granular directory. Only the
+            // first kind can be looked for here, because `dir` is a root directory. The two coincide
+            // unless a role config renames one of them, which is exactly when they diverge: the
+            // root contributions are routed through the root's .vibetags-roles into a shared role
+            // file, while the module-scoped ones resolve against the module's own (usually absent)
+            // config and keep per-class names. Comparing those per-class names against the root
+            // directory reported files as missing that were never meant to be there. See issue #443.
+            Set<String> moduleScoped = sidecar.getModuleGranularContributions().keySet();
+            for (String stem : sidecar.getGranularStems()) {
+                String entry = sidecar.getRegionId() + "'s " + stem;
+                String folded = foldedStem(stem);
+                boolean accountedFor = moduleScoped.contains(stem) || written.contains(folded) || present.contains(folded);
+                if (!accountedFor && !missing.contains(entry)) {
+                    missing.add(entry);
+                }
+            }
+        }
+    }
+
+    /** {@code stem} as a case-insensitive filesystem and the cross-module merge see it (#525, #1181). */
+    private static String foldedStem(String stem) {
+        return stem.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private static Set<String> foldedStems(Set<String> stems) {
+        Set<String> folded = new java.util.HashSet<>();
+        for (String stem : stems) {
+            folded.add(foldedStem(stem));
+        }
+        return folded;
     }
 
     /**

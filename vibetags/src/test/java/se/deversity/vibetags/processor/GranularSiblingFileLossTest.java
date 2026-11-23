@@ -93,6 +93,63 @@ class GranularSiblingFileLossTest {
     }
 
     /**
+     * The guard for the other direction: this build is about to write its own rule files, and the
+     * check runs before it does, so a module's first build has none of them on disk yet.
+     */
+    @Test
+    void aModulesFirstBuildDoesNotReportItsOwnFilesAsMissing(@TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-a", "com.example.a.Alpha", ctx("com.example.a", "Alpha", "alpha-routing"));
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        List<String> warnings = compileModuleCapturingWarnings(root, "module-b",
+            "com.example.b.Beta", ctx("com.example.b", "Beta", "beta-routing"));
+
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("com-example-b-Beta")),
+            "module-b's own file is the one this build is writing. Warnings were:" + NL + "  "
+                + String.join(NL + "  ", warnings));
+    }
+
+    /**
+     * Two modules whose stems differ only in capitalisation, a class {@code com.example.Payment} and
+     * a package {@code com.example.payment}, share one rule file on a case-insensitive filesystem,
+     * and the cross-module merge gives both spellings the same content for exactly that reason. The
+     * directory then lists one name, so the other module's spelling was reported as a file "not on
+     * disk" whose guardrails are "stated nowhere", on the build that had just written them into the
+     * one file both names are. On a case-sensitive filesystem the same state is a lost spelling
+     * beside an intact one, which is made here by deleting module-a's own file: the remaining one
+     * still carries both guardrails and both globs. See issue #1181.
+     */
+    @Test
+    void stemsThatDifferOnlyInCaseAreOneFile(@TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Path rules = Files.createDirectories(root.resolve(".claude/rules"));
+        String paymentPackage = "@se.deversity.vibetags.annotations.AIContext(focus = " + Q + "settlement-timing" + Q + ")"
+            + NL + "package com.example.payment;" + NL;
+        compileModule(root, "module-a", "com.example.Payment", ctx("com.example", "Payment", "wire-format"));
+        compileModule(root, "module-b", "com.example.payment.package-info", paymentPackage);
+        List<String> names;
+        try (java.util.stream.Stream<Path> entries = Files.list(rules)) {
+            names = entries.map(p -> String.valueOf(p.getFileName())).toList();
+        }
+        if (names.contains("com-example-Payment.md") && names.contains("com-example-payment.md")) {
+            Files.delete(rules.resolve("com-example-Payment.md")); // case-sensitive: two files
+        }
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        List<String> warnings = compileModuleCapturingWarnings(root, "module-b",
+            "com.example.payment.package-info", paymentPackage);
+
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("com-example-Payment")),
+            "the one file both spellings name is on disk and carries both guardrails. Warnings were:"
+                + NL + "  " + String.join(NL + "  ", warnings));
+        String shared = Files.readString(rules.resolve("com-example-payment.md"), StandardCharsets.UTF_8);
+        assertTrue(shared.contains("wire-format") && shared.contains("settlement-timing"),
+            "precondition: the remaining file states module-a's guardrail too:" + NL + shared);
+    }
+
+    /**
      * A module that opts into a granular directory of its own, in a reactor whose root has a
      * {@code .vibetags-roles} config, was reported as having lost rule files it never lost.
      *
