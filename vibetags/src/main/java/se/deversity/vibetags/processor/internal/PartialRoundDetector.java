@@ -182,18 +182,13 @@ public final class PartialRoundDetector {
         if (sourceRoots.isEmpty()) {
             return List.of();
         }
-        // The module directory of this compilation's own sidecar, then the source roots it
-        // recorded: the directories the walk for its missing elements covers.
-        Set<Path> recordingDirs = new LinkedHashSet<>();
-        Set<String> ownMissing = new LinkedHashSet<>();
-        Set<String> missing = missingRecordedElements(root, elementIdsSeen, sourceSet, moduleRoot, moduleId,
-            recordingDirs, ownMissing);
-        if (missing.isEmpty()) {
+        Missing missing = missingRecordedElements(root, elementIdsSeen, sourceSet, moduleRoot, moduleId);
+        if (missing.elements().isEmpty()) {
             return List.of(); // condition (1): nothing went missing, so nothing needs explaining
         }
         List<Path> unread = unreadSourcesNamingTheAnnotations();
-        return unread.isEmpty() && !ownMissing.isEmpty()
-            ? unreadSourcesOfMissingElements(root, recordingDirs, ownMissing) : unread;
+        return unread.isEmpty() && !missing.own().isEmpty()
+            ? unreadSourcesOfMissingElements(root, missing.recordingDirs(), missing.own()) : unread;
     }
 
     /**
@@ -215,18 +210,17 @@ public final class PartialRoundDetector {
      * which do not drift the way the module id can.
      *
      * <p>The missing elements of the sidecar filed under {@code moduleId} itself are also collected
-     * into {@code ownMissing}, with that sidecar's directory in {@code recordingDirs}: those alone
-     * may send the walk into the whole module directory. Containment is too loose for that walk.
+     * into {@link Missing#own}, with that sidecar's directory in {@link Missing#recordingDirs}: those
+     * alone may send the walk into the whole module directory. Containment is too loose for that walk.
      * Two modules configured from one root build file share a directory, each one's sidecar
      * contains the other's sources, and walking it found the other module's files and refused
      * every round of the second module as partial (examples/gradle-shared-buildfile). The source
-     * roots that sidecar recorded join its directory in {@code recordingDirs}; they are the same
-     * module's own, so the same reasoning holds for them (#1065).
+     * roots that sidecar recorded join its directory in {@link Missing#recordingDirs}; they are the
+     * same module's own, so the same reasoning holds for them (#1065).
      */
-    private Set<String> missingRecordedElements(Path root, Set<String> elementIdsSeen, String sourceSet,
-                                                Path moduleRoot, String moduleId, Set<Path> recordingDirs,
-                                                Set<String> ownMissing) {
-        Set<String> missing = new LinkedHashSet<>();
+    private Missing missingRecordedElements(Path root, Set<String> elementIdsSeen, String sourceSet,
+                                            Path moduleRoot, String moduleId) {
+        Missing missing = new Missing(new LinkedHashSet<>(), new LinkedHashSet<>(), new LinkedHashSet<>());
         List<ModuleSidecar> sidecars = ModuleSidecar.peekAll(root);
         for (ModuleSidecar sidecar : sidecars) {
             boolean own = ModuleSidecar.sanitizeId(moduleId).equals(sidecar.getModuleId());
@@ -234,24 +228,30 @@ public final class PartialRoundDetector {
                     || !ModuleSidecar.sanitizeId(sourceSet).equals(sourceSetOf(sidecar))) {
                 continue;
             }
-            Path dir = own ? walkableModuleDir(root, sidecar, sidecars) : null;
-            for (String recorded : sidecar.getElementIds()) {
-                if (!elementIdsSeen.contains(recorded)) {
-                    missing.add(recorded);
-                    if (own) {
-                        ownMissing.add(recorded);
-                        if (dir != null) {
-                            recordingDirs.add(dir);
-                        }
-                    }
+            Set<String> notSeen = new LinkedHashSet<>(sidecar.getElementIds());
+            notSeen.removeAll(elementIdsSeen);
+            missing.elements().addAll(notSeen);
+            if (own && !notSeen.isEmpty()) {
+                missing.own().addAll(notSeen);
+                Path dir = walkableModuleDir(root, sidecar, sidecars);
+                if (dir != null) {
+                    missing.recordingDirs().add(dir);
                 }
-            }
-            if (own && !ownMissing.isEmpty()) {
-                addRecordedSourceRoots(root, sidecar, recordingDirs);
+                addRecordedSourceRoots(root, sidecar, missing.recordingDirs());
             }
         }
         return missing;
     }
+
+    /**
+     * What condition (1) found.
+     *
+     * @param elements      every recorded element this round did not produce, in sidecar order
+     * @param own           those of them recorded by this compilation's own sidecar
+     * @param recordingDirs that sidecar's module directory, then the source roots it recorded: the
+     *                      directories the walk for {@code own} covers
+     */
+    private record Missing(Set<String> elements, Set<String> own, Set<Path> recordingDirs) { }
 
     /**
      * The module directory the walk for {@code own}'s missing elements may cover, or {@code null}
