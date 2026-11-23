@@ -93,6 +93,25 @@ class GranularSiblingFileLossTest {
     }
 
     /**
+     * The guard for the other direction: this build is about to write its own rule files, and the
+     * check runs before it does, so a module's first build has none of them on disk yet.
+     */
+    @Test
+    void aModulesFirstBuildDoesNotReportItsOwnFilesAsMissing(@TempDir Path root) throws Exception {
+        Files.createFile(root.resolve("CLAUDE.md"));
+        Files.createDirectories(root.resolve(".claude/rules"));
+        compileModule(root, "module-a", "com.example.a.Alpha", ctx("com.example.a", "Alpha", "alpha-routing"));
+
+        ProcessorTestHarness.awaitFilesystemTick(root);
+        List<String> warnings = compileModuleCapturingWarnings(root, "module-b",
+            "com.example.b.Beta", ctx("com.example.b", "Beta", "beta-routing"));
+
+        assertTrue(warnings.stream().noneMatch(w -> w.contains("com-example-b-Beta")),
+            "module-b's own file is the one this build is writing. Warnings were:" + NL + "  "
+                + String.join(NL + "  ", warnings));
+    }
+
+    /**
      * A module that opts into a granular directory of its own, in a reactor whose root has a
      * {@code .vibetags-roles} config, was reported as having lost rule files it never lost.
      *
