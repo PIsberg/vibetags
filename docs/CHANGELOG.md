@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`greptile.json`'s owned arrays are read one row at a time.** `JsonLineArraysMerge.parse`
+  (cognitive complexity 34) is now a nested `Document` that accepts each row through
+  `acceptKeyOrEnd` or `acceptLineOrClose`, and `merge` (19) hands the layout to `render`. No change
+  to any merged file: `JsonLineArraysMergeTest` came first and holds the union, the placeholder
+  rule and twelve refused shapes, which only whole builds reached before.
 - **A shared Markdown section folds its intro, bullets and closing in separate steps.**
   `MarkdownSectionMerge.foldSection` (cognitive complexity 23) is now `foldIntro`, `foldBullets`
   and `foldClosing`. A new case pins that a middle section closed two different ways declines,
