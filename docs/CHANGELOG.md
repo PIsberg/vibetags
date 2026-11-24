@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The generation lock is taken through one attempt object.** `GenerationLock.acquireFile`
+  (cognitive complexity 21) builds a nested `Attempt` whose `run`, `pollOn` and `tryLock` take
+  the lock and whose single `giveUp` releases the channel and the in-JVM gate on every way out,
+  where five exits each repeated that sequence. `GenerationLockEventsTest` came first and pins the
+  `generate.lock.*` events `MULTI-MODULE.md` documents, which no test asserted, and that a caller
+  giving up leaves the gate for the next one.
 - **`.vibetags-roles` lines and globs are parsed in named steps.** `RoleConfig.load` (cognitive
   complexity 26) hands each line to `Role.parse`, and `globToRegex` (23) is a nested `GlobRegex`
   with one method per star run and an arrow switch for every other character. Six parsing cases
