@@ -48,7 +48,7 @@ import se.deversity.vibetags.processor.internal.TransitiveManifestWriter;
 import se.deversity.vibetags.processor.internal.SourceDigest;
 import se.deversity.vibetags.processor.internal.WriteCache;
 import se.deversity.vibetags.processor.internal.WritePlan;
-import se.deversity.vibetags.processor.model.TransitiveRule;
+import se.deversity.vibetags.processor.internal.content.TransitiveRules;
 import org.slf4j.Logger;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -1241,15 +1241,25 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      */
     private void applyTransitiveRules() {
         TransitiveManifestReader reader = this.transitiveReader;
-        if (reader == null) {
+        if (reader == null || !resolveTransitiveSources(reader)) {
             return;
         }
+        TransitiveRules.Capped capped = TransitiveRules.capped(reader.rules(), maxTransitiveAdvisory);
+        collector.addTransitiveRules(capped.kept());
+        reportTransitiveRules(capped, reader.lookupCount());
+    }
+
+    /**
+     * Resolves the manifests named by option, then says whether discovery can answer here at all.
+     * When it cannot, a note says so: reporting nothing would read exactly like "no dependency
+     * publishes guardrails", which is the answer a reader would act on.
+     */
+    private boolean resolveTransitiveSources(TransitiveManifestReader reader) {
         // A build tool that resolved the dependency graph itself, or a compiler with no Tree API,
         // supplies its keys explicitly. Both run in addition to import discovery, never instead:
         // a project may legitimately use one for the module path and the other for the classpath.
         if (manifestDir != null) {
-            List<String> rejected = reader.resolveDirectory(manifestDir);
-            for (String bad : rejected) {
+            for (String bad : reader.resolveDirectory(manifestDir)) {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
                     "VibeTags: could not read dependency manifest " + bad);
             }
@@ -1257,51 +1267,32 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (!manifestPackages.isEmpty()) {
             reader.resolveExplicit(processingEnv.getFiler(), manifestPackages);
         }
-
-        if (reader.treesUnavailable() && manifestDir == null && manifestPackages.isEmpty()) {
-            // Unchecked, not clean. Reporting nothing here would read exactly like "no dependency
-            // publishes guardrails", which is the answer a reader would act on.
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
-                "VibeTags: transitive guardrails opted in, but this compiler exposes no Tree API ("
-                    + reader.treesUnavailableReason() + "); dependency manifests were not discovered. "
-                    + "Use -Avibetags.manifest.dir or -Avibetags.manifest.packages.");
-            if (log != null) {
-                log.info("Transitive discovery skipped: no Tree API ({}).", reader.treesUnavailableReason());
-            }
-            return;
+        if (!reader.treesUnavailable() || manifestDir != null || !manifestPackages.isEmpty()) {
+            return true;
         }
-
-        List<TransitiveRule> rules = new java.util.ArrayList<>(reader.rules());
-        rules.sort(se.deversity.vibetags.processor.internal.content.TransitiveRules.ORDER);
-        int total = rules.size();
-        int dropped = 0;
-        if (maxTransitiveAdvisory > 0) {
-            List<TransitiveRule> kept = new java.util.ArrayList<>(rules.size());
-            int advisoryKept = 0;
-            for (TransitiveRule rule : rules) {
-                if (rule.tier() == TransitiveRule.Tier.SAFETY) {
-                    kept.add(rule);
-                } else if (advisoryKept < maxTransitiveAdvisory) {
-                    kept.add(rule);
-                    advisoryKept++;
-                } else {
-                    dropped++;
-                }
-            }
-            rules = kept;
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
+            "VibeTags: transitive guardrails opted in, but this compiler exposes no Tree API ("
+                + reader.treesUnavailableReason() + "); dependency manifests were not discovered. "
+                + "Use -Avibetags.manifest.dir or -Avibetags.manifest.packages.");
+        if (log != null) {
+            log.info("Transitive discovery skipped: no Tree API ({}).", reader.treesUnavailableReason());
         }
-        collector.addTransitiveRules(rules);
+        return false;
+    }
 
-        if (total > 0) {
+    /** Says how many inherited rules were kept, and what the advisory cap dropped. */
+    private void reportTransitiveRules(TransitiveRules.Capped capped, int lookups) {
+        int kept = capped.kept().size();
+        int dropped = capped.dropped();
+        if (kept + dropped > 0) {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
-                "VibeTags: inherited " + rules.size() + " guardrail(s) from dependencies"
+                "VibeTags: inherited " + kept + " guardrail(s) from dependencies"
                     + (dropped > 0 ? " (" + dropped + " advisory rule(s) dropped by -Avibetags.manifest.max="
                         + maxTransitiveAdvisory + ")" : "")
-                    + " after " + reader.lookupCount() + " classpath lookup(s).");
+                    + " after " + lookups + " classpath lookup(s).");
         }
         if (log != null) {
-            log.info("Transitive guardrails: {} kept, {} dropped, {} lookups.",
-                rules.size(), dropped, reader.lookupCount());
+            log.info("Transitive guardrails: {} kept, {} dropped, {} lookups.", kept, dropped, lookups);
             if (dropped > 0) {
                 // A cap that reports nothing is indistinguishable from full coverage.
                 log.warn("transitive.skip reason=advisory-cap cap={} dropped={}", maxTransitiveAdvisory, dropped);

@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Inherited guardrails are applied in three named steps.** `applyTransitiveRules` (cognitive
+  complexity 23) now resolves the option-named manifests in `resolveTransitiveSources`, sorts and
+  caps through `TransitiveRules.capped` (a pure function: safety rules never count against
+  `-Avibetags.manifest.max`), and reports in `reportTransitiveRules`. Five cases came first: the
+  "inherited N guardrail(s)" note and its drop count had no test, and neither did a compiler without
+  a Tree API still delivering the rules of a named `-Avibetags.manifest.dir`.
 - **The generation lock is taken through one attempt object.** `GenerationLock.acquireFile`
   (cognitive complexity 21) builds a nested `Attempt` whose `run`, `pollOn` and `tryLock` take
   the lock and whose single `giveUp` releases the channel and the in-JVM gate on every way out,
