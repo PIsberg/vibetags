@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The duplicate-YAML-key check locates the block, then scans the keys.**
+  `DuplicateYamlKeyRule.find` (cognitive complexity 31) is now a located `Block`, a single
+  `Occurrences` scan that sorts each owned key into the block's or the hand-written ones, and a
+  per-key `findingFor`; `int[]` line and document pairs became an `Occurrence` record, and the
+  second walk that counted the block's document is gone. `DuplicateYamlKeyRuleFindTest` (18 cases
+  on who wins) came first; one of them, the document a not-yet-written key lands in, had no test
+  before.
 - **`greptile.json`'s owned arrays are read one row at a time.** `JsonLineArraysMerge.parse`
   (cognitive complexity 34) is now a nested `Document` that accepts each row through
   `acceptKeyOrEnd` or `acceptLineOrClose`, and `merge` (19) hands the layout to `render`. No change
@@ -212,6 +219,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The duplicate-YAML-key warning reads the file the way the writer does (#1194).** The writer
+  looks for its markers behind a byte order mark and writes the mark back; the check did not, saw
+  no block, and warned on every build that the block's own `read` key in `.aider.conf.yml` was a
+  hand-written duplicate to delete, while a real hand-written key on line 1 went unreported. An
+  indented marker, which the writer accepts, did the same, and a `---` on the last line without a
+  newline put the appended block in the wrong document. The check now finds the block with the
+  writer's own marker search.
 - **A repeated heading keeps its rules under its own section when source sets merge (#1190).**
   `llms-full.txt` writes `### <class>` under each annotation's section, so a class with two
   annotations has one heading twice. Merging a module's main and test bodies matched sections by the

@@ -1,6 +1,7 @@
 package se.deversity.vibetags.processor.internal.validation;
 
 import org.jspecify.annotations.Nullable;
+import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -42,6 +43,9 @@ public final class DuplicateYamlKeyRule {
 
     /** A YAML document separator. Keys either side of one belong to different mappings. */
     private static final Pattern DOCUMENT_START = Pattern.compile("^---(?:[ \\t].*)?$");
+
+    /** U+FEFF, which some editors save at the start of a UTF-8 file and the writer writes back. */
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
 
     /**
      * Files whose reading tool is known, and known to keep the last occurrence. Only named where it
@@ -104,74 +108,152 @@ public final class DuplicateYamlKeyRule {
      * @param markerEnd   the line that closes it
      */
     public static List<Finding> find(String content, Set<String> ownedKeys, String markerStart, String markerEnd) {
-        String[] lines = content.replace("\r\n", "\n").split("\n", -1);
-        int blockStart = -1;
-        int blockEnd = lines.length; // an unclosed block runs to the end, as the writer treats it
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i].stripTrailing();
-            if (blockStart < 0 && line.equals(markerStart)) {
-                blockStart = i;
-            } else if (blockStart >= 0 && line.equals(markerEnd)) {
-                blockEnd = i;
-                break;
-            }
+        String text = content.replace("\r\n", "\n");
+        // A byte order mark is encoding, not content: the writer looks for its markers behind one
+        // and writes it back, and left in place it hid the block and a first-line key (#1194).
+        if (!text.isEmpty() && text.charAt(0) == BYTE_ORDER_MARK) {
+            text = text.substring(1);
         }
-
-        int document = 0;
-        int lastDocument = 0;
-        Map<String, int[]> generated = new LinkedHashMap<>(); // key -> {line, document}
-        Map<String, List<int[]>> hand = new LinkedHashMap<>();
-        for (int i = 0; i < lines.length; i++) {
-            if (DOCUMENT_START.matcher(lines[i]).matches()) {
-                document++;
-                continue;
-            }
-            lastDocument = document;
-            String key = topLevelKey(lines[i]);
-            if (key == null || !ownedKeys.contains(key)) {
-                continue;
-            }
-            boolean inBlock = blockStart >= 0 && i > blockStart && i < blockEnd;
-            if (inBlock) {
-                generated.putIfAbsent(key, new int[]{i + 1, document});
-            } else {
-                hand.computeIfAbsent(key, k -> new ArrayList<>()).add(new int[]{i + 1, document});
-            }
-        }
-
-        List<Finding> findings = new ArrayList<>();
-        for (Map.Entry<String, List<int[]>> entry : hand.entrySet()) {
-            String key = entry.getKey();
-            int[] ours = generated.get(key);
-            // Not in the block on disk: this build writes it. Where it lands decides who wins. No
-            // block at all means it is appended below everything, into the last document.
-            int ourDocument = ours != null ? ours[1] : (blockStart >= 0 ? documentOf(lines, blockStart) : lastDocument);
-            int handLine = lastLineInDocument(entry.getValue(), ourDocument);
-            if (handLine == 0) {
-                continue; // only in another YAML document, which is a separate mapping
-            }
-            int generatedLine = ours != null ? ours[0] : 0;
-            boolean handBelow = ours != null
-                ? handLine > ours[0]
-                : blockStart >= 0 && handLine - 1 > blockEnd; // below a block that lacks the key
-            findings.add(new Finding(key, handLine, generatedLine, handBelow ? handLine : generatedLine));
-        }
-        return findings;
+        String[] lines = text.split("\n", -1);
+        return Occurrences.scan(lines, ownedKeys, Block.locate(text, lines.length, markerStart, markerEnd)).findings();
     }
 
     /**
-     * The last of {@code occurrences} ({line, document} pairs) in {@code document}, or {@code 0}.
-     * The last, because a key written twice by hand is read at its lower occurrence too, and that is
-     * the line the user has to be pointed at.
+     * Where the VibeTags block lies, as 0-based line indexes of its two marker lines. {@code start}
+     * is {@code -1} when there is no block; an unclosed block runs to the end, as the writer treats
+     * it, so {@code end} is then the line count.
      */
-    private static int lastLineInDocument(List<int[]> occurrences, int document) {
-        int line = 0;
-        for (int[] occurrence : occurrences) {
-            if (occurrence[1] == document) {
-                line = occurrence[0];
+    private record Block(int start, int end) {
+
+        /**
+         * The block the writer would replace in {@code text}, found with the writer's own search
+         * rather than a second marker rule: a marker with whitespace before it still owns its line,
+         * and one inside a code fence is not the block (#1194).
+         */
+        static Block locate(String text, int lineCount, String markerStart, String markerEnd) {
+            int start = GuardrailFileWriter.indexOfBlockStart(text, markerStart);
+            if (start < 0) {
+                return new Block(-1, lineCount);
+            }
+            int end = GuardrailFileWriter.indexOfMarkerLine(text, markerEnd, start + markerStart.length());
+            return new Block(lineOf(text, start), end < 0 ? lineCount : lineOf(text, end));
+        }
+
+        /** The 0-based line {@code index} falls on. */
+        private static int lineOf(String text, int index) {
+            int line = 0;
+            for (int i = text.indexOf('\n'); i >= 0 && i < index; i = text.indexOf('\n', i + 1)) {
+                line++;
+            }
+            return line;
+        }
+
+        boolean exists() {
+            return start >= 0;
+        }
+
+        /** Whether line {@code index} lies between the markers. */
+        boolean contains(int index) {
+            return exists() && index > start && index < end;
+        }
+
+        /** Whether the block closes above line {@code index}. */
+        boolean closesAbove(int index) {
+            return exists() && index > end;
+        }
+    }
+
+    /** A top-level key's 1-based line, and the 0-based YAML document it is declared in. */
+    private record Occurrence(int line, int document) {
+    }
+
+    /** Every top-level occurrence of an owned key, split into the block's and the hand-written ones. */
+    private static final class Occurrences {
+
+        private final Block block;
+        private final Map<String, Occurrence> generated = new LinkedHashMap<>();
+        private final Map<String, List<Occurrence>> handWritten = new LinkedHashMap<>();
+        private int blockDocument;
+        private int lastDocument;
+
+        private Occurrences(Block block) {
+            this.block = block;
+        }
+
+        static Occurrences scan(String[] lines, Set<String> ownedKeys, Block block) {
+            Occurrences occurrences = new Occurrences(block);
+            int document = 0;
+            for (int i = 0; i < lines.length; i++) {
+                if (DOCUMENT_START.matcher(lines[i]).matches()) {
+                    document++;
+                } else {
+                    occurrences.add(i, document, topLevelKey(lines[i]), ownedKeys);
+                }
+            }
+            // An appended block goes below everything, into the document the last separator
+            // opens, whether or not a line follows it (#1194).
+            occurrences.lastDocument = document;
+            return occurrences;
+        }
+
+        private void add(int index, int document, @Nullable String key, Set<String> ownedKeys) {
+            if (index == block.start()) {
+                blockDocument = document;
+            }
+            if (key == null || !ownedKeys.contains(key)) {
+                return;
+            }
+            Occurrence occurrence = new Occurrence(index + 1, document);
+            if (block.contains(index)) {
+                generated.putIfAbsent(key, occurrence);
+            } else {
+                handWritten.computeIfAbsent(key, k -> new ArrayList<>()).add(occurrence);
             }
         }
-        return line;
+
+        List<Finding> findings() {
+            List<Finding> findings = new ArrayList<>();
+            for (Map.Entry<String, List<Occurrence>> hand : handWritten.entrySet()) {
+                Finding finding = findingFor(hand.getKey(), hand.getValue());
+                if (finding != null) {
+                    findings.add(finding);
+                }
+            }
+            return findings;
+        }
+
+        /**
+         * The clash between {@code key}'s hand-written occurrences and the block's, or {@code null}
+         * when they are only in another YAML document, which is a separate mapping.
+         */
+        private @Nullable Finding findingFor(String key, List<Occurrence> hand) {
+            Occurrence ours = generated.get(key);
+            if (ours == null) {
+                // Not in the block on disk: this build writes it, and where it lands decides who
+                // wins. No block at all means it is appended below everything, into the last document.
+                int handLine = lastLineIn(hand, block.exists() ? blockDocument : lastDocument);
+                boolean handBelow = block.closesAbove(handLine - 1);
+                return handLine == 0 ? null : new Finding(key, handLine, 0, handBelow ? handLine : 0);
+            }
+            int handLine = lastLineIn(hand, ours.document());
+            return handLine == 0 ? null
+                : new Finding(key, handLine, ours.line(), Math.max(handLine, ours.line()));
+        }
+
+        /**
+         * The last of {@code occurrences} in {@code document}, or {@code 0}. The last, because a key
+         * written twice by hand is read at its lower occurrence too, and that is the line the user
+         * has to be pointed at.
+         */
+        private static int lastLineIn(List<Occurrence> occurrences, int document) {
+            int line = 0;
+            for (Occurrence occurrence : occurrences) {
+                if (occurrence.document() == document) {
+                    line = occurrence.line();
+                }
+            }
+            return line;
+        }
     }
 
     /**
@@ -213,15 +295,5 @@ public final class DuplicateYamlKeyRule {
         String key = m.group(1);
         char first = key.charAt(0);
         return first == '"' || first == '\'' ? key.substring(1, key.length() - 1) : key;
-    }
-
-    private static int documentOf(String[] lines, int index) {
-        int document = 0;
-        for (int i = 0; i < index; i++) {
-            if (DOCUMENT_START.matcher(lines[i]).matches()) {
-                document++;
-            }
-        }
-        return document;
     }
 }
