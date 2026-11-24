@@ -2,7 +2,10 @@ package se.deversity.vibetags.processor.internal.content;
 
 import se.deversity.vibetags.processor.model.TransitiveRule;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +30,44 @@ public final class TransitiveRules {
     public static final Comparator<TransitiveRule> ORDER = TransitiveRules::compare;
 
     private TransitiveRules() {}
+
+    /**
+     * Inherited rules after the advisory cap: the rules kept, in {@link #ORDER}, and how many
+     * advisory ones the cap dropped.
+     */
+    public record Capped(List<TransitiveRule> kept, int dropped) {
+
+        public Capped {
+            kept = List.copyOf(kept);
+        }
+    }
+
+    /**
+     * {@code rules} sorted into {@link #ORDER}, keeping every safety rule and the first
+     * {@code maxAdvisory} advisory ones; {@code 0} or less is no cap.
+     *
+     * <p>Sorted before the cap, not after: which advisory rules survive must depend on the
+     * dependency set alone, not on the order the manifests happened to be discovered or listed in.
+     * A cap that could drop a safety rule would be a security feature that quietly stops working on
+     * large projects, so the safety tier never counts against it.
+     */
+    public static Capped capped(Collection<TransitiveRule> rules, int maxAdvisory) {
+        List<TransitiveRule> sorted = new ArrayList<>(rules);
+        sorted.sort(ORDER);
+        if (maxAdvisory <= 0) {
+            return new Capped(sorted, 0);
+        }
+        List<TransitiveRule> kept = new ArrayList<>(sorted.size());
+        int advisoryKept = 0;
+        for (TransitiveRule rule : sorted) {
+            boolean safety = rule.tier() == TransitiveRule.Tier.SAFETY;
+            if (safety || advisoryKept < maxAdvisory) {
+                kept.add(rule);
+                advisoryKept += safety ? 0 : 1;
+            }
+        }
+        return new Capped(kept, sorted.size() - kept.size());
+    }
 
     /** The rule's attributes as one {@code key=value} line, or {@code ""} when it has none. */
     public static String memberSummary(TransitiveRule rule) {
