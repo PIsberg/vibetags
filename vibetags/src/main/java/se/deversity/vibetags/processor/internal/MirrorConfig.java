@@ -78,6 +78,9 @@ public final class MirrorConfig {
     /** Opt-in signal file: its presence in a module directory makes that module a mirror target. */
     public static final String FILE_NAME = ".vibetags-mirror";
 
+    /** U+FEFF, which some editors save at the start of a UTF-8 file: encoding, not a path. */
+    private static final char BYTE_ORDER_MARK = '\uFEFF';
+
     /** Directory names never descended into while discovering mirror targets. */
     static final Set<String> SKIP_DIRS = Set.of(
         "target", "build", "out", "bin", "src", "node_modules", ".git", ".idea", ".mvn", ".gradle");
@@ -182,7 +185,7 @@ public final class MirrorConfig {
         Path target = dir.toAbsolutePath().normalize();
         List<Path> sources = new ArrayList<>();
         List<String> globs = new ArrayList<>();
-        String[] lines = content.split("\r\n|\r|\n", -1);
+        String[] lines = linesOf(content);
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
             if (line.isEmpty() || line.startsWith("#")) {
@@ -210,6 +213,16 @@ public final class MirrorConfig {
         }
         return Reading.loaded(new MirrorConfig(target, List.copyOf(sources), List.copyOf(globs),
             BuildFingerprint.fingerprint(content)));
+    }
+
+    /**
+     * {@code content}'s lines, after any leading byte order mark: left in, it turned a first-line
+     * comment into a source path, or a source path into one naming no module, and the mirror
+     * copied nothing (#1197).
+     */
+    private static String[] linesOf(String content) {
+        String text = content.isEmpty() || content.charAt(0) != BYTE_ORDER_MARK ? content : content.substring(1);
+        return text.split("\r\n|\r|\n", -1);
     }
 
     /**

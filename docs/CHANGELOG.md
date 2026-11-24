@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`.vibetags-roles` lines and globs are parsed in named steps.** `RoleConfig.load` (cognitive
+  complexity 26) hands each line to `Role.parse`, and `globToRegex` (23) is a nested `GlobRegex`
+  with one method per star run and an arrow switch for every other character. Six parsing cases
+  came first; a commented-out role line containing `=` had no test before.
 - **A round's sources are resolved in named steps.** `RoundSources.resolve` (cognitive complexity
   26) is now a loop over `viaStandardApi`, falling back to `viaTrees`, and `record`, with the
   ask-once rule for the Tree API in `trees()`. `RoundSourcesFallbackTest` came first: it drives a
@@ -224,6 +228,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A byte order mark no longer corrupts the first line of `.vibetags-roles` or `.vibetags-mirror`
+  (#1197).** Both were read with the mark kept and `trim()` does not remove it. In a mirror
+  config the first source path named no module, or a first-line comment became a source, and the
+  mirror copied nothing; in a roles config the first role was named `-api` and split from a second
+  `api` line into two rule files. Both readers now drop the mark before reading lines.
 - **The duplicate-YAML-key warning reads the file the way the writer does (#1194).** The writer
   looks for its markers behind a byte order mark and writes the mark back; the check did not, saw
   no block, and warned on every build that the block's own `read` key in `.aider.conf.yml` was a

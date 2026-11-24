@@ -72,6 +72,27 @@ class MirrorConfigTest {
         assertFalse(cfg.accepts(root.resolve("payments-api")), "an unnamed module must not be");
     }
 
+    /** Some editors save U+FEFF first; it is encoding, not part of the first source path (#1197). */
+    @Test
+    void aByteOrderMarkIsNotPartOfTheFirstSourcePath(@TempDir Path root) throws IOException {
+        Path target = root.resolve("payments-tests");
+        Path core = root.resolve("payments-core");
+        Files.createDirectories(core);
+        MirrorConfig cfg = write(target, "\uFEFF../payments-core");
+
+        assertNotNull(cfg);
+        assertTrue(cfg.accepts(core), "the named sibling must be accepted");
+    }
+
+    /** A first-line comment behind a byte order mark is still a comment, not a source path (#1197). */
+    @Test
+    void aByteOrderMarkDoesNotTurnAFirstLineCommentIntoASource(@TempDir Path root) throws IOException {
+        MirrorConfig cfg = write(root.resolve("tests"), "\uFEFF# mirror everything", "");
+
+        assertNotNull(cfg);
+        assertTrue(cfg.accepts(root.resolve("anything")), "still the mirror-everything form");
+    }
+
     @Test
     void noSourceLinesMeansMirrorFromEveryModule(@TempDir Path root) throws IOException {
         MirrorConfig cfg = write(root.resolve("tests"), "# only a comment", "");
