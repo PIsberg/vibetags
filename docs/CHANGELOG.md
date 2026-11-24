@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A round's sources are resolved in named steps.** `RoundSources.resolve` (cognitive complexity
+  26) is now a loop over `viaStandardApi`, falling back to `viaTrees`, and `record`, with the
+  ask-once rule for the Tree API in `trees()`. `RoundSourcesFallbackTest` came first: it drives a
+  real javac round through a build tool's wrapper and holds every fallback, which only plain javac
+  reached in tests before.
 - **The duplicate-YAML-key check locates the block, then scans the keys.**
   `DuplicateYamlKeyRule.find` (cognitive complexity 31) is now a located `Block`, a single
   `Occurrences` scan that sorts each owned key into the block's or the hand-written ones, and a
