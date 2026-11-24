@@ -304,4 +304,65 @@ class ElementNamingUnitTest {
 
         assertEquals("orphanField", ElementNaming.elementDisplayName(field));
     }
+
+    @Test
+    void elementPath_fallbackTypeWithAnnotationContainingClosingParenInStringOrNestedParens_stripsWholeAnnotation() {
+        // Issue #1204: when a type falls through to stripAnnotations(type.toString()), a ')' inside
+        // a string literal, a char literal, or nested annotation parentheses must not end the
+        // annotation argument list early and leak the tail into the element's identity.
+        Element enclosing = mock(Element.class);
+        when(enclosing.toString()).thenReturn("com.example.Host");
+
+        Name methodName = mock(Name.class);
+        when(methodName.toString()).thenReturn("validate");
+
+        javax.lang.model.type.TypeMirror fallbackType = mock(javax.lang.model.type.TypeMirror.class);
+        when(fallbackType.getKind()).thenReturn(javax.lang.model.type.TypeKind.OTHER);
+        when(fallbackType.toString()).thenReturn(
+            "@jakarta.validation.constraints.Pattern(regexp = \"^(a|b)\\\\)\") "
+                + "@com.example.Chars(')') "
+                + "@com.example.Container({@com.example.Inner(\"x)y\")}) "
+                + "java.lang.String");
+
+        javax.lang.model.element.VariableElement param = mock(javax.lang.model.element.VariableElement.class);
+        when(param.asType()).thenReturn(fallbackType);
+
+        javax.lang.model.element.ExecutableElement method = mock(javax.lang.model.element.ExecutableElement.class);
+        when(method.getKind()).thenReturn(ElementKind.METHOD);
+        when(method.getSimpleName()).thenReturn(methodName);
+        when(method.getEnclosingElement()).thenReturn(enclosing);
+        doReturn(java.util.List.of()).when(method).getTypeParameters();
+        doReturn(java.util.List.of(param)).when(method).getParameters();
+        when(method.isVarArgs()).thenReturn(false);
+
+        assertEquals("com.example.Host.validate(java.lang.String)", ElementNaming.elementPath(method));
+    }
+
+    @Test
+    void elementPath_fallbackTypeWithIntersectionAndUnclosedAnnotationArgs_doesNotLoopOrThrow() {
+        Element enclosing = mock(Element.class);
+        when(enclosing.toString()).thenReturn("com.example.Host");
+
+        Name methodName = mock(Name.class);
+        when(methodName.toString()).thenReturn("intersect");
+
+        javax.lang.model.type.TypeMirror intersectionType = mock(javax.lang.model.type.TypeMirror.class);
+        when(intersectionType.getKind()).thenReturn(javax.lang.model.type.TypeKind.INTERSECTION);
+        when(intersectionType.toString()).thenReturn(
+            "java.io.@com.example.A(\"x)y\") Serializable & java.lang.@com.example.B Comparable<@com.example.Broken(\"unclosed");
+
+        javax.lang.model.element.VariableElement param = mock(javax.lang.model.element.VariableElement.class);
+        when(param.asType()).thenReturn(intersectionType);
+
+        javax.lang.model.element.ExecutableElement method = mock(javax.lang.model.element.ExecutableElement.class);
+        when(method.getKind()).thenReturn(ElementKind.METHOD);
+        when(method.getSimpleName()).thenReturn(methodName);
+        when(method.getEnclosingElement()).thenReturn(enclosing);
+        doReturn(java.util.List.of()).when(method).getTypeParameters();
+        doReturn(java.util.List.of(param)).when(method).getParameters();
+        when(method.isVarArgs()).thenReturn(false);
+
+        assertEquals("com.example.Host.intersect(java.io.Serializable & java.lang.Comparable<)",
+            ElementNaming.elementPath(method));
+    }
 }

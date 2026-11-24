@@ -1683,43 +1683,47 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             return; // Single module: its own round is by definition current.
         }
         for (String service : activeServices) {
-            Path optIn = serviceFiles.get(service);
-            if (optIn == null || !Files.isRegularFile(optIn)) {
-                continue;
-            }
-            // TESTING.md breaks this warning's premise, which is that a current module contributes
-            // a body for every active service. A main round renders nothing for `testing` by
-            // design, so the main sidecar never carries one however current it is, while the file's
-            // own mtime is whatever the test round last wrote. Every routed project would be told
-            // on every build that a complete file is missing a module. A warning that is always
-            // wrong is worse than none: it teaches the reader to skip the one that is right.
-            if (Platform.TESTING.getServiceKey().equals(service)) {
-                continue;
-            }
-            long optedInAt;
-            try {
-                optedInAt = Files.getLastModifiedTime(optIn).toMillis();
-            } catch (IOException e) {
-                continue;
-            }
-            List<String> behind =
-                ModuleSidecar.modulesPredatingOptIn(root, service, optedInAt, allSidecars);
-            if (behind.isEmpty()) {
-                continue;
-            }
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
-                "VibeTags: " + PathStrings.relative(root, optIn)
-                    + " was opted into after " + String.join(", ", behind)
-                    + " last compiled, so " + (behind.size() == 1 ? "its guardrails are" : "their guardrails are")
-                    + " missing from it. Run a full build to complete the file.");
-            if (log != null) {
-                log.warn("merge.partial service={} modulesBehind={} reason=opted-in-after-last-compile",
-                    service, behind);
-            }
+            warnIfServiceOptedInAfterModulesCompiled(service, serviceFiles.get(service), allSidecars);
         }
         warnAboutGranularOptedOutSinceAModuleLastCompiled(activeServices, allSidecars);
         warnAboutSiblingRuleFilesThatAreMissing(activeServices, serviceFiles, allSidecars);
         warnAboutElementsClaimedByTwoRegions(allSidecars);
+    }
+
+    private void warnIfServiceOptedInAfterModulesCompiled(
+            String service, @Nullable Path optIn, List<ModuleSidecar> allSidecars) {
+        if (optIn == null || !Files.isRegularFile(optIn)) {
+            return;
+        }
+        // TESTING.md breaks this warning's premise, which is that a current module contributes
+        // a body for every active service. A main round renders nothing for `testing` by
+        // design, so the main sidecar never carries one however current it is, while the file's
+        // own mtime is whatever the test round last wrote. Every routed project would be told
+        // on every build that a complete file is missing a module. A warning that is always
+        // wrong is worse than none: it teaches the reader to skip the one that is right.
+        if (Platform.TESTING.getServiceKey().equals(service)) {
+            return;
+        }
+        long optedInAt;
+        try {
+            optedInAt = Files.getLastModifiedTime(optIn).toMillis();
+        } catch (IOException e) {
+            return;
+        }
+        List<String> behind =
+            ModuleSidecar.modulesPredatingOptIn(root, service, optedInAt, allSidecars);
+        if (behind.isEmpty()) {
+            return;
+        }
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
+            "VibeTags: " + PathStrings.relative(root, optIn)
+                + " was opted into after " + String.join(", ", behind)
+                + " last compiled, so " + (behind.size() == 1 ? "its guardrails are" : "their guardrails are")
+                + " missing from it. Run a full build to complete the file.");
+        if (log != null) {
+            log.warn("merge.partial service={} modulesBehind={} reason=opted-in-after-last-compile",
+                service, behind);
+        }
     }
 
     /**
@@ -2105,46 +2109,52 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             collector, moduleBuilt, projectName, GENERATED_HEADER, checkModuleRoles, checkWriter,
             null, allSidecars, regionId, moduleId);
 
+        reportCheckVerdict(checkWriter.dryRunChanges(), effectiveContent.size(), allSidecars, moduleId);
+        VibeTagsLogger.shutdown(root);
+    }
+
+    private void reportCheckVerdict(List<String> drift, int activeFileCount,
+                                    List<ModuleSidecar> allSidecars, String moduleId) {
         Messager messager = processingEnv.getMessager();
-        List<String> drift = checkWriter.dryRunChanges();
         if (drift.isEmpty()) {
             messager.printMessage(Diagnostic.Kind.NOTE,
-                "VibeTags: check passed — all " + effectiveContent.size()
+                "VibeTags: check passed — all " + activeFileCount
                     + " active guardrail files are in sync with the annotations.");
-            if (log != null) log.info("Check passed: {} guardrail files in sync.", effectiveContent.size());
-        } else {
-            StringBuilder sb = new StringBuilder("VibeTags: check failed — ")
-                .append(drift.size())
-                .append(" guardrail file(s) are out of date with the annotations:");
-            for (String p : drift) {
-                String rel;
-                try {
-                    rel = PathStrings.relative(root, Paths.get(p));
-                } catch (IllegalArgumentException e) {
-                    rel = p;
-                }
-                sb.append("\n  - ").append(rel);
-            }
-            sb.append("\nRun a normal compile (without -Avibetags.check=true) and commit the regenerated files.");
-            // A verdict reached from one source set, with nothing on disk from any other, may be
-            // about content this round was simply never shown. Check mode writes no sidecar, on
-            // purpose, so on a clean checkout neither the main nor the test round can see the
-            // other's guardrails and the advice above is a dead end: a normal compile reproduces
-            // exactly the committed files (issue #794). Said here rather than left for the reader
-            // to work out, because the message they get today sends them to regenerate a tree that
-            // is already correct.
-            if (onlySourceSetInThisComparison(allSidecars, moduleId)) {
-                String seen = moduleIdentity == null ? "this" : moduleIdentity.sourceSet();
-                sb.append("\n\nNote: this comparison saw only the '").append(seen)
-                  .append("' source set, and no sidecar from another one. If this project also ")
-                  .append("annotates other source sets, their guardrails are committed but absent ")
-                  .append("here, and the drift above may be spurious (issue #794). Regenerate and ")
-                  .append("diff the tree instead: a normal full compile, then 'git status --porcelain'.");
-            }
-            messager.printMessage(Diagnostic.Kind.ERROR, sb.toString());
-            if (log != null) log.error("Check failed: {} guardrail file(s) out of date.", drift.size());
+            if (log != null) log.info("Check passed: {} guardrail files in sync.", activeFileCount);
+            return;
         }
-        VibeTagsLogger.shutdown(root);
+        StringBuilder sb = new StringBuilder("VibeTags: check failed — ")
+            .append(drift.size())
+            .append(" guardrail file(s) are out of date with the annotations:");
+        for (String p : drift) {
+            sb.append("\n  - ").append(relativeOrVerbatim(p));
+        }
+        sb.append("\nRun a normal compile (without -Avibetags.check=true) and commit the regenerated files.");
+        // A verdict reached from one source set, with nothing on disk from any other, may be
+        // about content this round was simply never shown. Check mode writes no sidecar, on
+        // purpose, so on a clean checkout neither the main nor the test round can see the
+        // other's guardrails and the advice above is a dead end: a normal compile reproduces
+        // exactly the committed files (issue #794). Said here rather than left for the reader
+        // to work out, because the message they get today sends them to regenerate a tree that
+        // is already correct.
+        if (onlySourceSetInThisComparison(allSidecars, moduleId)) {
+            String seen = moduleIdentity == null ? "this" : moduleIdentity.sourceSet();
+            sb.append("\n\nNote: this comparison saw only the '").append(seen)
+              .append("' source set, and no sidecar from another one. If this project also ")
+              .append("annotates other source sets, their guardrails are committed but absent ")
+              .append("here, and the drift above may be spurious (issue #794). Regenerate and ")
+              .append("diff the tree instead: a normal full compile, then 'git status --porcelain'.");
+        }
+        messager.printMessage(Diagnostic.Kind.ERROR, sb.toString());
+        if (log != null) log.error("Check failed: {} guardrail file(s) out of date.", drift.size());
+    }
+
+    private String relativeOrVerbatim(String path) {
+        try {
+            return PathStrings.relative(root, Paths.get(path));
+        } catch (IllegalArgumentException e) {
+            return path;
+        }
     }
 
     /**
@@ -2526,23 +2536,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         if (moduleIdOverride != null || !compilationRoot.equals(root)) {
             return;
         }
-        List<String> collapsing = new java.util.ArrayList<>();
-        for (String settingsName : List.of("settings.gradle", "settings.gradle.kts")) {
-            Path settings = root.resolve(settingsName);
-            if (!Files.isRegularFile(settings)) {
-                continue;
-            }
-            for (String included : ReactorRootDetector.gradleIncludes(settings)) {
-                Path dir = root.resolve(included);
-                if (!Files.isDirectory(dir) || !Files.isDirectory(dir.resolve("src"))) {
-                    continue; // Nothing there to compile, so nothing to collapse.
-                }
-                if (ModuleRootResolver.hasBuildFile(dir) || collapsing.contains(included)) {
-                    continue; // Its own build file is what gives it its own identity.
-                }
-                collapsing.add(included);
-            }
-        }
+        List<String> collapsing = collapsingGradleSubprojects();
         if (collapsing.isEmpty()) {
             return;
         }
@@ -2559,6 +2553,28 @@ public class AIGuardrailProcessor extends AbstractProcessor {
             log.warn("module.collapsed subprojects={} root={} reason=no-build-file-of-their-own",
                 collapsing, root);
         }
+    }
+
+    private List<String> collapsingGradleSubprojects() {
+        List<String> collapsing = new java.util.ArrayList<>();
+        for (String settingsName : List.of("settings.gradle", "settings.gradle.kts")) {
+            Path settings = root.resolve(settingsName);
+            if (!Files.isRegularFile(settings)) {
+                continue;
+            }
+            for (String included : ReactorRootDetector.gradleIncludes(settings)) {
+                if (!collapsing.contains(included) && isBuildlessSubprojectWithSources(root.resolve(included))) {
+                    collapsing.add(included);
+                }
+            }
+        }
+        return collapsing;
+    }
+
+    private static boolean isBuildlessSubprojectWithSources(Path dir) {
+        return Files.isDirectory(dir)
+            && Files.isDirectory(dir.resolve("src"))
+            && !ModuleRootResolver.hasBuildFile(dir);
     }
 
     /**

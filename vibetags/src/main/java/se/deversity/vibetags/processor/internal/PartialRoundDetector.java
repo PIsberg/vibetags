@@ -383,29 +383,42 @@ public final class PartialRoundDetector {
         Set<Path> unread = new LinkedHashSet<>();
         int scanned = 0;
         for (Path sourceRoot : sourceRoots) {
-            try (Stream<Path> walk = Files.walk(sourceRoot, MAX_WALK_DEPTH)) {
-                for (Path candidate : (Iterable<Path>) walk::iterator) {
-                    if (++scanned > MAX_FILES_SCANNED) {
-                        return List.copyOf(unread);
-                    }
-                    if (!candidate.toString().endsWith(".java")) {
-                        continue;
-                    }
-                    Path file = candidate.toAbsolutePath().normalize();
-                    if (compiledFiles.contains(file) || !namesTheAnnotations(file)) {
-                        continue;
-                    }
-                    unread.add(file);
-                    if (unread.size() >= MAX_REPORTED) {
-                        return List.copyOf(unread);
-                    }
-                }
-            } catch (IOException | RuntimeException unwalkable) {
-                // A source root this build cannot list tells us nothing either way; the other
-                // roots still can, and a guard that threw here would fail somebody's compile.
+            scanned = scanSourceRoot(sourceRoot, unread, scanned);
+            if (scanned > MAX_FILES_SCANNED || unread.size() >= MAX_REPORTED) {
+                break;
             }
         }
         return List.copyOf(unread);
+    }
+
+    private int scanSourceRoot(Path sourceRoot, Set<Path> unread, int scannedSoFar) {
+        int scanned = scannedSoFar;
+        try (Stream<Path> walk = Files.walk(sourceRoot, MAX_WALK_DEPTH)) {
+            for (Path candidate : (Iterable<Path>) walk::iterator) {
+                if (++scanned > MAX_FILES_SCANNED) {
+                    return scanned;
+                }
+                Path unreadFile = asUnreadAnnotatedSource(candidate);
+                if (unreadFile != null) {
+                    unread.add(unreadFile);
+                    if (unread.size() >= MAX_REPORTED) {
+                        return scanned;
+                    }
+                }
+            }
+        } catch (IOException | RuntimeException unwalkable) {
+            // A source root this build cannot list tells us nothing either way; the other
+            // roots still can, and a guard that threw here would fail somebody's compile.
+        }
+        return scanned;
+    }
+
+    private @Nullable Path asUnreadAnnotatedSource(Path candidate) {
+        if (!candidate.toString().endsWith(".java")) {
+            return null;
+        }
+        Path file = candidate.toAbsolutePath().normalize();
+        return !compiledFiles.contains(file) && namesTheAnnotations(file) ? file : null;
     }
 
     /**

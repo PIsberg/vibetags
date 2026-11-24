@@ -621,7 +621,28 @@ public final class WriteCache {
             mergedSections.put(currentModule, own);
         }
         String mergedStamp = rootStampSet ? sidecarStamp : diskStamp;
+        StringBuilder sb = formatCache(mergedSections, mergedEntries, mergedStamp);
+        try {
+            // Store parent in a local so SpotBugs can track the null-check across the two uses.
+            Path cacheParent = cachePath.getParent();
+            if (cacheParent != null) {
+                Files.createDirectories(cacheParent);
+            }
+            // Every module of a reactor flushes this one root-level cache (#554).
+            AtomicFileReplacer.replace(cachePath, sb);
+            dirty = false;
+            // On disk now; a later flush re-reads them, and must not re-assert a value a sibling
+            // has replaced since.
+            touchedKeys.clear();
+            rootStampSet = false;
+        } catch (IOException ignored) {
+            // Cache flush is best-effort — losing it just means we rebuild on the next compile.
+        }
+    }
 
+    private StringBuilder formatCache(Map<String, Section> mergedSections,
+                                      Map<String, Entry> mergedEntries,
+                                      @Nullable String mergedStamp) {
         StringBuilder sb = new StringBuilder(64 + 128 * mergedEntries.size());
         sb.append("# VibeTags write cache. Auto-generated. Safe to delete.\n")
             .append(FORMAT_HEADER).append(FORMAT_VERSION).append('\n');
@@ -646,22 +667,7 @@ public final class WriteCache {
               .append(e.getValue().size).append('\t')
               .append(e.getValue().mtime).append('\n');
         }
-        try {
-            // Store parent in a local so SpotBugs can track the null-check across the two uses.
-            Path cacheParent = cachePath.getParent();
-            if (cacheParent != null) {
-                Files.createDirectories(cacheParent);
-            }
-            // Every module of a reactor flushes this one root-level cache (#554).
-            AtomicFileReplacer.replace(cachePath, sb);
-            dirty = false;
-            // On disk now; a later flush re-reads them, and must not re-assert a value a sibling
-            // has replaced since.
-            touchedKeys.clear();
-            rootStampSet = false;
-        } catch (IOException ignored) {
-            // Cache flush is best-effort — losing it just means we rebuild on the next compile.
-        }
+        return sb;
     }
 
     /** The fingerprint, sidecar-stamp, and context lines of one section; the current module's context is the bound one. */

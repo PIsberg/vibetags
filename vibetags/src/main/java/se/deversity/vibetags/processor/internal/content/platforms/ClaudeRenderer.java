@@ -45,14 +45,7 @@ public final class ClaudeRenderer implements PlatformRenderer {
 
         appendIgnoreSection(sb, model);
 
-        if (!model.draft().isEmpty()) {
-            StringBuilder sec = new StringBuilder("  <implementation_tasks>\n");
-            for (TaggedElement e : model.draft()) {
-                FormatterRegistry.draft().format(e, sec, Platform.CLAUDE);
-            }
-            sec.append("  </implementation_tasks>\n");
-            sb.append(sec);
-        }
+        appendDraftSection(sb, model);
 
         appendPrivacySection(sb, model);
 
@@ -64,13 +57,7 @@ public final class ClaudeRenderer implements PlatformRenderer {
         appendSection(sb, model.contract(), FormatterRegistry.contract(), "contract_signatures",
             "\n<rule>You may refactor the internal logic of elements listed in <contract_signatures>, but you MUST NOT change their public signatures: method names, parameter types, parameter order, return types, or checked exceptions.</rule>\n");
 
-        if (!model.testDriven().isEmpty()) {
-            StringBuilder sec = new StringBuilder("  <test_driven_requirements>\n");
-            ClaudeTestDrivenSection.render(model.testDriven(), sec);
-            sec.append("  </test_driven_requirements>\n");
-            sb.append(sec)
-                .append("\n<rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed. Every name under <applies-to> in a <test_driven_default> block inherits that block's coverage goal, frameworks, and test-location convention (with {path} standing for the element's package path).</rule>\n");
-        }
+        appendTestDrivenSection(sb, model);
 
         appendSection(sb, model.threadSafe(), FormatterRegistry.threadSafe(), "thread_safe_elements",
             "\n<rule>Elements listed in <thread_safe_elements> are explicitly designed to be thread-safe via the named strategy. Any modification MUST preserve the synchronization invariant and document its reasoning in the change description.</rule>\n");
@@ -240,6 +227,20 @@ public final class ClaudeRenderer implements PlatformRenderer {
     private static void appendSecureSection(StringBuilder sb, GuardrailModel model) {
         appendSection(sb, model.secure(), FormatterRegistry.secure(), "security_elements",
             "\n<rule>Elements listed in <security_elements> are security-critical. Never weaken their security properties. Every proposed change must be explicitly reviewed for security impact.</rule>\n");
+    }
+
+    private static void appendDraftSection(StringBuilder sb, GuardrailModel model) {
+        appendSection(sb, model.draft(), FormatterRegistry.draft(), "implementation_tasks", "");
+    }
+
+    private static void appendTestDrivenSection(StringBuilder sb, GuardrailModel model) {
+        if (model.testDriven().isEmpty()) {
+            return;
+        }
+        sb.append("  <test_driven_requirements>\n");
+        ClaudeTestDrivenSection.render(model.testDriven(), sb);
+        sb.append("  </test_driven_requirements>\n")
+            .append("\n<rule>For any element listed in <test_driven_requirements>, you MUST provide both the implementation change AND the corresponding test code update in a single response. Changes without tests are incomplete and must not be proposed. Every name under <applies-to> in a <test_driven_default> block inherits that block's coverage goal, frameworks, and test-location convention (with {path} standing for the element's package path).</rule>\n");
     }
 
     /**

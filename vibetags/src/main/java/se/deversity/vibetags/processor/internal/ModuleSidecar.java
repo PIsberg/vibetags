@@ -1793,16 +1793,7 @@ public final class ModuleSidecar {
 
         private void finishValue() {
             switch (kind) {
-                case HEADER -> {
-                    String value = captured.toString();
-                    if (KEY_MODULE_ID.equals(keyName)) {
-                        moduleId = value;
-                    } else if (KEY_MODULE_PATH.equals(keyName)) {
-                        modulePath = value;
-                    } else {
-                        regionId = value;
-                    }
-                }
+                case HEADER -> finishHeader(captured.toString());
                 case ELEMENTS -> {
                     try {
                         addNonBlankLines(decode(captured.toString()), elementIds);
@@ -1822,6 +1813,16 @@ public final class ModuleSidecar {
                     if (!stream.finish()) undecodable = true;
                 }
                 case IGNORED -> { }
+            }
+        }
+
+        private void finishHeader(String value) {
+            if (KEY_MODULE_ID.equals(keyName)) {
+                moduleId = value;
+            } else if (KEY_MODULE_PATH.equals(keyName)) {
+                modulePath = value;
+            } else {
+                regionId = value;
             }
         }
 

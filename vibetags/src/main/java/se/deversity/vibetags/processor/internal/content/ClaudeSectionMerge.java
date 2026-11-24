@@ -52,24 +52,24 @@ public final class ClaudeSectionMerge {
         List<String> tail = new ArrayList<>();
         for (String body : bodies) {
             Parsed parsed = parse(body);
-            if (parsed == null) {
+            if (parsed == null || (lead != null && !lead.equals(parsed.lead()))) {
                 return null;
             }
-            if (lead == null) {
-                lead = parsed.lead();
-            } else if (!lead.equals(parsed.lead())) {
-                return null;
-            }
+            lead = parsed.lead();
             if (!mergeSections(merged, parsed.sections())) {
                 return null;
             }
-            for (String paragraph : parsed.tail()) {
-                if (!tail.contains(paragraph)) {
-                    tail.add(paragraph);
-                }
-            }
+            addUnique(tail, parsed.tail());
         }
         return render(lead == null ? "" : lead, merged, tail);
+    }
+
+    private static void addUnique(List<String> target, List<String> incoming) {
+        for (String item : incoming) {
+            if (!target.contains(item)) {
+                target.add(item);
+            }
+        }
     }
 
     /**
@@ -93,11 +93,7 @@ public final class ClaudeSectionMerge {
             if (!String.join("\n", existing.after()).strip().equals(String.join("\n", section.after()).strip())) {
                 return false;
             }
-            for (String block : section.blocks()) {
-                if (!existing.blocks().contains(block)) {
-                    existing.blocks().add(block);
-                }
-            }
+            addUnique(existing.blocks(), section.blocks());
             cursor = at;
         }
         return true;
@@ -130,8 +126,17 @@ public final class ClaudeSectionMerge {
         if (open < 0 || close < open) {
             return null;
         }
+        List<Section> sections = parseSections(lines, open + 1, close);
+        if (sections == null) {
+            return null;
+        }
+        String lead = String.join("\n", lines.subList(0, open)).strip();
+        return new Parsed(lead, sections, parseTail(lines, close + 1));
+    }
+
+    private static @Nullable List<Section> parseSections(List<String> lines, int from, int close) {
         List<Section> sections = new ArrayList<>();
-        int i = open + 1;
+        int i = from;
         while (i < close) {
             Matcher m = SECTION_OPEN.matcher(lines.get(i));
             if (!m.matches()) {
@@ -151,21 +156,29 @@ public final class ClaudeSectionMerge {
             if (blocks == null) {
                 return null;
             }
-            int next = end + 1;
-            while (next < close && !SECTION_OPEN.matcher(lines.get(next)).matches()) {
-                next++;
-            }
+            int next = nextSectionOrClose(lines, end + 1, close);
             sections.add(new Section(tag, blocks, List.copyOf(lines.subList(end + 1, next))));
             i = next;
         }
-        String lead = String.join("\n", lines.subList(0, open)).strip();
+        return sections;
+    }
+
+    private static int nextSectionOrClose(List<String> lines, int from, int close) {
+        int next = from;
+        while (next < close && !SECTION_OPEN.matcher(lines.get(next)).matches()) {
+            next++;
+        }
+        return next;
+    }
+
+    private static List<String> parseTail(List<String> lines, int afterClose) {
         List<String> tail = new ArrayList<>();
-        for (String paragraph : PARAGRAPH_BREAK.split(String.join("\n", lines.subList(close + 1, lines.size())))) {
+        for (String paragraph : PARAGRAPH_BREAK.split(String.join("\n", lines.subList(afterClose, lines.size())), -1)) {
             if (!paragraph.isBlank()) {
                 tail.add(paragraph.strip());
             }
         }
-        return new Parsed(lead, sections, tail);
+        return tail;
     }
 
     /**

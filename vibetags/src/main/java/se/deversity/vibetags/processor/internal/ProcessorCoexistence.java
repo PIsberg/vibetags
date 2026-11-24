@@ -138,19 +138,7 @@ public final class ProcessorCoexistence {
         List<Peer> dropped = new ArrayList<>();
         for (Peer peer : PEERS) {
             Use use = firstUse(env, round, peer);
-            if (use == null) {
-                continue;
-            }
-            if (loads(processorLoader, peer.processorClass())) {
-                if (log != null && log.isDebugEnabled()) {
-                    log.debug("coexistence.peer name={} annotation={} state=on-processor-path", peer.name(), use.annotation());
-                }
-                continue;
-            }
-            if (loads(jvmLoader, peer.processorClass())) {
-                if (log != null && log.isDebugEnabled()) {
-                    log.debug("coexistence.peer name={} annotation={} state=on-jvm-class-path", peer.name(), use.annotation());
-                }
+            if (use == null || isPresentOnEitherPath(peer, use, processorLoader, jvmLoader, log)) {
                 continue;
             }
             dropped.add(peer);
@@ -161,6 +149,23 @@ public final class ProcessorCoexistence {
             }
         }
         return dropped;
+    }
+
+    private static boolean isPresentOnEitherPath(Peer peer, Use use, ClassLoader processorLoader,
+                                                 ClassLoader jvmLoader, @Nullable Logger log) {
+        if (loads(processorLoader, peer.processorClass())) {
+            if (log != null && log.isDebugEnabled()) {
+                log.debug("coexistence.peer name={} annotation={} state=on-processor-path", peer.name(), use.annotation());
+            }
+            return true;
+        }
+        if (loads(jvmLoader, peer.processorClass())) {
+            if (log != null && log.isDebugEnabled()) {
+                log.debug("coexistence.peer name={} annotation={} state=on-jvm-class-path", peer.name(), use.annotation());
+            }
+            return true;
+        }
+        return false;
     }
 
     static String message(Peer peer, String annotation) {

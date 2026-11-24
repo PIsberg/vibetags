@@ -65,13 +65,17 @@ public final class MarkdownSectionMerge {
             } else if (!fold(merged, parsed)) {
                 return null;
             }
-            for (Item item : bodyTail) {
-                if (indexOfText(tail, item.text()) < 0) {
-                    tail.add(item);
-                }
-            }
+            addUniqueItems(tail, bodyTail);
         }
         return merged == null ? null : render(merged, tail);
+    }
+
+    private static void addUniqueItems(List<Item> target, List<Item> incoming) {
+        for (Item item : incoming) {
+            if (indexOfText(target, item.text()) < 0) {
+                target.add(item);
+            }
+        }
     }
 
     private static @Nullable List<Container> parse(String body) {
@@ -89,7 +93,7 @@ public final class MarkdownSectionMerge {
                 open = null;
                 continue;
             }
-            if ((inSections ? ANY_HEADING : SECTION_HEADING).matcher(line).matches()) {
+            if (isHeading(line, inSections)) {
                 current.trailingBlanks = blanks;
                 current = new Container(line, pathTo(path, line));
                 containers.add(current);
@@ -98,9 +102,7 @@ public final class MarkdownSectionMerge {
                 blanks = 0;
                 continue;
             }
-            boolean indented = Character.isWhitespace(line.charAt(0));
-            if (open != null && open.bullet && indented) {
-                open.append(line);
+            if (appendToOpenBullet(open, line)) {
                 continue;
             }
             if (BULLET.matcher(line).matches()) {
@@ -112,16 +114,33 @@ public final class MarkdownSectionMerge {
             if (open != null && open.bullet) {
                 return null;
             }
-            if (open != null) {
-                open.append(line);
-                continue;
-            }
-            open = new Item(false, line, blanks);
-            current.items.add(open);
+            open = appendOrStartParagraph(current, open, line, blanks);
             blanks = 0;
         }
         current.trailingBlanks = blanks;
         return containers;
+    }
+
+    private static boolean isHeading(String line, boolean inSections) {
+        return (inSections ? ANY_HEADING : SECTION_HEADING).matcher(line).matches();
+    }
+
+    private static boolean appendToOpenBullet(@Nullable Item open, String line) {
+        if (open != null && open.bullet && Character.isWhitespace(line.charAt(0))) {
+            open.append(line);
+            return true;
+        }
+        return false;
+    }
+
+    private static Item appendOrStartParagraph(Container current, @Nullable Item open, String line, int blanks) {
+        if (open != null) {
+            open.append(line);
+            return open;
+        }
+        Item paragraph = new Item(false, line, blanks);
+        current.items.add(paragraph);
+        return paragraph;
     }
 
     /**

@@ -113,15 +113,22 @@ public record YamlMergeShape(String anchor, int indent, String emptyBody) {
             int afterAnchor = endOfAnchorLine(document);
             if (afterAnchor < 0) return null;
             if (scaffold == null) scaffold = document.substring(0, afterAnchor).stripTrailing();
-            String body = trimBlankLines(document.substring(afterAnchor));
-            if (body.isBlank() || body.strip().equals(emptyBody.strip())) continue;
-            bodies.add(body);
+            String body = nonEmptyBody(document, afterAnchor);
+            if (body != null) {
+                bodies.add(body);
+            }
         }
         if (scaffold == null) return null;
-        if (bodies.isEmpty()) {
-            return emptyBody.isBlank() ? scaffold : scaffold + "\n" + emptyBody;
-        }
-        return scaffold + "\n" + String.join("\n", bodies);
+        return bodies.isEmpty() ? withEmptyBody(scaffold) : scaffold + "\n" + String.join("\n", bodies);
+    }
+
+    private @Nullable String nonEmptyBody(String document, int afterAnchor) {
+        String body = trimBlankLines(document.substring(afterAnchor));
+        return body.isBlank() || body.strip().equals(emptyBody.strip()) ? null : body;
+    }
+
+    private String withEmptyBody(String scaffold) {
+        return emptyBody.isBlank() ? scaffold : scaffold + "\n" + emptyBody;
     }
 
     private static void appendWrapped(StringBuilder out, String moduleId, String body, int indent,

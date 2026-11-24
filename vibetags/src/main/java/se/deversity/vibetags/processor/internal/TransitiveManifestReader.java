@@ -212,27 +212,34 @@ public final class TransitiveManifestReader {
     private void resolve(Filer filer, Set<String> candidates) {
         for (String candidate : candidates) {
             if (probed.size() >= MAX_LOOKUPS) {
-                if (!lookupCapHit) {
-                    lookupCapHit = true;
-                    if (log != null) {
-                        log.warn("transitive.skip reason=lookup-cap cap={} remaining-unprobed=true", MAX_LOOKUPS);
-                    }
-                }
+                noteLookupCapHit();
                 return;
             }
-            if (!probed.add(candidate)) {
-                continue;
+            if (probed.add(candidate)) {
+                probeCandidate(filer, candidate);
             }
-            String json = read(filer, candidate);
-            if (json == null) {
-                continue;
+        }
+    }
+
+    private void noteLookupCapHit() {
+        if (!lookupCapHit) {
+            lookupCapHit = true;
+            if (log != null) {
+                log.warn("transitive.skip reason=lookup-cap cap={} remaining-unprobed=true", MAX_LOOKUPS);
             }
-            try {
-                accept(candidate, json, TransitiveManifest.RESOURCE_PACKAGE + "/" + candidate);
-            } catch (RuntimeException e) {
-                if (log != null) {
-                    log.warn("transitive.skip package={} reason=unparseable detail={}", candidate, e.getMessage());
-                }
+        }
+    }
+
+    private void probeCandidate(Filer filer, String candidate) {
+        String json = read(filer, candidate);
+        if (json == null) {
+            return;
+        }
+        try {
+            accept(candidate, json, TransitiveManifest.RESOURCE_PACKAGE + "/" + candidate);
+        } catch (RuntimeException e) {
+            if (log != null) {
+                log.warn("transitive.skip package={} reason=unparseable detail={}", candidate, e.getMessage());
             }
         }
     }
@@ -347,27 +354,31 @@ public final class TransitiveManifestReader {
     static Set<String> candidatesFromImports(Collection<ImportedName> imports) {
         Set<String> out = new TreeSet<>();
         for (ImportedName imported : imports) {
-            String identifier = imported.identifier();
-            if (identifier.isEmpty() || isSkipped(identifier)) {
-                continue;
-            }
-            String[] segments = identifier.split("\\.");
-            int limit = segments.length - imported.nonPackageSegments();
-            StringBuilder prefix = new StringBuilder(identifier.length());
-            for (int i = 0; i < limit; i++) {
-                if (segments[i].isEmpty()) {
-                    break;
-                }
-                if (i > 0) {
-                    prefix.append('.');
-                }
-                prefix.append(segments[i]);
-                if (i + 1 >= MIN_SEGMENTS) {
-                    out.add(prefix.toString());
-                }
-            }
+            addPrefixesOf(imported, out);
         }
         return out;
+    }
+
+    private static void addPrefixesOf(ImportedName imported, Set<String> out) {
+        String identifier = imported.identifier();
+        if (identifier.isEmpty() || isSkipped(identifier)) {
+            return;
+        }
+        String[] segments = identifier.split("\\.", -1);
+        int limit = segments.length - imported.nonPackageSegments();
+        StringBuilder prefix = new StringBuilder(identifier.length());
+        for (int i = 0; i < limit; i++) {
+            if (segments[i].isEmpty()) {
+                break;
+            }
+            if (i > 0) {
+                prefix.append('.');
+            }
+            prefix.append(segments[i]);
+            if (i + 1 >= MIN_SEGMENTS) {
+                out.add(prefix.toString());
+            }
+        }
     }
 
     /** Convenience for tests and callers holding plain type-import strings. */

@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor.internal.content.annotations;
 
 // CPD-OFF
 
+import org.jspecify.annotations.Nullable;
 import se.deversity.vibetags.annotations.AIIgnore;
 import se.deversity.vibetags.processor.internal.content.ElementFiles;
 import se.deversity.vibetags.processor.model.TaggedElement;
@@ -40,9 +41,8 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
         // synthesized instance does, and formatters run against those in tests and in tooling that
         // builds a model without a compiler. VibeTags is advisory: a null here must render one
         // line less, not throw out of somebody's build.
-        AIIgnore ignore = element.annotation(AIIgnore.class);
-        String reason = ignore == null || ignore.reason() == null ? "" : ignore.reason();
-        boolean explained = !reason.isBlank() && !reason.equals(DEFAULT_REASON);
+        String reason = customReason(element.annotation(AIIgnore.class));
+        boolean explained = !reason.isEmpty();
         String suffix = explained ? " - " + reason : "";
 
         // An exclusion list takes bare .gitignore globs and nothing else. That was twenty-two
@@ -63,28 +63,13 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
         }
 
         switch (platform) {
-            case CURSOR:
-            case WINDSURF:
+            case CURSOR, WINDSURF, QWEN:
                 sb.append("* `").append(className).append('`').append(suffix).append('\n');
                 break;
             case CLAUDE:
-                if (explained) {
-                    sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <reason>")
-                      .append(Escape.xml(reason)).append("</reason>\n    </file>\n");
-                } else {
-                    sb.append("    <file path=\"").append(Escape.xml(className)).append("\"/>\n");
-                }
+                renderClaude(className, explained, reason, sb);
                 break;
-            case CODEX:
-                sb.append("- `").append(className).append('`').append(suffix).append('\n');
-                break;
-            case COPILOT:
-                sb.append("- `").append(className).append('`').append(suffix).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(suffix).append('\n');
-                break;
-            case GEMINI_MD:
+            case CODEX, COPILOT, GEMINI_MD, ZED:
                 sb.append("- `").append(className).append('`').append(suffix).append('\n');
                 break;
             case LLMS:
@@ -101,15 +86,26 @@ public final class AIIgnoreFormatter implements AnnotationFormatter {
                   .append("\n- **Instruction**: This element is strictly excluded from AI context. Do not reference it.")
                   .append(explained ? "\n- **Reason**: " + reason : "").append("\n\n");
                 break;
-            case ZED:
-                sb.append("- `").append(className).append('`').append(suffix).append('\n');
-                break;
             case CODERABBIT:
                 sb.append("- `").append(className).append("` (excluded): treat as non-existent")
                   .append(suffix).append('\n');
                 break;
             default:
                 break;
+        }
+    }
+
+    private static String customReason(@Nullable AIIgnore ignore) {
+        String reason = ignore == null || ignore.reason() == null ? "" : ignore.reason();
+        return reason.isBlank() || reason.equals(DEFAULT_REASON) ? "" : reason;
+    }
+
+    private static void renderClaude(String className, boolean explained, String reason, StringBuilder sb) {
+        if (explained) {
+            sb.append("    <file path=\"").append(Escape.xml(className)).append("\">\n      <reason>")
+              .append(Escape.xml(reason)).append("</reason>\n    </file>\n");
+        } else {
+            sb.append("    <file path=\"").append(Escape.xml(className)).append("\"/>\n");
         }
     }
 

@@ -68,30 +68,55 @@ public final class ModuleRootResolver {
         Map<Path, Optional<Path>> rootBySourceDir = new HashMap<>();
         for (Element element : sources.roots()) {
             Path file = sources.fileOf(element);
-            Path sourceDir = file != null ? file.getParent() : null;
-            if (file == null || sourceDir == null) continue;
-            Path candidate = rootBySourceDir
-                .computeIfAbsent(sourceDir, dir -> Optional.ofNullable(nearestBuildFileAncestor(dir)))
-                .orElse(null);
-            if (candidate == null) continue;
+            Path candidate = cachedModuleRoot(file, rootBySourceDir);
+            if (file == null || candidate == null) continue;
             if (moduleRoot == null) {
                 moduleRoot = candidate;
             }
             if (moduleRoot.equals(candidate)) {
-                // Read from the source root, not the package directory: under a root that is
-                // itself src/ the segment after src/ is the first package segment (#1068).
-                Path sourceRoot = PartialRoundDetector.sourceRootOf(
-                    file, PartialRoundDetector.packageNameOf(sources.elements(), element));
-                String sourceSet = sourceSetOf(moduleRoot, sourceRoot != null ? sourceRoot : sourceDir);
-                if (sourceSet != null) sourceSets.add(sourceSet);
+                recordElementSourceSet(moduleRoot, file, sources, element, sourceSets);
             }
         }
-        if (moduleRoot == null) return null;
-        // A round that saw main and a test source set at once: pickSourceSet prefers main, so
-        // nothing downstream would otherwise know the test half was here and went unrouted.
-        boolean mixed = sourceSets.contains(ModuleIdentity.MAIN)
+        return moduleRoot == null
+            ? null
+            : new ModuleIdentity(moduleRoot, pickSourceSet(sourceSets), isMixedSourceSets(sourceSets));
+    }
+
+    private static @Nullable Path cachedModuleRoot(@Nullable Path file, Map<Path, Optional<Path>> rootBySourceDir) {
+        Path sourceDir = file != null ? file.getParent() : null;
+        if (sourceDir == null) {
+            return null;
+        }
+        return rootBySourceDir
+            .computeIfAbsent(sourceDir, dir -> Optional.ofNullable(nearestBuildFileAncestor(dir)))
+            .orElse(null);
+    }
+
+    /**
+     * Read from the source root, not the package directory: under a root that is itself {@code src/}
+     * the segment after {@code src/} is the first package segment (#1068).
+     */
+    private static void recordElementSourceSet(Path moduleRoot, Path file, RoundSources sources,
+                                               Element element, SortedSet<String> sourceSets) {
+        Path sourceDir = file.getParent();
+        if (sourceDir == null) {
+            return;
+        }
+        Path sourceRoot = PartialRoundDetector.sourceRootOf(
+            file, PartialRoundDetector.packageNameOf(sources.elements(), element));
+        String sourceSet = sourceSetOf(moduleRoot, sourceRoot != null ? sourceRoot : sourceDir);
+        if (sourceSet != null) {
+            sourceSets.add(sourceSet);
+        }
+    }
+
+    /**
+     * A round that saw main and a test source set at once: {@link #pickSourceSet} prefers main, so
+     * nothing downstream would otherwise know the test half was here and went unrouted.
+     */
+    private static boolean isMixedSourceSets(SortedSet<String> sourceSets) {
+        return sourceSets.contains(ModuleIdentity.MAIN)
             && sourceSets.stream().anyMatch(ModuleIdentity::isTestSourceSetName);
-        return new ModuleIdentity(moduleRoot, pickSourceSet(sourceSets), mixed);
     }
 
     /**
@@ -120,6 +145,19 @@ public final class ModuleRootResolver {
      */
     public static @Nullable ModuleIdentity withRecordedOwner(@Nullable ModuleIdentity resolved,
                                                              RoundSources sources, Path root) {
+        List<Path> files = normalizedFiles(sources);
+        Path resolvedRoot = resolved == null ? null : resolved.root().toAbsolutePath().normalize();
+        if (files.isEmpty() || allUnderConventionalSrc(resolvedRoot, files)) {
+            return resolved;
+        }
+        ModuleIdentity owner = soleClaimant(root, files);
+        if (owner == null || (resolvedRoot != null && !owner.root().startsWith(resolvedRoot))) {
+            return resolved;
+        }
+        return owner;
+    }
+
+    private static List<Path> normalizedFiles(RoundSources sources) {
         List<Path> files = new ArrayList<>();
         for (Element element : sources.roots()) {
             Path file = sources.fileOf(element);
@@ -127,16 +165,18 @@ public final class ModuleRootResolver {
                 files.add(file.toAbsolutePath().normalize());
             }
         }
-        if (files.isEmpty()) {
-            return resolved;
+        return files;
+    }
+
+    private static boolean allUnderConventionalSrc(@Nullable Path resolvedRoot, List<Path> files) {
+        if (resolvedRoot == null) {
+            return false;
         }
-        Path resolvedRoot = resolved == null ? null : resolved.root().toAbsolutePath().normalize();
-        if (resolvedRoot != null) {
-            Path conventional = resolvedRoot.resolve(SRC_DIR);
-            if (files.stream().allMatch(f -> f.startsWith(conventional))) {
-                return resolved;
-            }
-        }
+        Path conventional = resolvedRoot.resolve(SRC_DIR);
+        return files.stream().allMatch(f -> f.startsWith(conventional));
+    }
+
+    private static @Nullable ModuleIdentity soleClaimant(Path root, List<Path> files) {
         ModuleIdentity owner = null;
         try {
             for (ModuleSidecar sidecar : ModuleSidecar.peekAll(root)) {
@@ -145,17 +185,14 @@ public final class ModuleRootResolver {
                     continue;
                 }
                 if (owner != null && !owner.equals(candidate)) {
-                    return resolved; // two modules record these roots: not ours to choose
+                    return null; // two modules record these roots: not ours to choose
                 }
                 owner = candidate;
             }
+            return owner;
         } catch (RuntimeException unreadable) {
-            return resolved; // a sidecar that cannot be read is no evidence of ownership
+            return null; // a sidecar that cannot be read is no evidence of ownership
         }
-        if (owner == null || (resolvedRoot != null && !owner.root().startsWith(resolvedRoot))) {
-            return resolved;
-        }
-        return owner;
     }
 
     /**

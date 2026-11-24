@@ -267,24 +267,33 @@ public final class MethodBodyGuardrailScanner {
             return true; // an enum constant or a class literal: the source names it
         }
         if (value instanceof List<?> list) {
-            for (Object item : list) {
-                Object inner = item instanceof AnnotationValue av ? av.getValue() : item;
-                if (!spelledOutInTheRound(inner, element, roots, sources)) {
-                    return false;
-                }
-            }
-            return true;
+            return allSpelledOut(list, element, roots, sources);
         }
         if (value instanceof String text) {
             String literal = javaLiteral(text);
             return appearsInTheRound(source -> containsText(source, literal), element, roots, sources);
         }
-        if (value instanceof Boolean || value instanceof Integer || value instanceof Long
-                || value instanceof Short || value instanceof Byte) {
+        if (isTokenPrimitive(value)) {
             String token = String.valueOf(value);
             return appearsInTheRound(source -> containsToken(source, token), element, roots, sources);
         }
         return false;
+    }
+
+    private boolean allSpelledOut(List<?> list, Element element, Set<? extends Element> roots,
+                                  RoundSources sources) {
+        for (Object item : list) {
+            Object inner = item instanceof AnnotationValue av ? av.getValue() : item;
+            if (!spelledOutInTheRound(inner, element, roots, sources)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isTokenPrimitive(@Nullable Object value) {
+        return value instanceof Boolean || value instanceof Integer || value instanceof Long
+            || value instanceof Short || value instanceof Byte;
     }
 
     /**

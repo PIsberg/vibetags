@@ -25,6 +25,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Every remaining unlocked method over the PMD complexity or statement-count threshold is split
+  into named steps.** In `CoreRules.all` (cognitive complexity 59), the sixteen inline attribute
+  lambdas are now named static `check*` methods routed through null-safe `isBlank` and `isEmpty`
+  helpers. The ten annotation formatters over the threshold (`AIKeepInSyncFormatter` 25,
+  `AIObservabilityFormatter` 22 / NCSS 76, `AIGeneratedFormatter` 19, `AIBannedApiFormatter` 18,
+  `AIImmutableFormatter` 17, `AILoadBearingFormatter` 17, `AIThreadAffinityFormatter` 17,
+  `AIDeprecatedFormatter` 16 / NCSS 65, `AIIgnoreFormatter` 16, `AITestDrivenFormatter` 16) split
+  `summary`, `renderClaude` and `renderLlmsFull`, and `ClaudeRenderer.render` (NCSS 64),
+  `ClaudeTestDrivenSection.render` (15) and `GranularIndexSection` (`appendMarkdownIndex` 19,
+  `appendXmlIndex` 17) extract their section and line steps. The remaining processor and internal
+  methods (`AIGuardrailProcessor.checkFiles` 22, `warnIfSubprojectsShareTheRootIdentity` 18 and
+  `warnAboutPartialMerges` 15; `LockedOverrideRule.visitTypes` 21; `ModuleRootResolver.fromRound`
+  20 and `withRecordedOwner` 18; `SourcePositionResolver.delegateOf` 20;
+  `GranularRulesWriter.stemsWithPrefix` 19 and `write` 16; `TransitiveManifestReader.resolve` 19
+  and `candidatesFromImports` 15; `GuardrailFileWriter.writeOnce` 18, `legacyXmlBlockEnd` 16 and
+  `frontMatterEnd` 15; `JsonValueSpans.merge` 18 and `Scanner.skipValue` 16; `MirrorConfig.read`
+  18; `PartialRoundDetector.unreadSourcesNamingTheAnnotations` 18; `ClaudeSectionMerge.parse` 18
+  and `merge` 17; `ElementNaming.stripAnnotations` 17; `HandAuthoredYamlKeyWarner.warn` 17;
+  `ProcessorCoexistence.check` 17; `MarkdownSectionMerge.parse` 17 and `merge` 15;
+  `ModuleOutputWriter.write` 16; `RuleFileLengthWarner.measure` 16; `WriteCache.flush` 16;
+  `FinalRoundElements.hasError` 15; `MethodBodyGuardrailScanner.spelledOutInTheRound` 15;
+  `ModuleSidecar.SummaryScan.finishValue` 15; `YamlMergeShape.mergeSourceSets` 15) are likewise
+  decomposed into named helpers, reducing the processor's PMD complexity findings from 51 to the
+  two findings on the `@AILocked` `AIGuardrailProcessor.generateFiles()`.
 - **Inherited guardrails are applied in three named steps.** `applyTransitiveRules` (cognitive
   complexity 23) now resolves the option-named manifests in `resolveTransitiveSources`, sorts and
   caps through `TransitiveRules.capped` (a pure function: safety rules never count against
@@ -240,6 +264,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SourcePositionResolver.delegateOf` unwraps a non-public `ProcessingEnvironment` decorator via
+  `delegate()` or `getDelegate()` (#1203).** The field probe called `field.trySetAccessible()`, but
+  the accessor fallback invoked `env.getClass().getMethod(accessor)` without
+  `method.trySetAccessible()`, which threw `IllegalAccessException` (swallowed as `null`) whenever
+  the concrete wrapper class was not `public`, and neither probe skipped a self-reference
+  (`inner.equals(env)`). Both now do.
+- **`ElementNaming.stripAnnotations` skips balanced parentheses and string or character literals in
+  annotation arguments (#1204).** For a fallback `TypeMirror` whose `toString()` carried a type-use
+  annotation with `')'` inside a string literal (such as a `@Pattern` regex), a character literal,
+  or nested parentheses, `indexOf(')', i)` stopped at the first inner `')'` and left the tail of
+  the annotation in the element's identity.
+- **Every `CoreRules` attribute check and `LockedOverrideRule` tolerates a `null` attribute return
+  in a degraded or mocked environment (#1202).** Nine rules in `CoreRules` and
+  `LockedOverrideRule` dereferenced `String` or `String[]` attributes without the null guard the
+  other five rules carried, throwing `NullPointerException` when a non-javac or mocked annotation
+  returned `null`.
 - **A byte order mark no longer corrupts the first line of `.vibetags-roles` or `.vibetags-mirror`
   (#1197).** Both were read with the mark kept and `trim()` does not remove it. In a mirror
   config the first source path named no module, or a first-line comment became a source, and the

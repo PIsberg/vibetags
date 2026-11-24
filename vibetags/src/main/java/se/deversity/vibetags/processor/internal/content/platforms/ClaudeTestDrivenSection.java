@@ -1,5 +1,6 @@
 package se.deversity.vibetags.processor.internal.content.platforms;
 
+import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -56,14 +57,31 @@ final class ClaudeTestDrivenSection {
         Map<Signature, List<TaggedElement>> groups = new LinkedHashMap<>();
         for (TaggedElement e : elements) {
             AITestDriven td = e.annotation(AITestDriven.class);
-            if (td == null) {
-                continue;
+            if (td != null) {
+                groups.computeIfAbsent(signature(e, td), k -> new ArrayList<>()).add(e);
             }
-            groups.computeIfAbsent(signature(e, td), k -> new ArrayList<>()).add(e);
         }
 
-        // Largest group becomes the default; ties resolve to the first-seen group (LinkedHashMap
-        // iteration order) via the strict > comparison, keeping the choice deterministic.
+        Signature defaultSig = coalescedSignature(groups);
+        if (defaultSig != null) {
+            appendDefaultBlock(defaultSig, groups.getOrDefault(defaultSig, List.of()), sb);
+        }
+
+        for (TaggedElement e : elements) {
+            AITestDriven td = e.annotation(AITestDriven.class);
+            if (td != null && !signature(e, td).equals(defaultSig)) {
+                FormatterRegistry.testDriven().format(e, sb, Platform.CLAUDE);
+            }
+        }
+    }
+
+    /**
+     * Largest group of at least {@link #MIN_COALESCE} members becomes the default; ties resolve to
+     * the first-seen group ({@code LinkedHashMap} iteration order) via the strict {@code >}
+     * comparison, keeping the choice deterministic.
+     */
+    private static @Nullable Signature coalescedSignature(
+            Map<Signature, List<TaggedElement>> groups) {
         Signature defaultSig = null;
         int best = 0;
         for (Map.Entry<Signature, List<TaggedElement>> entry : groups.entrySet()) {
@@ -72,24 +90,7 @@ final class ClaudeTestDrivenSection {
                 defaultSig = entry.getKey();
             }
         }
-
-        // best >= MIN_COALESCE implies a group was found, and therefore that defaultSig is set —
-        // but only the second half of that is something a reader (or a checker) can see locally.
-        boolean coalesce = best >= MIN_COALESCE && defaultSig != null;
-        if (coalesce && defaultSig != null) {
-            appendDefaultBlock(defaultSig, groups.getOrDefault(defaultSig, List.of()), sb);
-        }
-
-        for (TaggedElement e : elements) {
-            AITestDriven td = e.annotation(AITestDriven.class);
-            if (td == null) {
-                continue;
-            }
-            if (coalesce && signature(e, td).equals(defaultSig)) {
-                continue;
-            }
-            FormatterRegistry.testDriven().format(e, sb, Platform.CLAUDE);
-        }
+        return best >= MIN_COALESCE ? defaultSig : null;
     }
 
     private static void appendDefaultBlock(Signature sig, List<TaggedElement> members, StringBuilder sb) {

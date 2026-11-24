@@ -23,36 +23,16 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
         String forbidden = String.join(", ", banned.forbidden());
         String useInstead = banned.useInstead();
         String reason = banned.reason();
-        String summary = (forbidden.isEmpty()
-                            ? "Some APIs are prohibited at this element."
-                            : "Must not use: " + forbidden + ".")
-                       + (useInstead.isEmpty() ? "" : " Use " + useInstead + " instead.")
-                       + (reason.isEmpty() ? "" : " (" + reason + ")");
+        String summary = summary(forbidden, useInstead, reason);
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
-                    .append(CommonFormatterHelper.element("forbidden", forbidden));
-                if (!useInstead.isEmpty()) {
-                    sb.append("      <use-instead>").append(Escape.xml(useInstead)).append("</use-instead>\n");
-                }
-                if (!reason.isEmpty()) {
-                    sb.append("      <reason>").append(Escape.xml(reason)).append("</reason>\n");
-                }
-                sb.append("    </element>\n");
+                renderClaude(className, forbidden, useInstead, reason, sb);
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append('\n')
-                    .append(CommonFormatterHelper.bullet("Banned here", forbidden));
-                if (!useInstead.isEmpty()) {
-                    sb.append("- **Sanctioned route**: ").append(useInstead).append('\n');
-                }
-                if (!reason.isEmpty()) {
-                    sb.append("- **Reason**: ").append(reason).append('\n');
-                }
-                sb.append("- These symbols compile, so the compiler will not stop you. The ban is a project rule.\n\n");
+                renderLlmsFull(className, forbidden, useInstead, reason, sb);
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### BANNED APIs: ").append(className).append('\n')
@@ -67,5 +47,39 @@ public final class AIBannedApiFormatter implements AnnotationFormatter {
             default:
                 break;
         }
+    }
+
+    private static String summary(String forbidden, String useInstead, String reason) {
+        return (forbidden.isEmpty()
+                ? "Some APIs are prohibited at this element."
+                : "Must not use: " + forbidden + ".")
+            + (useInstead.isEmpty() ? "" : " Use " + useInstead + " instead.")
+            + (reason.isEmpty() ? "" : " (" + reason + ")");
+    }
+
+    private static void renderClaude(String className, String forbidden, String useInstead,
+                                     String reason, StringBuilder sb) {
+        sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+            .append(CommonFormatterHelper.element("forbidden", forbidden));
+        if (!useInstead.isEmpty()) {
+            sb.append("      <use-instead>").append(Escape.xml(useInstead)).append("</use-instead>\n");
+        }
+        if (!reason.isEmpty()) {
+            sb.append("      <reason>").append(Escape.xml(reason)).append("</reason>\n");
+        }
+        sb.append("    </element>\n");
+    }
+
+    private static void renderLlmsFull(String className, String forbidden, String useInstead,
+                                       String reason, StringBuilder sb) {
+        sb.append("### ").append(className).append('\n')
+            .append(CommonFormatterHelper.bullet("Banned here", forbidden));
+        if (!useInstead.isEmpty()) {
+            sb.append("- **Sanctioned route**: ").append(useInstead).append('\n');
+        }
+        if (!reason.isEmpty()) {
+            sb.append("- **Reason**: ").append(reason).append('\n');
+        }
+        sb.append("- These symbols compile, so the compiler will not stop you. The ban is a project rule.\n\n");
     }
 }

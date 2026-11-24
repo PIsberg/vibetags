@@ -181,47 +181,60 @@ public final class JsonValueSpans {
         List<Edit> edits = new ArrayList<>();
         List<String> additions = new ArrayList<>();
         for (SharedKey shared : keys) {
-            String body = bodies.getOrDefault(shared.key(), "");
-            List<Member> matches = members.stream().filter(m -> m.key().equals(shared.key())).toList();
-            if (matches.size() > 1) {
-                return Outcome.declined("duplicate-key", "\"" + shared.key() + "\" appears " + matches.size()
-                    + " times, and a JSON reader keeps only one of them");
+            Outcome declined = planSharedKeyEdit(text, members, shared,
+                bodies.getOrDefault(shared.key(), ""), edits, additions);
+            if (declined != null) {
+                return declined;
             }
-            if (matches.isEmpty()) {
-                if (!body.isEmpty()) {
-                    additions.add("\"" + Escape.json(shared.key()) + "\": \"" + Escape.json(span(shared, body)) + "\"");
-                }
-                continue;
-            }
-            Member member = matches.get(0);
-            if (text.charAt(member.valueStart()) != '"') {
-                return Outcome.declined("non-string-value", "\"" + shared.key() + "\" is not a string");
-            }
-            Edit edit = spliceSpan(text, member, shared, body);
-            if (edit == null) {
-                return Outcome.declined("unterminated-span", "\"" + shared.key() + "\" has a "
-                    + shared.markerStart() + " line with no " + shared.markerEnd() + " line after it");
-            }
-            edits.add(edit);
         }
         if (!additions.isEmpty()) {
             edits.add(insertion(text, members, additions));
         }
 
+        String out = applyEdits(text, edits);
+        try {
+            // Unreachable while the edits above are correct; the check turns a bug in them into a
+            // skipped write rather than a corrupted file.
+            Json.parseObject(out);
+        } catch (Json.JsonException e) {
+            return Outcome.declined("merge-invalid", "the merged document did not parse (" + e.getMessage() + ")");
+        }
+        return Outcome.merged(bom + out);
+    }
+
+    private static @Nullable Outcome planSharedKeyEdit(String text, List<Member> members, SharedKey shared,
+                                                       String body, List<Edit> edits, List<String> additions) {
+        List<Member> matches = members.stream().filter(m -> m.key().equals(shared.key())).toList();
+        if (matches.size() > 1) {
+            return Outcome.declined("duplicate-key", "\"" + shared.key() + "\" appears " + matches.size()
+                + " times, and a JSON reader keeps only one of them");
+        }
+        if (matches.isEmpty()) {
+            if (!body.isEmpty()) {
+                additions.add("\"" + Escape.json(shared.key()) + "\": \"" + Escape.json(span(shared, body)) + "\"");
+            }
+            return null;
+        }
+        Member member = matches.get(0);
+        if (text.charAt(member.valueStart()) != '"') {
+            return Outcome.declined("non-string-value", "\"" + shared.key() + "\" is not a string");
+        }
+        Edit edit = spliceSpan(text, member, shared, body);
+        if (edit == null) {
+            return Outcome.declined("unterminated-span", "\"" + shared.key() + "\" has a "
+                + shared.markerStart() + " line with no " + shared.markerEnd() + " line after it");
+        }
+        edits.add(edit);
+        return null;
+    }
+
+    private static String applyEdits(String text, List<Edit> edits) {
         StringBuilder out = new StringBuilder(text);
         edits.sort(Comparator.comparingInt(Edit::start).reversed());
         for (Edit edit : edits) {
             out.replace(edit.start(), edit.end(), edit.replacement());
         }
-        String merged = bom + out;
-        try {
-            // Unreachable while the edits above are correct; the check turns a bug in them into a
-            // skipped write rather than a corrupted file.
-            Json.parseObject(out.toString());
-        } catch (Json.JsonException e) {
-            return Outcome.declined("merge-invalid", "the merged document did not parse (" + e.getMessage() + ")");
-        }
-        return Outcome.merged(merged);
+        return out.toString();
     }
 
     // ---------------------------------------------------------------------------------------
@@ -405,25 +418,29 @@ public final class JsonValueSpans {
                 return;
             }
             if (c == '{' || c == '[') {
-                int depth = 0;
-                do {
-                    char d = text.charAt(pos);
-                    if (d == '"') {
-                        skipString();
-                        continue;
-                    }
-                    if (d == '{' || d == '[') {
-                        depth++;
-                    } else if (d == '}' || d == ']') {
-                        depth--;
-                    }
-                    pos++;
-                } while (depth > 0);
+                skipCompound();
                 return;
             }
             while (pos < text.length() && ",}] \t\r\n".indexOf(text.charAt(pos)) < 0) {
                 pos++;
             }
+        }
+
+        private void skipCompound() {
+            int depth = 0;
+            do {
+                char d = text.charAt(pos);
+                if (d == '"') {
+                    skipString();
+                    continue;
+                }
+                if (d == '{' || d == '[') {
+                    depth++;
+                } else if (d == '}' || d == ']') {
+                    depth--;
+                }
+                pos++;
+            } while (depth > 0);
         }
     }
 }

@@ -20,39 +20,20 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
         String replacedBy = dep.replacedBy();
         String migrationGuide = dep.migrationGuide();
         String deadline = dep.deadline();
-
-        StringBuilder summary = new StringBuilder();
-        if (!replacedBy.isEmpty()) {
-            summary.append("Replaced by: `").append(replacedBy).append("`. ");
-        }
-        summary.append(migrationGuide);
-        if (!deadline.isEmpty()) {
-            summary.append(" (Removal deadline: ").append(deadline).append(')');
-        }
+        String summary = summary(replacedBy, migrationGuide, deadline);
 
         switch (platform) {
-            case CURSOR:
+            case CURSOR, QWEN:
                 sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
-                if (!replacedBy.isEmpty()) {
-                    sb.append("      <replaced_by>").append(Escape.xml(replacedBy)).append("</replaced_by>\n");
-                }
-                sb.append(CommonFormatterHelper.element("migration_guide", migrationGuide));
-                if (!deadline.isEmpty()) {
-                    sb.append("      <deadline>").append(Escape.xml(deadline)).append("</deadline>\n");
-                }
-                sb.append("    </element>\n");
+                renderClaude(className, replacedBy, migrationGuide, deadline, sb);
                 break;
             case CODEX:
-                sb.append(CommonFormatterHelper.codexBullet(className, summary.toString()));
+                sb.append(CommonFormatterHelper.codexBullet(className, summary));
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
             case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
@@ -61,15 +42,7 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append('\n');
-                if (!replacedBy.isEmpty()) {
-                    sb.append("- **Replaced by**: ").append(replacedBy).append('\n');
-                }
-                sb.append(CommonFormatterHelper.bullet("Migration", migrationGuide));
-                if (!deadline.isEmpty()) {
-                    sb.append("- **Deadline**: ").append(deadline).append('\n');
-                }
-                sb.append('\n');
+                renderLlmsFull(className, replacedBy, migrationGuide, deadline, sb);
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### DEPRECATED: ").append(className).append("\n- **Status**: Scheduled for removal. Do not extend.\n")
@@ -80,14 +53,49 @@ public final class AIDeprecatedFormatter implements AnnotationFormatter {
             case WINDSURF:
                 sb.append("* `").append(className).append("` (deprecated)").append(CommonFormatterHelper.clause(" - ", summary)).append('\n');
                 break;
-            case ZED:
-                sb.append("- `").append(className).append("` (deprecated)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
-                break;
-            case CODERABBIT:
+            case ZED, CODERABBIT:
                 sb.append("- `").append(className).append("` (deprecated)").append(CommonFormatterHelper.clause(": ", summary)).append('\n');
                 break;
             default:
                 break;
         }
+    }
+
+    private static String summary(String replacedBy, String migrationGuide, String deadline) {
+        StringBuilder summary = new StringBuilder();
+        if (!replacedBy.isEmpty()) {
+            summary.append("Replaced by: `").append(replacedBy).append("`. ");
+        }
+        summary.append(migrationGuide);
+        if (!deadline.isEmpty()) {
+            summary.append(" (Removal deadline: ").append(deadline).append(')');
+        }
+        return summary.toString();
+    }
+
+    private static void renderClaude(String className, String replacedBy, String migrationGuide,
+                                     String deadline, StringBuilder sb) {
+        sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
+        if (!replacedBy.isEmpty()) {
+            sb.append("      <replaced_by>").append(Escape.xml(replacedBy)).append("</replaced_by>\n");
+        }
+        sb.append(CommonFormatterHelper.element("migration_guide", migrationGuide));
+        if (!deadline.isEmpty()) {
+            sb.append("      <deadline>").append(Escape.xml(deadline)).append("</deadline>\n");
+        }
+        sb.append("    </element>\n");
+    }
+
+    private static void renderLlmsFull(String className, String replacedBy, String migrationGuide,
+                                       String deadline, StringBuilder sb) {
+        sb.append("### ").append(className).append('\n');
+        if (!replacedBy.isEmpty()) {
+            sb.append("- **Replaced by**: ").append(replacedBy).append('\n');
+        }
+        sb.append(CommonFormatterHelper.bullet("Migration", migrationGuide));
+        if (!deadline.isEmpty()) {
+            sb.append("- **Deadline**: ").append(deadline).append('\n');
+        }
+        sb.append('\n');
     }
 }

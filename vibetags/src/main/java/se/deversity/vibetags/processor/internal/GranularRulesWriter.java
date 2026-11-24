@@ -142,57 +142,63 @@ public final class GranularRulesWriter {
                               String filePrefix,
                               List<String> extraGlobs,
                               Map<String, GranularContribution> mergedByStem) {
+        List<GranularFormat> formats = activeFormats(activeServices);
+        if (formats.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+
+        Map<String, Unit> units = plan(elementRules, roles, filePrefix, extraGlobs);
+        noteStemsDifferingOnlyInCase(units.keySet());
+
         Set<String> writtenQNames = new LinkedHashSet<>();
+        for (Map.Entry<String, Unit> planned : units.entrySet()) {
+            String stem = planned.getKey();
+            writtenQNames.add(stem);
+            writeUnit(stem, effectiveUnit(planned.getValue(), mergedByStem.get(stem)), formats, serviceFiles);
+        }
+        return writtenQNames;
+    }
+
+    private static List<GranularFormat> activeFormats(Set<String> activeServices) {
         List<GranularFormat> formats = new ArrayList<>();
         for (GranularFormat f : FORMATS) {
             if (activeServices.contains(f.serviceKey)) {
                 formats.add(f);
             }
         }
-        if (formats.isEmpty()) {
-            return writtenQNames;
+        return formats;
+    }
+
+    /**
+     * The merged view wins when there is one, because it already contains this module's own
+     * contribution — the sidecar was written before it was read. Its globs are taken whole rather
+     * than unioned with the local ones so that every module writing this file writes the same
+     * bytes; a per-module union would order them per module and churn the diff.
+     */
+    private static Unit effectiveUnit(Unit local, @Nullable GranularContribution merged) {
+        if (merged == null || merged.isEmpty() || merged.globs().isEmpty()) {
+            return local;
         }
+        // The heading follows the merged view too, or a file two modules write under
+        // two spellings of one name is headed by whichever compiled last (issue #579).
+        // A merge assembled from sidecars that carry no naming (an older sibling's)
+        // keeps this module's own heading, as before.
+        String displayName = merged.isNamed() ? merged.displayName() : local.displayName();
+        String description = merged.isNamed() ? merged.description() : local.description();
+        return new Unit(displayName, description, merged);
+    }
 
-        Map<String, Unit> units = plan(elementRules, roles, filePrefix, extraGlobs);
-        noteStemsDifferingOnlyInCase(units.keySet());
-
-        for (Map.Entry<String, Unit> planned : units.entrySet()) {
-            String stem = planned.getKey();
-            Unit unit = planned.getValue();
-            writtenQNames.add(stem);
-            // The merged view wins when there is one, because it already contains this module's own
-            // contribution — the sidecar was written before it was read. Its globs are taken whole
-            // rather than unioned with the local ones so that every module writing this file writes
-            // the same bytes; a per-module union would order them per module and churn the diff.
-            GranularContribution merged = mergedByStem.get(stem);
-            List<String> globs = unit.content().globs();
-            String body = unit.content().body();
-            String displayName = unit.displayName();
-            String description = unit.description();
-            if (merged != null && !merged.isEmpty() && !merged.globs().isEmpty()) {
-                globs = merged.globs();
-                body = merged.body();
-                // The heading follows the merged view too, or a file two modules write under
-                // two spellings of one name is headed by whichever compiled last (issue #579).
-                // A merge assembled from sidecars that carry no naming (an older sibling's)
-                // keeps this module's own heading, as before.
-                if (merged.isNamed()) {
-                    displayName = merged.displayName();
-                    description = merged.description();
-                }
-            }
-            for (GranularFormat f : formats) {
-                Path serviceDir = serviceFiles.get(f.serviceKey);
-                if (serviceDir == null) {
-                    continue;  // service not configured for this run: nothing to write
-                }
+    private void writeUnit(String stem, Unit unit, List<GranularFormat> formats, Map<String, Path> serviceFiles) {
+        List<String> globs = unit.content().globs();
+        String body = unit.content().body();
+        for (GranularFormat f : formats) {
+            Path serviceDir = serviceFiles.get(f.serviceKey);
+            if (serviceDir != null) {
                 fileWriter.writeFileIfChanged(
                     serviceDir.resolve(stem + f.extension).toString(),
-                    f.render(description, displayName, globs, body), true);
+                    f.render(unit.description(), unit.displayName(), globs, body), true);
             }
         }
-
-        return writtenQNames;
     }
 
     /**
@@ -562,29 +568,35 @@ public final class GranularRulesWriter {
         }
         for (GranularFormat f : FORMATS) {
             Path dir = serviceFiles.get(f.serviceKey);
-            if (dir == null || !activeServices.contains(f.serviceKey)
-                    || !java.nio.file.Files.isDirectory(dir)) {
-                continue;
-            }
-            try (java.util.stream.Stream<Path> files = java.nio.file.Files.list(dir)) {
-                for (Path file : files.toList()) {
-                    String name = String.valueOf(file.getFileName());
-                    if (!name.endsWith(f.extension)) {
-                        continue;
-                    }
-                    for (String prefix : prefixes) {
-                        if (name.startsWith(prefix)) {
-                            stems.add(name.substring(0, name.length() - f.extension.length()));
-                            break;
-                        }
-                    }
-                }
-            } catch (java.io.IOException ignored) {
-                // A directory this build cannot list has nothing in it to protect; the cleanup
-                // that follows cannot list it either.
+            if (dir != null && activeServices.contains(f.serviceKey) && java.nio.file.Files.isDirectory(dir)) {
+                collectPrefixedStems(dir, f.extension, prefixes, stems);
             }
         }
         return stems;
+    }
+
+    private static void collectPrefixedStems(Path dir, String extension,
+                                             java.util.Collection<String> prefixes, Set<String> stems) {
+        try (java.util.stream.Stream<Path> files = java.nio.file.Files.list(dir)) {
+            for (Path file : files.toList()) {
+                String name = String.valueOf(file.getFileName());
+                if (name.endsWith(extension) && startsWithAny(name, prefixes)) {
+                    stems.add(name.substring(0, name.length() - extension.length()));
+                }
+            }
+        } catch (java.io.IOException ignored) {
+            // A directory this build cannot list has nothing in it to protect; the cleanup
+            // that follows cannot list it either.
+        }
+    }
+
+    private static boolean startsWithAny(String name, java.util.Collection<String> prefixes) {
+        for (String prefix : prefixes) {
+            if (name.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

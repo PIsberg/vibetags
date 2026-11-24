@@ -210,30 +210,8 @@ public final class GuardrailFileWriter {
         // Phase-2 streaming fast path: for non-marker files where the on-disk size matches
         // the new content size exactly, stream-compare bytes with early-exit on first
         // mismatch. Skips materialising the entire file as a String just to call .equals().
-        if (!supportsMarkers && fileExists && existingSize == contentByteLen) {
-            if (fileBytesEqual(filePath, contentBytes)) {
-                // Byte-identical — nothing to do. Refresh the cache so subsequent calls hit
-                // the cheap WriteCache fast path even on the very first build.
-                noteCurrent(filePath, content, existingAttrs);
-                debug("write.skip file={} reason=identical-bytes bytes={}", fileName, contentByteLen);
-                return false;
-            }
-            // Sizes match but bytes differ — write directly. No need for readString or
-            // strip-tolerant compare: an exact-size byte mismatch is unambiguous.
-            if (!hasNewRules && existingSize > 0) {
-                debug("write.skip file={} reason=no-new-rules existingBytes={}", fileName, existingSize);
-                skipUpdateMsg(fileName);
-                return false;
-            }
-            String sameSize = Files.readString(filePath, StandardCharsets.UTF_8);
-            if (!replaceableWholeFile(sameSize)) {
-                return writeHandWrittenWholeFile(filePath, fileName, content, sameSize, existingAttrs);
-            }
-            debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
-                fileName, existingSize, contentByteLen);
-            writeAndCache(filePath, content, content, existingAttrs);
-            messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
-            return true;
+        if (!supportsMarkers && existingAttrs != null && existingSize == contentByteLen) {
+            return writeSameSizeWholeFile(filePath, fileName, content, contentBytes, hasNewRules, existingAttrs);
         }
 
         // Read the existing file whenever it exists so the compare-before-write below can treat
@@ -251,6 +229,36 @@ public final class GuardrailFileWriter {
         }
         return writeWithoutMarkers(filePath, fileName, content, existing, fileExists, existingSize, hasNewRules,
             existingAttrs);
+    }
+
+    private boolean writeSameSizeWholeFile(Path filePath, String fileName, String content,
+                                           byte[] contentBytes, boolean hasNewRules,
+                                           BasicFileAttributes existingAttrs) throws IOException {
+        long existingSize = existingAttrs.size();
+        int contentByteLen = contentBytes.length;
+        if (fileBytesEqual(filePath, contentBytes)) {
+            // Byte-identical — nothing to do. Refresh the cache so subsequent calls hit
+            // the cheap WriteCache fast path even on the very first build.
+            noteCurrent(filePath, content, existingAttrs);
+            debug("write.skip file={} reason=identical-bytes bytes={}", fileName, contentByteLen);
+            return false;
+        }
+        // Sizes match but bytes differ — write directly. No need for readString or
+        // strip-tolerant compare: an exact-size byte mismatch is unambiguous.
+        if (!hasNewRules && existingSize > 0) {
+            debug("write.skip file={} reason=no-new-rules existingBytes={}", fileName, existingSize);
+            skipUpdateMsg(fileName);
+            return false;
+        }
+        String sameSize = Files.readString(filePath, StandardCharsets.UTF_8);
+        if (!replaceableWholeFile(sameSize)) {
+            return writeHandWrittenWholeFile(filePath, fileName, content, sameSize, existingAttrs);
+        }
+        debug("write.update file={} reason=bytes-differ oldBytes={} newBytes={} markers=false",
+            fileName, existingSize, contentByteLen);
+        writeAndCache(filePath, content, content, existingAttrs);
+        messager.printMessage(Diagnostic.Kind.NOTE, "VibeTags: Updated " + fileName);
+        return true;
     }
 
     /**
@@ -834,16 +842,24 @@ public final class GuardrailFileWriter {
         if (openerEnd < 0 || !text.substring(3, openerEnd).isBlank()) return -1;
         int close = indexOfMarkerLine(text, "---", openerEnd);
         if (close < 0) return -1;
-        for (String line : text.substring(openerEnd + 1, close).split("\n")) {
-            if (line.isBlank() || Character.isWhitespace(line.charAt(0))) continue;
-            String t = line.strip();
-            if (t.startsWith("#") || t.equals("-") || t.startsWith("- ")) continue;
-            int colon = t.indexOf(':');
-            if (colon <= 0 || !t.substring(0, colon).strip().matches(KEY_PATTERN)) {
+        for (String line : text.substring(openerEnd + 1, close).split("\n", -1)) {
+            if (!isFrontMatterLine(line)) {
                 return -1;
             }
         }
         return close + 3;
+    }
+
+    private static boolean isFrontMatterLine(String line) {
+        if (line.isBlank() || Character.isWhitespace(line.charAt(0))) {
+            return true;
+        }
+        String t = line.strip();
+        if (t.startsWith("#") || t.equals("-") || t.startsWith("- ")) {
+            return true;
+        }
+        int colon = t.indexOf(':');
+        return colon > 0 && t.substring(0, colon).strip().matches(KEY_PATTERN);
     }
 
     /** A YAML mapping key as it appears in front matter: a bare or quoted identifier. */
@@ -1085,7 +1101,11 @@ public final class GuardrailFileWriter {
             int rule = window.lastIndexOf("</rule>");
             return rule < 0 ? -1 : rule + "</rule>".length();
         }
-        int end = idx + closer.length();
+        return skipTrailingRuleLines(rest, idx + closer.length());
+    }
+
+    private static int skipTrailingRuleLines(String rest, int from) {
+        int end = from;
         while (true) {
             int lineStart = end;
             while (lineStart < rest.length() && Character.isWhitespace(rest.charAt(lineStart))) {

@@ -177,12 +177,7 @@ public final class FinalRoundElements {
                 return true;
             }
         }
-        for (TypeMirror thrown : executable.getThrownTypes()) {
-            if (hasError(thrown)) {
-                return true;
-            }
-        }
-        return false;
+        return anyHasError(executable.getThrownTypes());
     }
 
     /** Whether {@code type} is, or has as a type argument, array component or bound, an error type. */
@@ -199,11 +194,13 @@ public final class FinalRoundElements {
         if (type instanceof WildcardType wildcard) {
             return hasError(wildcard.getExtendsBound()) || hasError(wildcard.getSuperBound());
         }
-        if (type instanceof DeclaredType declared) {
-            for (TypeMirror argument : declared.getTypeArguments()) {
-                if (hasError(argument)) {
-                    return true;
-                }
+        return type instanceof DeclaredType declared && anyHasError(declared.getTypeArguments());
+    }
+
+    private static boolean anyHasError(List<? extends TypeMirror> types) {
+        for (TypeMirror type : types) {
+            if (hasError(type)) {
+                return true;
             }
         }
         return false;

@@ -182,7 +182,10 @@ public final class MirrorConfig {
         } catch (IOException e) {
             return Reading.unusable(file, "it could not be read (" + e.getClass().getSimpleName() + ")");
         }
-        Path target = dir.toAbsolutePath().normalize();
+        return parseLines(file, dir.toAbsolutePath().normalize(), content);
+    }
+
+    private static Reading parseLines(Path file, Path target, String content) {
         List<Path> sources = new ArrayList<>();
         List<String> globs = new ArrayList<>();
         String[] lines = linesOf(content);
@@ -193,19 +196,16 @@ public final class MirrorConfig {
             }
             String glob = stripGlobKey(line);
             if (glob != null) {
-                if (!glob.isEmpty() && !globs.contains(glob)) {
-                    globs.add(glob);
-                }
+                addIfPresentAndUnique(globs, glob);
                 continue;
             }
-            Path source;
             try {
-                source = target.resolve(line).normalize();
+                Path source = target.resolve(line).normalize();
+                if (!sources.contains(source)) {
+                    sources.add(source);
+                }
             } catch (InvalidPathException notAPath) {
                 return Reading.unusable(file, notAPathReason(i + 1, line));
-            }
-            if (!sources.contains(source)) {
-                sources.add(source);
             }
         }
         if (globs.isEmpty()) {
@@ -213,6 +213,12 @@ public final class MirrorConfig {
         }
         return Reading.loaded(new MirrorConfig(target, List.copyOf(sources), List.copyOf(globs),
             BuildFingerprint.fingerprint(content)));
+    }
+
+    private static void addIfPresentAndUnique(List<String> target, String value) {
+        if (!value.isEmpty() && !target.contains(value)) {
+            target.add(value);
+        }
     }
 
     /**
