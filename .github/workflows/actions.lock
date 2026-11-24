@@ -17,7 +17,7 @@ workflows:
     '.github/workflows/codeql.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880'
-        - 'github/codeql-action@33d7b85da1a04171e211befe2c739303b9a4c066'
+        - 'github/codeql-action@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea'
         - 'step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c'
     '.github/workflows/copilot-review.yml':
         - 'step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c'
@@ -65,7 +65,7 @@ workflows:
     '.github/workflows/scorecards.yml':
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'
-        - 'github/codeql-action@33d7b85da1a04171e211befe2c739303b9a4c066'
+        - 'github/codeql-action@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea'
         - 'ossf/scorecard-action@23f22cd43608bae7a1f1fa2603d7314dee9538a5'
         - 'step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c'
 dependencies:
@@ -118,9 +118,9 @@ dependencies:
         repo_id: 200299178
         uses:
             - 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd'
-    'github/codeql-action@33d7b85da1a04171e211befe2c739303b9a4c066':
-        ref: 'v4.39.3'
-        commit: 'sha1-33d7b85da1a04171e211befe2c739303b9a4c066'
+    'github/codeql-action@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea':
+        ref: 'v4.39.4'
+        commit: 'sha1-1bd86f2fdb4b86187fa4059f16f31a3202acc9ea'
         owner_id: 9919
         repo_id: 259445878
     'gradle/actions@8da46b539cd8fe6ab27ca75128919a18d757604c':
