@@ -146,6 +146,27 @@ class ValidationRuleUnitTest {
         record Case(String label, ValidationRule rule, Element element) { }
 
         List<Case> cases = List.of(
+            new Case("@AIContext.focus/avoids",
+                findRuleFor(se.deversity.vibetags.annotations.AIContext.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIContext.class, a -> {
+                    when(a.focus()).thenReturn(null);
+                    when(a.avoids()).thenReturn(null);
+                })),
+            new Case("@AIAudit.checkFor",
+                findRuleFor(se.deversity.vibetags.annotations.AIAudit.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIAudit.class,
+                    a -> when(a.checkFor()).thenReturn(null))),
+            new Case("@AIDeprecated.replacedBy",
+                findRuleFor(se.deversity.vibetags.annotations.AIDeprecated.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIDeprecated.class,
+                    a -> when(a.replacedBy()).thenReturn(null))),
+            new Case("@AIObservability.metrics/traces/logs",
+                findRuleFor(se.deversity.vibetags.annotations.AIObservability.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIObservability.class, a -> {
+                    when(a.metrics()).thenReturn(null);
+                    when(a.traces()).thenReturn(null);
+                    when(a.logs()).thenReturn(null);
+                })),
             new Case("@AIRegulation.standard",
                 findRuleFor(se.deversity.vibetags.annotations.AIRegulation.class),
                 elementWithNullAttribute(se.deversity.vibetags.annotations.AIRegulation.class,
@@ -161,7 +182,42 @@ class ValidationRuleUnitTest {
             new Case("@AISunset.jira",
                 findRuleFor(se.deversity.vibetags.annotations.AISunset.class),
                 elementWithNullAttribute(se.deversity.vibetags.annotations.AISunset.class,
-                    a -> when(a.jira()).thenReturn(null))));
+                    a -> when(a.jira()).thenReturn(null))),
+            new Case("@AITemporary.expiresOn",
+                findRuleFor(se.deversity.vibetags.annotations.AITemporary.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AITemporary.class,
+                    a -> when(a.expiresOn()).thenReturn(null))),
+            new Case("@AIGenerated.regenerateWith/editInstead",
+                findRuleFor(se.deversity.vibetags.annotations.AIGenerated.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIGenerated.class, a -> {
+                    when(a.regenerateWith()).thenReturn(null);
+                    when(a.editInstead()).thenReturn(null);
+                })),
+            new Case("@AILoadBearing.breaksIf",
+                findRuleFor(se.deversity.vibetags.annotations.AILoadBearing.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AILoadBearing.class,
+                    a -> when(a.breaksIf()).thenReturn(null))),
+            new Case("@AIBannedApi.forbidden",
+                findRuleFor(se.deversity.vibetags.annotations.AIBannedApi.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIBannedApi.class,
+                    a -> when(a.forbidden()).thenReturn(null))),
+            new Case("@AIBannedApi.useInstead",
+                findRuleFor(se.deversity.vibetags.annotations.AIBannedApi.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIBannedApi.class, a -> {
+                    when(a.forbidden()).thenReturn(new String[]{"java.util.Date"});
+                    when(a.useInstead()).thenReturn(null);
+                })),
+            new Case("@AIThreadAffinity.thread/marshalVia",
+                findRuleFor(se.deversity.vibetags.annotations.AIThreadAffinity.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIThreadAffinity.class, a -> {
+                    when(a.value()).thenReturn(se.deversity.vibetags.annotations.AIThreadAffinity.Affinity.NAMED);
+                    when(a.thread()).thenReturn(null);
+                    when(a.marshalVia()).thenReturn(null);
+                })),
+            new Case("@AIKeepInSync.mirrors",
+                findRuleFor(se.deversity.vibetags.annotations.AIKeepInSync.class),
+                elementWithNullAttribute(se.deversity.vibetags.annotations.AIKeepInSync.class,
+                    a -> when(a.mirrors()).thenReturn(null))));
 
         for (Case c : cases) {
             Recorder recorder = new Recorder(c.element(), c.rule().scans());
@@ -170,6 +226,72 @@ class ValidationRuleUnitTest {
                 c.label() + ": a null attribute is as unusable as a blank one and must warn, not throw. "
                     + recorder.messages);
         }
+    }
+
+    @Test
+    void lockedOverrideRule_treatsANullReasonAsAbsentRatherThanThrowing() {
+        AILocked lock = mock(AILocked.class);
+        when(lock.reason()).thenReturn(null);
+
+        javax.lang.model.element.TypeElement owner = mock(javax.lang.model.element.TypeElement.class);
+        javax.lang.model.element.Name ownerName = mock(javax.lang.model.element.Name.class);
+        when(ownerName.toString()).thenReturn("com.example.Base");
+        when(owner.getQualifiedName()).thenReturn(ownerName);
+        javax.lang.model.type.TypeMirror ownerType = mock(javax.lang.model.type.TypeMirror.class);
+        when(owner.asType()).thenReturn(ownerType);
+
+        javax.lang.model.element.ExecutableElement lockedMethod =
+            mock(javax.lang.model.element.ExecutableElement.class);
+        when(lockedMethod.getKind()).thenReturn(javax.lang.model.element.ElementKind.METHOD);
+        when(lockedMethod.getModifiers()).thenReturn(Set.of(javax.lang.model.element.Modifier.PUBLIC));
+        when(lockedMethod.getEnclosingElement()).thenReturn(owner);
+        when(lockedMethod.getAnnotation(AILocked.class)).thenReturn(lock);
+        when(lockedMethod.toString()).thenReturn("round(long)");
+
+        javax.lang.model.element.ExecutableElement overrideMethod =
+            mock(javax.lang.model.element.ExecutableElement.class);
+        when(overrideMethod.getKind()).thenReturn(javax.lang.model.element.ElementKind.METHOD);
+        when(overrideMethod.getAnnotation(AILocked.class)).thenReturn(null);
+        when(overrideMethod.toString()).thenReturn("round(long)");
+
+        javax.lang.model.element.TypeElement sub = mock(javax.lang.model.element.TypeElement.class);
+        javax.lang.model.element.Name subName = mock(javax.lang.model.element.Name.class);
+        when(subName.toString()).thenReturn("com.example.Sub");
+        when(sub.getQualifiedName()).thenReturn(subName);
+        javax.lang.model.type.TypeMirror subType = mock(javax.lang.model.type.TypeMirror.class);
+        when(sub.asType()).thenReturn(subType);
+        org.mockito.Mockito.doReturn(List.of(overrideMethod)).when(sub).getEnclosedElements();
+
+        javax.lang.model.util.Elements elements = mock(javax.lang.model.util.Elements.class);
+        when(elements.overrides(overrideMethod, lockedMethod, sub)).thenReturn(true);
+        javax.lang.model.util.Types types = mock(javax.lang.model.util.Types.class);
+        when(types.erasure(ownerType)).thenReturn(ownerType);
+        when(types.erasure(subType)).thenReturn(subType);
+        when(types.isSubtype(subType, ownerType)).thenReturn(true);
+
+        ProcessingEnvironment env = mock(ProcessingEnvironment.class);
+        when(env.getElementUtils()).thenReturn(elements);
+        when(env.getTypeUtils()).thenReturn(types);
+
+        RoundEnvironment roundEnv = mock(RoundEnvironment.class);
+        org.mockito.Mockito.doReturn(Set.of(sub)).when(roundEnv).getRootElements();
+
+        List<String> messages = new ArrayList<>();
+        Messager messager = mock(Messager.class);
+        doAnswer(invocation -> {
+            messages.add(invocation.getArgument(0) + "|" + invocation.getArgument(1));
+            return null;
+        }).when(messager).printMessage(any(Diagnostic.Kind.class), anyString(), any(Element.class));
+
+        ValidationRule rule = ValidationRules.all().stream()
+            .filter(r -> r.scans().equals(AILocked.class) && !(r instanceof PairRule) && !(r instanceof AttributeRule))
+            .findFirst()
+            .orElseThrow();
+        rule.check(new ValidationContext(messager, roundEnv, env, null), lockedMethod);
+
+        assertEquals(1, messages.size(), "Expected one unlocked-override warning: " + messages);
+        assertTrue(messages.get(0).contains("which is @AILocked."),
+            "A null reason must omit the parenthesised reason rather than throw or print null: " + messages);
     }
 
     /** The registry's rule for {@code type}, so the test drives the real one rather than a copy. */

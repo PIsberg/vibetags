@@ -78,27 +78,39 @@ final class LockedOverrideRule implements ValidationRule {
         }
         if (!candidate.equals(owner)
                 && types.isSubtype(types.erasure(candidate.asType()), ownerErasure)) {
-            for (Element member : candidate.getEnclosedElements()) {
-                if (member.getKind() != ElementKind.METHOD
-                        || member.getAnnotation(AILocked.class) != null) {
-                    continue; // not a method, or the guardrail followed the override
-                }
-                if (elements.overrides((ExecutableElement) member, locked, candidate)) {
-                    AILocked lock = locked.getAnnotation(AILocked.class);
-                    ctx.warn(member, member + " in " + candidate.getQualifiedName() + " overrides "
-                        + owner.getQualifiedName() + "." + locked + ", which is @AILocked"
-                        + (lock != null && !lock.reason().isBlank() ? " (\"" + lock.reason() + "\")" : "")
-                        + ". A lock does not follow overrides — no generated guardrail file mentions"
-                        + " this method, so the locked behaviour can be replaced here unseen."
-                        + " Annotate the override with @AILocked as well, or name the extension"
-                        + " point in the locked reason.");
-                }
-            }
+            warnOnUnlockedOverrides(ctx, candidate, owner, locked, elements);
         }
         for (Element enclosed : root.getEnclosedElements()) {
             if (enclosed instanceof TypeElement) {
                 visitTypes(ctx, enclosed, owner, ownerErasure, locked, elements, types);
             }
         }
+    }
+
+    private static void warnOnUnlockedOverrides(ValidationContext ctx, TypeElement candidate,
+                                                TypeElement owner, ExecutableElement locked,
+                                                Elements elements) {
+        for (Element member : candidate.getEnclosedElements()) {
+            if (member.getKind() != ElementKind.METHOD
+                    || member.getAnnotation(AILocked.class) != null) {
+                continue; // not a method, or the guardrail followed the override
+            }
+            if (elements.overrides((ExecutableElement) member, locked, candidate)) {
+                ctx.warn(member, overrideWarning(member, candidate, owner, locked));
+            }
+        }
+    }
+
+    private static String overrideWarning(Element member, TypeElement candidate,
+                                          TypeElement owner, ExecutableElement locked) {
+        AILocked lock = locked.getAnnotation(AILocked.class);
+        String reason = lock != null ? lock.reason() : null;
+        String suffix = reason != null && !reason.isBlank() ? " (\"" + reason + "\")" : "";
+        return member + " in " + candidate.getQualifiedName() + " overrides "
+            + owner.getQualifiedName() + "." + locked + ", which is @AILocked" + suffix
+            + ". A lock does not follow overrides — no generated guardrail file mentions"
+            + " this method, so the locked behaviour can be replaced here unseen."
+            + " Annotate the override with @AILocked as well, or name the extension"
+            + " point in the locked reason.";
     }
 }

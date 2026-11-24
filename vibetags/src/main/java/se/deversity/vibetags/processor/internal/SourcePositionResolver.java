@@ -96,29 +96,50 @@ public final class SourcePositionResolver {
 
     /** The {@code ProcessingEnvironment} wrapped by {@code env}, or {@code null} when none is found. */
     private static @Nullable ProcessingEnvironment delegateOf(ProcessingEnvironment env) {
+        ProcessingEnvironment fromField = delegateFromFields(env);
+        return fromField != null ? fromField : delegateFromAccessors(env);
+    }
+
+    private static @Nullable ProcessingEnvironment delegateFromFields(ProcessingEnvironment env) {
         for (Class<?> c = env.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
             for (java.lang.reflect.Field field : c.getDeclaredFields()) {
-                if (!ProcessingEnvironment.class.isAssignableFrom(field.getType())) {
-                    continue;
-                }
-                try {
-                    // trySetAccessible rather than setAccessible: it reports a sealed-off field
-                    // (JPMS, record trusted-finals) as false instead of throwing, which is the
-                    // right shape for a best-effort probe.
-                    if (field.trySetAccessible()
-                            && field.get(env) instanceof ProcessingEnvironment inner) {
-                        return inner;
-                    }
-                } catch (ReflectiveOperationException | RuntimeException | Error ignored) {
-                    // Unreadable under this runtime — try the next candidate.
+                ProcessingEnvironment inner = readDelegateField(env, field);
+                if (inner != null) {
+                    return inner;
                 }
             }
         }
+        return null;
+    }
+
+    private static @Nullable ProcessingEnvironment readDelegateField(
+            ProcessingEnvironment env, java.lang.reflect.Field field) {
+        if (!ProcessingEnvironment.class.isAssignableFrom(field.getType())) {
+            return null;
+        }
+        try {
+            // trySetAccessible rather than setAccessible: it reports a sealed-off field
+            // (JPMS, record trusted-finals) as false instead of throwing, which is the
+            // right shape for a best-effort probe.
+            if (field.trySetAccessible()
+                    && field.get(env) instanceof ProcessingEnvironment inner
+                    && !inner.equals(env)) {
+                return inner;
+            }
+        } catch (ReflectiveOperationException | RuntimeException | Error ignored) {
+            // Unreadable under this runtime — try the next candidate.
+        }
+        return null;
+    }
+
+    private static @Nullable ProcessingEnvironment delegateFromAccessors(ProcessingEnvironment env) {
         for (String accessor : new String[]{"delegate", "getDelegate"}) {
             try {
                 java.lang.reflect.Method method = env.getClass().getMethod(accessor);
                 if (ProcessingEnvironment.class.isAssignableFrom(method.getReturnType())
-                        && method.invoke(env) instanceof ProcessingEnvironment inner) {
+                        && method.trySetAccessible()
+                        && method.invoke(env) instanceof ProcessingEnvironment inner
+                        && !inner.equals(env)) {
                     return inner;
                 }
             } catch (ReflectiveOperationException | RuntimeException | Error ignored) {

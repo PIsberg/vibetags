@@ -160,9 +160,11 @@
     <Method name="booleanOption"/>
     <Bug pattern="IMPROPER_UNICODE"/>
   </Match>
+  <!-- Split out of checkFiles: converts a dry-run writer path back to a Path so a drift report can
+       show it relative to the root. -->
   <Match>
     <Class name="se.deversity.vibetags.processor.AIGuardrailProcessor"/>
-    <Method name="checkFiles"/>
+    <Method name="relativeOrVerbatim"/>
     <Bug pattern="PATH_TRAVERSAL_IN"/>
   </Match>
   <Match>

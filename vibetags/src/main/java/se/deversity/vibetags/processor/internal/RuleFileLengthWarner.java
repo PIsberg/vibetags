@@ -67,6 +67,23 @@ public final class RuleFileLengthWarner {
     private static void measure(Messager messager, @Nullable Logger log, Path displayRoot, String serviceKey,
                                 Path file) {
         String shown = HandAuthoredYamlKeyWarner.displayPath(displayRoot, file);
+        String content = readMarkedContent(file, shown, RuleFileLengthRule.limit(serviceKey), log);
+        if (content == null || !RuleFileLengthRule.exceedsLimit(serviceKey, content)) {
+            return;
+        }
+        int length = RuleFileLengthRule.length(serviceKey, content);
+        Path fileName = file.getFileName();
+        boolean safetyFile = fileName != null && ServiceRegistry.SAFETY_TIER_FILE.equals(fileName.toString());
+        messager.printMessage(Diagnostic.Kind.WARNING,
+            ValidationContext.PREFIX + RuleFileLengthRule.message(serviceKey, shown, length, safetyFile));
+        logOverLimit(log, serviceKey, shown, length);
+    }
+
+    /**
+     * Reads {@code file} when it can exceed {@code limit} and carries the VibeTags marker pair,
+     * emitting the contracted {@code validation.skip} events when it is unreadable or unmarked.
+     */
+    private static @Nullable String readMarkedContent(Path file, String shown, int limit, @Nullable Logger log) {
         // A UTF-8 file of at most the cap in bytes cannot hold more than the cap in chars: every
         // code point costs at least as many bytes as the UTF-16 units it occupies (1 to 1, 2 to 1,
         // 3 to 1, and 4 to 2 for a surrogate pair). Such a file can never warn, so reading and
@@ -77,37 +94,37 @@ public final class RuleFileLengthWarner {
         // contracts (invariant 15, docs/LOGGING.md) and fire today for small files; a reader who
         // asked for DEBUG still gets them, and pays the read to do so. With DEBUG off, which is
         // every ordinary build, nothing observable is lost.
-        if ((log == null || !log.isDebugEnabled()) && withinCapByBytes(file, RuleFileLengthRule.limit(serviceKey))) {
-            return;
+        boolean debugEnabled = log != null && log.isDebugEnabled();
+        if (!debugEnabled && withinCapByBytes(file, limit)) {
+            return null;
         }
         String content;
         try {
             content = Files.readString(file, StandardCharsets.UTF_8);
         } catch (IOException | RuntimeException e) {
-            if (log != null && log.isDebugEnabled()) {
+            if (debugEnabled && log != null) {
                 log.debug("validation.skip check=rule-file-length file={} reason=unreadable detail={}",
                     shown, e.getMessage());
             }
-            return;
+            return null;
         }
         if (!content.contains(GuardrailFileWriter.MARKER_START_MD)) {
-            if (log != null && log.isDebugEnabled()) {
+            if (debugEnabled && log != null) {
                 log.debug("validation.skip check=rule-file-length file={} reason=no-markers", shown);
             }
+            return null;
+        }
+        return content;
+    }
+
+    private static void logOverLimit(@Nullable Logger log, String serviceKey, String shown, int length) {
+        if (log == null) {
             return;
         }
-        if (!RuleFileLengthRule.exceedsLimit(serviceKey, content)) {
-            return;
-        }
-        int length = RuleFileLengthRule.length(serviceKey, content);
-        Path fileName = file.getFileName();
-        boolean safetyFile = fileName != null && ServiceRegistry.SAFETY_TIER_FILE.equals(fileName.toString());
-        messager.printMessage(Diagnostic.Kind.WARNING,
-            ValidationContext.PREFIX + RuleFileLengthRule.message(serviceKey, shown, length, safetyFile));
-        if (log != null && RuleFileLengthRule.countsBytes(serviceKey)) {
+        if (RuleFileLengthRule.countsBytes(serviceKey)) {
             log.warn("validation.rule-file-over-limit file={} bytes={} limit={}",
                 shown, length, RuleFileLengthRule.limit(serviceKey));
-        } else if (log != null) {
+        } else {
             log.warn("validation.rule-file-over-limit file={} chars={} limit={}",
                 shown, length, RuleFileLengthRule.limit(serviceKey));
         }

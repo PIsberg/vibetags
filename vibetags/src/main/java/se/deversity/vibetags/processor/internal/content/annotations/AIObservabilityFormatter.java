@@ -21,37 +21,20 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
         String[] traces = obs.traces();
         String[] logs = obs.logs();
         String note = obs.note();
-
-        StringBuilder summary = new StringBuilder();
-        if (metrics.length > 0) summary.append("Metrics: ").append(String.join(", ", metrics)).append(". ");
-        if (traces.length > 0)  summary.append("Traces: ").append(String.join(", ", traces)).append(". ");
-        if (logs.length > 0)    summary.append("Logs: ").append(String.join(", ", logs)).append(". ");
-        if (!note.isEmpty())    summary.append("Note: ").append(note);
-        // Each clause above ends in a period and a space, so a summary whose last field is
-        // unset ends in that space and carries it into the file. The standard pre-commit
-        // trailing-whitespace hook strips it and the next build writes it back, forever.
-        String details = summary.toString().stripTrailing();
+        String details = details(metrics, traces, logs, note);
 
         switch (platform) {
-            case CURSOR:
+            case CURSOR, QWEN:
                 sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", details)).append('\n');
                 break;
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
-                for (String m : metrics) sb.append("      <metric>").append(Escape.xml(m)).append("</metric>\n");
-                for (String t : traces)  sb.append("      <trace>").append(Escape.xml(t)).append("</trace>\n");
-                for (String l : logs)    sb.append("      <log>").append(Escape.xml(l)).append("</log>\n");
-                if (!note.isEmpty()) sb.append("      <note>").append(Escape.xml(note)).append("</note>\n");
-                sb.append("    </element>\n");
+                renderClaude(className, metrics, traces, logs, note, sb);
                 break;
             case CODEX:
                 sb.append(CommonFormatterHelper.codexBullet(className, details));
                 break;
             case COPILOT:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", details)).append('\n');
-                break;
-            case QWEN:
-                sb.append("* `").append(className).append('`').append(CommonFormatterHelper.clause(" - ", details)).append('\n');
                 break;
             case GEMINI_MD:
                 sb.append("- `").append(className).append('`').append(CommonFormatterHelper.clause(": ", details)).append('\n');
@@ -60,12 +43,7 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
                 sb.append("- [").append(element.displayName()).append("](").append(className).append(')').append(CommonFormatterHelper.clause(": ", details)).append('\n');
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append('\n');
-                if (metrics.length > 0) sb.append("- **Metrics**: ").append(String.join(", ", metrics)).append('\n');
-                if (traces.length > 0)  sb.append("- **Traces**: ").append(String.join(", ", traces)).append('\n');
-                if (logs.length > 0)    sb.append("- **Logs**: ").append(String.join(", ", logs)).append('\n');
-                if (!note.isEmpty())    sb.append("- **Note**: ").append(note).append('\n');
-                sb.append('\n');
+                renderLlmsFull(className, metrics, traces, logs, note, sb);
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### OBSERVABILITY: ").append(className).append("\n- **Rule**: Do not remove or rename instrumentation without flagging the affected dashboard/alert.\n")
@@ -74,14 +52,43 @@ public final class AIObservabilityFormatter implements AnnotationFormatter {
             case WINDSURF:
                 sb.append("* `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(" - ", details)).append('\n');
                 break;
-            case ZED:
-                sb.append("- `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(": ", details)).append('\n');
-                break;
-            case CODERABBIT:
+            case ZED, CODERABBIT:
                 sb.append("- `").append(className).append("` (observability)").append(CommonFormatterHelper.clause(": ", details)).append('\n');
                 break;
             default:
                 break;
         }
+    }
+
+    private static String details(String[] metrics, String[] traces, String[] logs, String note) {
+        StringBuilder summary = new StringBuilder();
+        if (metrics.length > 0) summary.append("Metrics: ").append(String.join(", ", metrics)).append(". ");
+        if (traces.length > 0)  summary.append("Traces: ").append(String.join(", ", traces)).append(". ");
+        if (logs.length > 0)    summary.append("Logs: ").append(String.join(", ", logs)).append(". ");
+        if (!note.isEmpty())    summary.append("Note: ").append(note);
+        // Each clause above ends in a period and a space, so a summary whose last field is
+        // unset ends in that space and carries it into the file. The standard pre-commit
+        // trailing-whitespace hook strips it and the next build writes it back, forever.
+        return summary.toString().stripTrailing();
+    }
+
+    private static void renderClaude(String className, String[] metrics, String[] traces,
+                                     String[] logs, String note, StringBuilder sb) {
+        sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n");
+        for (String m : metrics) sb.append("      <metric>").append(Escape.xml(m)).append("</metric>\n");
+        for (String t : traces)  sb.append("      <trace>").append(Escape.xml(t)).append("</trace>\n");
+        for (String l : logs)    sb.append("      <log>").append(Escape.xml(l)).append("</log>\n");
+        if (!note.isEmpty()) sb.append("      <note>").append(Escape.xml(note)).append("</note>\n");
+        sb.append("    </element>\n");
+    }
+
+    private static void renderLlmsFull(String className, String[] metrics, String[] traces,
+                                       String[] logs, String note, StringBuilder sb) {
+        sb.append("### ").append(className).append('\n');
+        if (metrics.length > 0) sb.append("- **Metrics**: ").append(String.join(", ", metrics)).append('\n');
+        if (traces.length > 0)  sb.append("- **Traces**: ").append(String.join(", ", traces)).append('\n');
+        if (logs.length > 0)    sb.append("- **Logs**: ").append(String.join(", ", logs)).append('\n');
+        if (!note.isEmpty())    sb.append("- **Note**: ").append(note).append('\n');
+        sb.append('\n');
     }
 }

@@ -23,35 +23,16 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
         String invariant = loadBearing.invariant();
         String breaksIf = loadBearing.breaksIf();
         boolean suppressAudit = loadBearing.suppressAudit();
-        String summary = "Looks removable but is deliberate."
-                       + CommonFormatterHelper.detail(" ", "Invariant: ", invariant)
-                       + (breaksIf.isEmpty() ? "" : " Breaks if changed: " + breaksIf)
-                       + (suppressAudit ? " Not a defect — do not flag." : "");
+        String summary = summary(invariant, breaksIf, suppressAudit);
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
-                    .append(CommonFormatterHelper.element("invariant", invariant));
-                if (!breaksIf.isEmpty()) {
-                    sb.append("      <breaks-if>").append(Escape.xml(breaksIf)).append("</breaks-if>\n");
-                }
-                if (suppressAudit) {
-                    sb.append("      <suppress-audit>true</suppress-audit>\n");
-                }
-                sb.append("    </element>\n");
+                renderClaude(className, invariant, breaksIf, suppressAudit, sb);
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- This code is deliberate, not accidental.\n")
-                    .append(CommonFormatterHelper.bullet("Invariant", invariant));
-                if (!breaksIf.isEmpty()) {
-                    sb.append("- **Breaks if changed**: ").append(breaksIf).append('\n');
-                }
-                if (suppressAudit) {
-                    sb.append("- Audit tooling should stop reporting this element — the oddity is by design.\n");
-                }
-                sb.append("- Edits are allowed as long as the invariant survives.\n\n");
+                renderLlmsFull(className, invariant, breaksIf, suppressAudit, sb);
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### LOAD-BEARING: ").append(className).append('\n')
@@ -66,5 +47,38 @@ public final class AILoadBearingFormatter implements AnnotationFormatter {
             default:
                 break;
         }
+    }
+
+    private static String summary(String invariant, String breaksIf, boolean suppressAudit) {
+        return "Looks removable but is deliberate."
+            + CommonFormatterHelper.detail(" ", "Invariant: ", invariant)
+            + (breaksIf.isEmpty() ? "" : " Breaks if changed: " + breaksIf)
+            + (suppressAudit ? " Not a defect — do not flag." : "");
+    }
+
+    private static void renderClaude(String className, String invariant, String breaksIf,
+                                     boolean suppressAudit, StringBuilder sb) {
+        sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+            .append(CommonFormatterHelper.element("invariant", invariant));
+        if (!breaksIf.isEmpty()) {
+            sb.append("      <breaks-if>").append(Escape.xml(breaksIf)).append("</breaks-if>\n");
+        }
+        if (suppressAudit) {
+            sb.append("      <suppress-audit>true</suppress-audit>\n");
+        }
+        sb.append("    </element>\n");
+    }
+
+    private static void renderLlmsFull(String className, String invariant, String breaksIf,
+                                       boolean suppressAudit, StringBuilder sb) {
+        sb.append("### ").append(className).append("\n- This code is deliberate, not accidental.\n")
+            .append(CommonFormatterHelper.bullet("Invariant", invariant));
+        if (!breaksIf.isEmpty()) {
+            sb.append("- **Breaks if changed**: ").append(breaksIf).append('\n');
+        }
+        if (suppressAudit) {
+            sb.append("- Audit tooling should stop reporting this element — the oddity is by design.\n");
+        }
+        sb.append("- Edits are allowed as long as the invariant survives.\n\n");
     }
 }

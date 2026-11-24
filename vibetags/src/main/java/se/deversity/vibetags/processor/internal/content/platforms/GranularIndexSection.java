@@ -166,26 +166,30 @@ final class GranularIndexSection {
             .append(" An elements entry lists names under a shared prefix: in=\"a.b\" listing C, D means a.b.C and a.b.D.")            .append(Escape.xml(conventionNote(platform)))
             .append(" Consult the file before modifying an element.</note>\n");
         for (IndexLine line : indexLines(platform, owners, context)) {
-            if (line.prefix != null) {
-                sb.append("    <elements in=\"").append(Escape.xml(line.prefix));
-                if (line.rules != null) {
-                    sb.append("\" rules=\"").append(Escape.xml(line.rules));
-                }
-                sb.append("\">");
-                for (int i = 0; i < line.names.size(); i++) {
-                    sb.append(i == 0 ? "" : ", ").append(Escape.xml(line.names.get(i)));
-                }
-                sb.append("</elements>\n");
-                continue;
-            }
-            sb.append("    <element path=\"").append(Escape.xml(line.names.get(0)));
-            if (line.rules != null) {
-                sb.append("\" rules=\"").append(Escape.xml(line.rules));
-            }
-            sb.append("\"/>\n");
+            appendXmlLine(sb, line);
         }
         sb.append("  </scoped_rules>\n")
             .append("\n<rule>When you work on any element listed in <scoped_rules>, open its referenced rule file and apply the guardrails there. The rule files are the authoritative source for those elements.</rule>\n");
+    }
+
+    private static void appendXmlLine(StringBuilder sb, IndexLine line) {
+        if (line.prefix != null) {
+            sb.append("    <elements in=\"").append(Escape.xml(line.prefix));
+            if (line.rules != null) {
+                sb.append("\" rules=\"").append(Escape.xml(line.rules));
+            }
+            sb.append("\">");
+            for (int i = 0; i < line.names.size(); i++) {
+                sb.append(i == 0 ? "" : ", ").append(Escape.xml(line.names.get(i)));
+            }
+            sb.append("</elements>\n");
+            return;
+        }
+        sb.append("    <element path=\"").append(Escape.xml(line.names.get(0)));
+        if (line.rules != null) {
+            sb.append("\" rules=\"").append(Escape.xml(line.rules));
+        }
+        sb.append("\"/>\n");
     }
 
     /**
@@ -211,23 +215,23 @@ final class GranularIndexSection {
                 ? " Consult the file before modifying an element:\n\n"
                 : " Before modifying an element listed below, open its file with read_file and apply the guardrails there:\n\n");
         for (IndexLine line : indexLines(platform, owners, context)) {
-            if (line.prefix != null) {
-                sb.append("- `").append(line.prefix).append("`: ");
-                for (int i = 0; i < line.names.size(); i++) {
-                    sb.append(i == 0 ? "`" : ", `").append(line.names.get(i)).append('`');
-                }
-                if (line.rules != null) {
-                    sb.append(" → `").append(line.rules).append('`');
-                }
-                sb.append('\n');
-                continue;
-            }
-            sb.append("- `").append(line.names.get(0)).append('`');
-            if (line.rules != null) {
-                sb.append(" → `").append(line.rules).append('`');
-            }
-            sb.append('\n');
+            appendMarkdownLine(sb, line);
         }
+    }
+
+    private static void appendMarkdownLine(StringBuilder sb, IndexLine line) {
+        if (line.prefix != null) {
+            sb.append("- `").append(line.prefix).append("`: ");
+            for (int i = 0; i < line.names.size(); i++) {
+                sb.append(i == 0 ? "`" : ", `").append(line.names.get(i)).append('`');
+            }
+        } else {
+            sb.append("- `").append(line.names.get(0)).append('`');
+        }
+        if (line.rules != null) {
+            sb.append(" → `").append(line.rules).append('`');
+        }
+        sb.append('\n');
     }
 
     /**

@@ -21,39 +21,19 @@ public final class AIThreadAffinityFormatter implements AnnotationFormatter {
         AIThreadAffinity affinity = element.annotation(AIThreadAffinity.class);
         if (affinity == null) return;
         String className = element.path();
-        String thread = affinity.thread();
-        String where = describe(affinity.value(), thread);
+        String where = describe(affinity.value(), affinity.thread());
         String marshalVia = affinity.marshalVia();
         String symptom = affinity.symptomIfViolated();
-        String summary = "Pinned to " + where + ". NOT thread-safe — adding a lock is the wrong fix."
-                       + (marshalVia.isEmpty() ? "" : " Marshal via " + marshalVia + ".")
-                       + (symptom.isEmpty() ? "" : " If violated: " + symptom);
+        String summary = summary(where, marshalVia, symptom);
 
         if (CommonFormatterHelper.formatStandardPlatform(element, sb, platform, summary)) return;
 
         switch (platform) {
             case CLAUDE:
-                sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
-                    .append("      <affinity>").append(Escape.xml(where)).append("</affinity>\n");
-                if (!marshalVia.isEmpty()) {
-                    sb.append("      <marshal-via>").append(Escape.xml(marshalVia)).append("</marshal-via>\n");
-                }
-                if (!symptom.isEmpty()) {
-                    sb.append("      <symptom-if-violated>").append(Escape.xml(symptom)).append("</symptom-if-violated>\n");
-                }
-                sb.append("    </element>\n");
+                renderClaude(className, where, marshalVia, symptom, sb);
                 break;
             case LLMS_FULL:
-                sb.append("### ").append(className).append("\n- **Thread affinity**: ").append(where).append('\n')
-                    .append("- This is the inverse of thread-safety: safe on one thread, unsafe on every other.\n")
-                    .append("- Do NOT add synchronization to \"fix\" this — move the call, do not lock it.\n");
-                if (!marshalVia.isEmpty()) {
-                    sb.append("- **Marshal via**: ").append(marshalVia).append('\n');
-                }
-                if (!symptom.isEmpty()) {
-                    sb.append("- **Symptom if violated**: ").append(symptom).append('\n');
-                }
-                sb.append('\n');
+                renderLlmsFull(className, where, marshalVia, symptom, sb);
                 break;
             case AIDER_CONVENTIONS:
                 sb.append("#### THREAD AFFINITY: ").append(className).append('\n')
@@ -68,6 +48,39 @@ public final class AIThreadAffinityFormatter implements AnnotationFormatter {
             default:
                 break;
         }
+    }
+
+    private static String summary(String where, String marshalVia, String symptom) {
+        return "Pinned to " + where + ". NOT thread-safe — adding a lock is the wrong fix."
+            + (marshalVia.isEmpty() ? "" : " Marshal via " + marshalVia + ".")
+            + (symptom.isEmpty() ? "" : " If violated: " + symptom);
+    }
+
+    private static void renderClaude(String className, String where, String marshalVia,
+                                     String symptom, StringBuilder sb) {
+        sb.append("    <element path=\"").append(Escape.xml(className)).append("\">\n")
+            .append("      <affinity>").append(Escape.xml(where)).append("</affinity>\n");
+        if (!marshalVia.isEmpty()) {
+            sb.append("      <marshal-via>").append(Escape.xml(marshalVia)).append("</marshal-via>\n");
+        }
+        if (!symptom.isEmpty()) {
+            sb.append("      <symptom-if-violated>").append(Escape.xml(symptom)).append("</symptom-if-violated>\n");
+        }
+        sb.append("    </element>\n");
+    }
+
+    private static void renderLlmsFull(String className, String where, String marshalVia,
+                                       String symptom, StringBuilder sb) {
+        sb.append("### ").append(className).append("\n- **Thread affinity**: ").append(where).append('\n')
+            .append("- This is the inverse of thread-safety: safe on one thread, unsafe on every other.\n")
+            .append("- Do NOT add synchronization to \"fix\" this — move the call, do not lock it.\n");
+        if (!marshalVia.isEmpty()) {
+            sb.append("- **Marshal via**: ").append(marshalVia).append('\n');
+        }
+        if (!symptom.isEmpty()) {
+            sb.append("- **Symptom if violated**: ").append(symptom).append('\n');
+        }
+        sb.append('\n');
     }
 
     /** Human-readable thread constraint; NAMED falls back to the enum wording when unnamed. */

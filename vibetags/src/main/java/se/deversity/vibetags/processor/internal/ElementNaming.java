@@ -196,26 +196,75 @@ public final class ElementNaming {
         int i = 0;
         while (i < rendered.length()) {
             char c = rendered.charAt(i);
-            if (c != '@') {
+            if (c == '@') {
+                i = skipAnnotation(rendered, i + 1);
+            } else {
                 out.append(c);
-                i++;
-                continue;
-            }
-            i++; // the '@'
-            while (i < rendered.length()
-                   && (Character.isLetterOrDigit(rendered.charAt(i))
-                       || rendered.charAt(i) == '_' || rendered.charAt(i) == '.')) {
-                i++;
-            }
-            if (i < rendered.length() && rendered.charAt(i) == '(') {
-                int close = rendered.indexOf(')', i);
-                i = close < 0 ? rendered.length() : close + 1;
-            }
-            while (i < rendered.length() && Character.isWhitespace(rendered.charAt(i))) {
                 i++;
             }
         }
         return out.toString();
+    }
+
+    /** Advances from the first character after {@code '@'} to the first character after the annotation. */
+    private static int skipAnnotation(String rendered, int from) {
+        int i = from;
+        while (i < rendered.length() && isAnnotationNameChar(rendered.charAt(i))) {
+            i++;
+        }
+        if (i < rendered.length() && rendered.charAt(i) == '(') {
+            i = skipParenthesisedArgs(rendered, i);
+        }
+        while (i < rendered.length() && Character.isWhitespace(rendered.charAt(i))) {
+            i++;
+        }
+        return i;
+    }
+
+    private static boolean isAnnotationNameChar(char c) {
+        return Character.isLetterOrDigit(c) || c == '_' || c == '.';
+    }
+
+    /**
+     * Advances past a balanced {@code (...)} annotation argument list, skipping string and
+     * character literals so a {@code ')'} inside one does not end the scan early (#1204).
+     */
+    private static int skipParenthesisedArgs(String rendered, int open) {
+        int depth = 0;
+        int i = open;
+        while (i < rendered.length()) {
+            char c = rendered.charAt(i);
+            if (c == '"' || c == '\'') {
+                i = skipQuotedLiteral(rendered, i, c);
+                continue;
+            }
+            if (c == '(') {
+                depth++;
+            } else if (c == ')') {
+                depth--;
+                if (depth == 0) {
+                    return i + 1;
+                }
+            }
+            i++;
+        }
+        return rendered.length();
+    }
+
+    private static int skipQuotedLiteral(String rendered, int openQuote, char quote) {
+        int i = openQuote + 1;
+        while (i < rendered.length()) {
+            char c = rendered.charAt(i);
+            if (c == '\\') {
+                i += 2;
+                continue;
+            }
+            if (c == quote) {
+                return i + 1;
+            }
+            i++;
+        }
+        return rendered.length();
     }
 
     /**

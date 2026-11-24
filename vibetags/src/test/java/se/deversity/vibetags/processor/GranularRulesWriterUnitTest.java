@@ -137,4 +137,26 @@ class GranularRulesWriterUnitTest {
             }
         }
     }
+
+    @Test
+    void stemsWithPrefix_collectsMatchingStemsAcrossActiveFormats(@TempDir Path tmp) throws IOException {
+        GuardrailFileWriter fileWriter = new GuardrailFileWriter("# VibeTags\n", null, null, null);
+        GranularRulesWriter writer = new GranularRulesWriter(fileWriter);
+
+        Path cursorDir = Files.createDirectories(tmp.resolve(".cursor/rules"));
+        Path copilotDir = Files.createDirectories(tmp.resolve(".github/instructions"));
+        Files.writeString(cursorDir.resolve("mirrored-core-api-Foo.mdc"), "rule");
+        Files.writeString(cursorDir.resolve("mirrored-core-Bar.mdc"), "rule");
+        Files.writeString(cursorDir.resolve("mirrored-core-api-Ignored.txt"), "not a rule");
+        Files.writeString(copilotDir.resolve("mirrored-core-api-Baz.instructions.md"), "rule");
+
+        Map<String, Path> serviceFiles = Map.of(
+            "cursor_granular", cursorDir,
+            "copilot_granular", copilotDir);
+        Set<String> active = Set.of("cursor_granular", "copilot_granular");
+
+        assertEquals(Set.of(), writer.stemsWithPrefix(serviceFiles, active, java.util.List.of()));
+        assertEquals(Set.of("mirrored-core-api-Foo", "mirrored-core-api-Baz"),
+            writer.stemsWithPrefix(serviceFiles, active, java.util.List.of("mirrored-core-api-")));
+    }
 }

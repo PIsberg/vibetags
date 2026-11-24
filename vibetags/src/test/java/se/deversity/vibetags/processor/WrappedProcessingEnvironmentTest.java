@@ -173,6 +173,29 @@ class WrappedProcessingEnvironmentTest {
             "the illegal import must still be an ERROR behind a wrapped environment: " + diagnostics);
     }
 
+    /**
+     * A non-public wrapper that exposes the inner environment only through {@code delegate()} or
+     * {@code getDelegate()} (and carries a self-referential {@code ProcessingEnvironment} field)
+     * must still unwrap cleanly (#1203).
+     */
+    @Test
+    void lockReportPositions_surviveANonPublicAccessorOnlyWrapper() throws IOException {
+        Files.createFile(reactorRoot.resolve(".vibetags-locks"));
+        Files.createDirectories(reactorRoot.resolve("module-core"));
+        Files.writeString(reactorRoot.resolve("module-core").resolve("pom.xml"),
+            "<project><artifactId>module-core</artifactId></project>", StandardCharsets.UTF_8);
+
+        ProcessorTestHarness harness = new ProcessorTestHarness(reactorRoot, false);
+        harness.writeSourceFile("module-core/src/main/java/com/example/core/IrNode.java", CORE_SOURCE);
+        harness.compileWith(new AccessorWrappedEnvProcessor());
+
+        String report = Files.readString(reactorRoot.resolve(".vibetags-locks"), StandardCharsets.UTF_8);
+        assertTrue(report.contains("IrNode"),
+            "the locked element must appear in the report:\n" + report);
+        assertTrue(report.contains("\"startLine\""),
+            "positions must survive a non-public accessor-only ProcessingEnvironment wrapper:\n" + report);
+    }
+
     private String sidecarNames() throws IOException {
         try (Stream<Path> files = Files.list(reactorRoot)) {
             return files.map(p -> p.getFileName().toString())
@@ -198,6 +221,64 @@ class WrappedProcessingEnvironmentTest {
         public synchronized void init(ProcessingEnvironment processingEnv) {
             super.init(new DelegatingProcessingEnvironment(processingEnv));
         }
+    }
+
+    @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
+    @SupportedOptions({"vibetags.root", "vibetags.project", "vibetags.log.path", "vibetags.log.level",
+                       "vibetags.cache", "vibetags.check", "vibetags.module"})
+    private static final class AccessorWrappedEnvProcessor extends AIGuardrailProcessor {
+        @Override
+        public synchronized void init(ProcessingEnvironment processingEnv) {
+            super.init(new GetDelegateOnlyEnvironment(new DelegateMethodOnlyEnvironment(processingEnv)));
+        }
+    }
+
+    /**
+     * Holds the wrapped environment in an {@code Object[]} so no {@code ProcessingEnvironment}
+     * field exists to match, plus a self-referential {@code ProcessingEnvironment} field that must
+     * be skipped, exposing the delegate only via {@code delegate()} (#1203).
+     */
+    private static final class DelegateMethodOnlyEnvironment implements ProcessingEnvironment {
+        @SuppressWarnings("unused")
+        private final ProcessingEnvironment self = this;
+        private final Object[] box;
+
+        DelegateMethodOnlyEnvironment(ProcessingEnvironment inner) {
+            this.box = new Object[]{inner};
+        }
+
+        public ProcessingEnvironment delegate() {
+            return (ProcessingEnvironment) box[0];
+        }
+
+        @Override public Map<String, String> getOptions() { return delegate().getOptions(); }
+        @Override public Messager getMessager() { return delegate().getMessager(); }
+        @Override public Filer getFiler() { return delegate().getFiler(); }
+        @Override public Elements getElementUtils() { return delegate().getElementUtils(); }
+        @Override public Types getTypeUtils() { return delegate().getTypeUtils(); }
+        @Override public SourceVersion getSourceVersion() { return delegate().getSourceVersion(); }
+        @Override public Locale getLocale() { return delegate().getLocale(); }
+    }
+
+    /** Exposes the delegate only via {@code getDelegate()}, with no {@code ProcessingEnvironment} field. */
+    private static final class GetDelegateOnlyEnvironment implements ProcessingEnvironment {
+        private final Object[] box;
+
+        GetDelegateOnlyEnvironment(ProcessingEnvironment inner) {
+            this.box = new Object[]{inner};
+        }
+
+        public ProcessingEnvironment getDelegate() {
+            return (ProcessingEnvironment) box[0];
+        }
+
+        @Override public Map<String, String> getOptions() { return getDelegate().getOptions(); }
+        @Override public Messager getMessager() { return getDelegate().getMessager(); }
+        @Override public Filer getFiler() { return getDelegate().getFiler(); }
+        @Override public Elements getElementUtils() { return getDelegate().getElementUtils(); }
+        @Override public Types getTypeUtils() { return getDelegate().getTypeUtils(); }
+        @Override public SourceVersion getSourceVersion() { return getDelegate().getSourceVersion(); }
+        @Override public Locale getLocale() { return getDelegate().getLocale(); }
     }
 
     /** Pure pass-through; the only thing that matters is that it is not javac's own class. */

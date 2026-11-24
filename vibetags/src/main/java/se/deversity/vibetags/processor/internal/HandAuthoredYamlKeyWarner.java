@@ -45,34 +45,37 @@ public final class HandAuthoredYamlKeyWarner {
         for (Map.Entry<String, Path> service : serviceFiles.entrySet()) {
             String serviceKey = service.getKey();
             Path file = service.getValue();
-            if (PlatformRendererRegistry.mergeShapeFor(serviceKey) == null || !Files.isRegularFile(file)) {
-                continue; // not a YAML platform, or not opted in
+            if (PlatformRendererRegistry.mergeShapeFor(serviceKey) != null && Files.isRegularFile(file)) {
+                warnFile(messager, log, displayRoot, serviceKey, file);
             }
-            String fileName = GuardrailFileWriter.fileName(file);
-            String[] markers = GuardrailFileWriter.getMarkersFor(fileName);
-            if (markers == null) {
-                continue;
+        }
+    }
+
+    private static void warnFile(Messager messager, @Nullable Logger log, Path displayRoot,
+                                 String serviceKey, Path file) {
+        String[] markers = GuardrailFileWriter.getMarkersFor(GuardrailFileWriter.fileName(file));
+        if (markers == null) {
+            return;
+        }
+        String shown = displayPath(displayRoot, file);
+        String content;
+        try {
+            content = Files.readString(file, StandardCharsets.UTF_8);
+        } catch (IOException | RuntimeException e) {
+            // The writer reports an unreadable output file on its own path; this check is advisory.
+            if (log != null && log.isDebugEnabled()) {
+                log.debug("validation.skip check=duplicate-yaml-key file={} reason=unreadable detail={}",
+                    shown, e.getMessage());
             }
-            String shown = displayPath(displayRoot, file);
-            String content;
-            try {
-                content = Files.readString(file, StandardCharsets.UTF_8);
-            } catch (IOException | RuntimeException e) {
-                // The writer reports an unreadable output file on its own path; this check is advisory.
-                if (log != null && log.isDebugEnabled()) {
-                    log.debug("validation.skip check=duplicate-yaml-key file={} reason=unreadable detail={}",
-                        shown, e.getMessage());
-                }
-                continue;
-            }
-            Set<String> owned = DuplicateYamlKeyRule.ownedKeys(serviceKey);
-            for (DuplicateYamlKeyRule.Finding finding : DuplicateYamlKeyRule.find(content, owned, markers[0], markers[1])) {
-                messager.printMessage(Diagnostic.Kind.WARNING,
-                    ValidationContext.PREFIX + DuplicateYamlKeyRule.message(shown, finding));
-                if (log != null) {
-                    log.warn("validation.duplicate-yaml-key file={} key={} handLine={} generatedLine={} readLine={}",
-                        shown, finding.key(), finding.handLine(), finding.generatedLine(), finding.readLine());
-                }
+            return;
+        }
+        Set<String> owned = DuplicateYamlKeyRule.ownedKeys(serviceKey);
+        for (DuplicateYamlKeyRule.Finding finding : DuplicateYamlKeyRule.find(content, owned, markers[0], markers[1])) {
+            messager.printMessage(Diagnostic.Kind.WARNING,
+                ValidationContext.PREFIX + DuplicateYamlKeyRule.message(shown, finding));
+            if (log != null) {
+                log.warn("validation.duplicate-yaml-key file={} key={} handLine={} generatedLine={} readLine={}",
+                    shown, finding.key(), finding.handLine(), finding.generatedLine(), finding.readLine());
             }
         }
     }

@@ -119,31 +119,7 @@ public final class ModuleOutputWriter {
         // An emptied source set rewrites its own file for the same reason it rewrites the root's
         // (#781): nothing else ever withdraws the guardrails it contributed last time.
         boolean hasAnnotations = collector.anyAnnotationsFound() || collector.emptiedSourceSet();
-        int written = 0;
-        for (Map.Entry<String, String> entry : built.contentByService.entrySet()) {
-            String service = entry.getKey();
-            Path filePath = moduleFiles.get(service);
-            if (filePath == null) {
-                continue;
-            }
-            String content = entry.getValue();
-            if (regionId != null) {
-                // Every source set of this module contributed a body; concatenate them so a
-                // test-only round adds to the module's file instead of replacing it.
-                String merged = ModuleSidecar.mergeModuleBodies(service, sidecars, regionId);
-                if (!merged.isBlank()) {
-                    content = merged;
-                }
-            }
-            // Other files only carry the "hasNewRules" flag when this module actually had annotations,
-            // or has just lost its last ones (as in WritePlan). Ignore files are rewritten from any
-            // round, which WritePlan allows only for merged content, for the same reason: the content
-            // here was merged across this module's source sets just above, so an unannotated test
-            // round writes the main round's exclusions back rather than an empty block.
-            boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
-            writer.writeFileIfChanged(filePath.toString(), content, hasAnnotations || isIgnoreFile);
-            written++;
-        }
+        int written = writeServiceFiles(built, moduleFiles, writer, sidecars, regionId, hasAnnotations);
 
         // Per-class granular rule files under the module directory; cleanup runs after write, and
         // spares the stems other source sets of this same module recorded in their sidecars. The
@@ -164,5 +140,41 @@ public final class ModuleOutputWriter {
                 "VibeTags: wrote " + written + " module-scoped file(s) under "
                     + PathStrings.relative(vibetagsRoot, moduleRoot));
         }
+    }
+
+    private static int writeServiceFiles(GuardrailContentBuilder.Result built, Map<String, Path> moduleFiles,
+                                         GuardrailFileWriter writer, List<ModuleSidecar> sidecars,
+                                         @Nullable String regionId, boolean hasAnnotations) {
+        int written = 0;
+        for (Map.Entry<String, String> entry : built.contentByService.entrySet()) {
+            String service = entry.getKey();
+            Path filePath = moduleFiles.get(service);
+            if (filePath == null) {
+                continue;
+            }
+            String content = effectiveModuleContent(service, entry.getValue(), sidecars, regionId);
+            // Other files only carry the "hasNewRules" flag when this module actually had annotations,
+            // or has just lost its last ones (as in WritePlan). Ignore files are rewritten from any
+            // round, which WritePlan allows only for merged content, for the same reason: the content
+            // here was merged across this module's source sets just above, so an unannotated test
+            // round writes the main round's exclusions back rather than an empty block.
+            boolean isIgnoreFile = ServiceRegistry.isIgnoreService(service);
+            writer.writeFileIfChanged(filePath.toString(), content, hasAnnotations || isIgnoreFile);
+            written++;
+        }
+        return written;
+    }
+
+    /**
+     * Every source set of this module contributed a body; concatenate them so a test-only round
+     * adds to the module's file instead of replacing it.
+     */
+    private static String effectiveModuleContent(String service, String localContent,
+                                                 List<ModuleSidecar> sidecars, @Nullable String regionId) {
+        if (regionId == null) {
+            return localContent;
+        }
+        String merged = ModuleSidecar.mergeModuleBodies(service, sidecars, regionId);
+        return merged.isBlank() ? localContent : merged;
     }
 }
