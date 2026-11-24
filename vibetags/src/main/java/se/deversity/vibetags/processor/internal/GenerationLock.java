@@ -92,71 +92,120 @@ public final class GenerationLock implements AutoCloseable {
      * {@code generate.lock.*} ones, so a caller with a different contract passes none.
      */
     static GenerationLock acquireFile(Path lockFile, String moduleId, @Nullable Logger log, Duration maxWait) {
-        long start = System.nanoTime();
-        long deadline = start + maxWait.toNanos();
-        String gate = GATE_PROPERTY_PREFIX + gateKey(lockFile);
-        Gate entered;
-        try {
-            entered = enterGate(gate, moduleId, deadline, log);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            skip(log, moduleId, "interrupted", "");
-            return UNLOCKED;
+        return new Attempt(lockFile, moduleId, log, maxWait).run();
+    }
+
+    /**
+     * One caller's way to the lock: through the in-JVM gate, then a poll on the file. Every way it
+     * gives up goes through {@link #giveUp}, which lets go of whatever this attempt holds by then,
+     * the channel and the gate, before saying why.
+     */
+    private static final class Attempt {
+
+        private final Path lockFile;
+        private final String moduleId;
+        private final @Nullable Logger log;
+        private final Duration maxWait;
+        private final String gate;
+        private final long start = System.nanoTime();
+        private final long deadline;
+        private boolean inGate;
+        private boolean waited;
+
+        Attempt(Path lockFile, String moduleId, @Nullable Logger log, Duration maxWait) {
+            this.lockFile = lockFile;
+            this.moduleId = moduleId;
+            this.log = log;
+            this.maxWait = maxWait;
+            this.gate = GATE_PROPERTY_PREFIX + gateKey(lockFile);
+            this.deadline = start + maxWait.toNanos();
         }
-        if (entered == Gate.TIMED_OUT) {
-            skip(log, moduleId, "timeout", "waitedMs=" + maxWait.toMillis());
-            return UNLOCKED;
-        }
-        FileChannel channel;
-        try {
-            channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-        } catch (IOException | RuntimeException e) {
-            leaveGate(gate);
-            skip(log, moduleId, "unopenable", e.toString());
-            return UNLOCKED;
-        }
-        boolean waited = entered == Gate.ENTERED_AFTER_WAIT;
-        // Every close below is safe: holding the gate, no other thread in this JVM holds the lock.
-        while (true) {
-            FileLock lock;
+
+        GenerationLock run() {
+            Gate entered;
             try {
-                lock = channel.tryLock();
+                entered = enterGate(gate, moduleId, deadline, log);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return giveUp(null, "interrupted", "");
+            }
+            if (entered == Gate.TIMED_OUT) {
+                return giveUp(null, "timeout", "waitedMs=" + maxWait.toMillis());
+            }
+            inGate = true;
+            waited = entered == Gate.ENTERED_AFTER_WAIT;
+            FileChannel channel;
+            try {
+                channel = FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            } catch (IOException | RuntimeException e) {
+                return giveUp(null, "unopenable", e.toString());
+            }
+            return pollOn(channel);
+        }
+
+        /** Tries the file lock until it is free or the deadline passes. */
+        private GenerationLock pollOn(FileChannel channel) {
+            // Every close below is safe: holding the gate, no other thread in this JVM holds the lock.
+            while (true) {
+                FileLock lock;
+                try {
+                    lock = tryLock(channel);
+                } catch (IOException | RuntimeException e) {
+                    // NFS and some container overlays refuse advisory locks outright.
+                    return giveUp(channel, "unsupported", e.toString());
+                }
+                if (lock != null) {
+                    return acquired(channel, lock);
+                }
+                noteWaiting();
+                if (System.nanoTime() >= deadline) {
+                    return giveUp(channel, "timeout", "waitedMs=" + maxWait.toMillis());
+                }
+                try {
+                    Thread.sleep(POLL_MILLIS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return giveUp(channel, "interrupted", "");
+                }
+            }
+        }
+
+        /** The lock, or {@code null} while another holder has it. */
+        private static @Nullable FileLock tryLock(FileChannel channel) throws IOException {
+            try {
+                return channel.tryLock();
             } catch (OverlappingFileLockException heldInThisJvm) {
                 // Past the gate, only a processor that predates it can hold the lock in this JVM.
-                lock = null;
-            } catch (IOException | RuntimeException e) {
-                // NFS and some container overlays refuse advisory locks outright.
-                closeQuietly(channel);
-                leaveGate(gate);
-                skip(log, moduleId, "unsupported", e.toString());
-                return UNLOCKED;
+                return null;
             }
-            if (lock != null) {
-                if (waited && log != null) {
-                    log.info("generate.lock.acquired module={} waitedMs={}", moduleId,
-                        Duration.ofNanos(System.nanoTime() - start).toMillis());
-                }
-                return new GenerationLock(channel, lock, gate);
+        }
+
+        private GenerationLock acquired(FileChannel channel, FileLock lock) {
+            if (waited && log != null) {
+                log.info("generate.lock.acquired module={} waitedMs={}", moduleId,
+                    Duration.ofNanos(System.nanoTime() - start).toMillis());
             }
+            return new GenerationLock(channel, lock, gate);
+        }
+
+        /** Says once that this attempt is waiting for a sibling. */
+        private void noteWaiting() {
             if (!waited && log != null) {
                 log.info("generate.lock.wait module={} reason=sibling-generating", moduleId);
             }
             waited = true;
-            if (System.nanoTime() >= deadline) {
+        }
+
+        /** Closes {@code channel} when there is one, leaves the gate when held, and logs why. */
+        private GenerationLock giveUp(@Nullable FileChannel channel, String reason, String detail) {
+            if (channel != null) {
                 closeQuietly(channel);
-                leaveGate(gate);
-                skip(log, moduleId, "timeout", "waitedMs=" + maxWait.toMillis());
-                return UNLOCKED;
             }
-            try {
-                Thread.sleep(POLL_MILLIS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                closeQuietly(channel);
+            if (inGate) {
                 leaveGate(gate);
-                skip(log, moduleId, "interrupted", "");
-                return UNLOCKED;
             }
+            skip(log, moduleId, reason, detail);
+            return UNLOCKED;
         }
     }
 
