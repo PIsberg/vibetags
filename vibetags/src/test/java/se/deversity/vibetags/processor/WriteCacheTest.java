@@ -43,6 +43,22 @@ class WriteCacheTest {
     }
 
     @Test
+    void describeEntry_namesTheRecordedSizeAndMtime(@TempDir Path tmp) throws IOException {
+        // A diagnostic, but WriteCacheCrossInstanceAsyncTest reads the size off it to tell its
+        // own snapshot race from a false positive (#1145), so the format is relied on.
+        WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
+        Path file = tmp.resolve("foo.md");
+        Files.writeString(file, "hello world");
+        assertNull(cache.describeEntry(file), "no entry, nothing to describe");
+
+        cache.recordWrite(file, "hello world");
+        String entry = cache.describeEntry(file);
+        assertNotNull(entry);
+        assertTrue(entry.contains(" size=11 "), entry);
+        assertTrue(entry.contains(" mtime=" + Files.getLastModifiedTime(file).toMillis() + " "), entry);
+    }
+
+    @Test
     void differentBody_misses(@TempDir Path tmp) throws IOException {
         WriteCache cache = new WriteCache(tmp.resolve(".vibetags-cache"));
         Path file = tmp.resolve("foo.md");

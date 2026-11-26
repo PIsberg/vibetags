@@ -264,6 +264,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The write cache no longer records a file found current under another file's attributes
+  (#1145).** The writer stats a file, reads it, and when the bytes hold its rendering and a second
+  stat matches the first, records its body's hash with that size and mtime. In a parallel reactor
+  an A-B-A replacement passed both stats: A statted, another module's B read, A' with A's size and
+  mtime statted. On Windows the file key is `null` and two writes in one clock tick share an mtime,
+  so nothing told A from A'; the cache then vouched for B's body, and the write that would have
+  fixed the file was skipped (`WriteCacheCrossInstanceAsyncTest`, twice on windows-latest CI). The
+  UTF-8 length of the bytes compared must now also equal the first stat's size, which rules the
+  replacement out whenever A and B differ in size. Two different bodies of one size written in one
+  tick with no file key still look the same. The writer logs a new DEBUG event,
+  `write.read file= bytes=`, before it reads an existing file, which
+  `GuardrailFileWriterReplacedDuringReadTest` uses to replay the race deterministically; it was red
+  on every OS before the fix. `WriteCacheCrossInstanceAsyncTest` now names the entry behind a wrong
+  verdict (`WriteCache.describeEntry`) and skips a cycle whose verdict came from a third file.
+
 - **A failure in a collection round no longer lets the final round write from an unfinished
   model (#1143).** The failure was downgraded to `guardrail generation failed and was skipped
   (build not affected)`, and then the final round generated anyway, so a failure part way through

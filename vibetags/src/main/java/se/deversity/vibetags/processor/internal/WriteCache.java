@@ -485,6 +485,17 @@ public final class WriteCache {
     }
 
     /**
+     * The entry recorded for {@code file} as {@code "hash=<h> size=<bytes> mtime=<millis> "}, or
+     * {@code null} when there is none. For diagnostics: a test that sees a wrong verdict can name the
+     * entry behind it, and tell whether its size was the file's.
+     */
+    public synchronized @Nullable String describeEntry(Path file) {
+        loadIfNeeded();
+        Entry e = entries.get(cacheKey(file));
+        return e == null ? null : "hash=" + e.hash + " size=" + e.size + " mtime=" + e.mtime + " ";
+    }
+
+    /**
      * Records that {@code body} was written to {@code file}, with the file's attributes as they are
      * now. Right only when nothing else can write {@code file} between the write and this call;
      * a writer that shares the file uses {@link #recordWrite(Path, String, BasicFileAttributes)}.
