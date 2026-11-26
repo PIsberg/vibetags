@@ -22,7 +22,7 @@
 
 ## Core Functionality
 - **Sensitivity**: critical
-- **Note**: Runs inside every consumer's javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build
+- **Note**: Runs in every consumer's javac: init() and process() turn a RuntimeException into a WARNING (an ERROR in check mode); anything escaping them fails their build
 
 ### Rules for method process
 - **Constraint**: You may change internal logic, but MUST NOT modify the method name, parameters, return type, or checked exceptions.
