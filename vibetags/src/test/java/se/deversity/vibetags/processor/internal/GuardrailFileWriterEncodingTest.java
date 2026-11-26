@@ -103,21 +103,26 @@ class GuardrailFileWriterEncodingTest {
     }
 
     @Test
-    @DisplayName("a coding failure that is not the file's keeps the plain message")
-    void unencodableContentIsNotBlamedOnTheFile(@TempDir Path dir) throws IOException {
+    @DisplayName("a lone surrogate in the content is written as '?', and the next identical write changes nothing")
+    void unencodableContentIsWrittenWithTheCharacterReplaced(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("CLAUDE.md");
         Files.writeString(file, "Hand-written project notes.\n", StandardCharsets.UTF_8);
         List<String> warnings = new ArrayList<>();
         GuardrailFileWriter writer = new GuardrailFileWriter(HEADER, capturing(warnings), null);
 
-        // A lone surrogate cannot be encoded, so the write fails with the same exception type a
-        // UTF-16 file raises on read. The file is valid UTF-8 and must not be called otherwise.
-        assertFalse(writer.writeFileIfChanged(file.toString(), GENERATED + "- `\uD800`\n", true));
-        assertEquals(1, warnings.size(), "one warning per file: " + warnings);
-        assertTrue(warnings.get(0).contains("Failed to write AI rules file"), warnings.get(0));
-        assertFalse(warnings.get(0).contains("Re-save it as UTF-8"),
-            "telling the user to re-save a valid UTF-8 file sends them after the wrong problem: "
-                + warnings.get(0));
+        // A lone surrogate cannot be encoded as UTF-8. Encoding strictly threw before a byte was
+        // written, which dropped every rule in the file with it (#1141).
+        String content = GENERATED + "- `\uD800`\n";
+        assertTrue(writer.writeFileIfChanged(file.toString(), content, true), "the file is written: " + warnings);
+        assertEquals(List.of(), warnings);
+        String after = StandardCharsets.UTF_8.newDecoder()
+            .decode(java.nio.ByteBuffer.wrap(Files.readAllBytes(file))).toString();
+        assertTrue(after.contains("Hand-written project notes."), after);
+        assertTrue(after.contains("com.example.Ledger"), "the file's other rules are kept: " + after);
+        assertTrue(after.contains("- `?`"), "the character is written as '?': " + after);
+
+        assertFalse(writer.writeFileIfChanged(file.toString(), content, true),
+            "the same content again is no change, so the replacement cannot make every build rewrite the file");
     }
 
     private static Messager capturing(List<String> sink) {

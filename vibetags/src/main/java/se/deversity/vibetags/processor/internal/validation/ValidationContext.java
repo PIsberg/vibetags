@@ -137,7 +137,7 @@ public final class ValidationContext {
     }
 
     /** {@code element}'s mirror of {@code type}, or {@code null} when it cannot be resolved. */
-    private static @Nullable AnnotationMirror mirrorOf(Element element, Class<? extends Annotation> type) {
+    static @Nullable AnnotationMirror mirrorOf(Element element, Class<? extends Annotation> type) {
         List<? extends AnnotationMirror> mirrors = element.getAnnotationMirrors();
         if (mirrors == null) {
             return null; // mocked elements return no mirror list at all

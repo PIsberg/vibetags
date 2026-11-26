@@ -175,6 +175,7 @@ rather than to VibeTags:
 - `@AIKeepInSync` + `@AIContract` on the same element — NOTE; verify the mirrors track something other than the frozen signature
 - `@AIIgnore` present but no `.cursorignore` / `.qwenignore` / `.aiexclude` exists — orphaned ignore annotation (VibeTags writes no ignore file for Claude or Copilot, #667, #668, #720)
 - `@AILocked` present but no `.aiexclude` — Gemini/Codex lock not active
+- Any `@AI*` attribute string holding an unpaired UTF-16 surrogate (a mistyped escape such as a lone `\uD800`) — UTF-8 cannot encode it, so the generated files carry it as `?`; the warning names the element, the annotation, the attribute and the character's index (#1141)
 
 **Modern-Java detectors:**
 
@@ -209,5 +210,6 @@ Gradle's compiler.
   key
 
 Adding a check is one line in `ValidationRules.PAIRS`, or an entry in `CoreRules` (an annotation
-whose own attributes leave it instructing nobody) or `ModernJavaRules` (the list above). See
+whose own attributes leave it instructing nobody) or `ModernJavaRules` (the list above).
+`UnpairedSurrogateRule` runs once per annotation type over every explicitly written string. See
 `processor/internal/validation/`.
