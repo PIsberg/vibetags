@@ -264,6 +264,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A failure in a collection round no longer lets the final round write from an unfinished
+  model (#1143).** The failure was downgraded to `guardrail generation failed and was skipped
+  (build not affected)`, and then the final round generated anyway, so a failure part way through
+  collecting could overwrite committed guardrail files and the module's sidecar with a shrunken
+  view. The final round now leaves every file as the build found it, the same exit an
+  `errorRaised()` build takes, notes `an earlier round failed; guardrail files left untouched`, and
+  logs `round.skip reason=collection-failed`. `ProcessorFailureGuardTest` reproduced the write
+  first: `CLAUDE.md` went from 28 to 433 bytes under the warning that said it was skipped.
+
 - **One annotation attribute with an unpaired UTF-16 surrogate no longer drops every aggregate
   in the module (#1141).** A mistyped unicode escape is legal Java, and a dependency's manifest can
   carry the same character as a JSON escape. `GuardrailFileWriter` encoded strictly, so
