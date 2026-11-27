@@ -222,6 +222,12 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     private boolean peersChecked;
 
     /**
+     * Set when a collection round's runtime failure was reported (#1143). The model may lack what
+     * that round never reached, so the final round leaves every file as this build found it.
+     */
+    private final AtomicBoolean collectionFailed = new AtomicBoolean();
+
+    /**
      * What this compilation was actually shown: every source file it compiled, and the source
      * roots they came from. Read once at {@code processingOver()} to tell a build that saw all of
      * a module's sources from one that saw a subset of them — see {@link PartialRoundDetector}.
@@ -492,6 +498,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         this.liveErrors.set(0);
         this.liveDiagnostics.clear();
         this.peersChecked = false;
+        this.collectionFailed.set(false);
         collector.reset();
         collector.transitiveOptIn(this.transitiveReader != null);
         this.elementRules = new java.util.LinkedHashMap<>();
@@ -519,11 +526,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     }
 
     /**
-     * The final round: everything that needs the whole collected model, then the write (or, in
-     * check mode, the comparison). Runs at most once per processor. Every early return leaves the
-     * guardrail files exactly as this build found them.
+     * Ends the final round without touching a file when an earlier round failed, and says so.
+     * Returns {@code true} when it did.
      */
-    private void finishProcessing(RoundEnvironment roundEnv) {
+    private boolean leftUntouchedAfterAFailure(RoundEnvironment roundEnv) {
         if (roundEnv.errorRaised()) {
             // An earlier round reported an ERROR: any remaining source-generation rounds
             // were abandoned, so the collected annotation set may be incomplete — and the
@@ -538,6 +544,30 @@ public class AIGuardrailProcessor extends AbstractProcessor {
                 log.debug("round.skip reason=error-raised");
             }
             VibeTagsLogger.shutdown(root);
+            return true;
+        }
+        if (collectionFailed.get()) {
+            // The collection round's warning said generation was skipped, and the model may be
+            // missing everything that round did not reach. Writing from it is the shrunken-view
+            // write the guard above exists to prevent (#1143), so make the warning true.
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,
+                "VibeTags: an earlier round failed; guardrail files left untouched.");
+            if (log != null) {
+                log.debug("round.skip reason=collection-failed");
+            }
+            VibeTagsLogger.shutdown(root);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * The final round: everything that needs the whole collected model, then the write (or, in
+     * check mode, the comparison). Runs at most once per processor. Every early return leaves the
+     * guardrail files exactly as this build found them.
+     */
+    private void finishProcessing(RoundEnvironment roundEnv) {
+        if (leftUntouchedAfterAFailure(roundEnv)) {
             return;
         }
         // compareAndSet guarantees exactly one thread enters generateFiles() even if
@@ -778,6 +808,10 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // daemon (#1075). An earlier round's failure leaves the final round to release it.
         if (finalRound) {
             VibeTagsLogger.shutdown(root);
+        } else {
+            // The model may lack what this round never reached, so the final round must not
+            // write from it (#1143).
+            collectionFailed.set(true);
         }
     }
 

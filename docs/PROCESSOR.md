@@ -411,7 +411,10 @@ save-then-`readAll` does. It writes through a dry-run `GuardrailFileWriter` (`dr
 records every would-be write/scrub/delete into `dryRunChanges()` instead of touching disk. Any
 recorded path fails the build via `Messager.ERROR`. The fingerprint short-circuit and write cache are
 bypassed so the verdict never depends on cache state; internal failures in check mode fail closed
-(ERROR, not the usual downgrade-to-WARNING).
+(ERROR, not the usual downgrade-to-WARNING). Outside check mode, a failure in a round before the
+final one is that WARNING, and the final round then writes nothing, leaving every file as the build
+found it, the same exit as a compilation that raised errors: the model may lack what the failed
+round never reached (#1143).
 
 **In a reactor, check mode needs a normal build first.** It reads the same `.vibetags-mod-*`
 sidecars the merge does, and those are gitignored, so on a fresh clone they do not exist yet. Run as

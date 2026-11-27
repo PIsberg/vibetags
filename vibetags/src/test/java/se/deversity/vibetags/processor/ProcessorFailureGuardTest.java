@@ -21,6 +21,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -128,6 +130,46 @@ class ProcessorFailureGuardTest {
         assertFalse(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.WARNING
                 && d.getMessage(null).contains("guardrail generation failed")),
             () -> "check mode must not downgrade the failure to the advisory warning: " + diagnostics);
+    }
+
+    /**
+     * #1143. A failure in a collection round was reported as "generation failed and was skipped",
+     * and then the final round generated anyway, from a model the failed round may not have
+     * finished. The files must be left as this build found them, the way an errorRaised() build
+     * leaves them, so the warning is true.
+     */
+    @Test
+    void aFailedCollectionRoundLeavesEveryFileAsTheBuildFoundIt(@TempDir Path tempDir) throws IOException {
+        Path claude = tempDir.resolve("CLAUDE.md");
+        Files.writeString(claude, "Hand-written project notes.\n");
+        byte[] before = Files.readAllBytes(claude);
+        ProcessorTestHarness harness = new ProcessorTestHarness(tempDir, false);
+        harness.writeSourceFile("src/main/java/com/example/Locked.java", """
+            package com.example;
+            import se.deversity.vibetags.annotations.AILocked;
+            @AILocked(reason = "core logic")
+            public class Locked {}
+            """);
+
+        List<Diagnostic<? extends JavaFileObject>> diagnostics =
+            harness.compileWithReturningDiagnostics(new FaultyProcessor());
+
+        assertTrue(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.WARNING
+                && d.getMessage(null).contains("guardrail generation failed and was skipped")),
+            () -> "precondition: the collection round's fault was downgraded: " + diagnostics);
+        assertArrayEquals(before, Files.readAllBytes(claude),
+            "the warning said generation was skipped, so CLAUDE.md must keep its bytes");
+        try (java.util.stream.Stream<Path> files = Files.list(tempDir)) {
+            assertEquals(List.of(), files.map(p -> p.getFileName().toString())
+                    .filter(n -> n.startsWith(".vibetags-mod-")).toList(),
+                "no sidecar may record a model the failed round did not finish");
+        }
+        assertFalse(diagnostics.stream().anyMatch(d -> d.getMessage(null).contains("updated - CLAUDE.md")),
+            () -> "nothing may be reported as written: " + diagnostics);
+        assertTrue(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.NOTE
+                && d.getMessage(null).contains("guardrail files left untouched")),
+            () -> "the final round says why it wrote nothing: " + diagnostics);
+        assertNull(VibeTagsLogger.currentFor(tempDir), "the final round releases the log");
     }
 
     @Test
