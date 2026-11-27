@@ -314,6 +314,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on every OS before the fix. `WriteCacheCrossInstanceAsyncTest` now names the entry behind a wrong
   verdict (`WriteCache.describeEntry`) and skips a cycle whose verdict came from a third file.
 
+- **`.vibetags-roles` globs match Kotlin and Groovy types and nested types (#1178).** A glob was
+  matched against a path rebuilt from the qualified name, so `com.x.Invoice` from `Invoice.kt` was
+  tried as `com/x/Invoice.java` and `com.x.FooController.Request` as
+  `com/x/FooController/Request.java`; `**/*.kt` (the `kt` branch of the documented
+  `**/*.{java,kt}`) and `**/*Controller.java` never routed them, and each kept a per-class rule
+  file. A type is now matched as its package directory and the file its code is in
+  (`com/x/Invoice.kt`, `com/x/FooController.java`). **Committed output moves once:** in a project
+  with a `.vibetags-roles`, a Kotlin, Groovy or nested type that a glob now matches leaves its
+  per-class rule file for the role's file on the next build. A nested type that a glob matched only
+  by its own name (`**/*Entry.java` for `Ledger.Entry`) moves the other way, into a per-class file:
+  the role file's glob never loaded when an agent opened `Ledger.java`, and the per-class file's
+  does. None of the examples' committed files changes. `RoleConfigTest` failed its three new cases
+  first.
+
 - **A file found current is not recorded while its mtime is too recent to tell it from another
   write (#1211).** The fix above left one form: two bodies of the same size written in one clock
   tick, with no file key, have identical attributes, so the replacement still passed both stats.

@@ -114,7 +114,7 @@ database-models   = **/*Entity.java
 external-webhooks = **/webhooks/**, com.example.legacy.WeirdEndpoint
 ```
 
-Each role emits `<name>.<ext>` (e.g. `api-endpoints.mdc` / `api-endpoints.md`) with the role's globs in the platform's frontmatter (`globs:` / `paths:` / `applyTo:`) and the matched elements' guardrails grouped inside. An element goes to the **first** matching role (config order); an element matching no role keeps its per-class file. Listing a **fully-qualified name** on a role line routes an odd class that doesn't fit its glob. Applies to every granular platform and works per module.
+Each role emits `<name>.<ext>` (e.g. `api-endpoints.mdc` / `api-endpoints.md`) with the role's globs in the platform's frontmatter (`globs:` / `paths:` / `applyTo:`) and the matched elements' guardrails grouped inside. An element goes to the **first** matching role (config order); an element matching no role keeps its per-class file. Listing a **fully-qualified name** on a role line routes an odd class that doesn't fit its glob. Applies to every granular platform and works per module. A glob is matched against the package directory and the name of the file the type's code is in: `com/x/Invoice.kt` for a Kotlin class, `com/x/FooController.java` for the nested `FooController.Request`, and `com/x/` for a package, so `**/*.kt` routes Kotlin types and `**/*Controller.java` routes a controller's nested types with it.
 
 **A glob that holds a comma.** A `.vibetags-roles` glob may use brace alternation, `**/*.{java,kt}`, and a `.vibetags-mirror` glob
 line is taken whole, so either can put a comma inside one glob. Where a vendor documents several
