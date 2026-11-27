@@ -1090,11 +1090,19 @@ public final class ModuleSidecar {
          * is a flat {@code src/} cannot hold a {@code src/<set>/java} tree of a real second source set,
          * so the pair is only ever the misread one. Freshness decides the direction: a sibling written
          * earlier, or whose time cannot be read, retires nothing.
+         *
+         * <p>A root "whose first {@code src} segment is its last" is not only {@code <module>/src}: a
+         * main round that also compiles {@code gen/src} records one too, and the module's real
+         * {@code __test} sidecar was then retired on every compile-only build (#1159). So a candidate
+         * that records a {@code src/<its own set>/...} root of its own is never misread: the misread
+         * sidecars record the flat root itself, or no roots at all (they predate {@code ~roots}).
          */
         private void dropMisreadSourceSets() {
             List<Loaded> misread = new ArrayList<>();
             for (Loaded candidate : loaded) {
-                if (!ModuleIdentity.MAIN.equals(PartialRoundDetector.sourceSetOf(candidate.sidecar()))
+                String set = PartialRoundDetector.sourceSetOf(candidate.sidecar());
+                if (!ModuleIdentity.MAIN.equals(set)
+                        && !recordsItsOwnSetRoot(root, candidate.sidecar(), set)
                         && hasANoOlderSiblingOnAFlatSrcRoot(candidate)) {
                     misread.add(candidate);
                 }
@@ -1114,6 +1122,31 @@ public final class ModuleSidecar {
             }
             return false;
         }
+    }
+
+    /**
+     * True when {@code sidecar} records a source root below its module that passes through
+     * {@code src/<set>}, the conventional tree of the source set the sidecar is named after.
+     */
+    private static boolean recordsItsOwnSetRoot(Path root, ModuleSidecar sidecar, String set) {
+        Path dir = PartialRoundDetector.moduleDirOf(root, sidecar);
+        if (dir == null) return false;
+        for (Path sourceRoot : PartialRoundDetector.recordedSourceRoots(root, sidecar)) {
+            if (sourceRoot.startsWith(dir) && hasSegmentPair(dir.relativize(sourceRoot), "src", set)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** True when {@code first} is immediately followed by {@code second} somewhere in {@code path}. */
+    private static boolean hasSegmentPair(Path path, String first, String second) {
+        for (int k = 0; k + 1 < path.getNameCount(); k++) {
+            if (first.equals(path.getName(k).toString()) && second.equals(path.getName(k + 1).toString())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** True when {@code sidecar} records a source root below its module whose first {@code src} segment is its last. */

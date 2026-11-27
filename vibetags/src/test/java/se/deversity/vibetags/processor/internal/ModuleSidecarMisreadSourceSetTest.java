@@ -76,6 +76,47 @@ class ModuleSidecarMisreadSourceSetTest {
         assertEquals(List.of("core__it"), ids(ModuleSidecar.readAll(root)));
     }
 
+    /**
+     * #1159. A main round that compiles the conventional tree and a second directory ending in
+     * {@code src} records a flat-looking root, and the module's real test sidecar, whose sources are
+     * in {@code src/test/java}, was retired and deleted on every compile-only build.
+     */
+    @Test
+    void aSecondMainRootEndingInSrcDoesNotRetireTheRealTestSidecar(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core/src/main/java"));
+        Files.createDirectories(root.resolve("core/src/test/java"));
+        Files.createDirectories(root.resolve("core/gen/src"));
+        save(root, "core__test", List.of("core/src/test/java"), OLDER);
+        save(root, "core", List.of("core/src/main/java", "core/gen/src"), NEWER);
+
+        assertEquals(List.of("core", "core__test"), ids(ModuleSidecar.readAll(root)));
+        assertEquals(true, Files.exists(root.resolve(".vibetags-mod-core__test")), "and keeps its file");
+    }
+
+    /** A misread sidecar written after ~roots existed records the flat root itself, and is still retired. */
+    @Test
+    void aMisreadSidecarRecordingTheFlatRootIsStillRetired(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core/src"));
+        save(root, "core__com", List.of("core/src"), OLDER);
+        save(root, "core", List.of("core/src"), NEWER);
+
+        assertEquals(List.of("core"), ids(ModuleSidecar.readAll(root)));
+    }
+
+    /**
+     * Packages under a flat {@code src/test/} were filed as {@code __test} before #1068. That sidecar
+     * is named after a real source set but records no {@code src/test/...} root, so it is still the
+     * misread one.
+     */
+    @Test
+    void aMisreadTestSidecarFromAFlatSrcIsStillRetired(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core/src/test"));
+        save(root, "core__test", List.of("core/src"), OLDER);
+        save(root, "core", List.of("core/src"), NEWER);
+
+        assertEquals(List.of("core"), ids(ModuleSidecar.readAll(root)));
+    }
+
     private static void save(Path root, String moduleId, List<String> sourceRoots, long mtime) throws IOException {
         String region = moduleId.contains(ModuleSidecar.SOURCE_SET_SEPARATOR)
             ? moduleId.substring(0, moduleId.indexOf(ModuleSidecar.SOURCE_SET_SEPARATOR)) : moduleId;

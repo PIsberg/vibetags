@@ -43,7 +43,7 @@ appended line rather than a format-version bump.
 When a sidecar is left out, `vibetags.log` says why: `sidecar.prune reason=… path=…` for one that
 was deleted (`stale-format`, `malformed`, `module-gone`, `invalid-module-path`, `superseded`,
 `misread-source-set`, a source-set sidecar an older build filed under the first package segment
-of a flat `src/` root, #1068) and
+of a flat `src/` root, #1068, but never one that records a `src/<its set>/` root of its own, #1159) and
 `sidecar.skip reason=…` for one that was kept and merely ignored this build (`future-version`,
 `unreadable`, and every prune reason under check mode, which deletes nothing). That is the trace to
 grep for when a module's section is missing from a generated file.
