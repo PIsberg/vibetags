@@ -49,7 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * makes the output agree with javac anyway, which is the whole point.
  *
  * <p>The fixture is deliberately awkward: primitives, a qualified generic, a nested type, an
- * array, a varargs tail, a wildcard, a type variable, an overload set, a constructor and a field.
+ * array, a varargs tail, a wildcard, a type variable, an overload set, a constructor and a field,
+ * and a type nested in a parameterised outer type (#1188).
  * Those are the shapes where a hand-rolled signature builder goes wrong.
  *
  * <p>If javac ever changes its rendering this test goes red, which is the correct outcome: the
@@ -104,6 +105,17 @@ class ElementNamingFormatParityTest {
             }
 
             public record Point(int x, String label) {}
+
+            // A type nested in a parameterised outer type: javac writes the outer type's arguments,
+            // given or implicit, in front of the nested name (#1188).
+            public static class Outer<T> {
+                public class Inner<U> {
+                    public void insideInner(Inner<U> self) {}
+                }
+                public void insideOuter(Inner<String> implicitOuter) {}
+            }
+            public void outerArguments(Outer<String>.Inner<Integer> x, Outer<String>.Inner<Integer>[] xs) {}
+            public void rawOuter(Outer raw) {}
         }
         """;
 

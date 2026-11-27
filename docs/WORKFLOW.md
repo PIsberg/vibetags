@@ -208,7 +208,7 @@ that does not compile on its own is reported as such instead of being blamed on 
 3. **Nothing written to the VibeTags root.** File presence is the only opt-in and none of these
    repos opted in. `vibetags.log` is the documented exception.
 4. **`ElementNaming` renders every member the way javac does.**
-   `ElementNamingFormatParityTest` checks that against a 26-member fixture; this checks it
+   `ElementNamingFormatParityTest` checks that against a 48-member fixture; this checks it
    against roughly 15,700 members nobody chose.
 
 Assertion 0 comes before all of them: the control has to compile. Otherwise a repo that cannot
