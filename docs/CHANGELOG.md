@@ -271,6 +271,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A release puts 68 files on Maven Central instead of 84 (#863).** Central's monthly allowance
+  is per organization, and each published file also costs its `.asc`, `.md5` and `.sha1`. The
+  CycloneDX SBOM, which Central does not require, cost 4 files per jar module: it is no longer
+  attached to the build (`skipAttach`), each module writes it as
+  `<artifactId>-<version>-cyclonedx.json`, and `publish.yml` puts it on the GitHub release beside
+  the signed jars. Consumers who fetched `-cyclonedx.json` from Central find it on the release from
+  now on. `CentralPublishingBudgetTest` pins it, and the `central-bundle` job logs each pull
+  request's bundle file count.
+
 - **CI no longer starts every job with an empty Maven repository after a pom change (#1041).**
   `setup-java`'s `cache: maven` is keyed on the exact pom hash with no fallback, so a Dependabot
   bump started about thirty jobs cold against Maven Central at once, and Central answered some of

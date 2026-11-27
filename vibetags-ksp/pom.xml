@@ -242,7 +242,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- SBOM: generates CycloneDX BOM at package phase, attached as classifier "cyclonedx" -->
+            <!-- SBOM: generates the CycloneDX BOM at package phase as target/<artifactId>-<version>-cyclonedx.json; not attached, so it goes on the GitHub release rather than Central (#863) -->
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
@@ -267,7 +267,12 @@
                     <!-- JSON only: one SBOM format, since each published file costs 4 files of
                          Central's monthly allowance with its signature and checksums (#863). -->
                     <outputFormat>json</outputFormat>
-                    <outputName>bom</outputName>
+                    <!-- Not attached, so it stays off Central: Central does not require an SBOM, and
+                         attached it cost 4 files per artifact per release with its signature and
+                         checksums. publish.yml puts it on the GitHub release instead, which takes
+                         assets by file name, hence one name per artifact (#863). -->
+                    <outputName>${project.artifactId}-${project.version}-cyclonedx</outputName>
+                    <skipAttach>true</skipAttach>
                 </configuration>
             </plugin>
             <!-- Shipping-dependency allowlist; rule and rationale live in vibetags-parent. -->
