@@ -13,6 +13,18 @@
  * Nothing here may import {@code javax.lang.model}, {@code javax.annotation.processing}, or
  * {@code com.sun.source}; {@code ArchitectureRulesTest} enforces that.
  *
+ * <p><b>What stays here.</b> Ordering, derivation and lookup are not the model's: they live in
+ * {@code internal.GuardrailModelBuilder}, the only class that may construct a {@code GuardrailModel}
+ * ({@code ArchitectureRulesTest.ONLY_THE_BUILDER_CONSTRUCTS_A_MODEL}). What makes these types values
+ * stays with them (decided on #1090): {@code TaggedElement.owner()} answering the element itself when
+ * no owner was set; the nested {@code TaggedElement.Builder}'s defaults and its unmodifiable copies
+ * of the annotation and type-member maps; constructor validation and unmodifiable wrapping in both
+ * types; {@code TaggedElement}'s {@code equals}, {@code hashCode} and {@code toString}, whose
+ * identity is {@code kind} and {@code path}; and {@code GuardrailModel}'s named bucket accessors,
+ * each a one-line {@code of(...)}. Those are the types' identity, invariants and immutability, not
+ * logic about the data, and moving them out would make every caller re-establish them. New
+ * ordering or derivation still goes in the builder.
+ *
  * <p>All types are {@code @NullMarked}: every parameter and return type is non-null by default;
  * exceptions are annotated with {@code @Nullable} explicitly.
  */
