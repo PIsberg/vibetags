@@ -275,6 +275,7 @@ public final class GuardrailFileWriter {
      *                 {@code e} as it is
      */
     private boolean writeFailed(Path filePath, String path, IOException e, @Nullable String encoding) {
+        leftUnwritten.add(unwrittenKey(filePath));
         String reason;
         if (encoding == null) {
             reason = e.getMessage();
@@ -293,6 +294,27 @@ public final class GuardrailFileWriter {
             writeCache.recordFailure(filePath);
         }
         return false;
+    }
+
+    /**
+     * The files this writer warned it did not write: a write that failed, or one it declined (a
+     * stray start marker, a file it cannot merge into, a hand-written whole-file output).
+     * {@link #writeFileIfChanged} answers {@code false} for these as for a file already current,
+     * and its {@code boolean} is public API, so the caller asks here to tell the two apart (#1208).
+     */
+    private final Set<Path> leftUnwritten = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
+     * Whether this writer warned that it did not write {@code file}: it failed, or it declined.
+     * The status line after a write says {@code not written} for such a file instead of
+     * {@code no changes}, which contradicted the warning printed just above it (#1208).
+     */
+    public boolean leftUnwritten(Path file) {
+        return leftUnwritten.contains(unwrittenKey(file));
+    }
+
+    private static Path unwrittenKey(Path file) {
+        return file.toAbsolutePath().normalize();
     }
 
     /** {@link #undecodableEncoding} for a file with no UTF-16 byte order mark. */
@@ -856,6 +878,7 @@ public final class GuardrailFileWriter {
      * found it.
      */
     private boolean declined(Path filePath) {
+        leftUnwritten.add(unwrittenKey(filePath));
         if (!dryRun && writeCache != null) {
             writeCache.recordFailure(filePath);
         }

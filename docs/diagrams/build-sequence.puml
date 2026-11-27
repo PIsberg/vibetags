@@ -98,6 +98,9 @@ loop For each active service
         Processor -> Logger: info("{} — updated", relPath)
     else hasNewRules == false AND non-empty file
         Processor -> Compiler: NOTE: "Skipping update — multi-module"
+    else Write failed or declined (writer warned)
+        Processor -> Compiler: WARNING: "Failed to write ..." / "left ... untouched"
+        Processor -> Compiler: NOTE: "not written - <file>"
     else Content unchanged
         Processor -> Compiler: NOTE: "no changes - <file>"
     end

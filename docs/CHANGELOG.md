@@ -271,6 +271,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A file the writer warned it did not write is no longer reported as "no changes" (#1208).** The
+  writer's `false` means both "already current" and "failed or declined", and the status line
+  after the write mapped it to `no changes`, so every write warning was followed by a note
+  contradicting it: a UTF-16 `CLAUDE.md` printed "Failed to write AI rules file ... left unchanged"
+  and then "no changes - CLAUDE.md", and a stray start marker or a file VibeTags cannot merge into
+  did the same. Such a file now reads `not written - <file>`. `GuardrailFileWriter.leftUnwritten`
+  records it, since the writer's `boolean` is public API. The status line is printed inside the
+  `@AILocked` `generateFiles()`; the owner approved this edit there, together with replacing the
+  last hand-written path conversion in it with `PathStrings` (#1101). `FailedWriteStatusNoteTest`
+  failed both cases first.
+
 - **Upgrading a pre-marker file to markers takes one write, not two (#1162).** The upgrade joined the
   hand-written text above the new block with its trailing newline still on, so it left two blank
   lines there; the next build found the block, rebuilt the file with one, and wrote and reported it

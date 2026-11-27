@@ -1599,8 +1599,8 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         try {
             pool.submit(() -> plan.writes().parallelStream().forEach(write -> {
                 boolean changed = writeFileIfChanged(write.path().toString(), write.content(), write.hasNewRules());
-                String relPath = root.relativize(write.path()).toString().replace('\\', '/');
-                statusQueue.add(new String[]{relPath, changed ? "updated" : "no changes"});
+                String relPath = PathStrings.relative(root, write.path());
+                statusQueue.add(new String[]{relPath, writeStatus(write.path(), changed)});
             })).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -1701,6 +1701,19 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         collector.reset();
         this.elementRules = new java.util.LinkedHashMap<>();
         VibeTagsLogger.shutdown(root);
+    }
+
+    /**
+     * The status generateFiles() prints for {@code file} after its write: {@code updated},
+     * {@code not written} when the writer warned that it failed or declined, or {@code no changes}.
+     * The writer's {@code false} covers the last two alike, and reporting both as
+     * {@code no changes} contradicted the warning printed just above it (#1208).
+     */
+    private String writeStatus(Path file, boolean changed) {
+        if (changed) {
+            return "updated";
+        }
+        return fileWriter.leftUnwritten(file) ? "not written" : "no changes";
     }
 
     /**
