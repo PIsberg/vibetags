@@ -314,6 +314,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on every OS before the fix. `WriteCacheCrossInstanceAsyncTest` now names the entry behind a wrong
   verdict (`WriteCache.describeEntry`) and skips a cycle whose verdict came from a third file.
 
+- **A file found current is not recorded while its mtime is too recent to tell it from another
+  write (#1211).** The fix above left one form: two bodies of the same size written in one clock
+  tick, with no file key, have identical attributes, so the replacement still passed both stats.
+  Following git's "racily clean" rule, the writer now records such a file only once its mtime is
+  more than 100 ms old (2 s when the mtime has no sub-second part, as on HFS+ or FAT); a more
+  recent one is left for the next build to compare, and logged as
+  `write.uncached file= reason=recent-mtime`. NTFS `creationTime`, the per-write identity the
+  issue proposed, was measured and rejected: within 15 s of the name being deleted, every one of
+  20 rename-overs kept the old creation time (tunnelling). The path is reached only when a file
+  holds the right bytes but the cache has no entry for them: in a four-module probe of 44
+  compiles it never ran, and the short-circuit counts were the same with and without the change.
+  `GuardrailFileWriterReplacedDuringReadTest` failed its new same-size case first.
+
 - **A failure in a collection round no longer lets the final round write from an unfinished
   model (#1143).** The failure was downgraded to `guardrail generation failed and was skipped
   (build not affected)`, and then the final round generated anyway, so a failure part way through

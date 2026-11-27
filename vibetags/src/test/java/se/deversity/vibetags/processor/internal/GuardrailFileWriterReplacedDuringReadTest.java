@@ -17,7 +17,9 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -49,6 +51,7 @@ class GuardrailFileWriterReplacedDuringReadTest {
         GuardrailFileWriter.MARKER_START_MD + "\n" + GuardrailFileWriter.MARKER_END_MD + "\n";
     private static final String MINE = "- guardrail from module b, the longer of the two bodies\n";
     private static final String THEIRS = "- guardrail from module a\n";
+    private static final String SAME_SIZE_AS_THEIRS = "- guardrail from module b\n";
 
     private Logger logger;
 
@@ -84,6 +87,34 @@ class GuardrailFileWriterReplacedDuringReadTest {
     }
 
     @Test
+    @DisplayName("a same-size A-B-A replacement within one clock tick is not recorded as current")
+    void aSameSizeReplacementInOneTickIsNotVouchedFor(@TempDir Path dir) throws IOException {
+        // #1211: B is as long as A, so the byte count compared matches the first stat's size and
+        // only the mtime could tell A from A'. Writes in one tick share it, so the file is not
+        // vouched for while its mtime is that recent. The mtime is set ahead of the clock so that a
+        // slow machine cannot age it past the window before the writer looks.
+        Path file = dir.resolve("CLAUDE.md");
+        byte[] theirs = rendered(dir.resolve("a"), THEIRS);
+        byte[] mine = rendered(dir.resolve("b"), SAME_SIZE_AS_THEIRS);
+        assertEquals(theirs.length, mine.length, "precondition: the two renderings have one size");
+        Files.write(file, theirs);
+        FileTime oneTick = FileTime.from(Instant.now().plusSeconds(60));
+        Files.setLastModifiedTime(file, oneTick);
+        WriteCache cache = new WriteCache(dir.resolve(WriteCache.DEFAULT_FILE_NAME));
+
+        try (Replacer ignored = Replacer.attach(logger, file, mine, theirs, oneTick)) {
+            assertFalse(new GuardrailFileWriter(HEADER, null, logger, cache)
+                    .writeFileIfChanged(file.toString(), SAME_SIZE_AS_THEIRS, true),
+                "precondition: the writer read its own body and found the file current");
+        }
+
+        assertEquals(new String(theirs, StandardCharsets.UTF_8), Files.readString(file),
+            "precondition: the other module's bytes are what the file holds now");
+        assertFalse(cache.isUnchanged(file, SAME_SIZE_AS_THEIRS),
+            "the cache vouched for a body the file does not hold, so the next write would be skipped");
+    }
+
+    @Test
     @DisplayName("a file found current is still recorded, whatever its encoding holds")
     void aCurrentFileIsStillRecorded(@TempDir Path dir) throws IOException {
         // The check counts the UTF-8 bytes of what was read; a byte order mark, CRLF line ends and
@@ -93,13 +124,42 @@ class GuardrailFileWriterReplacedDuringReadTest {
         byte[] current = rendered(dir.resolve("c"), body);
         String crlf = "\uFEFF" + new String(current, StandardCharsets.UTF_8).replace("\n", "\r\n");
         Files.writeString(file, crlf, StandardCharsets.UTF_8);
+        Files.setLastModifiedTime(file, FileTime.from(Instant.now().minusSeconds(60)));
         WriteCache cache = new WriteCache(dir.resolve(WriteCache.DEFAULT_FILE_NAME));
 
         assertFalse(new GuardrailFileWriter(HEADER, null, logger, cache)
                 .writeFileIfChanged(file.toString(), body, true),
             "precondition: the file already holds the rendering");
         assertTrue(cache.isUnchanged(file, body),
-            "a file that nothing replaced is recorded, so the next build takes the cache fast path");
+            "a file that nothing replaced, last written before the racy window, is recorded, so the"
+                + " next build takes the cache fast path");
+    }
+
+    @Test
+    @DisplayName("an mtime is settled only once it is older than the racy window")
+    void anMtimeIsSettledOnlyPastTheRacyWindow(@TempDir Path dir) throws IOException {
+        long now = Instant.now().toEpochMilli() / 1_000L * 1_000L + 500L; // sub-second part 500 ms
+        long window = GuardrailFileWriter.RACY_WINDOW_MILLIS;
+        long coarse = GuardrailFileWriter.COARSE_RACY_WINDOW_MILLIS;
+        assertTrue(GuardrailFileWriter.settled(statWithMtime(dir, now - window - 1), now),
+            "a file last written before the window is recorded");
+        assertFalse(GuardrailFileWriter.settled(statWithMtime(dir, now - window), now),
+            "the window's edge still counts as recent");
+        assertFalse(GuardrailFileWriter.settled(statWithMtime(dir, now), now),
+            "a file written this tick can still be replaced by a same-size write with its mtime");
+        assertFalse(GuardrailFileWriter.settled(statWithMtime(dir, now + 60_000), now),
+            "an mtime ahead of the clock is not trusted either");
+        assertFalse(GuardrailFileWriter.settled(statWithMtime(dir, now - 500 - 1_000), now),
+            "a whole-second mtime, as a one- or two-second filesystem gives, waits out the coarse window");
+        assertTrue(GuardrailFileWriter.settled(statWithMtime(dir, now - 500 - coarse - 1_000), now),
+            "and is recorded once older than it");
+    }
+
+    private static BasicFileAttributes statWithMtime(Path dir, long millis) throws IOException {
+        Path file = dir.resolve("stat-" + millis);
+        Files.writeString(file, "x");
+        Files.setLastModifiedTime(file, FileTime.fromMillis(millis));
+        return Files.readAttributes(file, BasicFileAttributes.class);
     }
 
     /** The bytes the writer leaves in a CLAUDE.md that held an empty block, for {@code body}. */

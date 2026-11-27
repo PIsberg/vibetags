@@ -277,6 +277,12 @@ byte-stable on disk (size + mtime unchanged), the entire generate phase is skipp
 manually deleted granular file still triggers regeneration on the next compile (its `size`/`mtime` no
 longer matches the cache entry).
 
+A file the writer finds already holding its rendering is recorded with the attributes it had before
+the read, and only when a second stat after the read agrees, the bytes compared are that size, and
+its mtime is more than 100 ms old (2 s for a whole-second mtime). Two bodies of one size written in
+one clock tick have identical attributes on Windows, where there is no file key, so a file that
+recent is compared again by the next build instead of trusted (#1145, #1211).
+
 Where that check sits relative to everything else the orchestrator does — the fingerprint test
 runs *before* the sidecar write, which runs before the merge, which runs before any file write —
 is visible in the parsed call order,

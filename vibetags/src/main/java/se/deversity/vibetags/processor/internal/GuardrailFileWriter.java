@@ -402,7 +402,7 @@ public final class GuardrailFileWriter {
      * length of the text compared, must also equal the first stat's size, which rules that out
      * whenever A and B differ in size; {@code GuardrailFileWriterReplacedDuringReadTest} drives it.
      * Two different bodies of one size written within one tick, with no file key, still look the
-     * same, and nothing short of a per-write identity in the file's attributes can tell them apart.
+     * same, so a file whose mtime is that recent is not recorded at all ({@link #settled}).
      * The second stat failing is
      * the same answer as the stats differing, not a write failure: Windows refuses a stat with
      * {@code AccessDeniedException} while another process's rename is replacing the file (it hit
@@ -420,11 +420,47 @@ public final class GuardrailFileWriter {
         } catch (IOException e) {
             now = null;
         }
-        if (before != null && now != null && sameFile(before, now) && before.size() == bytesCompared) {
+        if (before == null || now == null || !sameFile(before, now) || before.size() != bytesCompared) {
+            writeCache.recordFailure(filePath);
+        } else if (settled(before, System.currentTimeMillis())) {
             writeCache.recordWrite(filePath, bodyForCache, before);
         } else {
+            debug("write.uncached file={} reason=recent-mtime mtime={}", filePath.getFileName(),
+                before.lastModifiedTime());
             writeCache.recordFailure(filePath);
         }
+    }
+
+    /**
+     * How long after a write another write can still be stamped with the same mtime, on a
+     * filesystem with fine timestamps. Measured on NTFS (Windows 11), back-to-back writes got mtimes
+     * about a millisecond apart, and 47 of 200 shared one with the write before; an ext4 tick is a
+     * few milliseconds. Kept this narrow because a file not recorded costs the next build its
+     * short-circuit, and modules of a sequential reactor write the root files further apart.
+     */
+    static final long RACY_WINDOW_MILLIS = 100L;
+
+    /**
+     * The window for an mtime with no sub-second part, which is what a filesystem with one- or
+     * two-second timestamps (HFS+, FAT, some network filesystems) gives every file. A fine mtime
+     * that happens to fall on a whole second takes this window too, which costs only a compare.
+     */
+    static final long COARSE_RACY_WINDOW_MILLIS = 2_000L;
+
+    /**
+     * Whether a file's mtime is old enough that no other write can still be given it, git's
+     * "racily clean" rule. Two different bodies of one size written in one tick, on a filesystem
+     * with no file key (Windows), have identical attributes; while the tick is that recent, a
+     * replacement may have landed between the two stats unseen (#1211), so the file is not
+     * recorded and the next build compares its bytes instead. NTFS {@code creationTime} cannot
+     * stand in for the missing key: measured on Windows 11, a rename-over within 15 s of the name
+     * being deleted keeps the old creation time (tunnelling), on every one of 20 writes. A mtime
+     * ahead of the clock counts as recent, which only costs a compare.
+     */
+    static boolean settled(BasicFileAttributes attrs, long nowMillis) {
+        long mtime = attrs.lastModifiedTime().toMillis();
+        long window = mtime % 1_000L == 0 ? COARSE_RACY_WINDOW_MILLIS : RACY_WINDOW_MILLIS;
+        return mtime < nowMillis - window;
     }
 
     /**
