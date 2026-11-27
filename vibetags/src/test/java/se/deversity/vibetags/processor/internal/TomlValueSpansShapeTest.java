@@ -306,6 +306,32 @@ class TomlValueSpansShapeTest {
     }
 
     /**
+     * #1174. A dotted {@code extra_instructions.x} key, or a {@code [pr_reviewer.extra_instructions]}
+     * header, makes {@code extra_instructions} a table. The key scan looked only for
+     * {@code extra_instructions =}, so the merge added a string beside the table: one key defined as
+     * both, which is not TOML, and PR-Agent could no longer parse the file.
+     */
+    @Test
+    @DisplayName("extra_instructions made a table, by a dotted key or a sub-table header, is refused")
+    void extraInstructionsMadeATableIsRefused() {
+        String detail = "extra_instructions in [pr_reviewer] is a table, not a string VibeTags can add to";
+        refuses("[pr_reviewer]\nextra_instructions.deep = 1\n", "key-is-a-table", detail);
+        refuses("[pr_reviewer]\n\"extra_instructions\".deep = 1\n", "key-is-a-table", detail);
+        refuses("[pr_reviewer]\n'extra_instructions' . deep = 1\n", "key-is-a-table", detail);
+        refuses("[pr_reviewer]\na = 1\n[pr_reviewer.extra_instructions]\ndeep = 1\n", "key-is-a-table", detail);
+        refuses("[pr_reviewer.extra_instructions.x]\ny = 1\n", "key-is-a-table", detail);
+        refuses("[[pr_reviewer.extra_instructions]]\ny = 1\n", "key-is-a-table", detail);
+    }
+
+    @Test
+    @DisplayName("a longer key name and another sub-table are not extra_instructions")
+    void aLookAlikeKeyAndAnotherSubTableStillMerge() {
+        merges("[pr_reviewer]\nextra_instructions_note.x = 1\n[pr_reviewer.other]\nz = 1\n",
+            "[pr_reviewer]\nextra_instructions = \"\"\"\n" + SPAN + "\n\"\"\"\nextra_instructions_note.x = 1\n"
+                + "[pr_reviewer.other]\nz = 1\n\n[pr_code_suggestions]\nextra_instructions = \"\"\"\n" + SPAN + "\n\"\"\"\n");
+    }
+
+    /**
      * A string or an array left open swallows every line after it, the table headers included, so
      * the tables were never found and both were appended again on every merge (#1171). The file
      * is not valid TOML to begin with; growing it on each build is not a repair.

@@ -264,6 +264,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A `.pr_agent.toml` whose `extra_instructions` is a table is left alone instead of made invalid
+  (#1174).** A dotted `extra_instructions.x = 1` under `[pr_reviewer]`, or a
+  `[pr_reviewer.extra_instructions]` header, makes the key a table. The merge looked only for
+  `extra_instructions =`, so it added a string of the same name beside it: one key defined as both,
+  which is not TOML, and PR-Agent could no longer parse the file. Such a file is now refused with
+  `key-is-a-table` and a build warning, as the other unmergeable shapes are.
+  `TomlValueSpansShapeTest` failed on it first.
+
 - **A second main source root ending in `src` no longer retires the module's real test sidecar
   (#1159).** The misread-source-set rule (#1068) retires a non-main sidecar when a sibling of its
   region records a root whose first `src` segment is its last. That matched `gen/src`,
