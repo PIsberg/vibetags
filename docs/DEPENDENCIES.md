@@ -175,7 +175,9 @@ tooling from working and buy nothing, because none of them can be read from a po
 release, toolchains included, and `BumpDependenciesTableTest` fails if the parent gains a
 `*.version` property the script has no source for. To apply one, edit the property in
 `vibetags-parent/pom.xml`, then run `python tools/sync-version-mirrors.py` to rewrite its copies.
-The procedure, with the gates that verify a bump, is the `bump-dependencies` skill.
+The procedure, with the gates that verify a bump, is the `bump-dependencies` skill. The Pin Report
+workflow runs the script every Monday and keeps its findings in one open issue, so a pin Dependabot
+cannot see is not behind unnoticed (docs/WORKFLOW.md, Pin Report, #1135).
 
 Dependabot edits the parent only, so its bump of a mirrored property arrives with the copies behind
 and `BuildVersionParityTest` red: #1024 and #1092, both `ksp.version`, did. Two mirrored
