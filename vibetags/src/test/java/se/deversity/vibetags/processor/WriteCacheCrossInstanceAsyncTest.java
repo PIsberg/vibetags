@@ -10,6 +10,8 @@ import se.deversity.asynctest.diagnostics.TrustTier;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.WriteCache;
 
+import org.jspecify.annotations.Nullable;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,7 +21,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * A parallel reactor's modules share one {@code .vibetags-cache}, each through its own
@@ -128,7 +130,33 @@ class WriteCacheCrossInstanceAsyncTest {
             }
             cache.flush();
         }
-        assertTrue(Files.exists(shared), "the shared file must survive the contention");
+        String missing = whyNotThere(shared);
+        assertNull(missing, "the shared file must survive the contention");
+    }
+
+    /**
+     * {@code null} when a stat finds the file, else what the stat threw and what the directory
+     * holds. The stat is what {@code Files.exists} runs, so the check is the same, but
+     * {@code Files.exists} answers {@code false} both for a missing file and for one whose existence
+     * cannot be determined, and twice on windows-latest that was all a failure said (#1221). The
+     * exception is captured at the moment of the check; {@code notExists} is {@code true} only for
+     * a file confirmed absent.
+     */
+    private static @Nullable String whyNotThere(Path file) {
+        try {
+            Files.readAttributes(file, BasicFileAttributes.class);
+            return null;
+        } catch (IOException statFailed) {
+            StringBuilder why = new StringBuilder("stat threw ").append(statFailed)
+                .append("; notExists=").append(Files.notExists(file));
+            try (Stream<Path> entries = Files.list(file.getParent())) {
+                why.append("; directory holds ")
+                    .append(entries.map(p -> p.getFileName().toString()).sorted().toList());
+            } catch (IOException unlistable) {
+                why.append("; directory unlistable: ").append(unlistable);
+            }
+            return why.toString();
+        }
     }
 
     private static boolean sameFile(BasicFileAttributes a, BasicFileAttributes b) {
