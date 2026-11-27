@@ -264,6 +264,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A second main source root ending in `src` no longer retires the module's real test sidecar
+  (#1159).** The misread-source-set rule (#1068) retires a non-main sidecar when a sibling of its
+  region records a root whose first `src` segment is its last. That matched `gen/src`,
+  `samples/src` or `it/src` as well as the flat `<module>/src` it was written for, so a module
+  whose main round also compiled such a directory lost its `__test` sidecar, and its test
+  guardrails from every generated file and `TESTING.md`, on every compile-only build, until the next
+  test compile put them back. A sidecar that records a `src/<its own set>/...` root is now never
+  taken for a misread one; the misread sidecars record the flat root itself or no roots at all, and
+  are still retired. `ModuleSidecarMisreadSourceSetTest` failed on the issue's reproduction first.
+
 - **A runtime failure in `AIGuardrailProcessor.init()` no longer fails the consumer's build
   (#1147).** `init()` reads options, the root, the role and mirror configs, the write cache and the
   sidecars on record, with no guard, so one `RuntimeException` there (a corrupt cache row did it
