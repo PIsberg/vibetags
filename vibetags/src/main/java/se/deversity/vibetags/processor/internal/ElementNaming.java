@@ -392,9 +392,18 @@ public final class ElementNaming {
         return "?";
     }
 
-    /** The qualified name, then the type arguments comma-separated with no spaces. */
+    /**
+     * The qualified name, then the type arguments comma-separated with no spaces. A type nested in a
+     * parameterised type is written after its enclosing type, arguments and all, as javac writes
+     * it: {@code p.Host.Outer<java.lang.String>.Inner<java.lang.Integer>}, and
+     * {@code p.Host.Outer<T>.Inner<U>} where the outer arguments are implicit. The qualified name
+     * alone dropped them (#1188).
+     */
     private static String declaredString(DeclaredType declared) {
-        StringBuilder sb = new StringBuilder(qualifiedName(declared.asElement()));
+        StringBuilder sb = new StringBuilder(
+            declared.getEnclosingType() instanceof DeclaredType outer && isParameterised(outer)
+                ? declaredString(outer) + "." + simpleNameOf(declared.asElement())
+                : qualifiedName(declared.asElement()));
         List<? extends TypeMirror> arguments = declared.getTypeArguments();
         if (!arguments.isEmpty()) {
             StringJoiner joined = new StringJoiner(",", "<", ">");
@@ -404,6 +413,12 @@ public final class ElementNaming {
             sb.append(joined);
         }
         return sb.toString();
+    }
+
+    /** Whether {@code type} or any type enclosing it carries type arguments. */
+    private static boolean isParameterised(DeclaredType type) {
+        return !type.getTypeArguments().isEmpty()
+            || type.getEnclosingType() instanceof DeclaredType outer && isParameterised(outer);
     }
 
     /**

@@ -314,6 +314,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on every OS before the fix. `WriteCacheCrossInstanceAsyncTest` now names the entry behind a wrong
   verdict (`WriteCache.describeEntry`) and skips a cycle whose verdict came from a third file.
 
+- **An element's identity keeps the outer type's arguments of a type nested in a generic class
+  (#1188).** `ElementNaming` rendered `void a(Outer<String>.Inner<Integer> x)` as
+  `a(p.Host.Outer.Inner<java.lang.Integer>)` where javac writes
+  `a(p.Host.Outer<java.lang.String>.Inner<java.lang.Integer>)`, against the documented contract
+  that type-use annotations are the only thing it renders differently from javac; inside `Outer<T>`
+  a bare `Inner<U>` lost the implicit `Outer<T>.` the same way. It now writes the enclosing type,
+  arguments and all, whenever any type enclosing the nested one is parameterised. **Identities
+  change:** a member with such a parameter gets a new `.vibetags-locks` entry and, when it has one,
+  a renamed granular rule file. No two members could collide on the old form, since their
+  erasures are the same. `ElementNamingFormatParityTest` failed first on the new shapes.
+
 - **`.vibetags-roles` globs match Kotlin and Groovy types and nested types (#1178).** A glob was
   matched against a path rebuilt from the qualified name, so `com.x.Invoice` from `Invoice.kt` was
   tried as `com/x/Invoice.java` and `com.x.FooController.Request` as
