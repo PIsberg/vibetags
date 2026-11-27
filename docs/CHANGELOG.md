@@ -271,6 +271,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CI no longer starts every job with an empty Maven repository after a pom change (#1041).**
+  `setup-java`'s `cache: maven` is keyed on the exact pom hash with no fallback, so a Dependabot
+  bump started about thirty jobs cold against Maven Central at once, and Central answered some of
+  them 429, about one failed job a week. The jobs in `build.yml` and the Jazzer job in `fuzz.yml`
+  now restore the repository through `.github/actions/maven-cache`, `actions/cache` with
+  `restore-keys`, which leaves out this repository's own `se/deversity/vibetags` artifacts.
+  `MavenCacheWiringTest` pins it.
+
 - **A file the writer warned it did not write is no longer reported as "no changes" (#1208).** The
   writer's `false` means both "already current" and "failed or declined", and the status line
   after the write mapped it to `no changes`, so every write warning was followed by a note

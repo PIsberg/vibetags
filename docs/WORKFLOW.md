@@ -55,7 +55,7 @@ Matrix over **JDK 21, 25, 26, 27** (Temurin distribution, Maven dependency cache
 
 1. **Harden runner** — egress audit.
 2. **Checkout** — `fetch-depth: 2`, so on a pull request the merge commit's first parent (the base branch) is there for the quality gate in step 27.
-3. **Set up JDK** — installs Temurin and primes the `~/.m2/repository` cache keyed on `pom.xml`.
+3. **Set up JDK** — installs Temurin; the next step restores `~/.m2/repository` through the shared `.github/actions/maven-cache` action (see [Known flake](#known-flake-an-artifact-central-has-is-reported-missing)).
 4. **Install VibeTags Annotations** — `cd vibetags-annotations && mvn install -B`. Installs the zero-dependency annotations jar into the local Maven repo first, because `vibetags/pom.xml` declares it as a regular `<dependency>`. Runs the same static-analysis stack as the library (Checkstyle, PMD, CPD, SpotBugs with Find Security Bugs, Error Prone with NullAway) under the same JDK-21-only split for the source and bytecode tools.
 5. **Build VibeTags Library** — `cd vibetags && mvn clean install -B`. Compiles the annotation processor, runs the fast test tier, and installs the artifact into the local Maven repo so the examples can resolve it. PMD, SpotBugs (with the Find Security Bugs detectors attached) and CPD are JDK-independent, so they run only on the JDK 21 leg (`-Dpmd.skip=true -Dcpd.skip=true -Dspotbugs.skip=true` is passed on the other JDKs; PMD and CPD have separate skip properties, and `BuildToolchainParityTest` fails a workflow that passes one no plugin reads) to avoid repeating identical analysis on every leg. Error Prone still runs on every JDK because it is a compiler plugin and is JDK-sensitive, and it
 carries NullAway with it — nullability is checked at `ERROR` on every matrix JDK, so a
@@ -708,17 +708,26 @@ pins both, and that the workflow still reads the marker the script prints (#1135
 ## Known flake: an artifact Central has is reported missing
 
 A job occasionally fails resolving a plugin or library that is on Maven Central: Maven says
-`Could not find artifact <coordinates> in central`, Gradle `Could not find <coordinates>` with
-`repo.maven.apache.org` in the searched locations. Seen three times in two weeks (#1041): run
-40995787430 (ECJ job, `maven-pmd-plugin:3.28.0`, 2026-10-30), run 42154399907 (Jazzer job, the
-same plugin, 2026-11-06) and run 42555409466 (Gradle job, `pmd-java:7.29.0`, 2026-11-09). Each
-passed on rerun with no change. It is not the cache: `setup-java`'s `cache: maven` is keyed on the
-pom hash, so a bump branch starts cold, and a restored "not found" marker would fail the rerun too.
+`Could not find artifact <coordinates> in central` or `status code: 429`, Gradle `Could not find
+<coordinates>` with `repo.maven.apache.org` in the searched locations. Seen about once a week
+(#1041), most often right after a pom change: `setup-java`'s `cache: maven` was keyed on the exact
+pom hash with no fallback, so a bump started about thirty jobs with an empty `~/.m2/repository` at
+once, and Central answered some of them 429.
+
+Every job in `build.yml` that resolves from Central, and the Jazzer job in `fuzz.yml`, now restores
+the repository through `.github/actions/maven-cache` instead: `actions/cache` keyed on the poms
+outside `target/`, with `restore-keys` falling back to the newest cache for the runner's OS, so a
+pom change downloads only what changed. It leaves out `se/deversity/vibetags`, which every job
+installs from the checkout, so an older build of this repository's own artifacts is never restored.
+`actions/cache` saves only when the job succeeds and the exact key missed, so a failed run writes no
+cache. `MavenCacheWiringTest` pins the fallback, the exclusion and that no job in either workflow
+uses `cache: maven` again. `codeql.yml`, `demo.yml`, `mutation.yml`, `nightly-perf.yml` and
+`publish.yml` keep `cache: maven`: none of them runs on a pom bump's pull request.
 
 - **Rule:** when a failed job's only error is that message for an artifact Central serves (open
   `https://repo.maven.apache.org/maven2/<group path>/<artifact>/<version>/` to check), rerun the job.
-  Do not change code for it.
-- If it reaches main, or more than about one a week, reopen #1041 with the run ids.
+- If it still happens more than about once a week with the shared cache in place, reopen #1041 with
+  the run ids.
 
 ---
 

@@ -30,6 +30,7 @@ workflows:
         - 'actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec'
         - 'step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c'
     '.github/workflows/fuzz.yml':
+        - 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9'
         - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
         - 'actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880'
         - 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9'

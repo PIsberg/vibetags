@@ -1,0 +1,24 @@
+name: 'Maven repository cache'
+description: >-
+  Restores ~/.m2/repository keyed on the poms, falling back to the newest cache for
+  the OS when the exact key misses (#1041). Leaves out se/deversity/vibetags, which
+  every job installs from this checkout.
+
+# setup-java's cache: maven is keyed on the exact pom hash with no fallback, so every pom
+# change (a Dependabot bump among them) started about thirty jobs with an empty repository at
+# once, and Central answered some of them 429 (#1041). restore-keys hands each job the newest
+# cache for its OS instead, so a bump downloads only what changed. actions/cache saves only when
+# the job succeeds and the exact key missed, so a failed run never writes a cache. Keyed on the
+# poms outside target/, where the corpus jobs restore cloned repositories that carry their own.
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache the Maven repository
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.m2/repository
+          !~/.m2/repository/se/deversity/vibetags
+        key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml', '!**/target/**') }}
+        restore-keys: |
+          maven-${{ runner.os }}-

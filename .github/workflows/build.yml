@@ -52,7 +52,9 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Install VibeTags Annotations (Maven)
         # Same JDK-21-only split as the library step below, and for the same reason: PMD, CPD
@@ -817,7 +819,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Install VibeTags Annotations (Maven)
         run: |
@@ -907,7 +911,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Install VibeTags annotations
         run: |
@@ -987,6 +993,9 @@ jobs:
           java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: gradle
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Publish VibeTags Annotations (Gradle)
         run: |
@@ -1688,7 +1697,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       # Keyed on repos.tsv and on the harness, so a pin bump or a change to how the corpus is
       # built fetches afresh. The repos are pinned to commits, so a hit is always the right
@@ -1734,7 +1745,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       # Keyed on the manifest, the harness and the init script, so a pin bump or a change to how
       # the injection works fetches afresh. The repositories are pinned to commits, so a hit is
@@ -1791,7 +1804,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Install VibeTags Annotations and Processor (Maven)
         run: |
@@ -1824,7 +1839,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Install VibeTags Annotations and Processor (Maven)
         run: |
@@ -1871,7 +1888,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Snapshot the committed diagrams' structure
         run: sh tools/diagram-structure.sh docs/diagrams/codekarta > /tmp/diagram-structure-committed.txt
@@ -1920,7 +1939,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Read the Maven version publish.yml pins
         run: |
