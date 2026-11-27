@@ -269,7 +269,9 @@ string of `[pr_reviewer]` and of `[pr_code_suggestions]`, and nothing else. Text
 string stays first, with the span after it; every other setting and comment stays byte for byte. A
 table or key the file lacks is added. When the file cannot be merged without guessing (a table or
 the key defined twice, a value that is not a `"""` string, a start marker with no end, the table set
-through a dotted key or an array of tables), VibeTags writes nothing and says why in a build warning.
+through a dotted key or an array of tables, or `extra_instructions` itself made a table by a dotted
+`extra_instructions.x` key or a `[pr_reviewer.extra_instructions]` header, #1174), VibeTags writes
+nothing and says why in a build warning.
 
 `.codex/config.toml` is not written at all since #934. It held fixed content with no guardrail in
 it, `model = "o3-mini"` and `approval_policy = "on-request"` under a `[project]` table, and Codex reads

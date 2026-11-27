@@ -21,7 +21,8 @@ import java.util.regex.Pattern;
  *
  * <p>A document that cannot be merged without guessing is refused, and the caller writes nothing:
  * a table defined twice, the key defined twice, a value that is not a {@code """} string, a start
- * marker with no end, the table reached through a dotted key or an array of tables, which the
+ * marker with no end, {@code extra_instructions} made a table (a dotted key below it, or a header
+ * naming it), the table reached through a dotted key or an array of tables, which the
  * table scan cannot see, or a table that would have to be added to a file that ends inside a
  * string or an array nobody closed.
  *
@@ -44,6 +45,9 @@ public final class TomlValueSpans {
 
     /** The key, bare or quoted: {@code "extra_instructions"} and {@code 'extra_instructions'} are the same key. */
     private static final Pattern KEY_LINE = Pattern.compile("^\\s*([\"']?)extra_instructions\\1\\s*=");
+
+    /** The key followed by a dot, which makes it a table: {@code extra_instructions.x = 1} (#1174). */
+    private static final Pattern DOTTED_KEY_LINE = Pattern.compile("^\\s*([\"']?)extra_instructions\\1\\s*\\.");
 
     private static final String OPEN = "extra_instructions = \"\"\"";
 
@@ -159,6 +163,7 @@ public final class TomlValueSpans {
                 // A quoted name is the same name, ["pr_reviewer"] the table [pr_reviewer] (TOML 1.0, Keys).
                 // A byte order mark in front of the first header is encoding, not part of the name.
                 String compact = textOf(line).strip().replaceAll("[\\s\"'\\uFEFF]", "");
+                refuseATableNamedForTheKey(compact);
                 if (compact.startsWith("[[" + table + "]]")) {
                     throw new Refused("array-of-tables", "[[" + table + "]] is an array of tables");
                 }
@@ -193,15 +198,43 @@ public final class TomlValueSpans {
             int tableEnd = endOfTable(header);
             List<Line> keys = new ArrayList<>();
             for (Line line : lines) {
-                if (line.normal() && line.start() > header.start() && line.start() < tableEnd
-                        && KEY_LINE.matcher(textOf(line)).find()) {
-                    keys.add(line);
+                if (line.normal() && line.start() > header.start() && line.start() < tableEnd) {
+                    String text = textOf(line);
+                    refuseADottedKey(text);
+                    if (KEY_LINE.matcher(text).find()) {
+                        keys.add(line);
+                    }
                 }
             }
             if (keys.size() > 1) {
                 throw new Refused("duplicate-key", "[" + table + "] sets extra_instructions twice");
             }
             return keys.isEmpty() ? null : keys.get(0);
+        }
+
+        /**
+         * Refuses a header that makes this table's {@code extra_instructions} a table of its own,
+         * {@code [pr_reviewer.extra_instructions]} or below it (#1174). The key scan stops at that
+         * header, so without this the merge would add a string of the same name.
+         */
+        private void refuseATableNamedForTheKey(String compactLine) {
+            String name = compactLine.startsWith("[") ? compactLine.replaceFirst("^\\[+", "") : "";
+            String key = table + ".extra_instructions";
+            if (name.startsWith(key + "]") || name.startsWith(key + ".")) {
+                throw keyIsATable();
+            }
+        }
+
+        /** Refuses {@code extra_instructions.x = ...} under the table, which makes the key a table (#1174). */
+        private void refuseADottedKey(String lineText) {
+            if (DOTTED_KEY_LINE.matcher(lineText).find()) {
+                throw keyIsATable();
+            }
+        }
+
+        private Refused keyIsATable() {
+            return new Refused("key-is-a-table",
+                "extra_instructions in [" + table + "] is a table, not a string VibeTags can add to");
         }
 
         /** Where the table stops: at the next header line below its own, or at the end of the document. */
