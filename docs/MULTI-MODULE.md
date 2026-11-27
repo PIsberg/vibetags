@@ -370,7 +370,10 @@ written to that service's file without `TESTING.md`. The ordinary `<service>` bo
 sidecar is the safety half only, so the merge reads `~tfull~` instead once `readAll()` finds the
 opt-in gone; the decision is transient state on the sidecar instances, like the index mode above,
 and `mergeFor` stays disk-free. An unrouted round writes no such key, and an older processor
-leaves it unstored like any reserved key it does not know. See
+leaves it unstored like any reserved key it does not know. In a lean root, a module linked for a
+service stays linked when the merge reads its `~tfull~` body: the module's own files carry its test
+guardrails whether or not the root's `TESTING.md` is there, because they are routed only by the
+module's own `TESTING.md` (#1156). See
 [PROCESSOR.md](PROCESSOR.md#test-code-guardrails-testingmd).
 
 Losslessness guard: a module is linked only when it actually emits its own per-module output for that
