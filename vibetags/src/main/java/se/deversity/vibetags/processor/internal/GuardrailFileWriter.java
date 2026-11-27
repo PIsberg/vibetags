@@ -595,7 +595,9 @@ public final class GuardrailFileWriter {
         private boolean upgradeLegacyFile() throws IOException {
             String human = stripLegacyVibeTagsBlock(existing);
             String before = human.isEmpty() ? frontMatter : withRenderedFrontMatter(human, frontMatter);
-            String merged = afterBlankLine(before, wrappedBody + "\n");
+            // Stripped as replaceBlock strips the text above its block, so the next build, which finds
+            // the block and takes that path, has nothing left to change (#1162).
+            String merged = afterBlankLine(before.stripTrailing(), wrappedBody + "\n");
             if (contentMatches(existing, merged)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=legacy",
                     fileName, merged.length());
