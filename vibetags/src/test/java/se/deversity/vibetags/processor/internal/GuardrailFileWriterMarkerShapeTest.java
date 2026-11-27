@@ -217,10 +217,38 @@ class GuardrailFileWriterMarkerShapeTest {
         assertTrue(write(trailingBlanks, "NEW RULES", true));
         assertFalse(write(trailingBlanks, "NEW RULES", true), "blank lines around the legacy block: " + read(trailingBlanks));
 
-        // The ordinary replace trims the head of the file; the legacy strip already does (see #1163).
+        // The legacy strip removes blank lines at the head; the ordinary replace keeps the head as it is (#1163).
         Path leadingBlanks = file("AGENTS.md", "\n\n# Mine\n\n" + legacyBlock);
         assertTrue(write(leadingBlanks, "NEW RULES", true));
         assertFalse(write(leadingBlanks, "NEW RULES", true), "blank lines at the top of the file: " + read(leadingBlanks));
+    }
+
+    /**
+     * #1163. Replacing a block joined the text below it through {@code stripLeading()}, which took
+     * the first line's indentation along with the blank lines, and trimmed the whole file, which
+     * took leading whitespace at the top. Indentation is content in Markdown: four spaces make a
+     * code block. Only the blank lines next to the block are the writer's to normalise.
+     */
+    @Test
+    @DisplayName("indentation next to the block is the developer's: the line below it and the top of the file keep theirs")
+    void indentationAroundTheBlockIsKept() throws IOException {
+        String mine = "  \n# Mine\n\nAbove.\n\n";
+        String below = "   indented below\nBelow.\n";
+        Path issue = file("CLAUDE.md", mine + block("OLD RULES") + "\n\n" + below);
+        assertTrue(write(issue, "NEW RULES", true));
+        assertEquals(mine + block("NEW RULES") + "\n\n" + below, read(issue));
+        assertFalse(write(issue, "NEW RULES", true), "and the next build writes nothing");
+
+        Path codeBelow = file("GEMINI.md", block("OLD RULES") + "\n    indentedCode();\n");
+        assertTrue(write(codeBelow, "NEW RULES", true));
+        assertEquals(block("NEW RULES") + "\n\n    indentedCode();\n", read(codeBelow),
+            "the blank line is the writer's, the four spaces are not");
+        assertFalse(write(codeBelow, "NEW RULES", true), "and the next build writes nothing");
+
+        Path codeAbove = file("QWEN.md", "    indentedCode();\n\n" + block("OLD RULES") + "\n\n\n");
+        assertTrue(write(codeAbove, "NEW RULES", true));
+        assertEquals("    indentedCode();\n\n" + block("NEW RULES") + "\n", read(codeAbove),
+            "the first line of the file keeps its indentation, and trailing blank lines still go");
     }
 
     @Test

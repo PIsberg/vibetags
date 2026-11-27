@@ -314,6 +314,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on every OS before the fix. `WriteCacheCrossInstanceAsyncTest` now names the entry behind a wrong
   verdict (`WriteCache.describeEntry`) and skips a cycle whose verdict came from a third file.
 
+- **Replacing a block keeps the indentation of the hand-written text around it (#1163).** The text
+  below the block went through `stripLeading()`, which took the first line's indentation along
+  with the blank lines, and the whole file through `trim()`, which took leading whitespace at the
+  top: a line indented four spaces right under the block (a Markdown code block, a list
+  continuation) came back flush left. Only blank lines next to the block, and trailing whitespace
+  at the end of the file, are normalised now. **Committed output changes once** in a file that has
+  an indented line directly below its block or whitespace at its very top; the result is stable
+  afterwards. No generated file in this repository changes. `GuardrailFileWriterMarkerShapeTest`
+  failed first on the issue's file.
+
 - **An element's identity keeps the outer type's arguments of a type nested in a generic class
   (#1188).** `ElementNaming` rendered `void a(Outer<String>.Inner<Integer> x)` as
   `a(p.Host.Outer.Inner<java.lang.Integer>)` where javac writes
