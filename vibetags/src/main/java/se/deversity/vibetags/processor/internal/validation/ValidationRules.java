@@ -23,6 +23,7 @@ import se.deversity.vibetags.annotations.AISunset;
 import se.deversity.vibetags.annotations.AITestDriven;
 import se.deversity.vibetags.annotations.AIThreadAffinity;
 import se.deversity.vibetags.annotations.AIThreadSafe;
+import se.deversity.vibetags.processor.model.GuardrailAnnotations;
 
 import javax.lang.model.element.Element;
 import java.lang.annotation.Annotation;
@@ -159,7 +160,7 @@ public final class ValidationRules {
                 + "than the frozen signature, which cannot change in the first place.")
     );
 
-    /** Every rule, flat. Ordered pairs → attributes → architecture → modern-Java. */
+    /** Every rule, flat. Ordered pairs → attributes → architecture → modern-Java → encodability. */
     private static final List<ValidationRule> ALL = buildAll();
 
     /** {@link #ALL} indexed by the annotation each rule scans, so each type is queried once. */
@@ -171,6 +172,7 @@ public final class ValidationRules {
         rules.add(new ArchitectureRule());
         rules.add(new LockedOverrideRule());
         rules.addAll(ModernJavaRules.all());
+        rules.addAll(UnpairedSurrogateRule.forEach(GuardrailAnnotations.ALL));
         return List.copyOf(rules);
     }
 

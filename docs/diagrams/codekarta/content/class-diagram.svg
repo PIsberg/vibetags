@@ -57,7 +57,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </defs>
 <rect width="2088" height="1844" fill="#f9fafb"/>
 <rect width="2088" height="1844" fill="url(#dotGrid)"/>
-<rect class="group-rect" x="10.0" y="100.0" width="1008.0" height="788.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
+<rect class="group-rect" x="10.0" y="100.0" width="1008.0" height="818.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="16.0" y="113.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content</text>
 <rect class="group-rect" x="1034.0" y="100.0" width="1008.0" height="773.0" rx="8" fill="#f3f4f6" fill-opacity="0.5" stroke="#9ca3af" stroke-dasharray="6,4" stroke-width="1.2"/>
 <text x="1040.0" y="113.0" font-family="sans-serif" font-size="11" fill="#6b7280" font-style="italic">se.deversity.vibetags.processor.internal.content.platforms</text>
@@ -71,8 +71,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIDraftFormatter" data-type="HAS" x="301.8" y="630.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">DRAFT</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AIAuditFormatter" data-type="HAS" d="M114.0 394.0 Q393.0 653.2 714.0 858.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIAuditFormatter" data-type="HAS" x="403.5" y="633.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">AUDIT</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AIIgnoreFormatter" data-type="HAS" d="M204.0 254.0 Q488.5 608.6 824.0 915.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AIIgnoreFormatter" data-type="HAS" x="501.3" y="590.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">IGNORE</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AIIgnoreFormatter" data-type="HAS" d="M204.0 254.0 Q488.2 615.9 824.0 930.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AIIgnoreFormatter" data-type="HAS" x="501.1" y="598.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">IGNORE</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AIPrivacyFormatter" data-type="HAS" d="M204.0 254.0 Q592.3 605.0 1024.0 901.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIPrivacyFormatter" data-type="HAS" x="603.1" y="585.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PRIVACY</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AICoreFormatter" data-type="HAS" d="M114.0 394.0 Q83.9 671.0 114.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -81,16 +81,16 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIPerformanceFormatter" data-type="HAS" x="199.5" y="670.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PERFORMANCE</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AIContractFormatter" data-type="HAS" d="M114.0 394.0 Q287.6 690.1 514.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIContractFormatter" data-type="HAS" x="300.8" y="674.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">CONTRACT</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AITestDrivenFormatter" data-type="HAS" d="M114.0 394.0 Q390.7 696.3 714.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AITestDrivenFormatter" data-type="HAS" x="402.3" y="677.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">TEST_DRIVEN</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AITestDrivenFormatter" data-type="HAS" d="M114.0 394.0 Q391.1 695.8 714.0 948.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AITestDrivenFormatter" data-type="HAS" x="402.6" y="677.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">TEST_DRIVEN</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AIThreadSafeFormatter" data-type="HAS" d="M204.0 254.0 Q486.9 645.3 824.0 991.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIThreadSafeFormatter" data-type="HAS" x="500.4" y="627.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">THREAD_SAFE</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AIImmutableFormatter" data-type="HAS" d="M204.0 254.0 Q590.3 648.9 1024.0 991.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AIImmutableFormatter" data-type="HAS" x="602.1" y="629.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">IMMUTABLE</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AIDeprecatedFormatter" data-type="HAS" d="M114.0 394.0 Q82.9 716.0 114.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AIDeprecatedFormatter" data-type="HAS" x="98.4" y="710.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">DEPRECATED</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AIObservabilityFormatter" data-type="HAS" d="M114.0 394.0 Q183.7 725.4 314.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AIObservabilityFormatter" data-type="HAS" x="198.9" y="714.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">OBSERVABILITY</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AIImmutableFormatter" data-type="HAS" d="M204.0 254.0 Q590.1 652.8 1024.0 999.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AIImmutableFormatter" data-type="HAS" x="602.1" y="633.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">IMMUTABLE</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AIDeprecatedFormatter" data-type="HAS" d="M114.0 394.0 Q83.4 716.0 114.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AIDeprecatedFormatter" data-type="HAS" x="98.7" y="710.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">DEPRECATED</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AIObservabilityFormatter" data-type="HAS" d="M114.0 394.0 Q184.3 725.2 314.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AIObservabilityFormatter" data-type="HAS" x="199.1" y="714.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">OBSERVABILITY</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AIRegulationFormatter" data-type="HAS" d="M114.0 394.0 Q286.0 733.4 514.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIRegulationFormatter" data-type="HAS" x="300.0" y="718.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">REGULATION</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AIParallelTestsFormatter" data-type="HAS" d="M114.0 394.0 Q388.8 739.5 714.0 1038.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -115,16 +115,16 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIIdempotentFormatter" data-type="HAS" x="97.6" y="800.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">IDEMPOTENT</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AIFeatureFlagFormatter" data-type="HAS" d="M114.0 394.0 Q181.9 813.8 314.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="FormatterRegistry" data-target="AIFeatureFlagFormatter" data-type="HAS" x="197.9" y="803.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">FEATURE_FLAG</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AIGeneratedFormatter" data-type="HAS" d="M114.0 394.0 Q283.6 820.8 514.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AIGeneratedFormatter" data-type="HAS" x="298.8" y="807.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GENERATED</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AILoadBearingFormatter" data-type="HAS" d="M114.0 394.0 Q385.9 826.5 714.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AILoadBearingFormatter" data-type="HAS" x="399.9" y="810.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">LOAD_BEARING</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AIBannedApiFormatter" data-type="HAS" d="M114.0 394.0 Q488.4 830.9 914.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AIBannedApiFormatter" data-type="HAS" x="501.2" y="812.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BANNED_API</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AIThreadAffinityFormatter" data-type="HAS" d="M114.0 394.0 Q590.8 834.2 1114.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AIThreadAffinityFormatter" data-type="HAS" x="602.4" y="814.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">THREAD_AFFINITY</text>
-<path class="edge-line" data-source="FormatterRegistry" data-target="AIKeepInSyncFormatter" data-type="HAS" d="M114.0 394.0 Q80.7 851.0 114.0 1308.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="FormatterRegistry" data-target="AIKeepInSyncFormatter" data-type="HAS" x="97.3" y="845.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">KEEP_IN_SYNC</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AIGeneratedFormatter" data-type="HAS" d="M114.0 394.0 Q284.0 820.6 514.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AIGeneratedFormatter" data-type="HAS" x="299.0" y="807.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">GENERATED</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AILoadBearingFormatter" data-type="HAS" d="M114.0 394.0 Q386.2 826.2 714.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AILoadBearingFormatter" data-type="HAS" x="400.1" y="810.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">LOAD_BEARING</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AIBannedApiFormatter" data-type="HAS" d="M114.0 394.0 Q488.6 830.6 914.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AIBannedApiFormatter" data-type="HAS" x="501.3" y="812.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BANNED_API</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AIThreadAffinityFormatter" data-type="HAS" d="M114.0 394.0 Q591.0 833.9 1114.0 1218.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AIThreadAffinityFormatter" data-type="HAS" x="602.5" y="813.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">THREAD_AFFINITY</text>
+<path class="edge-line" data-source="FormatterRegistry" data-target="AIKeepInSyncFormatter" data-type="HAS" d="M114.0 394.0 Q81.1 851.0 114.0 1308.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="FormatterRegistry" data-target="AIKeepInSyncFormatter" data-type="HAS" x="97.6" y="845.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">KEEP_IN_SYNC</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AISecureFormatter" data-type="HAS" d="M114.0 394.0 Q181.2 858.2 314.0 1308.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="FormatterRegistry" data-target="AISecureFormatter" data-type="HAS" x="197.6" y="848.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECURE</text>
 <path class="edge-line" data-source="FormatterRegistry" data-target="AICallersOnlyFormatter" data-type="HAS" d="M114.0 394.0 Q282.7 864.7 514.0 1308.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -155,8 +155,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="RenderingContext" data-target="TaggedElement" data-type="HAS" x="121.4" y="279.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">granularOwners</text>
 <path class="edge-line" data-source="RenderingContext" data-target="TaggedElement" data-type="HAS" d="M114.0 474.0 Q134.9 285.1 102.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="RenderingContext" data-target="TaggedElement" data-type="HAS" x="121.4" y="279.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">indexOwners</text>
-<path class="edge-line" data-source="RenderingContext" data-target="RoleConfig" data-type="HAS" d="M204.0 614.0 Q218.1 606.4 224.0 591.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="RenderingContext" data-target="RoleConfig" data-type="HAS" x="216.0" y="598.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
+<path class="edge-line" data-source="RenderingContext" data-target="RoleConfig" data-type="HAS" d="M204.0 614.0 Q216.7 610.1 224.0 599.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="RenderingContext" data-target="RoleConfig" data-type="HAS" x="215.4" y="602.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
 <path class="edge-line" data-source="ClaudeSectionMerge" data-target="Pattern" data-type="HAS" d="M624.0 239.0 Q524.3 126.4 392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="ClaudeSectionMerge" data-target="Pattern" data-type="HAS" x="516.2" y="130.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTION_OPEN</text>
 <path class="edge-line" data-source="ClaudeSectionMerge" data-target="Pattern" data-type="HAS" d="M624.0 239.0 Q524.3 126.4 392.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -275,12 +275,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AIStrictExceptionsFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="231.7" y="699.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AITemporaryFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M314.0 1488.0 Q250.9 883.3 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AITemporaryFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="232.4" y="880.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AITestDrivenFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M714.0 948.0 Q441.5 594.4 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AITestDrivenFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="427.8" y="600.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AILoadBearingFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M714.0 1218.0 Q445.5 734.1 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AILoadBearingFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="429.7" y="738.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AIGeneratedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M514.0 1218.0 Q348.0 739.8 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AIGeneratedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="331.0" y="741.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AITestDrivenFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M714.0 948.0 Q441.0 594.8 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AITestDrivenFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="427.5" y="601.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AILoadBearingFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M714.0 1218.0 Q445.1 734.4 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AILoadBearingFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="429.6" y="738.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AIGeneratedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M514.0 1218.0 Q347.6 740.0 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AIGeneratedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="330.8" y="741.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIExplainFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M914.0 1398.0 Q544.8 822.2 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIExplainFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="529.4" y="827.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIContextFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M314.0 858.0 Q247.2 562.8 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -295,8 +295,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AILegacyBridgeFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="526.9" y="644.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AICoreFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 948.0 Q149.3 619.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AICoreFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="131.7" y="613.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AIThreadAffinityFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M1114.0 1218.0 Q640.0 726.4 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AIThreadAffinityFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="627.0" y="734.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AIThreadAffinityFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M1114.0 1218.0 Q639.7 726.7 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AIThreadAffinityFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="626.9" y="734.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AISecureLoggingFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M714.0 1398.0 Q447.1 826.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AISecureLoggingFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="430.6" y="829.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AISecureFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M314.0 1308.0 Q250.3 792.4 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -305,12 +305,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AIInputSanitizedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="331.6" y="832.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AISchemaSafeFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M1024.0 1171.0 Q641.1 685.2 204.0 247.5" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AISchemaSafeFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="627.6" y="691.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AIIgnoreFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M824.0 915.5 Q539.6 557.7 204.0 247.5" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AIIgnoreFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="526.8" y="563.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AIIgnoreFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M824.0 930.5 Q540.0 565.4 204.0 247.5" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AIIgnoreFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="527.0" y="571.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIDraftFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M514.0 858.0 Q343.6 553.6 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIDraftFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="328.8" y="558.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AIDeprecatedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 1038.0 Q149.8 664.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AIDeprecatedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="131.9" y="658.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AIDeprecatedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 1038.0 Q149.2 664.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AIDeprecatedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="131.6" y="658.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIContractFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M514.0 948.0 Q345.1 600.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIContractFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="329.6" y="604.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AILockedFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 858.0 Q148.7 574.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -319,20 +319,20 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AIPrivacyFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="624.9" y="554.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIAuditFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M714.0 858.0 Q439.6 547.4 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIAuditFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="426.8" y="555.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AIBannedApiFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M914.0 1218.0 Q542.7 729.7 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AIBannedApiFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="528.4" y="736.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AIBannedApiFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M914.0 1218.0 Q542.4 729.9 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AIBannedApiFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="528.2" y="736.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIMemoryBudgetFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M914.0 1308.0 Q543.8 776.0 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIMemoryBudgetFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="528.9" y="781.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIIdempotentFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 1218.0 Q150.6 754.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIIdempotentFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="132.3" y="748.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AIKeepInSyncFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 1308.0 Q150.9 799.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AIKeepInSyncFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="132.4" y="793.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AIKeepInSyncFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 1308.0 Q150.4 799.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AIKeepInSyncFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="132.2" y="793.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AISunsetFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 1488.0 Q151.3 889.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AISunsetFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="132.7" y="883.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIPublicAPIFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M114.0 1128.0 Q150.3 709.5 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIPublicAPIFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="132.1" y="703.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AIImmutableFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M1024.0 991.0 Q637.9 592.9 204.0 247.5" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AIImmutableFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="625.9" y="600.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AIImmutableFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M1024.0 999.0 Q638.0 597.0 204.0 247.5" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AIImmutableFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="626.0" y="604.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIStrictTypesFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M514.0 1128.0 Q347.3 693.6 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIStrictTypesFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="330.6" y="695.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIThreadSafeFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M824.0 991.0 Q541.2 596.5 204.0 247.5" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -341,8 +341,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AIArchitectureFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="626.8" y="645.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIStrictClasspathFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M914.0 1128.0 Q541.4 683.3 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AIStrictClasspathFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="527.7" y="690.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="AIObservabilityFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M314.0 1038.0 Q248.9 655.2 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="AIObservabilityFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="231.4" y="653.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="AIObservabilityFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M314.0 1038.0 Q248.3 655.3 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="AIObservabilityFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="231.1" y="653.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AICallersOnlyFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M514.0 1308.0 Q348.7 785.9 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AICallersOnlyFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="331.3" y="786.7" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AIPureFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M1114.0 1308.0 Q641.3 772.6 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
@@ -351,8 +351,8 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="AIDomainModelFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="132.6" y="838.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="AISandboxOnlyFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" d="M714.0 1308.0 Q446.4 780.4 114.0 291.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="AISandboxOnlyFormatter" data-target="AnnotationFormatter" data-type="IMPLEMENTS" x="430.2" y="783.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
-<path class="edge-line" data-source="RoleConfig" data-target="Role" data-type="HAS" d="M404.0 591.5 Q635.0 343.8 812.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="RoleConfig" data-target="Role" data-type="HAS" x="621.5" y="327.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
+<path class="edge-line" data-source="RoleConfig" data-target="Role" data-type="HAS" d="M404.0 599.0 Q635.2 347.4 812.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="RoleConfig" data-target="Role" data-type="HAS" x="621.6" y="331.2" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">roles</text>
 <path class="edge-line" data-source="AnnotationDescriptors" data-target="AnnotationDescriptor" data-type="HAS" d="M204.0 651.5 Q222.0 632.9 224.0 607.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="AnnotationDescriptors" data-target="AnnotationDescriptor" data-type="HAS" x="218.0" y="625.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ALL</text>
 <path class="edge-line" data-source="PlatformDescriptors" data-target="CursorRenderer" data-type="HAS" d="M604.0 599.0 Q919.7 695.7 1248.0 730.7" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
@@ -415,28 +415,28 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 <text class="edge-label" data-source="PlatformDescriptors" data-target="PlatformDescriptor" data-type="HAS" x="621.4" y="553.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_KEY</text>
 <path class="edge-line" data-source="PlatformDescriptors" data-target="PlatformDescriptor" data-type="HAS" d="M604.0 599.0 Q628.8 561.6 624.0 517.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="PlatformDescriptors" data-target="PlatformDescriptor" data-type="HAS" x="621.4" y="553.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_PLATFORM</text>
-<path class="edge-line" data-source="JsonLineArraysMerge" data-target="WholeFileMerge" data-type="IMPLEMENTS" d="M204.0 809.0 Q230.6 766.4 224.0 716.7" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
-<text class="edge-label" data-source="JsonLineArraysMerge" data-target="WholeFileMerge" data-type="IMPLEMENTS" x="222.3" y="758.6" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
+<path class="edge-line" data-source="JsonLineArraysMerge" data-target="WholeFileMerge" data-type="IMPLEMENTS" d="M204.0 824.0 Q232.9 773.9 224.0 716.7" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
+<text class="edge-label" data-source="JsonLineArraysMerge" data-target="WholeFileMerge" data-type="IMPLEMENTS" x="223.5" y="766.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="ElementKinds" data-target="ElementTag" data-type="HAS" d="M804.0 359.0 Q932.7 223.9 1012.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="ElementKinds" data-target="ElementTag" data-type="HAS" x="920.3" y="209.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BY_NAME</text>
 <path class="edge-line" data-source="GranularBody" data-target="CharSequence" data-type="IMPLEMENTS" d="M1004.0 404.0 Q1134.8 245.4 1212.0 55.0" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="GranularBody" data-target="CharSequence" data-type="IMPLEMENTS" x="1121.4" y="231.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="GranularBody" data-target="Entry" data-type="HAS" d="M1004.0 404.0 Q1228.4 253.4 1412.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="GranularBody" data-target="Entry" data-type="HAS" x="1218.2" y="235.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">entries</text>
-<path class="edge-line" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" d="M314.0 384.0 Q334.0 239.9 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" x="321.0" y="234.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTION_HEADING</text>
-<path class="edge-line" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" d="M314.0 384.0 Q334.0 239.9 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" x="321.0" y="234.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ANY_HEADING</text>
-<path class="edge-line" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" d="M314.0 384.0 Q334.0 239.9 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" x="321.0" y="234.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BULLET</text>
+<path class="edge-line" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" d="M314.0 384.0 Q333.6 239.9 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" x="320.8" y="234.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">SECTION_HEADING</text>
+<path class="edge-line" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" d="M314.0 384.0 Q333.6 239.9 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" x="320.8" y="234.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ANY_HEADING</text>
+<path class="edge-line" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" d="M314.0 384.0 Q333.6 239.9 302.0 98.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="MarkdownSectionMerge" data-target="Pattern" data-type="HAS" x="320.8" y="234.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">BULLET</text>
 <path class="edge-line" data-source="SectionCatalog" data-target="String&gt;" data-type="HAS" d="M604.0 456.5 Q1120.8 287.9 1612.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="SectionCatalog" data-target="String&gt;" data-type="HAS" x="1114.4" y="265.8" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">OVERRIDES</text>
 <path class="edge-line" data-source="TomlInstructionsMerge" data-target="WholeFileMerge" data-type="IMPLEMENTS" d="M204.0 741.5 Q218.5 732.7 224.0 716.7" fill="none" stroke="#1d4ed8" stroke-width="1.6" stroke-dasharray="8,4" marker-end="url(#marker-hollow-1d4ed8)"/>
 <text class="edge-label" data-source="TomlInstructionsMerge" data-target="WholeFileMerge" data-type="IMPLEMENTS" x="216.2" y="724.9" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#1d4ed8" font-style="italic">implements</text>
 <path class="edge-line" data-source="TomlInstructionsMerge" data-target="TomlInstructionsMerge" data-type="HAS" d="M114.0 654.0 Q82.5 741.5 114.0 829.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TomlInstructionsMerge" data-target="TomlInstructionsMerge" data-type="HAS" x="98.3" y="735.5" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">INSTANCE</text>
-<path class="edge-line" data-source="TransitiveRules" data-target="Comparator" data-type="HAS" d="M804.0 441.5 Q1320.4 280.5 1812.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
-<text class="edge-label" data-source="TransitiveRules" data-target="Comparator" data-type="HAS" x="1314.2" y="258.4" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ORDER</text>
+<path class="edge-line" data-source="TransitiveRules" data-target="Comparator" data-type="HAS" d="M804.0 449.0 Q1320.6 284.2 1812.0 55.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
+<text class="edge-label" data-source="TransitiveRules" data-target="Comparator" data-type="HAS" x="1314.3" y="262.1" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">ORDER</text>
 <path class="edge-line" data-source="TransitiveSection" data-target="Platform" data-type="HAS" d="M604.0 651.5 Q621.9 633.1 624.0 607.5" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#marker-open-374151)"/>
 <text class="edge-label" data-source="TransitiveSection" data-target="Platform" data-type="HAS" x="618.0" y="625.3" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#374151" font-style="italic">PLATFORMS</text>
 <g id="FormatterRegistry">
@@ -490,13 +490,15 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="AIIgnoreFormatter">
   <title>AIIgnoreFormatter [CLASS]</title>
-  <rect class="node-rect" x="824.0" y="858.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="824.0" y="858.0" width="180.0" height="145.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="914.0" y="880.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIIgnoreFormatter</text>
   <line x1="824.0" y1="902.0" x2="1004.0" y2="902.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="832.0" y="915.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">DEFAULT_REASON: String</text>
   <line x1="824.0" y1="929.0" x2="1004.0" y2="929.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="832.0" y="942.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
-  <text x="832.0" y="957.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">defaultReason(): String</text>
+  <text x="832.0" y="957.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">customReason(AIIgnore): String</text>
+  <text x="832.0" y="972.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, boolean, S…</text>
+  <text x="832.0" y="987.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">defaultReason(): String</text>
 </g>
 <g id="AIPrivacyFormatter">
   <title>AIPrivacyFormatter [CLASS]</title>
@@ -528,10 +530,14 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="AITestDrivenFormatter">
   <title>AITestDrivenFormatter [CLASS]</title>
-  <rect class="node-rect" x="624.0" y="948.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="624.0" y="948.0" width="180.0" height="132.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="714.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AITestDrivenFormatter</text>
   <line x1="624.0" y1="992.0" x2="804.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="632.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
+  <text x="632.0" y="1020.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">frameworks(AITestDriven.Framewo…</text>
+  <text x="632.0" y="1035.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">summary(int, String, String, St…</text>
+  <text x="632.0" y="1050.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, int, Strin…</text>
+  <text x="632.0" y="1065.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, int, Str…</text>
 </g>
 <g id="AIThreadSafeFormatter">
   <title>AIThreadSafeFormatter [CLASS]</title>
@@ -542,24 +548,32 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="AIImmutableFormatter">
   <title>AIImmutableFormatter [CLASS]</title>
-  <rect class="node-rect" x="1024.0" y="948.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="1024.0" y="948.0" width="180.0" height="102.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="1114.0" y="970.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIImmutableFormatter</text>
   <line x1="1024.0" y1="992.0" x2="1204.0" y2="992.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1032.0" y="1005.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
+  <text x="1032.0" y="1020.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, String, St…</text>
+  <text x="1032.0" y="1035.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, String, …</text>
 </g>
 <g id="AIDeprecatedFormatter">
   <title>AIDeprecatedFormatter [CLASS]</title>
-  <rect class="node-rect" x="24.0" y="1038.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="24.0" y="1038.0" width="180.0" height="117.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="114.0" y="1060.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIDeprecatedFormatter</text>
   <line x1="24.0" y1="1082.0" x2="204.0" y2="1082.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="32.0" y="1095.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
+  <text x="32.0" y="1110.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">summary(String, String, String)…</text>
+  <text x="32.0" y="1125.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, String, St…</text>
+  <text x="32.0" y="1140.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, String, …</text>
 </g>
 <g id="AIObservabilityFormatter">
   <title>AIObservabilityFormatter [CLASS]</title>
-  <rect class="node-rect" x="224.0" y="1038.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="224.0" y="1038.0" width="180.0" height="117.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="314.0" y="1060.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIObservabilityFormatter</text>
   <line x1="224.0" y1="1082.0" x2="404.0" y2="1082.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="232.0" y="1095.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
+  <text x="232.0" y="1110.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">details(String[], String[], Str…</text>
+  <text x="232.0" y="1125.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, String[], …</text>
+  <text x="232.0" y="1140.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, String[]…</text>
 </g>
 <g id="AIRegulationFormatter">
   <title>AIRegulationFormatter [CLASS]</title>
@@ -647,39 +661,54 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="AIGeneratedFormatter">
   <title>AIGeneratedFormatter [CLASS]</title>
-  <rect class="node-rect" x="424.0" y="1218.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="424.0" y="1218.0" width="180.0" height="117.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="514.0" y="1240.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIGeneratedFormatter</text>
   <line x1="424.0" y1="1262.0" x2="604.0" y2="1262.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="432.0" y="1275.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
+  <text x="432.0" y="1290.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">summary(String, String, String)…</text>
+  <text x="432.0" y="1305.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, String, St…</text>
+  <text x="432.0" y="1320.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, String, …</text>
 </g>
 <g id="AILoadBearingFormatter">
   <title>AILoadBearingFormatter [CLASS]</title>
-  <rect class="node-rect" x="624.0" y="1218.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="624.0" y="1218.0" width="180.0" height="117.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="714.0" y="1240.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AILoadBearingFormatter</text>
   <line x1="624.0" y1="1262.0" x2="804.0" y2="1262.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="632.0" y="1275.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
+  <text x="632.0" y="1290.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">summary(String, String, boolean…</text>
+  <text x="632.0" y="1305.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, String, St…</text>
+  <text x="632.0" y="1320.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, String, …</text>
 </g>
 <g id="AIBannedApiFormatter">
   <title>AIBannedApiFormatter [CLASS]</title>
-  <rect class="node-rect" x="824.0" y="1218.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="824.0" y="1218.0" width="180.0" height="117.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="914.0" y="1240.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIBannedApiFormatter</text>
   <line x1="824.0" y1="1262.0" x2="1004.0" y2="1262.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="832.0" y="1275.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
+  <text x="832.0" y="1290.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">summary(String, String, String)…</text>
+  <text x="832.0" y="1305.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, String, St…</text>
+  <text x="832.0" y="1320.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, String, …</text>
 </g>
 <g id="AIThreadAffinityFormatter">
   <title>AIThreadAffinityFormatter [CLASS]</title>
-  <rect class="node-rect" x="1024.0" y="1218.0" width="180.0" height="87.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="1024.0" y="1218.0" width="180.0" height="132.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="1114.0" y="1240.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIThreadAffinityFormatter</text>
   <line x1="1024.0" y1="1262.0" x2="1204.0" y2="1262.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1032.0" y="1275.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
-  <text x="1032.0" y="1290.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">describe(AIThreadAffinity.Affin…</text>
+  <text x="1032.0" y="1290.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">summary(String, String, String)…</text>
+  <text x="1032.0" y="1305.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, String, St…</text>
+  <text x="1032.0" y="1320.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, String, …</text>
+  <text x="1032.0" y="1335.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">describe(AIThreadAffinity.Affin…</text>
 </g>
 <g id="AIKeepInSyncFormatter">
   <title>AIKeepInSyncFormatter [CLASS]</title>
-  <rect class="node-rect" x="24.0" y="1308.0" width="180.0" height="86.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="24.0" y="1308.0" width="180.0" height="117.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="114.0" y="1330.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">AIKeepInSyncFormatter</text>
   <line x1="24.0" y1="1352.0" x2="204.0" y2="1352.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="32.0" y="1365.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(TaggedElement, StringBui…</text>
+  <text x="32.0" y="1380.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">summary(String, String, String)…</text>
+  <text x="32.0" y="1395.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderClaude(String, String[], …</text>
+  <text x="32.0" y="1410.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">renderLlmsFull(String, String[]…</text>
 </g>
 <g id="AISecureFormatter">
   <title>AISecureFormatter [CLASS]</title>
@@ -800,21 +829,22 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="RoleConfig">
   <title>RoleConfig [CLASS]</title>
-  <rect class="node-rect" x="224.0" y="474.0" width="180.0" height="235.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="224.0" y="474.0" width="180.0" height="250.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="314.0" y="496.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">RoleConfig</text>
   <line x1="224.0" y1="518.0" x2="404.0" y2="518.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="232.0" y="531.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">FILE_NAME: String</text>
-  <text x="232.0" y="546.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roles: List&lt;Role&gt;</text>
-  <text x="232.0" y="561.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash: String</text>
-  <text x="232.0" y="576.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roleMemo: Map&lt;String,Optional&lt;S…</text>
-  <line x1="224.0" y1="590.0" x2="404.0" y2="590.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="232.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">load(Path): RoleConfig</text>
-  <text x="232.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isEmpty(): boolean</text>
-  <text x="232.0" y="633.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash(): String</text>
-  <text x="232.0" y="648.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roleFor(TaggedElement): Optiona…</text>
-  <text x="232.0" y="663.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">matchRole(TaggedElement): Optio…</text>
-  <text x="232.0" y="678.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">globsFor(String): List&lt;String&gt;</text>
-  <text x="232.0" y="693.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+6 more)</text>
+  <text x="232.0" y="546.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BYTE_ORDER_MARK: char</text>
+  <text x="232.0" y="561.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roles: List&lt;Role&gt;</text>
+  <text x="232.0" y="576.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash: String</text>
+  <text x="232.0" y="591.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roleMemo: Map&lt;String,Optional&lt;S…</text>
+  <line x1="224.0" y1="605.0" x2="404.0" y2="605.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="232.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">load(Path): RoleConfig</text>
+  <text x="232.0" y="633.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">linesOf(String): String[]</text>
+  <text x="232.0" y="648.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isEmpty(): boolean</text>
+  <text x="232.0" y="663.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash(): String</text>
+  <text x="232.0" y="678.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roleFor(TaggedElement): Optiona…</text>
+  <text x="232.0" y="693.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">matchRole(TaggedElement): Optio…</text>
+  <text x="232.0" y="708.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+7 more)</text>
 </g>
 <g id="GranularContribution">
   <title>GranularContribution [CLASS]</title>
@@ -852,12 +882,12 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="632.0" y="231.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ENTRY_INDENT: String</text>
   <line x1="624.0" y1="245.0" x2="804.0" y2="245.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="632.0" y="258.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">merge(List&lt;String&gt;): String</text>
-  <text x="632.0" y="273.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeSections(List&lt;Section&gt;, Li…</text>
-  <text x="632.0" y="288.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">nextShared(List&lt;Section&gt;, List&lt;…</text>
-  <text x="632.0" y="303.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">indexOf(List&lt;Section&gt;, String):…</text>
-  <text x="632.0" y="318.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">parse(String): Parsed</text>
-  <text x="632.0" y="333.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">blocks(List&lt;String&gt;): List&lt;Stri…</text>
-  <text x="632.0" y="348.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+1 more)</text>
+  <text x="632.0" y="273.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">addUnique(List&lt;String&gt;, List&lt;St…</text>
+  <text x="632.0" y="288.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">mergeSections(List&lt;Section&gt;, Li…</text>
+  <text x="632.0" y="303.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">nextShared(List&lt;Section&gt;, List&lt;…</text>
+  <text x="632.0" y="318.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">indexOf(List&lt;Section&gt;, String):…</text>
+  <text x="632.0" y="333.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">parse(String): Parsed</text>
+  <text x="632.0" y="348.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+5 more)</text>
 </g>
 <g id="Pattern">
   <title>Pattern [CLASS]</title>
@@ -989,7 +1019,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="1656.0" y="306.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedDir(Platform): String</text>
   <text x="1656.0" y="321.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedSuffix(Platform): String</text>
   <text x="1656.0" y="336.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">scopedPath(Platform, TaggedElem…</text>
-  <text x="1656.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+7 more)</text>
+  <text x="1656.0" y="351.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+9 more)</text>
 </g>
 <g id="ClaudeRenderer">
   <title>ClaudeRenderer [CLASS]</title>
@@ -1002,7 +1032,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="1256.0" y="666.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendAuditSection(StringBuilde…</text>
   <text x="1256.0" y="681.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendIgnoreSection(StringBuild…</text>
   <text x="1256.0" y="696.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendPrivacySection(StringBuil…</text>
-  <text x="1256.0" y="711.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+3 more)</text>
+  <text x="1256.0" y="711.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+5 more)</text>
 </g>
 <g id="CodexRenderer">
   <title>CodexRenderer [CLASS]</title>
@@ -1171,17 +1201,18 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="ClaudeTestDrivenSection">
   <title>ClaudeTestDrivenSection [CLASS]</title>
-  <rect class="node-rect" x="1048.0" y="474.0" width="180.0" height="175.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="1048.0" y="474.0" width="180.0" height="190.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="1138.0" y="496.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">ClaudeTestDrivenSection</text>
   <line x1="1048.0" y1="518.0" x2="1228.0" y2="518.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1056.0" y="531.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">TEMPLATE_LOCATION: String</text>
   <text x="1056.0" y="546.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MIN_COALESCE: int</text>
   <line x1="1048.0" y1="560.0" x2="1228.0" y2="560.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="1056.0" y="573.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(Collection&lt;TaggedElement…</text>
-  <text x="1056.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendDefaultBlock(Signature, L…</text>
-  <text x="1056.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">signature(TaggedElement, AITest…</text>
-  <text x="1056.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">frameworks(AITestDriven): String</text>
-  <text x="1056.0" y="633.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isConventionPath(TaggedElement,…</text>
+  <text x="1056.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">coalescedSignature(Map&lt;Signatur…</text>
+  <text x="1056.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendDefaultBlock(Signature, L…</text>
+  <text x="1056.0" y="618.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">signature(TaggedElement, AITest…</text>
+  <text x="1056.0" y="633.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">frameworks(AITestDriven): String</text>
+  <text x="1056.0" y="648.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isConventionPath(TaggedElement,…</text>
 </g>
 <g id="ZedRenderer">
   <title>ZedRenderer [CLASS]</title>
@@ -1337,14 +1368,16 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="JsonLineArraysMerge">
   <title>JsonLineArraysMerge [CLASS]</title>
-  <rect class="node-rect" x="24.0" y="744.0" width="180.0" height="130.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="24.0" y="744.0" width="180.0" height="160.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="114.0" y="766.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">JsonLineArraysMerge</text>
   <line x1="24.0" y1="788.0" x2="204.0" y2="788.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="32.0" y="801.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">placeholderLiteral: String</text>
   <line x1="24.0" y1="815.0" x2="204.0" y2="815.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="32.0" y="828.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">merge(List&lt;Map.Entry&lt;String,Str…</text>
-  <text x="32.0" y="843.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">parse(String): Map&lt;String,List&lt;…</text>
-  <text x="32.0" y="858.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">keyOf(String): String</text>
+  <text x="32.0" y="843.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">render(Map&lt;String,Set&lt;String&gt;&gt;)…</text>
+  <text x="32.0" y="858.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">parse(String): Map&lt;String,List&lt;…</text>
+  <text x="32.0" y="873.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">literalOf(String): String</text>
+  <text x="32.0" y="888.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">keyOf(String): String</text>
 </g>
 <g id="ElementFiles">
   <title>ElementFiles [CLASS]</title>
@@ -1425,20 +1458,21 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="MarkdownSectionMerge">
   <title>MarkdownSectionMerge [CLASS]</title>
-  <rect class="node-rect" x="224.0" y="384.0" width="180.0" height="220.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="224.0" y="384.0" width="180.0" height="235.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="314.0" y="406.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">MarkdownSectionMerge</text>
   <line x1="224.0" y1="428.0" x2="404.0" y2="428.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="232.0" y="441.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">SECTION_HEADING: Pattern</text>
   <text x="232.0" y="456.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ANY_HEADING: Pattern</text>
   <text x="232.0" y="471.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">BULLET: Pattern</text>
-  <line x1="224.0" y1="485.0" x2="404.0" y2="485.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="232.0" y="498.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">merge(List&lt;String&gt;): String</text>
-  <text x="232.0" y="513.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">parse(String): List&lt;Container&gt;</text>
-  <text x="232.0" y="528.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">takeTail(List&lt;Container&gt;, List&lt;…</text>
-  <text x="232.0" y="543.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">fold(List&lt;Container&gt;, List&lt;Cont…</text>
-  <text x="232.0" y="558.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">foldSection(Container, Containe…</text>
-  <text x="232.0" y="573.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">bulletSpacing(List&lt;Item&gt;, List&lt;…</text>
-  <text x="232.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+9 more)</text>
+  <text x="232.0" y="486.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">MAX_LEVEL: int</text>
+  <line x1="224.0" y1="500.0" x2="404.0" y2="500.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
+  <text x="232.0" y="513.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">merge(List&lt;String&gt;): String</text>
+  <text x="232.0" y="528.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">addUniqueItems(List&lt;Item&gt;, List…</text>
+  <text x="232.0" y="543.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">parse(String): List&lt;Container&gt;</text>
+  <text x="232.0" y="558.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isHeading(String, boolean): boo…</text>
+  <text x="232.0" y="573.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendToOpenBullet(Item, String…</text>
+  <text x="232.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendOrStartParagraph(Containe…</text>
+  <text x="232.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+17 more)</text>
 </g>
 <g id="SectionCatalog">
   <title>SectionCatalog [CLASS]</title>
@@ -1481,13 +1515,14 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
 </g>
 <g id="TransitiveRules">
   <title>TransitiveRules [CLASS]</title>
-  <rect class="node-rect" x="624.0" y="384.0" width="180.0" height="115.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
+  <rect class="node-rect" x="624.0" y="384.0" width="180.0" height="130.0" rx="6.0" fill="url(#grad-CLASS)" stroke="#374151" stroke-width="1.8" filter="url(#nodeShadow)"/>
   <text class="node-label" x="714.0" y="406.0" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="13" font-weight="bold" fill="#1f2937">TransitiveRules</text>
   <line x1="624.0" y1="428.0" x2="804.0" y2="428.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
   <text x="632.0" y="441.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">ORDER: Comparator&lt;TransitiveRul…</text>
   <line x1="624.0" y1="455.0" x2="804.0" y2="455.0" stroke="#374151" stroke-width="0.8" opacity="0.4"/>
-  <text x="632.0" y="468.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">memberSummary(TransitiveRule): …</text>
-  <text x="632.0" y="483.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">compare(TransitiveRule, Transit…</text>
+  <text x="632.0" y="468.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">capped(Collection&lt;TransitiveRul…</text>
+  <text x="632.0" y="483.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">memberSummary(TransitiveRule): …</text>
+  <text x="632.0" y="498.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">compare(TransitiveRule, Transit…</text>
 </g>
 <g id="Comparator">
   <title>Comparator [CLASS]</title>

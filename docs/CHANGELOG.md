@@ -264,6 +264,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **One annotation attribute with an unpaired UTF-16 surrogate no longer drops every aggregate
+  in the module (#1141).** A mistyped unicode escape is legal Java, and a dependency's manifest can
+  carry the same character as a JSON escape. `GuardrailFileWriter` encoded strictly, so
+  `MalformedInputException` ("Input length = 1") stopped `CLAUDE.md`, `.cursorrules` and every
+  other aggregate before a byte was written, taking every other element's rule with it, under a
+  warning that named neither the element nor the character. The writer now writes such a character
+  as `?`, the replacement the module sidecar already gave it through `String.getBytes`, and the
+  new `UnpairedSurrogateRule` warns at the annotation with the element, the attribute and the
+  index. A well-formed surrogate pair is written unchanged. `UnpairedSurrogateEndToEndTest`
+  failed on three of its four cases before the change.
+
 - **`SourcePositionResolver.delegateOf` unwraps a non-public `ProcessingEnvironment` decorator via
   `delegate()` or `getDelegate()` (#1203).** The field probe called `field.trySetAccessible()`, but
   the accessor fallback invoked `env.getClass().getMethod(accessor)` without

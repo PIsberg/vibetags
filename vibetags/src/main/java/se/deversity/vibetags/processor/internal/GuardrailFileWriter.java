@@ -131,16 +131,19 @@ public final class GuardrailFileWriter {
      * Writes {@code content} to {@code path} only if the file's current content differs.
      * Honors marker-aware updates for .md/.mdc/llms*.txt, hash markers for rules/ignore files,
      * a span inside shared string values for {@code greptile.json} (see {@link JsonValueSpans}),
-     * and full overwrite for every other .json/.toml.
+     * and full overwrite for every other .json/.toml. An unpaired UTF-16 surrogate in
+     * {@code content} is written as {@code ?} (see {@link UnpairedSurrogates}).
      *
      * @return {@code true} if the file was actually written
      */
     @AIContract(reason = "Public API since v0.1; tests and the processor both bind to the (String path, String content, boolean hasNewRules) signature and return semantics")
     public boolean writeFileIfChanged(String path, String content, boolean hasNewRules) {
         Path filePath = Paths.get(path);
+        // Strict UTF-8 encoding throws on one unpaired surrogate and drops the whole file (#1141).
+        String encodable = UnpairedSurrogates.replaced(content);
         for (int attempt = 1; ; attempt++) {
             try {
-                return writeOnce(filePath, path, content, hasNewRules);
+                return writeOnce(filePath, path, encodable, hasNewRules);
             } catch (AppearedDuringWrite e) {
                 if (attempt == MAX_WRITE_ATTEMPTS) {
                     debug("write.skip file={} reason=appeared-during-write attempts={}", fileName(filePath), attempt);

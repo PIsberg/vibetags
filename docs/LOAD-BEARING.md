@@ -160,8 +160,9 @@ Beyond what the generated section below describes:
   that contradict each other, as a table), `CoreRules` (an annotation whose own attributes leave it
   instructing nobody), `ArchitectureRule` (the Tree-API import scan), `LockedOverrideRule` (an
   unlocked override of a locked concrete method), `ModernJavaRules` (an annotation that contradicts
-  the declaration it sits on — records, sealed types, virtual threads, the unnamed package). Add
-  new warnings there, not in the entry point.
+  the declaration it sits on — records, sealed types, virtual threads, the unnamed package),
+  `UnpairedSurrogateRule` (an attribute string UTF-8 cannot encode, #1141). Add new warnings
+  there, not in the entry point.
 
   `ValidationRules` indexes rules by the annotation each one scans and runs
   `getElementsAnnotatedWith` **once per annotation type**, however many rules share it. That is
