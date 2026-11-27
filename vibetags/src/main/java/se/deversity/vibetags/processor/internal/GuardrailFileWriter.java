@@ -569,13 +569,15 @@ public final class GuardrailFileWriter {
         /** The ordinary case: a block is there, and the text around it stays where it is. */
         private boolean replaceBlock(int start, int end) throws IOException {
             String before = handTextBefore(start);
-            String after = existing.substring(end).stripLeading();
+            String after = withoutLeadingBlankLines(existing.substring(end));
 
             StringBuilder sb = new StringBuilder();
             if (!before.isEmpty()) sb.append(before).append("\n\n");
             sb.append(wrappedBody);
             if (!after.isEmpty()) sb.append("\n\n").append(after);
-            String merged = sb.toString().trim() + "\n";
+            // Only the end is normalised: leading whitespace at the top of the file is the
+            // developer's, and trimming it took a first line's indentation (#1163).
+            String merged = sb.toString().stripTrailing() + "\n";
 
             if (contentMatches(existing, merged)) {
                 debug("write.skip file={} reason=identical-bytes bytes={} markers=true",
@@ -1509,6 +1511,25 @@ public final class GuardrailFileWriter {
     private static boolean isEmptyOrBoilerplate(String content) {
         int headerEnd = frontMatterEnd(content);
         return content.isEmpty() || (headerEnd != -1 && content.substring(headerEnd).isBlank());
+    }
+
+    /**
+     * {@code text} from its first line that holds anything but whitespace, that line's indentation
+     * included, or {@code ""} when it is all whitespace. {@code stripLeading()} took the indentation
+     * of the first hand-written line below a block too, and four spaces make a Markdown code block
+     * (#1163). The rest of the end marker's own line counts as a blank line.
+     */
+    private static String withoutLeadingBlankLines(String text) {
+        int lineStart = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '\n') {
+                lineStart = i + 1;
+            } else if (!Character.isWhitespace(c)) {
+                return text.substring(lineStart);
+            }
+        }
+        return "";
     }
 
     /** {@code rest} after {@code before} with one blank line between them; just {@code rest} when {@code before} is empty. */
