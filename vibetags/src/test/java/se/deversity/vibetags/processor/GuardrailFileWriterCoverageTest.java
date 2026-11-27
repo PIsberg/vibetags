@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,6 +42,8 @@ class GuardrailFileWriterCoverageTest {
         Path file = tmp.resolve("config.json");
         String body = "alpha-beta-gamma\n";
         Files.writeString(file, body, StandardCharsets.UTF_8);
+        // Written before the racy window: a file whose mtime is that recent is not recorded (#1211).
+        Files.setLastModifiedTime(file, FileTime.from(Instant.now().minusSeconds(60)));
 
         boolean wrote = writer.writeFileIfChanged(file.toString(), body, true);
         assertFalse(wrote, "byte-equal content should not trigger a write");
