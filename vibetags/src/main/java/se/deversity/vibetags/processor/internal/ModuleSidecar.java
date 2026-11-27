@@ -1096,6 +1096,9 @@ public final class ModuleSidecar {
          * {@code __test} sidecar was then retired on every compile-only build (#1159). So a candidate
          * that records a {@code src/<its own set>/...} root of its own is never misread: the misread
          * sidecars record the flat root itself, or no roots at all (they predate {@code ~roots}).
+         * Nor is one that records a root its sibling does not: a misread sidecar compiled the same
+         * sources, so its roots are among the sibling's, while a set compiled from {@code it/src}
+         * alone records no {@code src/it/...} root and was retired (#1214).
          */
         private void dropMisreadSourceSets() {
             List<Loaded> misread = new ArrayList<>();
@@ -1116,12 +1119,25 @@ public final class ModuleSidecar {
                         && sibling.sidecar().regionId.equals(candidate.sidecar().regionId)
                         && sibling.writtenAt() != Long.MAX_VALUE
                         && sibling.writtenAt() >= candidate.writtenAt()
-                        && recordsAFlatSrcRoot(root, sibling.sidecar())) {
+                        && recordsAFlatSrcRoot(root, sibling.sidecar())
+                        && recordsEveryRootOf(root, sibling.sidecar(), candidate.sidecar())) {
                     return true;
                 }
             }
             return false;
         }
+    }
+
+    /**
+     * True when {@code sibling} records every source root {@code candidate} records, which holds
+     * vacuously for a candidate that records none. A misread sidecar compiled the same sources as
+     * its sibling, so its roots are among the sibling's; a source set compiled from a root of its
+     * own, such as {@code it/src}, records one the sibling does not and is never the misread one
+     * (#1214).
+     */
+    private static boolean recordsEveryRootOf(Path root, ModuleSidecar sibling, ModuleSidecar candidate) {
+        return PartialRoundDetector.recordedSourceRoots(root, sibling)
+            .containsAll(PartialRoundDetector.recordedSourceRoots(root, candidate));
     }
 
     /**
