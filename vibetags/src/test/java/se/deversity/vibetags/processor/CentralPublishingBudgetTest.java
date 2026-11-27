@@ -31,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * of 1,167 files, and an organization that stays over it is rate limited (#863). Two plugin
  * defaults decided most of that count without anyone choosing it: the publishing plugin sends
  * SHA-256 and SHA-512 beside the required MD5 and SHA-1, and CycloneDX's {@code all} writes the
- * SBOM twice. Together they made a release 150 files instead of 84. Nothing else fails when either
+ * SBOM twice. Together they made a release 150 files instead of 84, and the SBOM itself, which Central
+ * does not require, cost 16 more: it now goes on the GitHub release, and a release is 68. Nothing else fails when either
  * comes back; the first sign would be Central's warning on a publish that already happened.
  *
  * <p>The organization's monthly allowance of 7 <em>releases</em> binds first, and Central counts
@@ -132,12 +133,32 @@ class CentralPublishingBudgetTest {
                 continue;
             }
             withSbom++;
-            assertEquals("json", childText(firstChild(cyclonedx, "configuration"), "outputFormat"),
-                module + " must publish its SBOM as JSON only. CycloneDX's 'all' attaches an XML copy "
-                    + "too, which is 4 more files on Central per artifact per release (#863)");
+            Element configuration = firstChild(cyclonedx, "configuration");
+            assertEquals("json", childText(configuration, "outputFormat"),
+                module + " must write its SBOM as JSON only. CycloneDX's 'all' writes an XML copy too (#863)");
+            assertEquals("true", childText(configuration, "skipAttach"),
+                module + " must not attach its SBOM to the build: attached, it goes to Central with its "
+                    + "signature and checksums, 4 files per artifact per release, and publish.yml puts it "
+                    + "on the GitHub release instead (#863)");
+            assertTrue(childText(configuration, "outputName").contains("${project.artifactId}"),
+                module + "'s SBOM must be named after its artifact: the GitHub release takes assets by file "
+                    + "name, so four modules writing bom.json would overwrite each other");
         }
         assertTrue(withSbom > 0, "no module publish.yml deploys generates an SBOM; if that is "
             + "deliberate, delete this check rather than leaving it vacuous");
+    }
+
+    /** The SBOMs that no longer go to Central are still published, on the GitHub release (#863). */
+    @Test
+    void theSbomsGoToTheGitHubRelease() throws IOException {
+        String publish = Files.readString(repoRoot().resolve(".github/workflows/publish.yml"), StandardCharsets.UTF_8);
+        int attach = publish.indexOf("- name: Attach signed artifacts to the GitHub release");
+        assertTrue(attach >= 0, "publish.yml has no step attaching artifacts to the GitHub release");
+        int next = publish.indexOf("- name:", attach + 1);
+        String step = publish.substring(attach, next < 0 ? publish.length() : next);
+        assertTrue(step.contains("-cyclonedx.json"),
+            "publish.yml must attach each module's -cyclonedx.json to the GitHub release; it no longer "
+                + "goes to Central, so without this the SBOM is not published anywhere:\n" + step);
     }
 
     /**

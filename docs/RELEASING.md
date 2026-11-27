@@ -238,14 +238,17 @@ limits are per organization: async-test-lib and every other group under
   git for-each-ref --format='%(creatordate:format:%Y-%m) %(refname:short)' 'refs/tags/v*' \
     | grep "^$(date +%Y-%m) "
   ```
-- **84 files per release.** Each of the four jar artifacts publishes 5 files (jar, pom,
-  sources, javadoc, `-cyclonedx.json`) and each file goes up with its `.asc`, `.md5` and
-  `.sha1`; the BOM adds its pom with the same three. Until #863 it was 150: the publishing
-  plugin's default also sent `.sha256` and `.sha512`, which Central accepts but does not
-  require ([requirements](https://central.sonatype.org/publish/requirements/)), and the SBOM
-  went up as XML too. `<checksums>required</checksums>` in the `central-publish` profile and
-  `<outputFormat>json</outputFormat>` in each module's CycloneDX plugin are what keep it at 84;
-  `CentralPublishingBudgetTest` pins both.
+- **68 files per release.** Each of the four jar artifacts publishes 4 files (jar, pom,
+  sources, javadoc), the files Central requires
+  ([requirements](https://central.sonatype.org/publish/requirements/)), and each goes up with
+  its `.asc`, `.md5` and `.sha1`; the BOM adds its pom with the same three. It was 150 before
+  #863: the publishing plugin's default also sent `.sha256` and `.sha512`, which Central accepts
+  but does not require, and the SBOM went up as JSON and XML. Then 84, with the SBOM as JSON on
+  Central. The SBOM is not required either, so each module's `<artifactId>-<version>-cyclonedx.json`
+  now goes on the GitHub release instead (`skipAttach` in its CycloneDX plugin, and the attach step
+  in `publish.yml`). `<checksums>required</checksums>` in the `central-publish` profile and those
+  CycloneDX settings are what keep it at 68; `CentralPublishingBudgetTest` pins them, and the
+  `central-bundle` job in `build.yml` logs the bundle's file count on every pull request.
 - **A vibetags version is 1 Central release.** Central counts each published deployment as a
   release: the 1.4.0 publish, five deployments, logged "6 of 7 used" after the fifth, with one
   async-test-lib deployment before it that month (#863). `publish.yml` now deploys the release

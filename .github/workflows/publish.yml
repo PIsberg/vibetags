@@ -275,4 +275,8 @@ jobs:
             vibetags-cli/target/*.jar.asc
             vibetags-ksp/target/*.jar
             vibetags-ksp/target/*.jar.asc
+            vibetags-annotations/target/*-cyclonedx.json
+            vibetags/target/*-cyclonedx.json
+            vibetags-cli/target/*-cyclonedx.json
+            vibetags-ksp/target/*-cyclonedx.json
             vibetags-bom/target/*.pom.asc

@@ -116,4 +116,7 @@ if [ "${#bundles[@]}" -ne 1 ]; then
   tail -n 80 "$log"
   exit 1
 fi
+# One bundle is one release, so its entry count is the release's cost against Central's monthly
+# file allowance (#863); logged so every pull request measures it.
+echo "central-bundle.zip holds $(unzip -Z1 "${bundles[0]}" | grep -vc '/$') files, the release's count on Central's monthly file allowance (#863)"
 bash "$check" "${check_opts[@]}" "${bundles[0]}" "${specs[@]}"
