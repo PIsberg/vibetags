@@ -387,8 +387,8 @@ two methods).
 
 `RoleConfig.load(root)` reads an optional `.vibetags-roles` (name → globs/FQNs, one role per line;
 null when absent). `GranularRulesWriter.writeAll(..., roles)` then partitions the granular owners: an
-owner matching a role (first-match, config order — glob matched against the FQN-reconstructed path,
-or exact FQN) is grouped into one human-named file `<role>.<ext>` with the role's globs in the
+owner matching a role (first-match, config order — glob matched against the package directory and
+the type's source file name, `com/x/Invoice.kt`, a nested type as its outer type's file, or exact FQN) is grouped into one human-named file `<role>.<ext>` with the role's globs in the
 platform frontmatter; owners matching no role keep their per-class file (non-lossy). Loaded at the
 root in `generateFiles()`/`checkFiles()` and per module in `ModuleOutputWriter`; the config's
 `contentHash()` is folded into the fingerprint set so edits regenerate. The 12 per-platform

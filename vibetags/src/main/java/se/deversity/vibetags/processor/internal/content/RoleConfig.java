@@ -88,10 +88,11 @@ public final class RoleConfig {
     }
 
     /**
-     * Memoised {@link #roleFor} answers, keyed by the two values the match actually reads.
+     * Memoised {@link #roleFor} answers, keyed by the four values the match actually reads: kind,
+     * qualified name, outermost type name and source file.
      *
      * <p>Not keyed by {@link TaggedElement} itself: its {@code equals} is {@code (path, kind)}
-     * while the match reads {@code (qualifiedName, kind)}. Those agree for every element the
+     * while the match reads more than that. Those agree for every element the
      * processor builds today, but a memo keyed on something other than its function's inputs
      * answers the wrong question the moment they stop agreeing, and silently.
      *
@@ -118,7 +119,7 @@ public final class RoleConfig {
      * the element belongs to no role and should keep its per-class file.
      */
     public Optional<String> roleFor(TaggedElement owner) {
-        String key = owner.kind() + "::" + owner.qualifiedName();
+        String key = owner.kind() + "::" + owner.qualifiedName() + "::" + owner.fileStem() + "::" + owner.sourceFile();
         return roleMemo.computeIfAbsent(key, unused -> matchRole(owner));
     }
 
@@ -213,10 +214,50 @@ public final class RoleConfig {
         return out;
     }
 
-    /** Reconstructs a path from the element's FQN: {@code a.b.Foo} → {@code a/b/Foo.java}; a package → {@code a/b/pkg/}. */
+    /**
+     * The path a role glob is matched against. A package is {@code a/b/pkg/}. A type is its package
+     * directory and the file its code is in, {@link TaggedElement#sourceFile()}: {@code a/b/Foo.java},
+     * {@code a/b/Invoice.kt} for a Kotlin class, and {@code a/b/Ledger.java} for {@code a.b.Ledger.Entry}.
+     * Rebuilt from the qualified name instead, a Kotlin type became {@code Invoice.java} and a nested
+     * type {@code a/b/Ledger/Entry.java}, files that do not exist, so a glob written for the file the
+     * type is in never routed it (#1178).
+     */
     private static String ownerPath(TaggedElement owner) {
-        String slashed = owner.qualifiedName().replace('.', '/');
-        return owner.kind() == ElementTag.PACKAGE ? slashed + "/" : slashed + ".java";
+        String qualifiedName = owner.qualifiedName();
+        if (owner.kind() == ElementTag.PACKAGE) {
+            return qualifiedName.replace('.', '/') + "/";
+        }
+        if (owner.fileStem().isEmpty()) {
+            // The model knows no file for this type: rebuild the path from the name, as before.
+            return qualifiedName.replace('.', '/') + ".java";
+        }
+        String pkg = packageOf(qualifiedName, owner.fileStem());
+        return pkg.isEmpty() ? owner.sourceFile() : pkg.replace('.', '/') + "/" + owner.sourceFile();
+    }
+
+    /**
+     * The package of a type whose outermost enclosing type is named {@code outermost}: what comes
+     * before that name in {@code qualifiedName}. The last occurrence, because a package segment may
+     * repeat the name ({@code com.Foo.Foo}) while no nested type may share a name with a type that
+     * encloses it. A name that does not contain {@code outermost} falls back to everything before
+     * the simple name.
+     */
+    static String packageOf(String qualifiedName, String outermost) {
+        if (qualifiedName.equals(outermost)) {
+            return "";
+        }
+        if (qualifiedName.endsWith("." + outermost)) {
+            return qualifiedName.substring(0, qualifiedName.length() - outermost.length() - 1);
+        }
+        int at = qualifiedName.lastIndexOf("." + outermost + ".");
+        if (at >= 0) {
+            return qualifiedName.substring(0, at);
+        }
+        if (qualifiedName.startsWith(outermost + ".")) {
+            return ""; // nested in a type of the default package
+        }
+        int dot = qualifiedName.lastIndexOf('.');
+        return dot < 0 ? "" : qualifiedName.substring(0, dot);
     }
 
     /**

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import se.deversity.vibetags.processor.internal.content.RoleConfig;
 
 import javax.lang.model.element.Element;
+import se.deversity.vibetags.processor.model.ElementTag;
 import se.deversity.vibetags.processor.model.TaggedElement;
 import javax.lang.model.element.ElementKind;
 import java.io.IOException;
@@ -340,6 +341,72 @@ class RoleConfigTest {
         assertEquals("api", roles.granularStemFor(type("com.example.web.OrderController")),
             "one rule file for the role, not a second one named -api");
         assertEquals(List.of("**/*Controller.java"), roles.globsFor("api"));
+    }
+
+    /**
+     * A type's glob is matched against the file its code is in (#1178): the package directory and
+     * {@link TaggedElement#sourceFile()}. Rebuilding the path from the qualified name gave a Kotlin
+     * type a {@code .java} name and a nested type a directory per enclosing type, so neither ever
+     * matched a glob written for its file.
+     */
+    @Test
+    @DisplayName("a Kotlin type is matched as the .kt file it is in")
+    void aKotlinTypeMatchesItsKtFile(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "kotlin = **/*.kt", "billing = com/x/InvoiceUtils.kt");
+
+        assertEquals("kotlin", roles.roleFor(sourceType("com.x.Invoice", "Invoice", "Invoice.kt")).orElse(null));
+        assertEquals("billing",
+            write(dir, "billing = com/x/InvoiceUtils.kt").roleFor(
+                sourceType("com.x.Invoice", "Invoice", "InvoiceUtils.kt")).orElse(null),
+            "a Kotlin file may declare a type whose name is not the file's");
+    }
+
+    @Test
+    @DisplayName("a nested type is matched as its outer type's file")
+    void aNestedTypeMatchesItsOuterTypesFile(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "api = **/*Controller.java");
+
+        assertEquals("api", roles.roleFor(
+            sourceType("com.x.FooController.Request", "FooController", "FooController.java")).orElse(null));
+        assertEquals("api", roles.roleFor(
+            sourceType("com.x.FooController.Request.Body", "FooController", "FooController.java")).orElse(null),
+            "two levels deep");
+        assertTrue(write(dir, "api = **/FooController/**").roleFor(
+                sourceType("com.x.FooController.Request", "FooController", "FooController.java")).isEmpty(),
+            "no FooController directory exists, so a glob for one does not route the nested type");
+    }
+
+    @Test
+    @DisplayName("a type in the default package or in a package named like it keeps its directory")
+    void thePackageDirectoryComesFromTheModel(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "root = *.java", "odd = com/Foo/Foo.java");
+
+        assertEquals("root", roles.roleFor(sourceType("Top", "Top", "Top.java")).orElse(null),
+            "'*' does not cross a '/', so this matches only a file with no package directory");
+        assertEquals("odd", roles.roleFor(sourceType("com.Foo.Foo.Inner", "Foo", "Foo.java")).orElse(null),
+            "a package segment equal to the outer type's name is still the package");
+    }
+
+    @Test
+    @DisplayName("a type nested in a default-package type, and a name without its outer type, still get a package")
+    void thePackageCutsEdges(@TempDir Path dir) throws IOException {
+        RoleConfig roles = write(dir, "root = *.java", "fallback = com/x/Other.java");
+
+        assertEquals("root", roles.roleFor(sourceType("Outer.Inner", "Outer", "Outer.java")).orElse(null),
+            "nested in a type of the default package: no directory");
+        assertEquals("fallback", roles.roleFor(sourceType("com.x.Thing", "Other", "Other.java")).orElse(null),
+            "an outermost name the qualified name does not hold: the package is what precedes the simple name");
+    }
+
+    /** A type as the collector builds it, with the outermost type's name and the file it is in. */
+    private static TaggedElement sourceType(String fqn, String fileStem, String sourceFile) {
+        String simple = fqn.substring(fqn.lastIndexOf('.') + 1);
+        return TaggedElement.builder(fqn)
+            .names(fqn, simple, simple, fqn.replaceAll("[^A-Za-z0-9-]", "-"))
+            .fileStem(fileStem)
+            .sourceFile(sourceFile)
+            .kind(ElementTag.CLASS)
+            .build();
     }
 
     @Test
