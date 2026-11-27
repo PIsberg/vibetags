@@ -264,6 +264,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A runtime failure in `AIGuardrailProcessor.init()` no longer fails the consumer's build
+  (#1147).** `init()` reads options, the root, the role and mirror configs, the write cache and the
+  sidecars on record, with no guard, so one `RuntimeException` there (a corrupt cache row did it
+  once, #1146) surfaced as javac's processor crash. It now gets the guard `process()` has: a
+  WARNING (`could not start; guardrail generation is off for this compilation`), or in check mode
+  an ERROR (`check mode could not start`), which fails closed as `process()` does; the log is
+  released and `process()` does nothing for the rest of the compilation, so a half-initialised
+  processor never generates. `ProcessorFailureGuardTest` failed both new cases first, with the
+  exception escaping `task.call()`.
+
 - **The write cache no longer records a file found current under another file's attributes
   (#1145).** The writer stats a file, reads it, and when the bytes hold its rendering and a second
   stat matches the first, records its body's hash with that size and mtime. In a parallel reactor

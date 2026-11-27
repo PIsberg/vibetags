@@ -50,7 +50,7 @@ untouched.
 ## 🧠 CORE FUNCTIONALITY
 The following elements are well-tested core components. Make changes with extreme caution.
 
-- **se.deversity.vibetags.processor.AIGuardrailProcessor** (sensitivity: critical): Runs inside every consumer's javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build
+- **se.deversity.vibetags.processor.AIGuardrailProcessor** (sensitivity: critical): Runs in every consumer's javac: init() and process() turn a RuntimeException into a WARNING (an ERROR in check mode); anything escaping them fails their build
 - **se.deversity.vibetags.processor.internal.GuardrailFileWriter** (sensitivity: high): Invariant 2 lives here: hand-authored content outside VIBETAGS-START/END must never be overwritten or lost
 - **se.deversity.vibetags.processor.internal.ModuleSidecar** (sensitivity: high): The .vibetags-mod-* format is read by modules compiled separately, possibly by another processor version; changing it breaks them
 - **se.deversity.vibetags.processor.internal.PartialRoundDetector** (sensitivity: high): Both conditions in unreadAnnotatedSources are load-bearing and neither may be dropped as redundant: without the missing-element check an excluded-but-annotated source stops VibeTags writing for good, and without the unread-source check a genuinely deleted annotation can never have its rule file retired

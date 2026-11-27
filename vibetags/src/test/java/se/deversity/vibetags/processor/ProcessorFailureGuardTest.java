@@ -59,6 +59,73 @@ class ProcessorFailureGuardTest {
         }
     }
 
+    /** A processor whose init() fails part way, after the log is open (#1147). */
+    @SupportedAnnotationTypes("se.deversity.vibetags.annotations.*")
+    static final class FaultyInitProcessor extends AIGuardrailProcessor {
+        @Override
+        se.deversity.vibetags.processor.internal.ModuleSidecar.OnRecord sidecarsOnRecord() {
+            throw new IllegalStateException(BOOM);
+        }
+    }
+
+    /**
+     * #1147. init() reads options, the root, the role and mirror configs, the write cache and the
+     * sidecars on record, and had no guard: one RuntimeException there failed the consumer's
+     * compilation as a processor crash, the outcome process()'s guard exists to rule out. A corrupt
+     * cache row did it once (#1146).
+     */
+    @Test
+    void aFailureInInitIsAWarningAndTheProcessorStandsDown(@TempDir Path tempDir) throws IOException {
+        Path claude = tempDir.resolve("CLAUDE.md");
+        Files.writeString(claude, "Hand-written project notes.\n");
+        byte[] before = Files.readAllBytes(claude);
+        ProcessorTestHarness harness = new ProcessorTestHarness(tempDir, false);
+        harness.writeSourceFile("src/main/java/com/example/Locked.java", """
+            package com.example;
+            import se.deversity.vibetags.annotations.AILocked;
+            @AILocked(reason = "core logic")
+            public class Locked {}
+            """);
+
+        List<Diagnostic<? extends JavaFileObject>> diagnostics =
+            harness.compileWithReturningDiagnostics(new FaultyInitProcessor());
+
+        assertFalse(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR),
+            () -> "a failure in init() must not fail the consumer's build: " + diagnostics);
+        assertTrue(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.WARNING
+                && d.getMessage(null).contains("guardrail generation is off for this compilation")
+                && d.getMessage(null).contains(BOOM)),
+            () -> "the failure is named in one warning: " + diagnostics);
+        assertArrayEquals(before, Files.readAllBytes(claude),
+            "a processor that did not start must not write: CLAUDE.md keeps its bytes");
+        assertFalse(diagnostics.stream().anyMatch(d -> d.getMessage(null).contains("Generating files")),
+            () -> "a half-initialised processor must not run generation: " + diagnostics);
+        assertNull(VibeTagsLogger.currentFor(tempDir), "the log init() opened is released");
+    }
+
+    /** Check mode fails closed here as it does in process(): a check that could not start has not passed. */
+    @Test
+    void inCheckModeAFailureInInitFailsTheBuild(@TempDir Path tempDir) throws IOException {
+        Files.createFile(tempDir.resolve("CLAUDE.md"));
+        ProcessorTestHarness harness = new ProcessorTestHarness(tempDir, false);
+        harness.writeSourceFile("src/main/java/com/example/Locked.java", """
+            package com.example;
+            import se.deversity.vibetags.annotations.AILocked;
+            @AILocked(reason = "core logic")
+            public class Locked {}
+            """);
+
+        List<Diagnostic<? extends JavaFileObject>> diagnostics =
+            harness.compileWithReturningDiagnostics(new FaultyInitProcessor(), "-Avibetags.check=true");
+
+        assertTrue(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR
+                && d.getMessage(null).contains("check mode could not start")),
+            () -> "a check that could not start must fail the build: " + diagnostics);
+        assertFalse(diagnostics.stream().anyMatch(d -> d.getKind() == Diagnostic.Kind.ERROR
+                && d.getMessage(null).contains("threw an uncaught exception")),
+            () -> "the failure is VibeTags' own ERROR, not javac's processor crash: " + diagnostics);
+    }
+
     @Test
     void runtimeFailure_isDowngradedToWarning_andBuildSucceeds(@TempDir Path tempDir) throws IOException {
         // An opt-in file so at least one service is active; the fault fires before generation anyway.

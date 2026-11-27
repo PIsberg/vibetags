@@ -96,7 +96,7 @@ answers; use it when the topic is not below.
   <core_elements>
     <element path="se.deversity.vibetags.processor.AIGuardrailProcessor">
       <sensitivity>critical</sensitivity>
-      <note>Runs inside every consumer&#39;s javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build</note>
+      <note>Runs in every consumer&#39;s javac: init() and process() turn a RuntimeException into a WARNING (an ERROR in check mode); anything escaping them fails their build</note>
     </element>
     <element path="se.deversity.vibetags.processor.internal.GuardrailFileWriter">
       <sensitivity>high</sensitivity>

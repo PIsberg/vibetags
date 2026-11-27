@@ -85,7 +85,7 @@ import java.util.stream.Collectors;
  */
 @AICore(
     sensitivity = "critical",
-    note = "Runs inside every consumer's javac: process() turns a RuntimeException into a WARNING (an ERROR in check mode), and anything escaping that catch fails their build"
+    note = "Runs in every consumer's javac: init() and process() turn a RuntimeException into a WARNING (an ERROR in check mode); anything escaping them fails their build"
 )
 @AITestDriven(
     coverageGoal = 90,
@@ -176,8 +176,13 @@ public class AIGuardrailProcessor extends AbstractProcessor {
     /** Per-output-file content cache; created on init() pointing at {@code <root>/.vibetags-cache}. */
     private @Nullable WriteCache writeCache;
 
-    private Path root;
-    private String projectName;
+    // Given the values init() falls back to, so a processor whose init() failed part way (#1147)
+    // still has a root to release its log at.
+    private Path root = Paths.get("").toAbsolutePath().normalize();
+    private String projectName = DEFAULT_PROJECT_NAME;
+
+    /** The {@code llms.txt} H1 when {@code -Avibetags.project} is not given. */
+    private static final String DEFAULT_PROJECT_NAME = "This Project";
 
     /**
      * Opt-in check mode ({@code -Avibetags.check=true}): verify generated files instead of
@@ -226,6 +231,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
      * that round never reached, so the final round leaves every file as this build found it.
      */
     private final AtomicBoolean collectionFailed = new AtomicBoolean();
+
+    /** Set when {@link #init} failed part way (#1147); {@link #process} then does nothing. */
+    private final AtomicBoolean initFailed = new AtomicBoolean();
 
     /**
      * What this compilation was actually shown: every source file it compiled, and the source
@@ -342,7 +350,20 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
+        // Outside the guard: a second init() throws by contract (AIGuardrailProcessorProcessTest).
         super.init(processingEnv);
+        // The same promise process() keeps: generation is advisory, so a runtime failure while
+        // starting up must not fail the consumer's compilation (#1147). A processor that did not
+        // finish starting must not run generation either, so it stands down for the compilation.
+        try {
+            initialise(processingEnv);
+        } catch (RuntimeException e) {
+            reportInitFailure(processingEnv, e);
+        }
+    }
+
+    /** Everything {@link #init} sets up, in order; a runtime failure here is {@link #reportInitFailure}'s. */
+    private void initialise(ProcessingEnvironment processingEnv) {
         Map<String, String> options = processingEnv.getOptions();
         Messager messager = processingEnv.getMessager();
 
@@ -356,6 +377,30 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         configureTransitiveGuardrails(options, messager);
         readWhatIsOnRecord();
         resetRunState();
+    }
+
+    /**
+     * Reports a runtime failure in {@link #initialise} the way {@link #reportProcessingFailure}
+     * reports one in a round: a WARNING, or an ERROR in check mode, which fails closed. Then the
+     * processor stands down: the log is released and {@link #process} does nothing.
+     */
+    private void reportInitFailure(ProcessingEnvironment processingEnv, RuntimeException e) {
+        initFailed.set(true);
+        // Check mode may not have been read yet when the failure came first, so the option decides.
+        boolean failClosed = checkMode
+            || Boolean.parseBoolean(String.valueOf(processingEnv.getOptions().get("vibetags.check")).strip());
+        if (failClosed) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                "VibeTags: check mode could not start (failing build): " + e);
+        } else {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,
+                "VibeTags: could not start; guardrail generation is off for this compilation"
+                    + " (build not affected): " + e);
+        }
+        if (log != null) {
+            log.error("init.skip reason=runtime-failure checkMode={}", failClosed, e);
+        }
+        VibeTagsLogger.shutdown(root);
     }
 
     /** {@code -Avibetags.root}, else the JVM working directory; both named in a NOTE. */
@@ -382,7 +427,7 @@ public class AIGuardrailProcessor extends AbstractProcessor {
 
     /** The options that shape output without being annotations: the project and module names. */
     private void readOutputOptions(Map<String, String> options) {
-        this.projectName = options.getOrDefault("vibetags.project", "This Project");
+        this.projectName = options.getOrDefault("vibetags.project", DEFAULT_PROJECT_NAME);
 
         // Explicit module name. Only needed when the build cannot be read off the sources — for
         // instance a compiler that exposes neither the Tree API nor Elements.getFileObjectOf, or a
@@ -480,9 +525,17 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // One streaming pass for both questions, keeping no rendered body: a sidecar holds every
         // body of its module, and parsing them in full here was most of what a no-op rebuild
         // still allocated (#834, #858).
-        ModuleSidecar.OnRecord onRecord = ModuleSidecar.onRecord(this.root);
+        ModuleSidecar.OnRecord onRecord = sidecarsOnRecord();
         this.testingFallbackPending = onRecord.withdrawnTestingFallback();
         this.guardrailsOnRecord = onRecord.recordsElements();
+    }
+
+    /**
+     * The sidecars' record under the root. Package-private and free of field writes: the seam
+     * ProcessorFailureGuardTest throws from to fail init() part way (#1147).
+     */
+    ModuleSidecar.OnRecord sidecarsOnRecord() {
+        return ModuleSidecar.onRecord(this.root);
     }
 
     private void resetRunState() {
@@ -513,6 +566,9 @@ public class AIGuardrailProcessor extends AbstractProcessor {
         // entire purpose is to fail the build — there an internal failure fails closed as an
         // ERROR rather than silently passing. We always return false so peer processors still
         // see the annotations.
+        if (initFailed.get()) {
+            return false; // init() reported why; a half-initialised processor generates nothing
+        }
         try {
             if (roundEnv.processingOver()) {
                 finishProcessing(roundEnv);
