@@ -1219,7 +1219,12 @@ public final class ModuleSidecar {
         if (modulePath.isEmpty() || "_root_".equals(moduleId)) return;
         Path moduleDir = root.resolve(modulePath);
         if (!Files.isDirectory(moduleDir)) return;
-        List<String> contributed = INDEXABLE_AGGREGATES.stream().filter(bodies::containsKey).toList();
+        // The unrouted body counts too: it is what the merge reads once TESTING.md is withdrawn
+        // (reactorBody), and a test round whose tests carry no safety annotation stores no other.
+        // Without a pointer that body was embedded whole in a root opted into being lean (#1156).
+        List<String> contributed = INDEXABLE_AGGREGATES.stream()
+            .filter(agg -> bodies.containsKey(agg) || unroutedBodies.containsKey(agg))
+            .toList();
         // Only the eight keys buildIndexPointer consults, and only for aggregates this module
         // actually contributes to. resolveActiveServices would stat every opt-in path instead:
         // measured at 85 per call, 4 calls per build of the indexed example, 340 of that build's

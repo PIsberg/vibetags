@@ -314,6 +314,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on every OS before the fix. `WriteCacheCrossInstanceAsyncTest` now names the entry behind a wrong
   verdict (`WriteCache.describeEntry`) and skips a cycle whose verdict came from a third file.
 
+- **A lean root no longer embeds a linked module's whole test body once `TESTING.md` is
+  withdrawn (#1156).** A module linked from a root with `.vibetags-root-index` was linked only for
+  the aggregates its sidecar held an ordinary body for, so a test sidecar holding only the
+  `~tfull~` fallback got no pointer, and the merge embedded that body in full. The unrouted body
+  now counts too. Measured end to end, today's processor always stores an ordinary body beside the
+  fallback, so no build was found that reached the shape; the change keeps the sidecar-level rule
+  consistent, and no output changes. The same probe settled the issue's open question: a linked
+  module's own scoped rule files carry its test guardrails both before and after the root's
+  `TESTING.md` goes. `ModuleSidecarTestingFallbackTest` failed its new case first.
+
 - **Replacing a block keeps the indentation of the hand-written text around it (#1163).** The text
   below the block went through `stripLeading()`, which took the first line's indentation along
   with the blank lines, and the whole file through `trim()`, which took leading whitespace at the

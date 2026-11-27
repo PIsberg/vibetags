@@ -137,6 +137,50 @@ class ModuleSidecarTestingFallbackTest {
     }
 
     /**
+     * #1156. In a root opted into the lean index, a module that keeps its own output puts its safety
+     * digest and one pointer in the root, not its body. A routed test round whose tests carry no
+     * safety annotation stores no ordinary body, only the unrouted one, so it got no pointer, and
+     * once {@code TESTING.md} was withdrawn its whole unrouted body was embedded in the lean root.
+     * The module's own files carry its test guardrails either way: they are routed only by the
+     * module's own {@code TESTING.md}, which withdrawing the root's does not touch.
+     */
+    @Test
+    void aLinkedModulesUnroutedTestBodyStaysOutOfTheLeanRoot() throws IOException {
+        Files.createFile(root.resolve(ServiceRegistry.ROOT_INDEX_FILE));
+        Files.createDirectories(root.resolve("core/.claude/rules"));
+        saveMainAndTestSidecarWithOnlyTheUnroutedBody();
+
+        String withdrawn = mergedClaude();
+        Files.createFile(root.resolve("TESTING.md"));
+        String present = mergedClaude();
+
+        assertFalse(withdrawn.contains(UNROUTED_BODY), withdrawn);
+        assertFalse(withdrawn.contains(MAIN_BODY), "the linked module's main body is not embedded either: " + withdrawn);
+        assertEquals(present, withdrawn, "the lean root reads the same with TESTING.md as without it");
+    }
+
+    /** A module that keeps no output of its own is not linked, so the fallback is still all the root has. */
+    @Test
+    void anUnlinkedModulesUnroutedTestBodyIsStillEmbeddedInTheLeanRoot() throws IOException {
+        Files.createFile(root.resolve(ServiceRegistry.ROOT_INDEX_FILE));
+        saveMainAndTestSidecarWithOnlyTheUnroutedBody();
+
+        String merged = mergedClaude();
+
+        assertTrue(merged.contains(MAIN_BODY) && merged.contains(UNROUTED_BODY), merged);
+    }
+
+    private void saveMainAndTestSidecarWithOnlyTheUnroutedBody() throws IOException {
+        ModuleSidecar main = new ModuleSidecar("core", "core", "core");
+        main.putBody("claude", MAIN_BODY);
+        main.save(root);
+        ModuleSidecar tests = new ModuleSidecar("core__test", "core", "core");
+        tests.putUnroutedBody("claude", UNROUTED_BODY);
+        tests.putBody("cursor", "keeps the sidecar non-empty");
+        tests.save(root);
+    }
+
+    /**
      * What an older processor does with a {@code ~tfull~} line is what this one does with a key it
      * has never heard of: load the rest, store nothing for it, render nothing from it.
      */
