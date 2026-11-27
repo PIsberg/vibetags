@@ -37,7 +37,9 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Restore the Maven repository (restore-keys, #1041)
+        uses: $/.github/actions/maven-cache
 
       - name: Install VibeTags annotations
         run: cd vibetags-annotations && mvn install -B -q -DskipTests
