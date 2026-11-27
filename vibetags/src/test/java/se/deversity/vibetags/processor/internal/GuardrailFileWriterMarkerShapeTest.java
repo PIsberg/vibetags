@@ -193,6 +193,36 @@ class GuardrailFileWriterMarkerShapeTest {
         assertEquals(block("NEW RULES") + "\n", read(generatedOnly), "a file that was all ours becomes the block alone");
     }
 
+    /**
+     * #1162. The upgrade joined the hand-written text with its trailing newline still on, so it left
+     * two blank lines above the block; the next build found the block, rebuilt the file with one,
+     * and wrote it again. An upgrade must leave the file the next build leaves alone.
+     */
+    @Test
+    @DisplayName("a legacy upgrade is a fixed point: the next build writes nothing")
+    void aLegacyUpgradeIsAFixedPoint() throws IOException {
+        String legacyBlock = HEADER + "<project_guardrails>\n<x/>\n</project_guardrails>\n";
+
+        Path around = file("CLAUDE.md", "# Mine\n\nKeep me.\n\n" + legacyBlock + "\nAfter legacy.\n");
+        assertTrue(write(around, "NEW RULES", true));
+        assertEquals("# Mine\n\nKeep me.\n\nAfter legacy.\n\n" + block("NEW RULES") + "\n", read(around),
+            "one blank line between the hand-written text and the block");
+        assertFalse(write(around, "NEW RULES", true), "the build after the upgrade must not write again");
+
+        Path onlyAfter = file("GEMINI.md", legacyBlock + "\nAfter legacy.\n");
+        assertTrue(write(onlyAfter, "NEW RULES", true));
+        assertFalse(write(onlyAfter, "NEW RULES", true), "text only below the legacy block: " + read(onlyAfter));
+
+        Path trailingBlanks = file("QWEN.md", "# Mine\n\n\n\n" + legacyBlock + "\n\n");
+        assertTrue(write(trailingBlanks, "NEW RULES", true));
+        assertFalse(write(trailingBlanks, "NEW RULES", true), "blank lines around the legacy block: " + read(trailingBlanks));
+
+        // The ordinary replace trims the head of the file; the legacy strip already does (see #1163).
+        Path leadingBlanks = file("AGENTS.md", "\n\n# Mine\n\n" + legacyBlock);
+        assertTrue(write(leadingBlanks, "NEW RULES", true));
+        assertFalse(write(leadingBlanks, "NEW RULES", true), "blank lines at the top of the file: " + read(leadingBlanks));
+    }
+
     @Test
     @DisplayName("a marker line inside the rendered body is defused, and the write is still a fixed point")
     void aMarkerLineInTheBodyIsDefused() throws IOException {

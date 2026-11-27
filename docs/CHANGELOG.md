@@ -264,6 +264,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Upgrading a pre-marker file to markers takes one write, not two (#1162).** The upgrade joined the
+  hand-written text above the new block with its trailing newline still on, so it left two blank
+  lines there; the next build found the block, rebuilt the file with one, and wrote and reported it
+  again. The upgrade now strips that text as the ordinary block replace does, so it lands on the
+  file the second build used to leave, and that build writes nothing. Files already upgraded are not
+  touched. `GuardrailFileWriterMarkerShapeTest` failed on the issue's file first.
+
 - **A `.pr_agent.toml` whose `extra_instructions` is a table is left alone instead of made invalid
   (#1174).** A dotted `extra_instructions.x = 1` under `[pr_reviewer]`, or a
   `[pr_reviewer.extra_instructions]` header, makes the key a table. The merge looked only for
