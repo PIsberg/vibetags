@@ -117,6 +117,46 @@ class ModuleSidecarMisreadSourceSetTest {
         assertEquals(List.of("core"), ids(ModuleSidecar.readAll(root)));
     }
 
+    /**
+     * #1214. A real source set compiled only from a non-conventional root ({@code it/src}, from a
+     * Gradle {@code srcDir} or a build-helper execution) records no {@code src/it/...} root, so the
+     * #1159 exemption did not cover it, and a main sidecar recording a flat-looking root retired it.
+     * A misread sidecar compiled the same sources as its sibling, so every root it records is one
+     * the sibling records too; this one records a root the sibling does not.
+     */
+    @Test
+    void aSourceSetOnANonConventionalRootOfItsOwnIsKept(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core/src"));
+        Files.createDirectories(root.resolve("core/it/src"));
+        save(root, "core__it", List.of("core/it/src"), OLDER);
+        save(root, "core", List.of("core/src"), NEWER);
+
+        assertEquals(List.of("core", "core__it"), ids(ModuleSidecar.readAll(root)));
+        assertEquals(true, Files.exists(root.resolve(".vibetags-mod-core__it")), "and keeps its file");
+    }
+
+    @Test
+    void aSourceSetOnANonConventionalRootIsKeptBesideAGeneratedFlatRoot(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core/src/main/java"));
+        Files.createDirectories(root.resolve("core/gen/src"));
+        Files.createDirectories(root.resolve("core/it/src"));
+        save(root, "core__it", List.of("core/it/src"), OLDER);
+        save(root, "core", List.of("core/src/main/java", "core/gen/src"), NEWER);
+
+        assertEquals(List.of("core", "core__it"), ids(ModuleSidecar.readAll(root)));
+    }
+
+    /** The sibling may have gained a root since; a misread sidecar's roots are still among its own. */
+    @Test
+    void aMisreadSidecarIsRetiredBySiblingThatGainedARoot(@TempDir Path root) throws IOException {
+        Files.createDirectories(root.resolve("core/src"));
+        Files.createDirectories(root.resolve("core/gen/src"));
+        save(root, "core__com", List.of("core/src"), OLDER);
+        save(root, "core", List.of("core/src", "core/gen/src"), NEWER);
+
+        assertEquals(List.of("core"), ids(ModuleSidecar.readAll(root)));
+    }
+
     private static void save(Path root, String moduleId, List<String> sourceRoots, long mtime) throws IOException {
         String region = moduleId.contains(ModuleSidecar.SOURCE_SET_SEPARATOR)
             ? moduleId.substring(0, moduleId.indexOf(ModuleSidecar.SOURCE_SET_SEPARATOR)) : moduleId;

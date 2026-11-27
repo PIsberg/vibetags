@@ -314,6 +314,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on every OS before the fix. `WriteCacheCrossInstanceAsyncTest` now names the entry behind a wrong
   verdict (`WriteCache.describeEntry`) and skips a cycle whose verdict came from a third file.
 
+- **A source set compiled only from a non-conventional root is no longer retired as misread
+  (#1214).** The #1068 clean-up retires a non-main sidecar beside a no-older sibling that records a
+  flat `src` root; #1159 exempted one recording `src/<its set>/...`. A set compiled only from
+  `it/src` (a Gradle `srcDir`, a build-helper execution) records neither, so beside a main on
+  `core/src` or `core/gen/src` it was retired and its sidecar deleted. A sidecar is now retired
+  only when its sibling records every root it records: a misread sidecar compiled the same sources,
+  so its roots are among the sibling's (or it records none), and every #1068 and #1159 fixture keeps
+  its verdict. `ModuleSidecarMisreadSourceSetTest` failed both new shapes first.
+
 - **A lean root no longer embeds a linked module's whole test body once `TESTING.md` is
   withdrawn (#1156).** A module linked from a root with `.vibetags-root-index` was linked only for
   the aggregates its sidecar held an ordinary body for, so a test sidecar holding only the
