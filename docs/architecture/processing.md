@@ -73,7 +73,7 @@ Three layered fast paths in front of the actual write, in order of cheapness:
 
 After a successful write or a streaming-byte-equal hit, `WriteCache.recordWrite(...)` updates the cache entry. After all platform files are processed, `generateFiles()` calls `writeCache.flush()` once to persist the sidecar atomically.
 
-`Messager` emits NOTE: `"updated"` or `"no changes"` for each file.
+`Messager` emits NOTE: `"updated"`, `"no changes"`, or `"not written"` for each file. The last is for a file the writer warned it failed to write or declined (an undecodable file, a stray start marker, a file it cannot merge into): `writeFileIfChanged` answers `false` for it as for a current file, so `generateFiles()` asks `GuardrailFileWriter.leftUnwritten` instead of printing `"no changes"` under the warning (#1208).
 
 **Phase 6: Orphaned Annotation Check**
 ```java

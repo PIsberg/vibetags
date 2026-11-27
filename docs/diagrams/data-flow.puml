@@ -123,6 +123,9 @@ partition "generateFiles() — called once on final round" {
       if (Content changed?) then (yes)
         :stageAndMove();
         :Print NOTE: updated;
+      elseif (Writer warned: failed or declined?) then (yes)
+        :Print WARNING;
+        :Print NOTE: not written;
       else (no)
         :Skip write;
         :Print NOTE: no changes;
