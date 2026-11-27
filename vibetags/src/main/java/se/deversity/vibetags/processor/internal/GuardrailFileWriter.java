@@ -221,6 +221,9 @@ public final class GuardrailFileWriter {
         // a line-ending-only difference (LF vs CRLF, e.g. a git core.autocrlf checkout on
         // Windows) as a no-op instead of rewriting the file — see issue #282. The common
         // unchanged case is already handled allocation-free by the exact-size byte fast path above.
+        if (fileExists) {
+            debug("write.read file={} bytes={}", fileName, existingSize);
+        }
         String existing = fileExists
             ? Files.readString(filePath, StandardCharsets.UTF_8)
             : "";
@@ -242,7 +245,7 @@ public final class GuardrailFileWriter {
         if (fileBytesEqual(filePath, contentBytes)) {
             // Byte-identical — nothing to do. Refresh the cache so subsequent calls hit
             // the cheap WriteCache fast path even on the very first build.
-            noteCurrent(filePath, content, existingAttrs);
+            noteCurrent(filePath, content, existingAttrs, contentByteLen);
             debug("write.skip file={} reason=identical-bytes bytes={}", fileName, contentByteLen);
             return false;
         }
@@ -390,14 +393,24 @@ public final class GuardrailFileWriter {
      * apart, since every write here is a new file moved into place. When the stats differ the entry
      * is recorded as failed, not dropped: a missing entry counts as stable to the early exit, and
      * the next build must look at this file again. {@code WriteCacheCrossInstanceAsyncTest} pins the
-     * stat-only-now case; the before-only case is reasoned from the code and no test has made it
-     * fail, so the second stat is a guard rather than a measured fix. The second stat failing is
+     * stat-only-now case.
+     *
+     * <p>Matching stats are not enough on their own. On Windows the file key is {@code null} and
+     * two writes in one clock tick share an mtime, so an A-B-A replacement (A statted, another
+     * module's B read, A' with A's size and mtime statted) passed both, and B's body was recorded
+     * with A's attributes (#1145, twice on windows-latest CI). {@code bytesCompared}, the UTF-8
+     * length of the text compared, must also equal the first stat's size, which rules that out
+     * whenever A and B differ in size; {@code GuardrailFileWriterReplacedDuringReadTest} drives it.
+     * Two different bodies of one size written within one tick, with no file key, still look the
+     * same, and nothing short of a per-write identity in the file's attributes can tell them apart.
+     * The second stat failing is
      * the same answer as the stats differing, not a write failure: Windows refuses a stat with
      * {@code AccessDeniedException} while another process's rename is replacing the file (it hit
      * this class's concurrency test on windows-latest CI), and the file was current when it was
      * compared.
      */
-    private void noteCurrent(Path filePath, String bodyForCache, @Nullable BasicFileAttributes before) {
+    private void noteCurrent(Path filePath, String bodyForCache, @Nullable BasicFileAttributes before,
+                             long bytesCompared) {
         if (dryRun || writeCache == null) {
             return;
         }
@@ -407,11 +420,32 @@ public final class GuardrailFileWriter {
         } catch (IOException e) {
             now = null;
         }
-        if (before != null && now != null && sameFile(before, now)) {
+        if (before != null && now != null && sameFile(before, now) && before.size() == bytesCompared) {
             writeCache.recordWrite(filePath, bodyForCache, before);
         } else {
             writeCache.recordFailure(filePath);
         }
+    }
+
+    /**
+     * The number of bytes {@code s} takes in UTF-8, without encoding it. {@code s} is text decoded
+     * strictly from a file, so every surrogate in it is paired.
+     */
+    static long utf8Length(CharSequence s) {
+        long bytes = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < 0x80) {
+                bytes += 1;
+            } else if (c < 0x800) {
+                bytes += 2;
+            } else if (Character.isSurrogate(c)) {
+                bytes += 2; // a pair is one 4-byte code point
+            } else {
+                bytes += 3;
+            }
+        }
+        return bytes;
     }
 
     /** Whether two stats describe one unchanged file: size, full-precision mtime, and file key. */
@@ -603,7 +637,7 @@ public final class GuardrailFileWriter {
 
         /** The file already holds what this write would produce: record it as current. */
         private boolean leftCurrent() {
-            noteCurrent(filePath, content, existingAttrs);
+            noteCurrent(filePath, content, existingAttrs, utf8Length(bom) + utf8Length(existing));
             return false;
         }
 
@@ -665,7 +699,7 @@ public final class GuardrailFileWriter {
         }
         if (merged.equals(existing)) {
             debug("write.skip file={} reason=identical-bytes bytes={} markers=json-values", fileName, merged.length());
-            noteCurrent(filePath, content, existingAttrs);
+            noteCurrent(filePath, content, existingAttrs, utf8Length(existing));
             return false;
         }
         if (!hasNewRules && !existing.isBlank()) {
@@ -684,7 +718,7 @@ public final class GuardrailFileWriter {
                                         boolean hasNewRules, @Nullable BasicFileAttributes existingAttrs)
             throws IOException {
         if (contentMatches(existing, content)) {
-            noteCurrent(filePath, content, existingAttrs);
+            noteCurrent(filePath, content, existingAttrs, utf8Length(existing));
             return false;
         }
 
@@ -749,7 +783,7 @@ public final class GuardrailFileWriter {
         }
         if (merged.equals(existing)) {
             debug("write.skip file={} reason=identical-bytes bytes={} markers=toml-values", fileName, merged.length());
-            noteCurrent(filePath, content, existingAttrs);
+            noteCurrent(filePath, content, existingAttrs, utf8Length(existing));
             return false;
         }
         debug("write.update file={} reason=toml-values-differ oldBytes={} newBytes={} markers=toml-values",

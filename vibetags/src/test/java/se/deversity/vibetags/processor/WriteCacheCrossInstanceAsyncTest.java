@@ -111,8 +111,20 @@ class WriteCacheCrossInstanceAsyncTest {
                 continue;
             }
             if (unchanged && sameFile(before, after) && !onDisk.contains(body)) {
+                // isUnchanged answers true only for a file of the entry's size. An entry of another
+                // size than both stats means the verdict's own stat saw a third file: an A-B-A
+                // inside this snapshot, on Windows where the file key is null and two writes can
+                // share an mtime. That cycle proves nothing. An entry of the file's size is the
+                // product's false positive (#1145).
+                String entry = cache.describeEntry(shared);
+                if (entry != null && !entry.contains(" size=" + before.size() + " ")) {
+                    cache.flush();
+                    continue;
+                }
                 throw new AssertionError("the cache vouched for a body the file does not hold.\n"
-                    + "expected: " + body + "on disk:\n" + onDisk);
+                    + "expected: " + body + "on disk:\n" + onDisk
+                    + "entry: " + entry + "\nfile: size=" + before.size() + " mtime=" + before.lastModifiedTime()
+                    + " key=" + before.fileKey());
             }
             cache.flush();
         }
