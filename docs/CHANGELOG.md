@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A weekly report of pins with a newer stable release (#1135).** `.github/workflows/pin-report.yml`
+  runs `tools/bump-dependencies.sh` every Monday and keeps one open issue listing what it reports:
+  created when a pin is behind, rewritten while one stays behind, closed when none is. Dependabot
+  never sees the toolchain pins and ignores the two mirrored ones, so until now they were reported
+  only when someone ran the script. The job's token can write issues and nothing else, and the
+  workflow starts only on its schedule or by hand; `PinReportWorkflowTest` pins both.
+
 - **A quality gate on new code.** Sonar's "Sonar way for agentic AI" conditions, measured on what a
   pull request adds with the build's own tools: at least 80% of new executable lines covered by
   the full suite, at most 3% of new lines in a CPD clone, and no method new over

@@ -19,9 +19,10 @@ This document describes what happens during CI builds in `.github/workflows/`. F
 | Instruction Evals | `instruction-evals.yml` | PRs carrying the `run-instruction-evals` label, manual |
 | Copilot Review | `copilot-review.yml` | PR opened/reopened/ready-for-review |
 | Nightly Perf Ring | `nightly-perf.yml` | Weekly cron (Mondays 03:17 UTC), manual |
+| Pin Report | `pin-report.yml` | Weekly cron (Mondays 05:41 UTC), manual |
 | Actions Lockfile | `actions-lock.yml` | Push to `main`; every pull request |
 
-All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow except Scorecard is `contents: read`; Scorecard declares `read-all`, as its action requires. Jobs that need more (e.g. CodeQL writes `security-events`, publish writes `contents` to attach release assets) escalate explicitly.
+All jobs run on `ubuntu-latest` and start with the StepSecurity `harden-runner` action in `audit` mode, which records every outbound network call. The default token permission for every workflow except Scorecard is `contents: read`; Scorecard declares `read-all`, as its action requires. Jobs that need more (e.g. CodeQL writes `security-events`, publish writes `contents` to attach release assets, the pin report writes `issues`) escalate explicitly.
 
 All third-party actions are pinned by full commit SHA with the version as a trailing comment — required by the OpenSSF Scorecard `Pinned-Dependencies` check. `.github/workflows/actions.lock` records where each of those commits comes from; see [14. Actions Lockfile](#14-actions-lockfile-actions-lockyml).
 
@@ -685,6 +686,24 @@ the lockfile does not cover, when an entry is no longer used, or when an entry w
   the lockfile cannot cover (#1030, blocked upstream).
 - Blocking at run time is a separate repository policy, **Require lockfile** (Settings → Actions →
   Policies). This workflow does not depend on it.
+
+## 15. Pin Report (`pin-report.yml`)
+
+Dependabot proposes bumps for the Maven and npm pins it can see. It never sees the toolchain
+properties (Gradle, Kotlin, Groovy, Scala, Node, the publishing Maven, `gh-actions-lock`,
+`foojay-resolver`, Lombok, MapStruct), and it ignores the two mirrored pins it could see
+(`ksp.version`, `maven-compiler-plugin.version`). `tools/bump-dependencies.sh` reports all of
+them, but only when someone runs it, so this workflow runs it every Monday and keeps one open issue,
+`[P4] Pins with a newer stable release (weekly report)`, listing every `<- update` line: created
+when a pin is behind, rewritten while one stays behind, closed with a comment when none is. A pin
+whose release feed did not answer is listed as not checked. The script exits 2 when the parent gains
+a property its table lacks, and that fails the job rather than reporting nothing.
+
+The job token can write issues and nothing else, and the workflow starts only on its schedule or by
+hand, never from a pull request, so no branch code runs with that token. `PinReportWorkflowTest`
+pins both, and that the workflow still reads the marker the script prints (#1135).
+
+---
 
 ## Known flake: an artifact Central has is reported missing
 

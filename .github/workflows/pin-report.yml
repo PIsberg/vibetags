@@ -1,0 +1,96 @@
+# Weekly report of version pins with a newer stable release (#1135).
+#
+# Dependabot proposes bumps for the Maven and npm pins it can see. It never sees the toolchain
+# properties (Gradle, Kotlin, Groovy, Scala, Node, the publishing Maven, gh-actions-lock,
+# foojay-resolver, Lombok, MapStruct), and it ignores the two whose copies live in
+# version-mirrors.txt (ksp, maven-compiler-plugin). tools/bump-dependencies.sh reports all of them,
+# but only when someone runs it. This runs it weekly and keeps one open issue with what it found:
+# created when a pin is behind, rewritten while one stays behind, closed when none is.
+#
+# Read-only apart from that one issue: the job token can write issues and nothing else, and the
+# workflow starts only on its schedule or by hand, never from a pull request, so no branch code
+# runs with it (PinReportWorkflowTest pins both).
+
+name: Pin Report
+
+on:
+  schedule:
+    - cron: '41 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Pins With a Newer Stable Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Into a file rather than through tee: a pipe would report tee's exit status, and the
+      # script exits 2 when the pom gains a property its table has no source for.
+      - name: Report every pin's latest stable release
+        run: |
+          tools/bump-dependencies.sh > "$RUNNER_TEMP/pins.txt"
+          cat "$RUNNER_TEMP/pins.txt"
+
+      - name: Create, update or close the report issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title='[P4] Pins with a newer stable release (weekly report)'
+          report="$RUNNER_TEMP/pins.txt"
+          updates="$(grep -F -- '<- update' "$report" || true)"
+          # A feed that did not answer prints ? as the latest version: say so rather than drop it.
+          unknown="$(awk 'NR > 1 && NF == 3 && $3 == "?" { print $1 }' "$report" | paste -sd, - | sed 's/,/, /g')"
+          # The exact title, from a listing rather than a search: a search can lag behind a new
+          # issue, and a missed match would open a second one.
+          number="$(gh issue list --state open --limit 500 --json number,title \
+            --jq "map(select(.title == \"$title\")) | .[0].number // empty")"
+          today="$(date -u +%F)"
+          if [ -z "$updates" ]; then
+            if [ -n "$number" ]; then
+              gh issue close "$number" --comment "No pin has a newer stable release as of $today ($RUN_URL)."
+            fi
+            echo "No pin has a newer stable release." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          body="$RUNNER_TEMP/body.md"
+          {
+            echo "Pins in \`vibetags-parent/pom.xml\` with a newer stable release, as \`tools/bump-dependencies.sh\` reported on $today ([run]($RUN_URL)). Dependabot opens PRs for the Maven pins it can see; the toolchains and the mirrored pins it ignores arrive only here."
+            echo
+            echo "| Property | Pinned | Latest |"
+            echo "|---|---|---|"
+            printf '%s\n' "$updates" | awk '{ printf "| `%s` | %s | %s |\n", $1, $2, $3 }'
+            if [ -n "$unknown" ]; then
+              echo
+              echo "Not checked, because the release feed did not answer: $unknown."
+            fi
+            echo
+            echo "Apply a bump with the \`bump-dependencies\` skill: edit the property, run \`python tools/sync-version-mirrors.py\`, then the gates the skill lists. This issue is rewritten every Monday while a pin is behind, and closed when none is."
+          } > "$body"
+          cat "$body" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file "$body"
+          else
+            url="$(gh issue create --title "$title" --body-file "$body")"
+            gh issue comment "$url" --body "P4: infrastructure. Nothing breaks while a pin is behind, and each bump is applied and verified through the bump-dependencies skill."
+          fi
