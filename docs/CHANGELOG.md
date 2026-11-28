@@ -271,6 +271,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A test source set's section no longer splits a main section in a merged Markdown file
+  (#1192).** When a module's main and test bodies merge (`MarkdownSectionMerge`), a section only
+  the test body has, with no later section both share, went right after the last shared section's
+  heading. A test-only sub-section then came ahead of the main ones (`com.example.testing.PaymentFixturesTest`
+  headed "Contextual Rules" in `examples/basic/llms-full.txt`), and a test-only top-level section
+  split the shared one: its remaining main sub-sections were rendered under the new heading, so a
+  class's locked rule read as, for example, a draft. It now goes after the last shared section's
+  whole subtree. **Committed output changes** where a test source set adds such a section: entries
+  move after the main ones, and a misfiled main entry returns under its own heading.
+  `MarkdownSectionMergeTest` failed both shapes first.
+
 - **A release puts 68 files on Maven Central instead of 84 (#863).** Central's monthly allowance
   is per organization, and each published file also costs its `.asc`, `.md5` and `.sha1`. The
   CycloneDX SBOM, which Central does not require, cost 4 files per jar module: it is no longer

@@ -95,10 +95,36 @@ class MarkdownSectionMergeTest {
 
         assertEquals(HEADER
                 + "## LOCKED\n\n### com.Foo\n- **Reason**: r\n\n### com.FooTest\n- **Reason**: rt\n\n"
-                + "## CONTEXT\n\n### com.FooTest\n- **Focus**: ft\n\n### com.Foo\n- **Focus**: f",
+                + "## CONTEXT\n\n### com.Foo\n- **Focus**: f\n\n### com.FooTest\n- **Focus**: ft",
             MarkdownSectionMerge.merge(List.of(main, test)),
-            "each class's rule stays under the annotation it came from. In the last shared section a "
-                + "test-only sub-section still goes first (issue #1192)");
+            "each class's rule stays under the annotation it came from, main source set first, in the "
+                + "last shared section too (issue #1192)");
+    }
+
+    /**
+     * #1192. A section only the test body has, with no later section both share, went right after
+     * the last shared section's heading. A test-only sub-section then came before that section's
+     * own, and a test-only top-level section split it: main's `### com.Foo` was rendered under
+     * `## DRAFT`, so its locked rule read as a draft. It goes after the shared section's subtree.
+     */
+    @Test
+    void aSectionOnlyTheTestBodyHasGoesAfterTheLastSharedSubtree() {
+        String main = HEADER + "## LOCKED\n\n### com.Foo\n- **Reason**: r";
+        String test = HEADER + "## LOCKED\n\n### com.FooTest\n- **Reason**: rt\n\n## DRAFT\n\n### com.FooTest\n- **Task**: d";
+
+        assertEquals(HEADER
+                + "## LOCKED\n\n### com.Foo\n- **Reason**: r\n\n### com.FooTest\n- **Reason**: rt\n\n"
+                + "## DRAFT\n\n### com.FooTest\n- **Task**: d",
+            MarkdownSectionMerge.merge(List.of(main, test)),
+            "main's com.Foo stays under LOCKED, ahead of the test entry, and DRAFT follows the whole LOCKED section");
+
+        // The last shared section is a sub-section with a main-only sibling after it: the new
+        // top-level section still goes after the whole LOCKED section, not between the two.
+        String mainTwo = HEADER + "## LOCKED\n\n### com.Bar\n- **Reason**: b\n\n### com.Foo\n- **Reason**: r";
+        String testShared = HEADER + "## LOCKED\n\n### com.Bar\n- **Reason**: b\n\n## DRAFT\n\n### com.BarTest\n- **Task**: d";
+        assertEquals(mainTwo + "\n\n## DRAFT\n\n### com.BarTest\n- **Task**: d",
+            MarkdownSectionMerge.merge(List.of(mainTwo, testShared)),
+            "com.Foo stays under LOCKED");
     }
 
     @Test

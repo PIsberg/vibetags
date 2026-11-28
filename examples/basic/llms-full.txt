@@ -40,10 +40,6 @@ The following files are locked. AI tools MUST NOT propose modifications to them.
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
 
-### com.example.testing.PaymentFixturesTest
-- **Focus**: Build payments through PaymentFixtures, never with the PaymentRequest constructor: the fixture is what keeps minor units and currency consistent across the suite
-- **Avoid**: Asserting on formatted amounts; assert on the minor-unit long
-
 ### com.example.security.SecurityConfig
 - **Focus**: This class is READ-ONLY for AI assistants. Do not suggest modifications.
 - **Avoid**: Any changes to encryption algorithms, key sizes, or validation logic
@@ -71,6 +67,10 @@ These files have specific context and focus areas for AI assistance.
 ### com.example.utils.StringParser
 - **Focus**: Optimize for memory usage over CPU speed. Minimize object allocations and avoid creating intermediate string objects.
 - **Avoid**: java.util.regex, String.split(), StringBuilder in loops
+
+### com.example.testing.PaymentFixturesTest
+- **Focus**: Build payments through PaymentFixtures, never with the PaymentRequest constructor: the fixture is what keeps minor units and currency consistent across the suite
+- **Avoid**: Asserting on formatted amounts; assert on the minor-unit long
 
 ## Mandatory Security Audit Requirements
 When writing or modifying the following files, perform a security audit for the listed vulnerabilities before displaying any code to the user.

@@ -211,8 +211,9 @@ the 1,755 bytes it added to this repository's `CLAUDE.md` (#839). The merge decl
 bodies are concatenated as before, when a body is not the shape it knows, for example a sidecar
 written by another processor version. The Markdown renderers (`AGENTS.md`, `GEMINI.md`,
 `llms.txt`, `.cursorrules` and the rest) join them through `MarkdownSectionMerge` (#841): the
-generated header once, each `##` section once with both source sets' bullets, and the
-`TESTING.md` pointer once at the end. It declines on the same terms. `.vibetags-locks` joins through
+generated header once, each `##` section once with both source sets' bullets, the main source
+set's entries ahead of the test set's in every section (#1192), and the `TESTING.md` pointer once at
+the end. It declines on the same terms. `.vibetags-locks` joins through
 `LocksReportMerge` (#851), a union of its JSON Lines, so the header and the format record appear
 once. The JSON outputs are still concatenated.
 

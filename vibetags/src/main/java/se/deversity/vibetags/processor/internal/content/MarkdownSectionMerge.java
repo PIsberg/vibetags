@@ -20,7 +20,9 @@ import java.util.regex.Pattern;
  * compared as one block: the transitive appendix nests rules under a package bullet, and two
  * source sets naming one package with different rules must keep both. Each section appears once,
  * with every source set's bullets in source-set order. A section only a later body has goes before
- * the next section both share, so the renderer's order holds.
+ * the next section both share, so the renderer's order holds; with no later shared section, it goes
+ * after the whole subtree of the last shared one at its own level, so the main source set's
+ * sub-sections come first and a new heading never splits a section (#1192).
  *
  * <p>Text after the last bullet of a body's last section, which is where the {@code TESTING.md}
  * pointer is appended, is written once at the very end. So is a trailing {@code # } comment line,
@@ -193,7 +195,7 @@ public final class MarkdownSectionMerge {
             int at = indexOf(merged, section.key);
             if (at < 0) {
                 int before = nextShared(merged, incoming, k);
-                int position = before >= 0 ? before : anyShared ? cursor + 1 : merged.size();
+                int position = before >= 0 ? before : anyShared ? afterSubtree(merged, cursor, section.key) : merged.size();
                 merged.add(position, section);
                 cursor = position;
                 continue;
@@ -304,6 +306,60 @@ public final class MarkdownSectionMerge {
             }
         }
         return false;
+    }
+
+    /**
+     * Where a section with no later shared section goes: after the whole subtree of the section at
+     * its own level that {@code cursor} sits in, so after the last shared section's own sub-sections.
+     * Right after {@code cursor} it went ahead of them, and a new top-level section there split the
+     * shared section: its remaining sub-sections were rendered under the new heading, filing a
+     * locked rule under DRAFT (#1192). A key is the heading path, so a descendant's key starts with
+     * its ancestor's.
+     */
+    private static int afterSubtree(List<Container> merged, int cursor, @Nullable String key) {
+        String anchorKey = merged.get(cursor).key;
+        if (anchorKey == null || key == null) {
+            return cursor + 1;
+        }
+        String ancestor = firstLines(anchorKey, depth(key));
+        int at = ancestor.length() < anchorKey.length() ? indexOf(merged, ancestor) : cursor;
+        if (at < 0) {
+            at = cursor;
+        }
+        String prefix = merged.get(at).key;
+        int end = at + 1;
+        while (end < merged.size() && prefix != null && isUnder(merged.get(end).key, prefix)) {
+            end++;
+        }
+        return end;
+    }
+
+    private static boolean isUnder(@Nullable String key, String prefix) {
+        return key != null && key.startsWith(prefix);
+    }
+
+    /** How many headings a key holds: one line each. */
+    private static int depth(String key) {
+        int lines = 0;
+        for (int i = 0; i < key.length(); i++) {
+            if (key.charAt(i) == '\n') {
+                lines++;
+            }
+        }
+        return lines;
+    }
+
+    /** The first {@code lines} headings of {@code key}, or all of it when it has no more. */
+    private static String firstLines(String key, int lines) {
+        int end = 0;
+        for (int seen = 0; seen < lines; seen++) {
+            int next = key.indexOf('\n', end);
+            if (next < 0) {
+                return key;
+            }
+            end = next + 1;
+        }
+        return key.substring(0, end);
     }
 
     /** Where in {@code merged} the first section after {@code incoming[k]} that both have sits, or -1. */
