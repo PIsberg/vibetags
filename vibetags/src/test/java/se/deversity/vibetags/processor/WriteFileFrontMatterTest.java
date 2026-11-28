@@ -260,4 +260,36 @@ class WriteFileFrontMatterTest {
             "the rendered front matter must open the file:\n" + result);
         assertFalse(result.contains("old rules"), result);
     }
+
+    /**
+     * A hand-written header whose block scalar holds a lone, indented {@code ---} is replaced whole by
+     * the rendered one (#1241). The indented line once ended the header, so its tail was kept below
+     * the new header as if it were hand text.
+     */
+    @Test
+    void mdcFile_update_replacesAHeaderWhoseBlockScalarHoldsAnIndentedRule(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("Foo.mdc");
+        String existing =
+            "---\n" +
+            "description: |\n" +
+            "  first\n" +
+            "  ---\n" +
+            "  second\n" +
+            "---\n\n" +
+            "<!-- VIBETAGS-START -->\nold rules\n<!-- VIBETAGS-END -->\n";
+        Files.writeString(file, existing, StandardCharsets.UTF_8);
+        String rendered =
+            "---\n" +
+            "description: \"AI rules for com.example.Foo\"\n" +
+            "globs: [\"**/Foo.java\"]\n" +
+            "---\n\n" +
+            "# Rules for Foo\n";
+
+        new AIGuardrailProcessor().writeFileIfChanged(file.toString(), rendered, true);
+
+        String result = Files.readString(file, StandardCharsets.UTF_8);
+        assertTrue(result.startsWith("---\ndescription: \"AI rules for com.example.Foo\"\nglobs: [\"**/Foo.java\"]\n---\n\n<!-- VIBETAGS-START -->"),
+            "the rendered header replaces the whole old one and the block follows it directly:\n" + result);
+        assertFalse(result.contains("second"), "nothing of the old header is left behind:\n" + result);
+    }
 }

@@ -258,7 +258,7 @@ public final class JsonValueSpans {
 
     /** The span as it reads in the decoded value: delimiters on their own lines around the body. */
     private static String span(SharedKey shared, String body) {
-        String safe = GuardrailFileWriter.neutraliseMarkers(body,
+        String safe = MarkerLines.neutraliseMarkers(body,
             new String[]{shared.markerStart(), shared.markerEnd()});
         return safe.isEmpty()
             ? shared.markerStart() + "\n" + shared.markerEnd()
@@ -278,9 +278,9 @@ public final class JsonValueSpans {
         String value = decoded.value();
         String replacement = Escape.json(span(shared, body));
 
-        int start = GuardrailFileWriter.indexOfMarkerLine(value, shared.markerStart(), 0);
+        int start = MarkerLines.indexOfMarkerLine(value, shared.markerStart(), 0);
         if (start >= 0) {
-            int end = GuardrailFileWriter.indexOfMarkerLine(value, shared.markerEnd(),
+            int end = MarkerLines.indexOfMarkerLine(value, shared.markerEnd(),
                 start + shared.markerStart().length());
             if (end < 0) {
                 return null;

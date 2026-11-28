@@ -225,7 +225,7 @@ class GuardrailFileWriterDamagedFileTest {
     }
 
     private static boolean broken(String content) {
-        return GuardrailFileWriter.hasBrokenMarkers(content, START, END);
+        return MarkerLines.hasBrokenMarkers(content, START, END);
     }
 
     /**
@@ -234,8 +234,8 @@ class GuardrailFileWriterDamagedFileTest {
      */
     private static int markerLines(String content, String marker) {
         int count = 0;
-        for (int i = GuardrailFileWriter.indexOfMarkerLine(content, marker, 0); i >= 0;
-             i = GuardrailFileWriter.indexOfMarkerLine(content, marker, i + marker.length())) {
+        for (int i = MarkerLines.indexOfMarkerLine(content, marker, 0); i >= 0;
+             i = MarkerLines.indexOfMarkerLine(content, marker, i + marker.length())) {
             count++;
         }
         return count;

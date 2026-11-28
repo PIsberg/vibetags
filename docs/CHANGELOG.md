@@ -32,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The marker and front-matter text rules moved out of `GuardrailFileWriter` into
+  `MarkerLines` and `FrontMatter`.** The line-owned marker search, the CommonMark fence check, the
+  broken-pair test, marker defusing and the front-matter boundary are what every reader of a
+  generated block shares: the writer, the JSON and TOML span mergers, the duplicate-key check,
+  `ServiceRegistry` and `vibetags doctor`. They now live outside the writer and every caller names
+  them directly. `GuardrailFileWriter` goes from 1,727 to 1,520 lines and weighted method count
+  253 to 200. `MarkerLinesTest` pins each rule and was written before the move.
+
 - **The sidecar body merge moved out of `ModuleSidecar` into `SidecarBodyMerge`, and its
   sub-marker style into `SubMarkers`.** `ModuleSidecar` both stored the sidecars and turned their
   bodies into each file's text. The merge half now lives in its own class, and `mergeFor`,
@@ -296,6 +304,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds, `vibetags`'s Gradle build and the kotlin, kotlin-ksp, groovy, scala and basic examples.
 
 ### Fixed
+
+- **A YAML header ends at a `---` in column 0, not at an indented one (#1241).** A
+  hand-written header whose block scalar held an indented `---` line ended there, so when a
+  granular rule file or the Claude skill replaced the header with the rendered one, the rest of the
+  old header stayed below it as if it were hand text. YAML reads an indented `---` as content, and
+  now so does VibeTags.
 
 - **The warning about buildless Gradle subprojects reads correctly in the plural (#1238).** With
   two or more of them it said they "have no build file of its own, so it resolves to this root and

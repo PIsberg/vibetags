@@ -335,8 +335,8 @@ public final class ServiceRegistry {
         }
         try {
             String content = Files.readString(path);
-            int start = GuardrailFileWriter.indexOfBlockStart(content, GuardrailFileWriter.MARKER_START_MD);
-            return start >= 0 && GuardrailFileWriter.indexOfMarkerLine(content, GuardrailFileWriter.MARKER_END_MD,
+            int start = MarkerLines.indexOfBlockStart(content, GuardrailFileWriter.MARKER_START_MD);
+            return start >= 0 && MarkerLines.indexOfMarkerLine(content, GuardrailFileWriter.MARKER_END_MD,
                 start + GuardrailFileWriter.MARKER_START_MD.length()) >= 0;
         } catch (IOException | RuntimeException e) {
             return false;

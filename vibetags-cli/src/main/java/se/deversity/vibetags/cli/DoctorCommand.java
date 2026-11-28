@@ -1,5 +1,6 @@
 package se.deversity.vibetags.cli;
 
+import se.deversity.vibetags.processor.internal.MarkerLines;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 
@@ -375,9 +376,9 @@ final class DoctorCommand {
             String text = read.get();
             // The writer's own reading of the pair, not whether each literal appears somewhere:
             // an end above the start, or an example pair in a fence, fooled a contains() check (#919).
-            boolean brokenMd = GuardrailFileWriter.hasBrokenMarkers(text,
+            boolean brokenMd = MarkerLines.hasBrokenMarkers(text,
                 GuardrailFileWriter.MARKER_START_MD, GuardrailFileWriter.MARKER_END_MD);
-            boolean brokenHash = GuardrailFileWriter.hasBrokenMarkers(text,
+            boolean brokenHash = MarkerLines.hasBrokenMarkers(text,
                 GuardrailFileWriter.MARKER_START_HASH, GuardrailFileWriter.MARKER_END_HASH);
             if (brokenMd || brokenHash) {
                 broken++;
