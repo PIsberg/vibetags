@@ -52,6 +52,11 @@ Write events, not positions:
   `merge.partial modulesBehind= reason=granular-opted-out-after-last-compile`,
   `granular.missing entries= reason=sibling-file-absent` and
   `region.duplicate elements= regions= reason=element-claimed-twice`.
+  `ModuleIdentityDiagnosticsTest` pins the WARN events for a module identity that costs
+  guardrails: `module.detached module= moduleRoot= reactorRoot=`,
+  `module.collapsed subprojects= root= reason=no-build-file-of-their-own`,
+  `module.unidentified id= root= compilationRoot= existing=` and
+  `sidecar.collision moduleId= path= other=`.
 - When you fix a bug, add the DEBUG line that would have made it obvious in one read, and keep it.
 
 Rationale and the longer argument: *Vibe Architecture*, Chapter 6b, "The Log Is a Feedback Loop".

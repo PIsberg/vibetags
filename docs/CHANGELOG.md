@@ -32,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The module-identity warnings moved out of `AIGuardrailProcessor` into
+  `ModuleIdentityDiagnostics`.** The four warnings about an identity that costs a build guardrails
+  (detached from its reactor, buildless Gradle subprojects collapsing into the root, a module filed
+  under a content hash, two modules under one id) and their helpers leave the processor; it goes
+  from 2,779 to 2,658 lines, weighted method count 352 to 327 and NCSS 929 to 881, while its
+  coupling rises by one, to 54, for the new class. The text and log events are unchanged apart from
+  #1238, and `ModuleIdentityDiagnosticsTest` now pins both; no test asserted the four events before.
+
 - **The partial-merge warnings moved out of `AIGuardrailProcessor` into
   `PartialMergeDiagnostics`.** The six warnings raised after the sidecar read (an unreadable
   sidecar, an unusable `.vibetags-mirror`, an opt-in or a granular opt-out a module has not seen, a
@@ -279,6 +287,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds, `vibetags`'s Gradle build and the kotlin, kotlin-ksp, groovy, scala and basic examples.
 
 ### Fixed
+
+- **The warning about buildless Gradle subprojects reads correctly in the plural (#1238).** With
+  two or more of them it said they "have no build file of its own, so it resolves to this root and
+  shares one module identity"; it now says they "have no build file of their own, so each resolves
+  to this root and they all share one module identity". The singular is unchanged.
 
 - **The Central usage counter no longer counts async-test-maven-plugin as a second deployment
   after async-test-lib 1.14.4 (#863).** PIsberg/async-test-lib#1474 moved the plugin into that
