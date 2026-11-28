@@ -271,6 +271,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Central usage counter no longer counts async-test-maven-plugin as a second deployment
+  after async-test-lib 1.14.4 (#863).** PIsberg/async-test-lib#1474 moved the plugin into that
+  library's single Central deployment, but `central-month-usage.sh` still listed it in
+  `SEPARATE_DEPLOYMENTS` for every version, so each later async-test-lib release would have read
+  as two of the organization's seven a month, and a release that fits would have been held back.
+  An entry can now be bounded as `path@LAST`: the artifact counts on its own through version LAST
+  (compared with `sort -V`, so 1.14.10 is after 1.14.4) and shares its version's bundle after
+  it. The default is `@1.14.4`, because 1.14.4's tag predates #1474 and a re-run of its refused
+  publish would upload the plugin on its own again; if it goes up as one bundle, that one version
+  reads one high, the safe direction. November 2026 still reads 7 of 7.
+
 - **A test source set's section no longer splits a main section in a merged Markdown file
   (#1192).** When a module's main and test bodies merge (`MarkdownSectionMerge`), a section only
   the test body has, with no later section both share, went right after the last shared section's
