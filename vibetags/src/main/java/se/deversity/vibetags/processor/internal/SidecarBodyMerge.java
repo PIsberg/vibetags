@@ -249,7 +249,7 @@ final class SidecarBodyMerge {
     static String sharedFrontMatter(List<String> bodies) {
         String shared = null;
         for (String body : bodies) {
-            int close = GuardrailFileWriter.frontMatterEnd(body);
+            int close = FrontMatter.end(body);
             if (close < 0) {
                 return "";
             }

@@ -1,5 +1,6 @@
 package se.deversity.vibetags.cli;
 
+import se.deversity.vibetags.processor.internal.MarkerLines;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 import se.deversity.vibetags.processor.internal.ServiceRegistry;
 
@@ -155,12 +156,12 @@ final class ContextWeight {
         for (String[] markers : new String[][]{
                 {GuardrailFileWriter.MARKER_START_MD, GuardrailFileWriter.MARKER_END_MD},
                 {GuardrailFileWriter.MARKER_START_HASH, GuardrailFileWriter.MARKER_END_HASH}}) {
-            int start = GuardrailFileWriter.indexOfBlockStart(text, markers[0]);
+            int start = MarkerLines.indexOfBlockStart(text, markers[0]);
             if (start < 0) {
                 continue;
             }
             int from = start + markers[0].length();
-            int end = GuardrailFileWriter.indexOfMarkerLine(text, markers[1], from);
+            int end = MarkerLines.indexOfMarkerLine(text, markers[1], from);
             if (end >= 0) {
                 return Optional.of(text.substring(from, end));
             }

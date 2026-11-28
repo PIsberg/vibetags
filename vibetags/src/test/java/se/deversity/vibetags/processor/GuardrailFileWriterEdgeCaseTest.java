@@ -2,6 +2,7 @@ package se.deversity.vibetags.processor;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import se.deversity.vibetags.processor.internal.FrontMatter;
 import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
 
 import java.io.IOException;
@@ -471,26 +472,26 @@ class GuardrailFileWriterEdgeCaseTest {
 
     @Test
     void frontMatterEnd_recognisesOnlyRealHeaders() {
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\nprose\n---\nmore\n"));
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("----\nkey: v\n----\n"));
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\nkey: v\n"));
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("# heading\n---\nkey: v\n---\n"));
+        assertEquals(-1, FrontMatter.end("---\nprose\n---\nmore\n"));
+        assertEquals(-1, FrontMatter.end("----\nkey: v\n----\n"));
+        assertEquals(-1, FrontMatter.end("---\nkey: v\n"));
+        assertEquals(-1, FrontMatter.end("# heading\n---\nkey: v\n---\n"));
         assertEquals("---\nkey: a --- b\n---".length(),
-            GuardrailFileWriter.frontMatterEnd("---\nkey: a --- b\n---\nbody\n"));
+            FrontMatter.end("---\nkey: a --- b\n---\nbody\n"));
         assertEquals("---\n# c\ndescription: |\n  two\n  lines\nlist:\n- a\n---".length(),
-            GuardrailFileWriter.frontMatterEnd("---\n# c\ndescription: |\n  two\n  lines\nlist:\n- a\n---\n"));
+            FrontMatter.end("---\n# c\ndescription: |\n  two\n  lines\nlist:\n- a\n---\n"));
         assertEquals("---\r\nkey: v\r\n---".length(),
-            GuardrailFileWriter.frontMatterEnd("---\r\nkey: v\r\n---\r\nbody\r\n"));
+            FrontMatter.end("---\r\nkey: v\r\n---\r\nbody\r\n"));
         // Every early exit and every kind of line the scan accepts or rejects.
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd(null));
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd(""));
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---"), "opener with no line end");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("--- x\nkey: v\n---\n"), "opener with trailing text");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\nkey v\n---\n"), "no colon is prose");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\n: v\n---\n"), "empty key");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\n1st: v\n---\n"), "key must start with a letter");
+        assertEquals(-1, FrontMatter.end(null));
+        assertEquals(-1, FrontMatter.end(""));
+        assertEquals(-1, FrontMatter.end("---"), "opener with no line end");
+        assertEquals(-1, FrontMatter.end("--- x\nkey: v\n---\n"), "opener with trailing text");
+        assertEquals(-1, FrontMatter.end("---\nkey v\n---\n"), "no colon is prose");
+        assertEquals(-1, FrontMatter.end("---\n: v\n---\n"), "empty key");
+        assertEquals(-1, FrontMatter.end("---\n1st: v\n---\n"), "key must start with a letter");
         assertEquals("---\n\"quoted.key\": v\n-\n- item\n---".length(),
-            GuardrailFileWriter.frontMatterEnd("---\n\"quoted.key\": v\n-\n- item\n---\n"));
+            FrontMatter.end("---\n\"quoted.key\": v\n-\n- item\n---\n"));
     }
 
     @Test

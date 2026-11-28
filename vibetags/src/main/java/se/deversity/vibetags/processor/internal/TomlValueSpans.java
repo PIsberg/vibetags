@@ -84,7 +84,7 @@ public final class TomlValueSpans {
     /** Puts {@code body} into the span of each table's {@code extra_instructions} in {@code existing}. */
     public static Outcome merge(String existing, String body) {
         String nl = existing.contains("\r\n") ? "\r\n" : "\n";
-        String safeBody = GuardrailFileWriter.neutraliseMarkers(body.strip(),
+        String safeBody = MarkerLines.neutraliseMarkers(body.strip(),
             new String[]{GuardrailFileWriter.MARKER_START_MD, GuardrailFileWriter.MARKER_END_MD});
         String span = GuardrailFileWriter.MARKER_START_MD + nl + safeBody.replace("\n", nl) + nl
             + GuardrailFileWriter.MARKER_END_MD;
@@ -274,11 +274,11 @@ public final class TomlValueSpans {
          * whatever the developer wrote, or alone when they wrote nothing.
          */
         private String withSpan(String content) {
-            int start = GuardrailFileWriter.indexOfMarkerLine(content, GuardrailFileWriter.MARKER_START_MD, 0);
+            int start = MarkerLines.indexOfMarkerLine(content, GuardrailFileWriter.MARKER_START_MD, 0);
             if (start < 0) {
                 return content.isBlank() ? nl + span + nl : content.stripTrailing() + nl + nl + span + nl;
             }
-            int end = GuardrailFileWriter.indexOfMarkerLine(content, GuardrailFileWriter.MARKER_END_MD,
+            int end = MarkerLines.indexOfMarkerLine(content, GuardrailFileWriter.MARKER_END_MD,
                 start + GuardrailFileWriter.MARKER_START_MD.length());
             if (end < 0) {
                 throw new Refused("unclosed-span",

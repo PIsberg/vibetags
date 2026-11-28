@@ -29,18 +29,18 @@ class MarkerLinesTest {
     @Test
     @DisplayName("a marker counts on a line of its own, whitespace around it allowed, CRLF included")
     void aMarkerOnItsOwnLineCounts() {
-        assertEquals(0, GuardrailFileWriter.indexOfMarkerLine(START + "\n", START, 0));
-        assertEquals(6, GuardrailFileWriter.indexOfMarkerLine("intro\n" + START, START, 0));
-        assertEquals(8, GuardrailFileWriter.indexOfMarkerLine("intro\n  " + START + " \t\n", START, 0));
-        assertEquals(7, GuardrailFileWriter.indexOfMarkerLine("intro\r\n" + START + "\r\nrest", START, 0));
+        assertEquals(0, MarkerLines.indexOfMarkerLine(START + "\n", START, 0));
+        assertEquals(6, MarkerLines.indexOfMarkerLine("intro\n" + START, START, 0));
+        assertEquals(8, MarkerLines.indexOfMarkerLine("intro\n  " + START + " \t\n", START, 0));
+        assertEquals(7, MarkerLines.indexOfMarkerLine("intro\r\n" + START + "\r\nrest", START, 0));
     }
 
     @Test
     @DisplayName("a marker quoted in prose is not one")
     void aMarkerInProseIsNotOne() {
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine("Write `" + START + "` to start.\n", START, 0));
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine("x" + START + "\n", START, 0));
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine(START + "x\n", START, 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine("Write `" + START + "` to start.\n", START, 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine("x" + START + "\n", START, 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine(START + "x\n", START, 0));
     }
 
     @Test
@@ -48,18 +48,18 @@ class MarkerLinesTest {
     void theSearchStartsAtFromIndex() {
         String text = START + "\nsee " + START + " here\n" + START + "\n";
         int second = text.lastIndexOf(START);
-        assertEquals(0, GuardrailFileWriter.indexOfMarkerLine(text, START, -5));
-        assertEquals(second, GuardrailFileWriter.indexOfMarkerLine(text, START, 1));
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine(text, START, second + 1));
+        assertEquals(0, MarkerLines.indexOfMarkerLine(text, START, -5));
+        assertEquals(second, MarkerLines.indexOfMarkerLine(text, START, 1));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine(text, START, second + 1));
     }
 
     @Test
     @DisplayName("null or empty text or marker finds nothing")
     void nothingToSearch() {
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine(null, START, 0));
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine("", START, 0));
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine(START, null, 0));
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine(START, "", 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine(null, START, 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine("", START, 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine(START, null, 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine(START, "", 0));
     }
 
     // ---------------------------------------------------------------- fences
@@ -69,7 +69,7 @@ class MarkerLinesTest {
     void aStartInsideAFenceIsSkipped() {
         for (String fence : new String[] {FENCE, "~~~", FENCE + "markdown"}) {
             String text = fence + "\n" + START + "\nexample\n" + END + "\n" + fence.substring(0, 3) + "\n\n" + START + "\n";
-            assertEquals(text.lastIndexOf(START), GuardrailFileWriter.indexOfBlockStart(text, START), fence);
+            assertEquals(text.lastIndexOf(START), MarkerLines.indexOfBlockStart(text, START), fence);
         }
     }
 
@@ -77,28 +77,28 @@ class MarkerLinesTest {
     @DisplayName("a fence stays open until a line of the same character, at least as long, with nothing after it")
     void aFenceClosesOnlyByCommonMarksRules() {
         String longer = FENCE + "`\n" + FENCE + "\n" + START + "\n" + FENCE + "`\n" + START + "\n";
-        assertEquals(longer.lastIndexOf(START), GuardrailFileWriter.indexOfBlockStart(longer, START),
+        assertEquals(longer.lastIndexOf(START), MarkerLines.indexOfBlockStart(longer, START),
             "a three-backtick line inside a four-backtick fence does not close it");
         String otherChar = FENCE + "\n~~~\n" + START + "\n";
-        assertEquals(-1, GuardrailFileWriter.indexOfBlockStart(otherChar, START), "tildes do not close backticks");
+        assertEquals(-1, MarkerLines.indexOfBlockStart(otherChar, START), "tildes do not close backticks");
         String trailing = FENCE + "\n" + FENCE + " not a closer\n" + START + "\n";
-        assertEquals(-1, GuardrailFileWriter.indexOfBlockStart(trailing, START), "text after the run keeps it open");
+        assertEquals(-1, MarkerLines.indexOfBlockStart(trailing, START), "text after the run keeps it open");
         String unclosed = FENCE + "\n" + START + "\n";
-        assertEquals(-1, GuardrailFileWriter.indexOfBlockStart(unclosed, START), "an unclosed fence runs to the end");
+        assertEquals(-1, MarkerLines.indexOfBlockStart(unclosed, START), "an unclosed fence runs to the end");
     }
 
     @Test
     @DisplayName("a line opening with an inline code span is not a fence (#1161)")
     void anInlineSpanIsNotAFence() {
         String text = FENCE + "inline` code\n" + START + "\n";
-        assertEquals(text.indexOf(START), GuardrailFileWriter.indexOfBlockStart(text, START));
+        assertEquals(text.indexOf(START), MarkerLines.indexOfBlockStart(text, START));
         String tildeInfo = "~~~ info with ` tick\n" + START + "\n~~~\n" + START + "\n";
-        assertEquals(tildeInfo.lastIndexOf(START), GuardrailFileWriter.indexOfBlockStart(tildeInfo, START),
+        assertEquals(tildeInfo.lastIndexOf(START), MarkerLines.indexOfBlockStart(tildeInfo, START),
             "a tilde fence's info string may hold a backtick");
         String shortRun = "``not a fence\n" + START + "\n";
-        assertEquals(shortRun.indexOf(START), GuardrailFileWriter.indexOfBlockStart(shortRun, START));
+        assertEquals(shortRun.indexOf(START), MarkerLines.indexOfBlockStart(shortRun, START));
         String indented = "   " + FENCE + "\n" + START + "\n" + FENCE + "\n" + START + "\n";
-        assertEquals(indented.lastIndexOf(START), GuardrailFileWriter.indexOfBlockStart(indented, START),
+        assertEquals(indented.lastIndexOf(START), MarkerLines.indexOfBlockStart(indented, START),
             "a fence line is read stripped");
     }
 
@@ -107,14 +107,14 @@ class MarkerLinesTest {
     @Test
     @DisplayName("a pair is broken when the start has no end after it, or an end has no start")
     void brokenPairs() {
-        assertTrue(GuardrailFileWriter.hasBrokenMarkers(START + "\nbody\n", START, END));
-        assertTrue(GuardrailFileWriter.hasBrokenMarkers("hand\n" + END + "\n", START, END));
-        assertTrue(GuardrailFileWriter.hasBrokenMarkers(END + "\n" + START + "\n", START, END),
+        assertTrue(MarkerLines.hasBrokenMarkers(START + "\nbody\n", START, END));
+        assertTrue(MarkerLines.hasBrokenMarkers("hand\n" + END + "\n", START, END));
+        assertTrue(MarkerLines.hasBrokenMarkers(END + "\n" + START + "\n", START, END),
             "an end above the start does not close it");
-        assertFalse(GuardrailFileWriter.hasBrokenMarkers(START + "\nbody\n" + END + "\n", START, END));
-        assertFalse(GuardrailFileWriter.hasBrokenMarkers("no markers at all\n", START, END));
-        assertFalse(GuardrailFileWriter.hasBrokenMarkers("Quote `" + START + "` in prose\n", START, END));
-        assertFalse(GuardrailFileWriter.hasBrokenMarkers(FENCE + "\n" + START + "\n" + FENCE + "\n", START, END),
+        assertFalse(MarkerLines.hasBrokenMarkers(START + "\nbody\n" + END + "\n", START, END));
+        assertFalse(MarkerLines.hasBrokenMarkers("no markers at all\n", START, END));
+        assertFalse(MarkerLines.hasBrokenMarkers("Quote `" + START + "` in prose\n", START, END));
+        assertFalse(MarkerLines.hasBrokenMarkers(FENCE + "\n" + START + "\n" + FENCE + "\n", START, END),
             "a lone start inside a fence is an example, not a broken block");
     }
 
@@ -124,12 +124,12 @@ class MarkerLinesTest {
     @DisplayName("a marker on its own line inside a body is defused with a zero-width space; prose is left alone")
     void markersInABodyAreDefused() {
         String body = "reason one\n" + END + "\nsee " + END + " in prose\n  " + START + "\n";
-        String out = GuardrailFileWriter.neutraliseMarkers(body, new String[] {START, END});
+        String out = MarkerLines.neutraliseMarkers(body, new String[] {START, END});
 
         assertEquals("reason one\n<!--\u200B" + END.substring(4) + "\nsee " + END + " in prose\n  <!--\u200B"
             + START.substring(4) + "\n", out);
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine(out, START, 0));
-        assertEquals(-1, GuardrailFileWriter.indexOfMarkerLine(out, END, 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine(out, START, 0));
+        assertEquals(-1, MarkerLines.indexOfMarkerLine(out, END, 0));
     }
 
     @Test
@@ -140,9 +140,9 @@ class MarkerLinesTest {
         String body = start + "\nrule\n" + start + "\n";
 
         assertEquals("#\u200B" + start.substring(1) + "\nrule\n#\u200B" + start.substring(1) + "\n",
-            GuardrailFileWriter.neutraliseMarkers(body, new String[] {start, end}));
+            MarkerLines.neutraliseMarkers(body, new String[] {start, end}));
         String plain = "nothing to defuse\n";
-        assertEquals(plain, GuardrailFileWriter.neutraliseMarkers(plain, new String[] {start, end}));
+        assertEquals(plain, MarkerLines.neutraliseMarkers(plain, new String[] {start, end}));
     }
 
     // ---------------------------------------------------------------- front matter
@@ -161,25 +161,25 @@ class MarkerLinesTest {
             + "\n"
             + "    indented continuation\n"
             + "---";
-        assertEquals(fm.length(), GuardrailFileWriter.frontMatterEnd(fm + "\nbody"));
-        assertEquals(7, GuardrailFileWriter.frontMatterEnd("---\n---\n"), "an empty header is still one");
-        assertEquals(9, GuardrailFileWriter.frontMatterEnd("---  \n---\nbody"), "the opener may carry trailing blanks");
-        assertEquals(16, GuardrailFileWriter.frontMatterEnd("---\r\na: 1\r\n  ---  \r\nbody"),
+        assertEquals(fm.length(), FrontMatter.end(fm + "\nbody"));
+        assertEquals(7, FrontMatter.end("---\n---\n"), "an empty header is still one");
+        assertEquals(9, FrontMatter.end("---  \n---\nbody"), "the opener may carry trailing blanks");
+        assertEquals(16, FrontMatter.end("---\r\na: 1\r\n  ---  \r\nbody"),
             "CRLF, and a closer with whitespace around it: just past its dashes, not its line");
     }
 
     @Test
     @DisplayName("a horizontal rule, a --- inside a value or an unclosed header is not front matter")
     void whatIsNotFrontMatter() {
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd(null));
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("body\n---\n"));
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---"), "no line after the opener");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("--- title\na: 1\n---\n"), "text after the opener");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\nplain prose line\n---\n"), "a line that is not YAML");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\n9key: 1\n---\n"), "a key must start with a letter");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\n: 1\n---\n"), "a colon with no key");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\na: 1\nb: 2\n"), "no closing fence");
-        assertEquals(-1, GuardrailFileWriter.frontMatterEnd("---\na: value with --- inside\n"),
+        assertEquals(-1, FrontMatter.end(null));
+        assertEquals(-1, FrontMatter.end("body\n---\n"));
+        assertEquals(-1, FrontMatter.end("---"), "no line after the opener");
+        assertEquals(-1, FrontMatter.end("--- title\na: 1\n---\n"), "text after the opener");
+        assertEquals(-1, FrontMatter.end("---\nplain prose line\n---\n"), "a line that is not YAML");
+        assertEquals(-1, FrontMatter.end("---\n9key: 1\n---\n"), "a key must start with a letter");
+        assertEquals(-1, FrontMatter.end("---\n: 1\n---\n"), "a colon with no key");
+        assertEquals(-1, FrontMatter.end("---\na: 1\nb: 2\n"), "no closing fence");
+        assertEquals(-1, FrontMatter.end("---\na: value with --- inside\n"),
             "a --- inside a value does not close it");
     }
 

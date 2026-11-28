@@ -1,7 +1,7 @@
 package se.deversity.vibetags.processor.internal.validation;
 
 import org.jspecify.annotations.Nullable;
-import se.deversity.vibetags.processor.internal.GuardrailFileWriter;
+import se.deversity.vibetags.processor.internal.MarkerLines;
 import se.deversity.vibetags.processor.internal.content.Platform;
 import se.deversity.vibetags.processor.internal.content.PlatformRendererRegistry;
 import se.deversity.vibetags.processor.internal.content.RenderingContext;
@@ -131,11 +131,11 @@ public final class DuplicateYamlKeyRule {
          * and one inside a code fence is not the block (#1194).
          */
         static Block locate(String text, int lineCount, String markerStart, String markerEnd) {
-            int start = GuardrailFileWriter.indexOfBlockStart(text, markerStart);
+            int start = MarkerLines.indexOfBlockStart(text, markerStart);
             if (start < 0) {
                 return new Block(-1, lineCount);
             }
-            int end = GuardrailFileWriter.indexOfMarkerLine(text, markerEnd, start + markerStart.length());
+            int end = MarkerLines.indexOfMarkerLine(text, markerEnd, start + markerStart.length());
             return new Block(lineOf(text, start), end < 0 ? lineCount : lineOf(text, end));
         }
 
