@@ -164,8 +164,8 @@ class MarkerLinesTest {
         assertEquals(fm.length(), FrontMatter.end(fm + "\nbody"));
         assertEquals(7, FrontMatter.end("---\n---\n"), "an empty header is still one");
         assertEquals(9, FrontMatter.end("---  \n---\nbody"), "the opener may carry trailing blanks");
-        assertEquals(16, FrontMatter.end("---\r\na: 1\r\n  ---  \r\nbody"),
-            "CRLF, and a closer with whitespace around it: just past its dashes, not its line");
+        assertEquals(14, FrontMatter.end("---\r\na: 1\r\n---  \r\nbody"),
+            "CRLF, and a closer with trailing blanks: just past its dashes, not its line");
     }
 
     @Test
@@ -181,6 +181,15 @@ class MarkerLinesTest {
         assertEquals(-1, FrontMatter.end("---\na: 1\nb: 2\n"), "no closing fence");
         assertEquals(-1, FrontMatter.end("---\na: value with --- inside\n"),
             "a --- inside a value does not close it");
+        assertEquals(-1, FrontMatter.end("---\na: 1\n  ---\nbody\n"), "an indented --- is not a closer (#1241)");
+    }
+
+    @Test
+    @DisplayName("an indented --- inside a block scalar is content, and the header ends at the --- in column 0 (#1241)")
+    void anIndentedRuleInsideABlockScalarIsContent() {
+        String header = "---\ndescription: |\n  first\n  ---\n  second\n---";
+
+        assertEquals(header.length(), FrontMatter.end(header + "\nbody\n"));
     }
 
     // ---------------------------------------------------------------- equality

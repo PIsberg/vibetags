@@ -18,18 +18,18 @@ public final class FrontMatter {
      * Index just past the closing {@code ---} of a YAML front-matter block that opens
      * {@code text}, or {@code -1} when the text does not open with one.
      *
-     * <p>Both fences must own their line, and every line between them must read as YAML: a
-     * mapping entry, a list item, a comment, or an indented continuation. Splitting at the first
-     * {@code ---} found anywhere after the opener did two things wrong: a hand-written file that
-     * opens with a horizontal rule lost everything up to its next rule as if it were a header, and
-     * a {@code ---} inside a value (a description, say) cut the header mid-value and spilled the
-     * rest of it into the body.
+     * <p>Both fences must own their line and start it, and every line between them must read as
+     * YAML: a mapping entry, a list item, a comment, or an indented continuation. Splitting at the
+     * first {@code ---} found anywhere after the opener did two things wrong: a hand-written file
+     * that opens with a horizontal rule lost everything up to its next rule as if it were a
+     * header, and a {@code ---} inside a value (a description, say) cut the header mid-value and
+     * spilled the rest of it into the body.
      */
     public static int end(String text) {
         if (text == null || !text.startsWith("---")) return -1;
         int openerEnd = text.indexOf('\n');
         if (openerEnd < 0 || !text.substring(3, openerEnd).isBlank()) return -1;
-        int close = MarkerLines.indexOfMarkerLine(text, "---", openerEnd);
+        int close = closingFence(text, openerEnd);
         if (close < 0) return -1;
         for (String line : text.substring(openerEnd + 1, close).split("\n", -1)) {
             if (!isFrontMatterLine(line)) {
@@ -37,6 +37,19 @@ public final class FrontMatter {
             }
         }
         return close + 3;
+    }
+
+    /**
+     * The first {@code ---} after {@code from} that owns its line and starts it. YAML reads an
+     * indented one as content, a line of a block scalar for instance, so it does not close the
+     * header (#1241). Trailing whitespace is allowed, as on the opener.
+     */
+    private static int closingFence(String text, int from) {
+        int close = MarkerLines.indexOfMarkerLine(text, "---", from);
+        while (close >= 0 && text.charAt(close - 1) != '\n') {
+            close = MarkerLines.indexOfMarkerLine(text, "---", close + 1);
+        }
+        return close;
     }
 
     private static boolean isFrontMatterLine(String line) {
