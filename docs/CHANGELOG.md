@@ -32,6 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The sidecar streaming scans moved out of `ModuleSidecar` into `SidecarScans`.** The reads behind
+  `unreadableSidecarNames` and `loadSummary` (`TrailerScan`, `SummaryScan`, `Base64Stream`) were 564
+  of `ModuleSidecar`'s lines; the format they read stays defined there. `ModuleSidecar` goes from
+  2,636 to 2,101 lines and NCSS 1,037 to 731; its weighted method count moves only 285 to 276,
+  because PMD already scored the nested scanners as classes of their own. Verdicts are unchanged,
+  held there by three agreement tests, one of them (`ModuleSidecarScanEdgeAgreementTest`, buffer
+  edges and CR/CRLF line endings) new and written before the move.
+
 - **The marker and front-matter text rules moved out of `GuardrailFileWriter` into
   `MarkerLines` and `FrontMatter`.** The line-owned marker search, the CommonMark fence check, the
   broken-pair test, marker defusing and the front-matter boundary are what every reader of a
