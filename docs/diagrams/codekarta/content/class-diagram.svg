@@ -844,7 +844,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="232.0" y="663.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">contentHash(): String</text>
   <text x="232.0" y="678.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">roleFor(TaggedElement): Optiona…</text>
   <text x="232.0" y="693.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">matchRole(TaggedElement): Optio…</text>
-  <text x="232.0" y="708.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+7 more)</text>
+  <text x="232.0" y="708.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+8 more)</text>
 </g>
 <g id="GranularContribution">
   <title>GranularContribution [CLASS]</title>
@@ -1472,7 +1472,7 @@ text { font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe
   <text x="232.0" y="558.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">isHeading(String, boolean): boo…</text>
   <text x="232.0" y="573.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendToOpenBullet(Item, String…</text>
   <text x="232.0" y="588.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">appendOrStartParagraph(Containe…</text>
-  <text x="232.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+17 more)</text>
+  <text x="232.0" y="603.5" font-family="sans-serif" font-size="10" fill="#374151" dominant-baseline="central">…(+21 more)</text>
 </g>
 <g id="SectionCatalog">
   <title>SectionCatalog [CLASS]</title>
