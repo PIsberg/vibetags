@@ -45,6 +45,13 @@ Write events, not positions:
   pins `round.skip reason=sources-unchanged digest= rounds=` (DEBUG, the early exit ahead of the
   collection walk fired, #834); its sibling `round.skip reason=sources-appeared-after-skip digest=`
   is written when another processor generated sources after the first round was skipped.
+  `PartialMergeDiagnosticsTest` pins the WARN events for a merged file that is missing a module's
+  guardrails or points at rule files nobody will write: `sidecar.unreadable count= names=`,
+  `mirror.skip file= reason=unusable-config detail=`,
+  `merge.partial service= modulesBehind= reason=opted-in-after-last-compile`,
+  `merge.partial modulesBehind= reason=granular-opted-out-after-last-compile`,
+  `granular.missing entries= reason=sibling-file-absent` and
+  `region.duplicate elements= regions= reason=element-claimed-twice`.
 - When you fix a bug, add the DEBUG line that would have made it obvious in one read, and keep it.
 
 Rationale and the longer argument: *Vibe Architecture*, Chapter 6b, "The Log Is a Feedback Loop".

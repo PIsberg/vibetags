@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The partial-merge warnings moved out of `AIGuardrailProcessor` into
+  `PartialMergeDiagnostics`.** The six warnings raised after the sidecar read (an unreadable
+  sidecar, an unusable `.vibetags-mirror`, an opt-in or a granular opt-out a module has not seen, a
+  sibling's missing rule file, an element claimed by two regions) and their helpers were 371 of the
+  processor's 3,153 lines. PMD's class-level measures for the processor go from weighted method
+  count 408 to 352, NCSS 1,050 to 929 and coupling 56 to 53. Their text and log events are unchanged, and `PartialMergeDiagnosticsTest`
+  now pins both, which no test did before: the end-to-end cases asserted a fragment of each
+  message and none of the six events, which `docs/LOGGING.md` now lists.
+
 - **Every remaining unlocked method over the PMD complexity or statement-count threshold is split
   into named steps.** In `CoreRules.all` (cognitive complexity 59), the sixteen inline attribute
   lambdas are now named static `check*` methods routed through null-safe `isBlank` and `isEmpty`
