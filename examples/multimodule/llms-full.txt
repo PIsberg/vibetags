@@ -71,13 +71,13 @@ The following files are locked. AI tools MUST NOT propose modifications to them.
 ## Contextual Rules
 These files have specific context and focus areas for AI assistance.
 
-### com.example.multimodule.core.IrGraphFixturesTest
-- **Focus**: Build IrGraph fixtures through IrGraphFixtures.of(...), never by mutating a graph in place: the engine's layout cache keys on node identity
-- **Avoid**: Sharing one fixture graph between cases; the engine mutates what it lays out
-
 ### com.example.multimodule.core
 - **Focus**: Immutable IR data model shared across every module of the reactor.
 - **Avoid**: Adding mutable state, framework annotations, or a dependency on any sibling module.
+
+### com.example.multimodule.core.IrGraphFixturesTest
+- **Focus**: Build IrGraph fixtures through IrGraphFixtures.of(...), never by mutating a graph in place: the engine's layout cache keys on node identity
+- **Avoid**: Sharing one fixture graph between cases; the engine mutates what it lays out
 
 ## 🧵 Thread-Safe by Design
 These elements are explicitly designed to be thread-safe via the named strategy. Preserve the synchronization invariant on every change.
