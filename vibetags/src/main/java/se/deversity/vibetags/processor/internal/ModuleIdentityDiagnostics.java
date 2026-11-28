@@ -140,10 +140,13 @@ public final class ModuleIdentityDiagnostics {
         }
         messager.printMessage(Diagnostic.Kind.WARNING,
             "VibeTags: " + String.join(", ", collapsing)
-                + (collapsing.size() == 1 ? " is declared as a Gradle subproject but has"
-                                          : " are declared as Gradle subprojects but have")
-                + " no build file of its own, so it resolves to this root and shares one module"
-                + " identity with every other such subproject. They overwrite one another's"
+                + (collapsing.size() == 1
+                    ? " is declared as a Gradle subproject but has no build file of its own, so it"
+                        + " resolves to this root and shares one module identity with every other such"
+                        + " subproject."
+                    : " are declared as Gradle subprojects but have no build file of their own, so"
+                        + " each resolves to this root and they all share one module identity.")
+                + " They overwrite one another's"
                 + " guardrails and only the last to compile survives. Pass"
                 + " -Avibetags.module=${project.name} in the shared build file to give each one"
                 + " its own identity.");
