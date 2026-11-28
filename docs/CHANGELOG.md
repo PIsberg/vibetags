@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The sidecar body merge moved out of `ModuleSidecar` into `SidecarBodyMerge`, and its
+  sub-marker style into `SubMarkers`.** `ModuleSidecar` both stored the sidecars and turned their
+  bodies into each file's text. The merge half now lives in its own class, and `mergeFor`,
+  `contributionsFor` and `mergeModuleBodies` keep their signatures as delegates. `ModuleSidecar`
+  goes from 2,974 to 2,636 lines, weighted method count 326 to 285 and NCSS 1,188 to 1,037. The
+  output is unchanged. `ModuleSidecarBodyMergeTest` pins it for the paths
+  `ModuleSidecarMergeShapeTest` did not (`contributionsFor`, `mergeModuleBodies`, the `TESTING.md`
+  fallback, the one YAML document), and was written before the move.
+
 - **The module-identity warnings moved out of `AIGuardrailProcessor` into
   `ModuleIdentityDiagnostics`.** The four warnings about an identity that costs a build guardrails
   (detached from its reactor, buildless Gradle subprojects collapsing into the root, a module filed
