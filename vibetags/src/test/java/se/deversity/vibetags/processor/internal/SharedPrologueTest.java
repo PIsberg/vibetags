@@ -30,7 +30,7 @@ class SharedPrologueTest {
     @Test
     @DisplayName("hoisted when every body opens with it")
     void hoistedWhenSharedByAll() {
-        String shared = ModuleSidecar.sharedPrologue(TESTING,
+        String shared = SidecarBodyMerge.sharedPrologue(TESTING,
             List.of(PREAMBLE + "\n\n## CONTEXTUAL RULES\n- a", PREAMBLE + "\n\n## CONTEXTUAL RULES\n- b"));
 
         assertEquals(PREAMBLE, shared, "both regions carry it, so it belongs at the top of the file");
@@ -39,7 +39,7 @@ class SharedPrologueTest {
     @Test
     @DisplayName("not hoisted when one body does not carry it")
     void notHoistedWhenOneBodyLacksIt() {
-        String shared = ModuleSidecar.sharedPrologue(TESTING,
+        String shared = SidecarBodyMerge.sharedPrologue(TESTING,
             List.of(PREAMBLE + "\n\n## CONTEXTUAL RULES\n- a", "## CONTEXTUAL RULES\n- written by an older build"));
 
         assertEquals("", shared,
@@ -49,13 +49,13 @@ class SharedPrologueTest {
     @Test
     @DisplayName("a service whose renderer declares no prologue hoists nothing")
     void noPrologueDeclared() {
-        assertEquals("", ModuleSidecar.sharedPrologue("claude", List.of("anything", "at all")),
+        assertEquals("", SidecarBodyMerge.sharedPrologue("claude", List.of("anything", "at all")),
             "only TESTING.md declares one; every other aggregate keeps the stacking it had");
     }
 
     @Test
     @DisplayName("no bodies, nothing to hoist")
     void noBodies() {
-        assertEquals("", ModuleSidecar.sharedPrologue(TESTING, List.of()));
+        assertEquals("", SidecarBodyMerge.sharedPrologue(TESTING, List.of()));
     }
 }

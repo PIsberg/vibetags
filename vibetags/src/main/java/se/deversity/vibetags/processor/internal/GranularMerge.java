@@ -143,7 +143,7 @@ final class GranularMerge {
         }
         StringBuilder wrapped = new StringBuilder();
         byRegion.forEach((region, contributions) ->
-            wrapped.append(ModuleSidecar.SubMarkers.MARKDOWN.wrap(region, joined(contributions))));
+            wrapped.append(SubMarkers.MARKDOWN.wrap(region, joined(contributions))));
         return wrapped.toString().strip();
     }
 
