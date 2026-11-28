@@ -64,7 +64,7 @@ the numbers. Then:
 
 Put the counter's lines in the release PR body. It counts each deployment (a version whose
 artifacts landed minutes apart counts once per burst, and a bundle uploaded by a deploy call of its
-own, such as async-test-maven-plugin, counts on its own), but it is a floor: Central's own number is
+own, such as async-test-maven-plugin through 1.14.4, counts on its own), but it is a floor: Central's own number is
 on the usage page (https://central.sonatype.com/publishing/usage?org=deversity, owner login), and an
 exit 0 is not a go when the owner has seen the page say otherwise.
 

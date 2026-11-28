@@ -230,7 +230,11 @@ limits are per organization: async-test-lib and every other group under
   uploads `async-test-maven-plugin` that way. The counter lists such artifacts in
   `SEPARATE_DEPLOYMENTS`; a publish workflow in the organization that adds a deploy call must
   add its artifact there, or the count reads low again (#1130: it said 4 of 7 while Central, at
-  7, refused the 2026-11-21 release). That puts October 2026 at 12.
+  7, refused the 2026-11-21 release). That puts October 2026 at 12. A workflow that drops such
+  a call gets its entry bounded as `path@LAST`, the last version uploaded that way, not removed,
+  so the months already published keep counting it: async-test-lib publishes the plugin in its
+  reactor's bundle after 1.14.4 (PIsberg/async-test-lib#1474), so the entry is `@1.14.4` and
+  every later version is one deployment.
 - **At most 3 vibetags releases a month**, and none that the count says goes over. The exception
   is a fix a consumer is blocked on, and the release PR says so, with the count. This
   repository's tags for the month:

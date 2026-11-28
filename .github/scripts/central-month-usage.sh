@@ -28,7 +28,9 @@
 #   CENTRAL_NAMESPACE   group path to count (default se/deversity)
 #   CENTRAL_INDEX_FILE  appended to each directory URL; the tests' fixture trees use index.html
 #   CENTRAL_SEPARATE_DEPLOYMENTS  space-separated artifact paths (group path/artifact) that go up as
-#                       a bundle of their own; replaces the default list below, and may be empty
+#                       a bundle of their own, each optionally bounded as path@LAST: the artifact went up
+#                       on its own through version LAST and shares its version's bundle after it;
+#                       replaces the default list below, and may be empty
 # Exit: 0 when every count is under its limit, 1 when one is at or over it (a release this month
 # goes over), 2 when the month cannot be read: a listing that failed is never reported as zero.
 set -u
@@ -38,10 +40,15 @@ BASE="${CENTRAL_BASE_URL:-https://repo1.maven.org/maven2}"
 NAMESPACE="${CENTRAL_NAMESPACE:-se/deversity}"
 INDEX="${CENTRAL_INDEX_FILE:-}"
 # Artifacts each publish workflow in the organization uploads with a deploy call of its own. A new
-# one belongs here as soon as a workflow adds the call: repo1 will never show it.
-#   async-test-lib's publish.yml: "Build, test and publish async-test-maven-plugin to Maven Central",
-#   deployment 0b097b26 beside the reactor's 6ef54da0 for 1.14.3.
-SEPARATE_DEPLOYMENTS="${CENTRAL_SEPARATE_DEPLOYMENTS-se/deversity/async-test-lib/async-test-maven-plugin}"
+# one belongs here as soon as a workflow adds the call: repo1 will never show it. When a workflow
+# drops the call, bound the entry with @ and the last version it uploaded that way rather than
+# removing it: the months it already published in must keep counting it.
+#   async-test-lib's publish.yml uploaded async-test-maven-plugin with a deploy call of its own from
+#   1.14.0 (deployment 0b097b26 beside the reactor's 6ef54da0 for 1.14.3) until
+#   PIsberg/async-test-lib#1474 moved it into the reactor's bundle. The bound is 1.14.4, not 1.14.3:
+#   Central refused 1.14.4 on 2026-11-21, its tag predates #1474, and re-running that publish would
+#   upload the plugin on its own again. If 1.14.4 goes up as one bundle instead, it reads one high.
+SEPARATE_DEPLOYMENTS="${CENTRAL_SEPARATE_DEPLOYMENTS-se/deversity/async-test-lib/async-test-maven-plugin@1.14.4}"
 USAGE_PAGE="https://central.sonatype.com/publishing/usage?org=deversity"
 
 MAX_RELEASES=7
@@ -109,13 +116,29 @@ count_version() {
     END { printf "%s\t%s\t%d\t%d\t%s\t%s\n", group, version, files, bytes, published, bundle }' >>"$RECORDS"
 }
 
-# bundle_of <artifact path>: the artifact's path when SEPARATE_DEPLOYMENTS lists it, otherwise -
-bundle_of() {
+# separate_entry <artifact path>: the artifact's SEPARATE_DEPLOYMENTS entry (path or path@LAST), or
+# nothing when the list does not name it
+separate_entry() {
   local separate
   for separate in $SEPARATE_DEPLOYMENTS; do
-    [ "$separate" = "$1" ] && { printf '%s' "$1"; return; }
+    [ "${separate%%@*}" = "$1" ] && { printf '%s' "$separate"; return; }
   done
-  printf '%s' -
+}
+
+# version_after <a> <b>: true when version a sorts after version b (sort -V, so 1.14.10 > 1.14.4)
+version_after() {
+  [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n 1)" = "$1" ]
+}
+
+# bundle_of <entry> <version>: the bundle the artifact's version went up in: - for the version's
+# shared bundle, or the artifact's path when its entry says it went up on its own
+bundle_of() {
+  local entry="$1" version="$2"
+  [ -n "$entry" ] || { printf '%s' -; return; }
+  case "$entry" in
+    *@*) version_after "$version" "${entry#*@}" && { printf '%s' -; return; } ;;
+  esac
+  printf '%s' "${entry%%@*}"
 }
 
 # walk <path> <depth>: descends from <path> to every artifact directory and counts its versions
@@ -136,14 +159,15 @@ walk() {
 # count_artifact <path> <entries>: counts the artifact's versions published in MONTH under the
 # artifact's group, the directory above it
 count_artifact() {
-  local path="$1" group bundle name published _
+  local path="$1" group entry name published _
   group="${path%/}"
-  bundle="$(bundle_of "$group")"
+  entry="$(separate_entry "$group")"
   group="${group%/*}"
   while IFS=$'\t' read -r name published _; do
     case "$name" in [0-9]*/) ;; *) continue ;; esac
     case "$published" in "$MONTH"-*) ;; *) continue ;; esac
-    count_version "$group" "${name%/}" "$path$name" "$published" "$bundle" || return 1
+    count_version "$group" "${name%/}" "$path$name" "$published" \
+      "$(bundle_of "$entry" "${name%/}")" || return 1
   done <<<"$2"
 }
 

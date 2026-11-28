@@ -190,6 +190,39 @@ run "$NOV" 2026-11
 expect "12: by default async-test-maven-plugin is its own deployment, so November 2026 is at the limit" 1 \
   '^releases +7 of 7$' '^se/deversity/async-test-lib 1\.14\.3: 2 files, 200 bytes \(2 deployments\)$'
 
+# async-test-lib publishes the plugin in the reactor's bundle from the version after 1.14.4
+# (PIsberg/async-test-lib#1474), so the default list bounds the plugin's entry with @1.14.4: the
+# versions up to it are two deployments, every later one is one. 1.14.4 counts as two because its
+# tag predates #1474 and a re-run of its publish would upload the plugin on its own again.
+DEC="$TMP/dec"
+listing "$DEC" se/deversity "async-test-lib/|-|-"
+listing "$DEC" se/deversity/async-test-lib "async-test-lib/|-|-" "async-test-maven-plugin/|-|-"
+for name in async-test-lib async-test-maven-plugin; do
+  listing "$DEC" "se/deversity/async-test-lib/$name" \
+    "1.14.4/|2026-12-01 09:00|-" "1.14.10/|2026-12-08 09:00|-" "maven-metadata.xml|2026-12-08 09:05|500"
+  for v in 1.14.4 1.14.10; do
+    listing "$DEC" "se/deversity/async-test-lib/$name/$v" "$name-$v.pom|2026-12-01 09:00|100"
+  done
+done
+
+run "$DEC" 2026-12
+expect "14: by default the plugin is its own deployment up to 1.14.4 and shares the bundle after it" 0 \
+  '^releases +3 of 7$' '^se/deversity/async-test-lib 1\.14\.4: 2 files, 200 bytes \(2 deployments\)$' \
+  '^se/deversity/async-test-lib 1\.14\.10: 2 files, 200 bytes$'
+
+# The bound compares versions, not text: 3.10.0 is after 3.9.0, so with @3.9.0 it is one deployment.
+listing "$TWIN" se/deversity/twin "lib/|-|-" "plugin/|-|-"
+for name in lib plugin; do
+  listing "$TWIN" "se/deversity/twin/$name" "3.0.0/|2026-11-05 10:00|-" "3.10.0/|2026-11-06 10:00|-" \
+    "maven-metadata.xml|2026-11-06 10:05|500"
+  listing "$TWIN" "se/deversity/twin/$name/3.10.0" "$name-3.10.0.pom|2026-11-06 10:00|100"
+done
+
+CENTRAL_SEPARATE_DEPLOYMENTS="se/deversity/twin/plugin@3.9.0" run "$TWIN" 2026-11
+expect "15: an entry's @version bound ends its own bundle after that version" 0 \
+  '^releases +3 of 7$' '^se/deversity/twin 3\.0\.0: 2 files, 200 bytes \(2 deployments\)$' \
+  '^se/deversity/twin 3\.10\.0: 2 files, 200 bytes$'
+
 # A count under every limit is a floor, not a go: the run says where Central's own number is.
 run "$ORG" 2026-11
 expect "13: a count under the limits names Central's usage page as the authority" 0 \
